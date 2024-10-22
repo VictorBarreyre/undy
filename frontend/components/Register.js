@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { View, TextInput, Button, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { VStack, Box, Input, Button, Text, Link, Pressable } from 'native-base';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext'; // Importer le contexte d'authentification
 
@@ -32,61 +32,44 @@ export default function Register({ navigation }) {
     };
 
     return (
-        <View style={styles.container}>
-            <Text>Inscription</Text>
-            <TextInput
-                style={styles.input}
-                placeholder="Nom"
-                value={name}
-                onChangeText={setName}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Email"
-                value={email}
-                onChangeText={setEmail}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Mot de passe"
-                value={password}
-                secureTextEntry={!showPassword}
-                onChangeText={setPassword}
-            />
-            <TouchableOpacity
-                style={styles.showButton}
-                onPress={() => setShowPassword(!showPassword)} // Basculer la visibilité
-            >
-                <Text>{showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}</Text>
-            </TouchableOpacity>
-            <Button title="S'inscrire" onPress={handleRegister} />
-            {message ? <Text>{message}</Text> : null}
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.linkText}>Déjà un compte ? Connectez-vous ici</Text>
-            </TouchableOpacity>
-        </View>
+        <Box flex={1} justifyContent="center" p={5} bg="white">
+            <VStack space={4} alignItems="center">
+                <Text fontSize="2xl" fontWeight="bold" color="primary.500">
+                    Inscription
+                </Text>
+                <Input
+                    placeholder="Nom"
+                    value={name}
+                    onChangeText={setName}
+                    variant="outline"
+                    w="100%"
+                />
+                <Input
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    variant="outline"
+                    w="100%"
+                />
+                <Input
+                    placeholder="Mot de passe"
+                    value={password}
+                    secureTextEntry={!showPassword}
+                    onChangeText={setPassword}
+                    variant="outline"
+                    w="100%"
+                />
+                <Pressable onPress={() => setShowPassword(!showPassword)}>
+                    <Text color="blue.500">{showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}</Text>
+                </Pressable>
+                <Button onPress={handleRegister} colorScheme="primary" w="100%">
+                    S'inscrire
+                </Button>
+                {message ? <Text color="red.500">{message}</Text> : null}
+                <Link onPress={() => navigation.navigate('Login')} mt={3} _text={{ color: "blue.500" }}>
+                    Déjà un compte ? Connectez-vous ici
+                </Link>
+            </VStack>
+        </Box>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        padding: 20,
-    },
-    input: {
-        height: 40,
-        borderColor: 'gray',
-        borderWidth: 1,
-        marginBottom: 10,
-        padding: 10,
-    },
-    showButton: {
-        padding: 5,
-    },
-    linkText: {
-        marginTop: 15,
-        color: 'blue',
-        textAlign: 'center',
-    },
-});
