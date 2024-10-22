@@ -1,18 +1,17 @@
+// routes/userRoutes.js
 const express = require('express');
-const User = require('../models/User');
+const { registerUser, loginUser, getUserProfile } = require('../controllers/userController');
+const protect = require('../middleware/authMiddleware'); // Importation du middleware
+
 const router = express.Router();
 
-// POST : Register user
-router.post('/register', async (req, res) => {
-    const { name, email, password } = req.body;
+// Route pour l'inscription
+router.post('/register', registerUser);
 
-    try {
-        const newUser = new User({ name, email, password });
-        await newUser.save();
-        res.status(201).json(newUser);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
+// Route pour la connexion
+router.post('/login', loginUser);
+
+// Route protégée pour obtenir le profil de l'utilisateur connecté
+router.get('/profile', protect, getUserProfile); // Utilisation du middleware "protect"
 
 module.exports = router;
