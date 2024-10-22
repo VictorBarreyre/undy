@@ -1,40 +1,32 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList } from 'react-native';
-import axios from 'axios';
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { AuthProvider, AuthContext } from './context/AuthContext';
+import Register from './components/Register';
+import Login from './components/Login';
+import Home from './screens/Home';
+
+const Stack = createStackNavigator();
 
 export default function App() {
-    const [users, setUsers] = useState([]);
-
-    useEffect(() => {
-        // Appel à l'API backend
-        axios.get('http://localhost:5000/api/users')
-            .then(response => {
-                setUsers(response.data);
-            })
-            .catch(error => {
-                console.log(error);
-            });
-    }, []);
-
     return (
-        <View style={styles.container}>
-            <Text>Liste des utilisateurs</Text>
-            <FlatList
-                data={users}
-                keyExtractor={(item) => item._id}
-                renderItem={({ item }) => (
-                    <Text>{item.name}</Text>
-                )}
-            />
-        </View>
+        <AuthProvider>
+            <NavigationContainer>
+                <AuthContext.Consumer>
+                    {({ isLoggedIn }) => (
+                        <Stack.Navigator>
+                            {isLoggedIn ? (
+                                <Stack.Screen name="Home" component={Home} />
+                            ) : (
+                                <>
+                                    <Stack.Screen name="Register" component={Register} />
+                                    <Stack.Screen name="Login" component={Login} />
+                                </>
+                            )}
+                        </Stack.Navigator>
+                    )}
+                </AuthContext.Consumer>
+            </NavigationContainer>
+        </AuthProvider>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-});
