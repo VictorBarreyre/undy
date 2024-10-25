@@ -9,29 +9,45 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware pour analyser le corps des requêtes JSON
+// Middleware pour analyser les requêtes JSON
 app.use(express.json());
 
 // Configuration CORS
 const corsOptions = {
-    origin: ['http://localhost:8081', 'https://undy-93a12c731bb4.herokuapp.com'], // Domaines autorisés
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Méthodes autorisées
-    allowedHeaders: ['Content-Type', 'Authorization'], // En-têtes autorisés
-    credentials: true // Permettre l'envoi de cookies et d'en-têtes d'autorisation
+    origin: ['http://localhost:8081', 'https://undy-93a12c731bb4.herokuapp.com'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 };
 
+// Activer CORS avec les options
 app.use(cors(corsOptions));
 
-// Middleware pour gérer les en-têtes CORS dans toutes les réponses
+// Interception des requêtes préflight (OPTIONS)
+app.options('*', cors(corsOptions)); // Activer CORS pour toutes les routes
+
+// Middleware pour forcer les en-têtes CORS dans toutes les réponses
 app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", req.headers.origin); // Dynamique pour autoriser le domaine d'origine
+    const allowedOrigins = ['http://localhost:8081', 'https://undy-93a12c731bb4.herokuapp.com'];
+    const origin = req.headers.origin;
+
+    if (allowedOrigins.includes(origin)) {
+        res.header("Access-Control-Allow-Origin", origin);
+    }
+
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.header("Access-Control-Allow-Credentials", "true");
+
+    // Si la requête est une préflight, envoyer une réponse 200
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+
     next();
 });
 
-// Route racine pour tester si le serveur fonctionne
+// Route racine pour vérifier le bon fonctionnement du serveur
 app.get('/', (req, res) => {
     res.send('Why are you here man?');
 });
