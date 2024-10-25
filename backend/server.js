@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware pour analyser les requêtes JSON
+// Middleware pour analyser les requêtes JSONs
 app.use(express.json());
 
 // Configuration CORS avec options dynamiques pour autoriser les requêtes depuis les origines spécifiées
