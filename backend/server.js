@@ -12,25 +12,32 @@ const PORT = process.env.PORT || 5000;
 // Middleware pour analyser les requêtes JSON
 app.use(express.json());
 
-// Configuration CORS pour autoriser l'accès à l'API depuis le frontend
-const corsOptions = {
-    origin: ['http://localhost:8081', 'https://undy-93a12c731bb4.herokuapp.com'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
-};
+// Configuration CORS avec options dynamiques pour autoriser les requêtes depuis les origines spécifiées
+const allowedOrigins = ['http://localhost:8081', 'https://undy-93a12c731bb4.herokuapp.com'];
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.header("Access-Control-Allow-Origin", origin); // Autorise l'origine de la requête
+    }
 
-// Activer CORS avec les options
-app.use(cors(corsOptions));
+    // Définir les en-têtes CORS
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Credentials", "true");
 
-// Middleware pour répondre aux requêtes préflight (OPTIONS) avec CORS
-app.options('*', cors(corsOptions));
+    // Répondre aux requêtes préflight immédiatement avec un statut 200
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+
+    next();
+});
 
 // Import des routes
 const userRoutes = require('./routes/userRoutes');
 app.use('/api/users', userRoutes);
 
-// Route pour vérifier que le serveur est actif
+// Route de vérification du serveur
 app.get('/', (req, res) => {
     res.send('Server is running');
 });

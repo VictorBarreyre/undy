@@ -25,7 +25,7 @@ export default function App() {
 const StackNavigator = () => {
     const { isLoggedIn } = useContext(AuthContext);  // Vérifier si l'utilisateur est connecté
 
-    console.log(DATABASE_URL)
+    console.log(DATABASE_URL.trim())
 
     return (
         <Stack.Navigator>
