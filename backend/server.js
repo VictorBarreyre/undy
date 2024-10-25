@@ -28,7 +28,7 @@ app.options('*', cors(corsOptions));
 
 // Import des routes
 const userRoutes = require('./routes/userRoutes');
-app.use('api/users', userRoutes);
+app.use('/api/users', userRoutes);
 
 // Route pour vérifier que le serveur est actif
 app.get('/', (req, res) => {
