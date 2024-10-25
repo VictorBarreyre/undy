@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cors());
 app.get('/', (req, res) => {
-    res.send('Why are you here?');
+    res.send('Why are you here man?');
   });
 
 // Routes
