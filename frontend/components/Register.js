@@ -1,33 +1,33 @@
 import React, { useState, useContext } from 'react';
 import { VStack, Box, Input, Button, Text, Link, Pressable } from 'native-base';
 import axios from 'axios';
-import { AuthContext } from '../context/AuthContext'; // Importer le contexte d'authentification
+import { AuthContext } from '../context/AuthContext';
+import { DATABASE_URL } from '@env'; // Importer l'URL depuis .env
 
 export default function Register({ navigation }) {
-    const { login } = useContext(AuthContext); // Récupérer la fonction login depuis le contexte
+    const { login } = useContext(AuthContext);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
-    const [showPassword, setShowPassword] = useState(false); // État pour gérer la visibilité du mot de passe
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleRegister = async () => {
         try {
-            const response = await axios.post('http://localhost:5000/api/users/register', {
+            const response = await axios.post(`${DATABASE_URL}/api/users/register`, {
                 name,
                 email,
                 password
             });
 
             if (response.data.token) {
-                // Appeler la fonction login pour stocker le token et mettre à jour l'état de connexion
                 login(response.data.token);
                 setMessage('Inscription réussie, connexion en cours...');
             } else {
                 setMessage('Erreur lors de la génération du token.');
             }
         } catch (error) {
-            setMessage('Erreur lors de l\'inscription');
+            setMessage("Erreur lors de l'inscription");
         }
     };
 
@@ -60,7 +60,9 @@ export default function Register({ navigation }) {
                     w="100%"
                 />
                 <Pressable onPress={() => setShowPassword(!showPassword)}>
-                    <Text color="blue.500">{showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}</Text>
+                    <Text color="blue.500">
+                        {showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    </Text>
                 </Pressable>
                 <Button onPress={handleRegister} colorScheme="primary" w="100%">
                     S'inscrire
