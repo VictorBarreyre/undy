@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5000;
 // Middleware pour analyser les requêtes JSON
 app.use(express.json());
 
-// Configuration CORS
+// Configuration CORS pour autoriser l'accès à l'API depuis le frontend
 const corsOptions = {
     origin: ['http://localhost:8081', 'https://undy-93a12c731bb4.herokuapp.com'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -23,38 +23,17 @@ const corsOptions = {
 // Activer CORS avec les options
 app.use(cors(corsOptions));
 
-// Interception des requêtes préflight (OPTIONS)
-app.options('*', cors(corsOptions)); // Activer CORS pour toutes les routes
+// Middleware pour répondre aux requêtes préflight (OPTIONS) avec CORS
+app.options('*', cors(corsOptions));
 
-// Middleware pour forcer les en-têtes CORS dans toutes les réponses
-app.use((req, res, next) => {
-    const allowedOrigins = ['http://localhost:8081', 'https://undy-93a12c731bb4.herokuapp.com'];
-    const origin = req.headers.origin;
-
-    if (allowedOrigins.includes(origin)) {
-        res.header("Access-Control-Allow-Origin", origin);
-    }
-
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.header("Access-Control-Allow-Credentials", "true");
-
-    // Si la requête est une préflight, envoyer une réponse 200
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
-
-    next();
-});
-
-// Route racine pour vérifier le bon fonctionnement du serveur
-app.get('/', (req, res) => {
-    res.send('Why are you here man?');
-});
-
-// Import des routes utilisateurs
+// Import des routes
 const userRoutes = require('./routes/userRoutes');
 app.use('/api/users', userRoutes);
+
+// Route pour vérifier que le serveur est actif
+app.get('/', (req, res) => {
+    res.send('Server is running');
+});
 
 // Connexion à MongoDB
 mongoose.connect(process.env.MONGO_URI, {
@@ -64,7 +43,7 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => console.log('MongoDB connecté'))
 .catch(err => console.error(err));
 
-// Démarrage du serveur
+// Démarrer le serveur
 app.listen(PORT, () => {
     console.log(`Serveur démarré sur le port ${PORT}`);
 });

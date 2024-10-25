@@ -6,6 +6,7 @@ import { AuthProvider, AuthContext } from './context/AuthContext';
 import Register from './components/Register';
 import Login from './components/Login';
 import DrawerNavigator from './Layout';  // Import du DrawerNavigator
+import { DATABASE_URL } from '@env';
 
 const Stack = createStackNavigator();
 
@@ -23,6 +24,8 @@ export default function App() {
 
 const StackNavigator = () => {
     const { isLoggedIn } = useContext(AuthContext);  // Vérifier si l'utilisateur est connecté
+
+    console.log(DATABASE_URL)
 
     return (
         <Stack.Navigator>
