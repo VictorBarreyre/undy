@@ -1,10 +1,11 @@
 import React, { useState, useContext } from 'react';
-import { VStack, Box, Input, Button, Text, Pressable } from 'native-base';
+import { View, TextInput, Button, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import axios from 'axios';
-import { AuthContext } from '../context/AuthContext'; // Importer le contexte d'authentification
+import { AuthContext } from '../context/AuthContext';
+import { DATABASE_URL } from '@env'; // Importer la variable d'environnement
 
 export default function Login({ navigation }) {
-    const { login } = useContext(AuthContext); // Récupérer la fonction login depuis le contexte
+    const { login } = useContext(AuthContext);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
@@ -12,13 +13,13 @@ export default function Login({ navigation }) {
 
     const handleLogin = async () => {
         try {
-            const response = await axios.post('http://localhost:5000/api/users/login', {
+            const response = await axios.post(`${DATABASE_URL}/api/users/login`, {
                 email,
                 password
             });
 
             if (response.data.token) {
-                login(response.data.token); // Appelle login pour mettre à jour le contexte
+                login(response.data.token);
                 setMessage('Connexion réussie');
             } else {
                 setMessage('Erreur lors de la génération du token.');
@@ -29,39 +30,45 @@ export default function Login({ navigation }) {
     };
 
     return (
-        <Box flex={1} justifyContent="center" p={5} bg="white">
-            <VStack space={4} alignItems="center">
-                <Text fontSize="2xl" fontWeight="bold" color="primary.500">
-                    Connexion
-                </Text>
-                <Input
-                    placeholder="Email"
-                    value={email}
-                    onChangeText={setEmail}
-                    variant="outline"
-                    w="100%"
-                />
-                <Input
-                    placeholder="Mot de passe"
-                    value={password}
-                    secureTextEntry={!showPassword}
-                    onChangeText={setPassword}
-                    variant="outline"
-                    w="100%"
-                />
-                <Pressable onPress={() => setShowPassword(!showPassword)}>
-                    <Text color="blue.500">
-                        {showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                    </Text>
-                </Pressable>
-                <Button onPress={handleLogin} colorScheme="primary" w="100%">
-                    Se connecter
-                </Button>
-                {message ? <Text color="red.500">{message}</Text> : null}
-                <Text mt={3} color="blue.500" onPress={() => navigation.navigate('Register')}>
-                    Vous n'avez pas de compte ? Inscrivez-vous ici
-                </Text>
-            </VStack>
-        </Box>
+        <View style={styles.container}>
+            <Text>Connexion</Text>
+            <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+            />
+            <TextInput
+                style={styles.input}
+                placeholder="Mot de passe"
+                value={password}
+                secureTextEntry={!showPassword}
+                onChangeText={setPassword}
+            />
+            <TouchableOpacity
+                style={styles.showButton}
+                onPress={() => setShowPassword(!showPassword)}
+            >
+                <Text>{showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}</Text>
+            </TouchableOpacity>
+
+            <Button title="Se connecter" onPress={handleLogin} />
+            {message ? <Text>{message}</Text> : null}
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+        padding: 20,
+    },
+    input: {
+        height: 40,
+        borderColor: 'gray',
+        borderWidth: 1,
+        marginBottom: 10,
+        padding: 10,
+    },
+});
