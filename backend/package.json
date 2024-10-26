@@ -12,9 +12,11 @@
     "cors": "^2.8.5",
     "dotenv": "^8.6.0",
     "express": "^4.21.1",
+    "install": "^0.13.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.10.0",
-    "mongoose": "^8.7.3"
+    "mongoose": "^8.7.3",
+    "npm": "^10.9.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"
