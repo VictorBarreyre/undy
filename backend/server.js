@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 
 // Configuration CORS avec options dynamiques pour autoriser les requêtes depuis les origines spécifiées
-const allowedOrigins = ['http://localhost:8081', 'https://undy-93a12c731bb4.herokuapp.com'];
+const allowedOrigins = ['http://localhost:8081', 'https://undy-5948c5547ec9.herokuapp.com'];
 app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
