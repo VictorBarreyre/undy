@@ -1,4 +1,6 @@
 {
+  "name": "undy",
+  "version": "1.0.0",
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.0.0",
     "@react-navigation/native": "^6.1.18",
@@ -10,5 +12,12 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.7"
+  },
+  "scripts": {
+    "start": "cd backend && npm start",
+    "postinstall": "cd backend && npm install"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
