@@ -15,7 +15,7 @@
   },
   "scripts": {
     "start": "cd backend && npm start",
-    "postinstall": "cd backend && npm install"
+    "postinstall": "echo 'Installing backend dependencies' && cd backend && npm install"
   },
   "engines": {
     "node": "18.x"
