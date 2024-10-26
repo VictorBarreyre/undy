@@ -15,19 +15,19 @@ const PORT = process.env.PORT || 5000;
 // Middleware pour analyser les requêtes JSON
 app.use(express.json());
 
-// Configuration des options CORS
-const corsOptions = {
-    origin: [
-        'http://localhost:8081', 
-        'https://undy-5948c5547ec9.herokuapp.com'
-    ],
-    methods: 'GET,POST,PUT,DELETE,OPTIONS',
-    allowedHeaders: 'Origin, X-Requested-With, Content-Type, Accept, Authorization',
-    credentials: true
-};
+// Configuration CORS pour autoriser toutes les origines
+app.use(cors());
 
-// Appliquer CORS avec les options configurées
-app.use(cors(corsOptions));
+// Appliquer les en-têtes CORS manuellement pour les requêtes de prévalidation (OPTIONS)
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*"); // Autorise toutes les origines
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200); // Répondre immédiatement aux requêtes de prévalidation
+    }
+    next();
+});
 
 // Import des routes
 const userRoutes = require('./routes/userRoutes');
@@ -40,8 +40,6 @@ app.get('/', (req, res) => {
 
 // Connexion à MongoDB
 mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
 })
 .then(() => console.log('MongoDB connecté'))
 .catch(err => console.error('Erreur de connexion MongoDB:', err));
