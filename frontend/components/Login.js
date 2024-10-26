@@ -13,7 +13,7 @@ export default function Login({ navigation }) {
 
     const handleLogin = async () => {
         try {
-            const response = await axios.post(`${DATABASE_URL.trim()}/api/users/login`,{
+            const response = await axios.post(/api/users/login,{
                 email,
                 password
             });

@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -13,15 +14,7 @@ const PORT = process.env.PORT || 5000;
 // Middleware pour analyser les requêtes JSON
 app.use(express.json());
 
-// Middleware pour journaliser les requêtes
-app.use((req, res, next) => {
-    console.log(`Requête reçue : ${req.method} ${req.path}`);
-    console.log('Origine:', req.headers.origin);
-    console.log('En-têtes:', req.headers);
-    next();
-});
-
-// Configuration CORS pour autoriser toutes les origines
+// Configuration CORS pour autoriser toutes les origines en développement
 const corsOptions = {
     origin: '*', // Autorise toutes les origines
     methods: 'GET,POST,PUT,DELETE,OPTIONS',
@@ -31,6 +24,22 @@ const corsOptions = {
     optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
+
+// Proxy pour contourner les restrictions CORS en local
+// Remarque : uniquement pour le développement local
+app.use(
+    '/api',
+    createProxyMiddleware({
+        target: 'https://undy-93a12c731bb4.herokuapp.com', // Remplacez par l'URL de production
+        changeOrigin: true,
+    })
+);
+
+// Middleware pour journaliser les requêtes
+app.use((req, res, next) => {
+    console.log(`Requête reçue : ${req.method} ${req.path}`);
+    next();
+});
 
 // Import des routes
 const userRoutes = require('./routes/userRoutes');
@@ -43,7 +52,8 @@ app.get('/', (req, res) => {
 
 // Connexion à MongoDB
 mongoose.connect(process.env.MONGO_URI, {
-  
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 })
 .then(() => console.log('MongoDB connecté'))
 .catch(err => console.error('Erreur de connexion MongoDB:', err));
