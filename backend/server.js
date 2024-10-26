@@ -32,6 +32,7 @@ app.use((req, res, next) => {
     next();
 });
 
+
 // Import des routes
 const userRoutes = require('./routes/userRoutes');
 app.use('/api/users', userRoutes);
