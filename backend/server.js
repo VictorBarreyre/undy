@@ -1,5 +1,3 @@
-// server.js
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -15,19 +13,24 @@ const PORT = process.env.PORT || 5000;
 // Middleware pour analyser les requêtes JSON
 app.use(express.json());
 
-// Configuration CORS pour autoriser toutes les origines
-app.use(cors());
-
-// Appliquer les en-têtes CORS manuellement pour les requêtes de prévalidation (OPTIONS)
+// Middleware pour journaliser les requêtes
 app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*"); // Autorise toutes les origines
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200); // Répondre immédiatement aux requêtes de prévalidation
-    }
+    console.log(`Requête reçue : ${req.method} ${req.path}`);
+    console.log('Origine:', req.headers.origin);
+    console.log('En-têtes:', req.headers);
     next();
 });
+
+// Configuration CORS pour autoriser toutes les origines
+const corsOptions = {
+    origin: '*', // Autorise toutes les origines
+    methods: 'GET,POST,PUT,DELETE,OPTIONS',
+    allowedHeaders: 'Origin, X-Requested-With, Content-Type, Accept, Authorization',
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
 
 // Import des routes
 const userRoutes = require('./routes/userRoutes');
@@ -40,6 +43,7 @@ app.get('/', (req, res) => {
 
 // Connexion à MongoDB
 mongoose.connect(process.env.MONGO_URI, {
+  
 })
 .then(() => console.log('MongoDB connecté'))
 .catch(err => console.error('Erreur de connexion MongoDB:', err));
