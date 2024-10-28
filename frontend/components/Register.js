@@ -14,7 +14,7 @@ export default function Register({ navigation }) {
 
     const handleRegister = async () => {
         try {
-            const response = await axios.post(`/api/users/register`, {
+            const response = await axios.post(`${DATABASE_URL.replace(/\/+$/, '')}/api/users/register`, {
                 name,
                 email,
                 password
