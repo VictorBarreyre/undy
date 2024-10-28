@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 5000;
 // Middleware pour analyser les requêtes JSON
 app.use(express.json());
 
-// Configuration CORS pour autoriser toutes les origines en développement
+// Configuration CORS pour autoriser les origines en développement
 const corsOptions = {
     origin: '*', // Autorise toutes les origines
     methods: 'GET,POST,PUT,DELETE,OPTIONS',
@@ -25,15 +25,17 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Proxy pour contourner les restrictions CORS en local
-// Remarque : uniquement pour le développement local
-app.use(
-    '/api',
-    createProxyMiddleware({
-        target: 'https://undy-93a12c731bb4.herokuapp.com', // Remplacez par l'URL de production
-        changeOrigin: true,
-    })
-);
+// **Configuration du Proxy en développement**
+// Ce middleware redirige les requêtes locales vers l'API sur Heroku
+if (process.env.NODE_ENV === 'development') {
+    app.use(
+        '/api',
+        createProxyMiddleware({
+            target: 'https://undy-93a12c731bb4.herokuapp.com', // URL de production sur Heroku
+            changeOrigin: true,
+        })
+    );
+}
 
 // Middleware pour journaliser les requêtes
 app.use((req, res, next) => {
@@ -41,7 +43,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// Import des routes
+// Importer les routes
 const userRoutes = require('./routes/userRoutes');
 app.use('/api/users', userRoutes);
 
