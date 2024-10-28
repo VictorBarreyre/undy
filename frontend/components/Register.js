@@ -34,7 +34,7 @@ export default function Register({ navigation }) {
     return (
         <Box flex={1} justifyContent="center" p={5} bg="white">
             <VStack space={4} alignItems="center">
-                <Text fontSize="2xl" fontWeight="bold" color="primary.500">
+                <Text fontSize="2xl" fontWeight="bold" color="black">
                     Inscription
                 </Text>
                 <Input
@@ -64,7 +64,7 @@ export default function Register({ navigation }) {
                         {showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                     </Text>
                 </Pressable>
-                <Button onPress={handleRegister} colorScheme="primary" w="100%">
+                <Button onPress={handleRegister} backgroundColor="black" w="100%">
                     S'inscrire
                 </Button>
                 {message ? <Text color="red.500">{message}</Text> : null}

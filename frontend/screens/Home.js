@@ -8,10 +8,10 @@ export default function Home() {
     return (
         <Box flex={1} justifyContent="center" alignItems="center" p={5} bg="white">
             <VStack space={4} alignItems="center">
-                <Text fontSize="2xl" fontWeight="bold" color="primary.500">
+                <Text fontSize="2xl" fontWeight="bold" color="black">
                     Bienvenue à la maison !
                 </Text>
-                <Button onPress={logout} colorScheme="primary" w="100%">
+                <Button onPress={logout} colorScheme="red" w="100%">
                     Déconnexion
                 </Button>
             </VStack>
