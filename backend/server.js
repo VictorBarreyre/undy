@@ -31,7 +31,7 @@ if (process.env.NODE_ENV === 'development') {
     app.use(
         '/api',
         createProxyMiddleware({
-            target: 'https://undy-93a12c731bb4.herokuapp.com', // URL de production sur Heroku
+            target: 'https://undy-5948c5547ec9.herokuapp.com', // URL de production sur Heroku
             changeOrigin: true,
         })
     );

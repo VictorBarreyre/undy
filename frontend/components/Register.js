@@ -32,12 +32,44 @@ const Register = React.memo(function Register({ navigation }) {
 
     return (
         <Box flex={1} justifyContent="center" alignItems="center" p={5} bg="white">
-            <Image source={require('../assets/images/u.svg')} style={{ width: 50, height: 50, marginBottom: 10 }} />
+            <Image source={require('../assets/images/u.svg')} style={{ width: 50, height: 50, marginBottom: 10, resizeMode: 'contain' }} />
             <VStack space={4} alignItems="center" w="90%">
                 <Text fontSize="2xl" fontWeight="bold" color="black">Inscription</Text>
-                <Input placeholder="Nom" value={name} onChangeText={setName} variant="outline" w="100%" />
-                <Input placeholder="Email" value={email} onChangeText={setEmail} variant="outline" w="100%" />
-                <Input placeholder="Mot de passe" value={password} secureTextEntry={!showPassword} onChangeText={setPassword} variant="outline" w="100%" />
+                <Input
+                    placeholder="Nom"
+                    value={name}
+                    onChangeText={setName}
+                    variant="outline"
+                    w="100%"
+                    _focus={{
+                        borderColor: "blue.500", 
+                        backgroundColor: "gray.100" // (optionnel) Couleur d'arrière-plan en focus
+                        // Couleur de la bordure en focus
+                    }} />
+                <Input
+                    placeholder="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    variant="outline"
+                    w="100%"
+                    _focus={{
+                        borderColor: "blue.500",  
+                        backgroundColor: "gray.100" // (optionnel) Couleur d'arrière-plan en focus
+                        // Couleur de la bordure en focus
+                    }} />
+                <Input
+                    placeholder="Mot de passe"
+                    value={password}
+                    secureTextEntry={!showPassword}
+                    onChangeText={setPassword}
+                    variant="outline"
+                    w="100%"
+                    _focus={{
+                        borderColor: "blue.500",
+                        backgroundColor: "gray.100" // (optionnel) Couleur d'arrière-plan en focus
+                        // Couleur de la bordure en focus
+                    }}
+                />
                 <Pressable onPress={() => setShowPassword(!showPassword)}>
                     <Text color="blue.500">
                         {showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}

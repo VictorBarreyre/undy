@@ -24,7 +24,8 @@ const App = React.memo(function App() {
 
 const StackNavigator = React.memo(() => {
     const { isLoggedIn } = useContext(AuthContext);
-
+ 
+    console.log(DATABASE_URL)
     return (
         <Stack.Navigator>
             {isLoggedIn ? (

@@ -27,11 +27,12 @@ const Login = React.memo(function Login({ navigation }) {
         } catch (error) {
             setMessage('Erreur lors de la connexion');
         }
-    }, [email, password, login]); // Dépendances : email, password, login
+    }, [email, password, login]); // Dépendances : email, password, Login
+
 
     return (
         <Box flex={1} justifyContent="center" alignItems="center" p={5} bg="white">
-            <Image source={require('../assets/images/u.svg')} style={{ width: 50, height: 50, marginBottom: 10 }} />
+            <Image source={require('../assets/images/u.svg')} style={{ width: 50, height: 50, marginBottom: 10,resizeMode: 'contain' }} />
             <VStack space={4} alignItems="center" w="90%">
                 <Text fontSize="2xl" fontWeight="bold" color="black">
                     Connexion
@@ -42,6 +43,11 @@ const Login = React.memo(function Login({ navigation }) {
                     onChangeText={setEmail}
                     variant="outline"
                     w="100%"
+                    _focus={{
+                        borderColor: "blue.500", 
+                        backgroundColor: "gray.100" // (optionnel) Couleur d'arrière-plan en focus
+                        // Couleur de la bordure en focus
+                    }}
                 />
                 <Input
                     placeholder="Mot de passe"
@@ -50,6 +56,11 @@ const Login = React.memo(function Login({ navigation }) {
                     onChangeText={setPassword}
                     variant="outline"
                     w="100%"
+                    _focus={{
+                        borderColor: "blue.500",
+                        backgroundColor: "gray.100" // (optionnel) Couleur d'arrière-plan en focus
+                        // Couleur de la bordure en focus
+                    }}
                 />
                 <Pressable onPress={() => setShowPassword(!showPassword)}>
                     <Text color="blue.500">
