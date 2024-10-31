@@ -1,19 +1,19 @@
-import React, { useState, useContext } from 'react';
-import { VStack, Box, Input, Button, Text, Pressable, Link } from 'native-base';
+import React, { useState, useContext, useCallback } from 'react';
+import { VStack, Box, Input, Button, Text, Pressable, Link,Image } from 'native-base';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { DATABASE_URL } from '@env';
 
-export default function Login({ navigation }) {
+const Login = React.memo(function Login({ navigation }) {
     const { login } = useContext(AuthContext);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
-    const handleLogin = async () => {
+    const handleLogin = useCallback(async () => {
         try {
-            const response = await axios.post(`${DATABASE_URL}/api/users/login`,{
+            const response = await axios.post(`${DATABASE_URL}/api/users/login`, {
                 email,
                 password
             });
@@ -25,13 +25,14 @@ export default function Login({ navigation }) {
                 setMessage('Erreur lors de la génération du token.');
             }
         } catch (error) {
-            setMessage('Erreur lors de la Connexion');
+            setMessage('Erreur lors de la connexion');
         }
-    };
+    }, [email, password, login]); // Dépendances : email, password, login
 
     return (
-        <Box flex={1} justifyContent="center" p={5} bg="white">
-            <VStack space={4} alignItems="center">
+        <Box flex={1} justifyContent="center" alignItems="center" p={5} bg="white">
+            <Image source={require('../assets/images/u.svg')} style={{ width: 50, height: 50, marginBottom: 10 }} />
+            <VStack space={4} alignItems="center" w="90%">
                 <Text fontSize="2xl" fontWeight="bold" color="black">
                     Connexion
                 </Text>
@@ -65,4 +66,6 @@ export default function Login({ navigation }) {
             </VStack>
         </Box>
     );
-}
+});
+
+export default Login;
