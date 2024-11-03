@@ -1,4 +1,3 @@
-// models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -18,6 +17,15 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    birthdate: {
+        type: Date,
+        required: false, // Champ optionnel pour la date de naissance
+    },
+    phone: {
+        type: String,
+        required: false, // Champ optionnel pour le numéro de téléphone
+        trim: true,
+    }
 }, { timestamps: true });
 
 // Avant de sauvegarder, hacher le mot de passe
