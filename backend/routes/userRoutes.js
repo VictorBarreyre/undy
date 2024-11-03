@@ -1,6 +1,6 @@
 // routes/userRoutes.js
 const express = require('express');
-const { registerUser, loginUser, getUserProfile } = require('../controllers/userController');
+const { registerUser, loginUser,updateUserProfile, getUserProfile } = require('../controllers/userController');
 const protect = require('../middleware/authMiddleware'); // Importation du middleware
 
 const router = express.Router();
