@@ -102,3 +102,30 @@ exports.getUserProfile = async (req, res) => {
     }
 };
 
+exports.updateUserProfile = async (req, res) => {
+    try {
+        // Récupérer l'utilisateur connecté
+        const user = req.user;
+
+        // Mettre à jour les informations de profil
+        if (user) {
+            user.name = req.body.name || user.name;
+            user.email = req.body.email || user.email;
+
+            // Sauvegarder les modifications dans la base de données
+            const updatedUser = await user.save();
+
+            res.json({
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                token: generateToken(updatedUser._id), // Renouveler le token si besoin
+            });
+        } else {
+            res.status(404).json({ message: 'Utilisateur non trouvé' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Erreur lors de la mise à jour du profil' });
+    }
+};
+

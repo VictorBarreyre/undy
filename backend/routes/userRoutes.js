@@ -11,6 +11,9 @@ router.post('/register', registerUser);
 // Route pour la connexion
 router.post('/login', loginUser);
 
+// Route pour mettre à jour le profil de l'utilisateur
+router.put('/profile', protect, updateUserProfile);
+
 // Route protégée pour obtenir le profil de l'utilisateur connecté
 router.get('/profile', protect, getUserProfile); // Utilisation du middleware "protect"
 

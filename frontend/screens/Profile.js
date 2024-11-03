@@ -3,6 +3,8 @@ import { VStack, Box, Text, Button, Pressable, Modal, Input, HStack, Spinner } f
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { FontAwesome } from '@expo/vector-icons';
+import { DATABASE_URL } from '@env';
+
 
 export default function Profile({ navigation }) {
     const { userToken, logout } = useContext(AuthContext);
@@ -34,7 +36,7 @@ export default function Profile({ navigation }) {
     const handleUpdateProfile = async () => {
         try {
             const response = await axios.put(
-                `${LOCAL_DATABASE_URL}/api/users/profile`,
+                `${DATABASE_URL}/api/users/profile`,
                 { name, email },
                 { headers: { Authorization: `Bearer ${userToken}` } }
             );
@@ -72,7 +74,6 @@ export default function Profile({ navigation }) {
                     Mon Profil
                 </Text>
 
-                {/* Liste des informations du profil avec icône flèche */}
                 <Pressable onPress={() => openEditModal('name', name)}>
                     <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
                         <Box>
@@ -100,7 +101,6 @@ export default function Profile({ navigation }) {
                 {message ? <Text color="red.500" textAlign="center" mt={2}>{message}</Text> : null}
             </VStack>
 
-            {/* Modal pour éditer l'information sélectionnée */}
             <Modal isOpen={modalVisible} onClose={() => setModalVisible(false)}>
                 <Modal.Content maxWidth="400px">
                     <Modal.CloseButton />
