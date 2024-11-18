@@ -2,7 +2,7 @@ import React, { useState, useContext, useCallback } from 'react';
 import { VStack, Box, Input, Button, Text, Pressable, Link,Image } from 'native-base';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import { DATABASE_URL } from '@env';
+import API_URL from '../config';
 
 const Login = React.memo(function Login({ navigation }) {
     const { login } = useContext(AuthContext);
@@ -13,11 +13,11 @@ const Login = React.memo(function Login({ navigation }) {
 
     const handleLogin = useCallback(async () => {
         try {
-            const response = await axios.post(`${DATABASE_URL}/api/users/login`, {
+            const response = await axios.post(`${API_URL}/api/users/login`, {
                 email,
                 password
             });
-
+    
             if (response.data.token) {
                 login(response.data.token);
                 setMessage('Connexion réussie');
@@ -25,9 +25,10 @@ const Login = React.memo(function Login({ navigation }) {
                 setMessage('Erreur lors de la génération du token.');
             }
         } catch (error) {
+            console.error('Erreur Axios:', error.response || error.message);
             setMessage('Erreur lors de la connexion');
         }
-    }, [email, password, login]); // Dépendances : email, password, Login
+    }, [email, password, login]);
 
 
     return (
