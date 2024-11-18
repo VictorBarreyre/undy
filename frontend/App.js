@@ -1,4 +1,5 @@
 import React, { useContext, useCallback } from 'react';
+import 'react-native-gesture-handler';
 import { NativeBaseProvider } from 'native-base';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';

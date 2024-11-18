@@ -1,7 +1,8 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faUser, faHome } from '@fortawesome/free-solid-svg-icons';
 import Home from './screens/Home';
 import Profile from './screens/Profile';
 
@@ -13,16 +14,17 @@ function TabNavigator() {
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 tabBarIcon: ({ color, size }) => {
-                    let iconName;
+                    let icon;
 
                     if (route.name === 'Home') {
-                        iconName = 'home';
+                        icon = faHome; // Icône pour la page "Home"
                     } else if (route.name === 'Profile') {
-                        iconName = 'user';
+                        icon = faUser; // Icône pour la page "Profile"
                     }
 
-                    return <FontAwesome name={iconName} size={size} color={color} />;
+                    return <FontAwesomeIcon icon={icon} size={size} color={color} />;
                 },
+                tabBarShowLabel: false, // Supprime le nom des onglets
                 tabBarActiveTintColor: 'black', // Couleur des icônes actives
                 tabBarInactiveTintColor: 'gray', // Couleur des icônes inactives
                 tabBarStyle: {

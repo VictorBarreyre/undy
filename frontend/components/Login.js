@@ -32,9 +32,9 @@ const Login = React.memo(function Login({ navigation }) {
 
     return (
         <Box flex={1} justifyContent="center" alignItems="center" p={5} bg="white">
-            <Image source={require('../assets/images/u.svg')} style={{ width: 50, height: 50, marginBottom: 10,resizeMode: 'contain' }} />
+            <Image source={require('../assets/images/u1.png')} alt="Logo de l'application" style={{ width: 50, height: 50, marginBottom: 10,resizeMode: 'contain' }} />
             <VStack space={4} alignItems="center" w="90%">
-                <Text fontSize="2xl" fontWeight="bold" color="black">
+                <Text fontSize="2xl" fontWeight="bold" color="black" marginBottom="3">
                     Connexion
                 </Text>
                 <Input
