@@ -2,7 +2,7 @@ import React, { useState, useContext, useCallback } from 'react';
 import { VStack, Box, Input, Button, Text, Link, Pressable, Image } from 'native-base';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import { DATABASE_URL } from '@env';
+import API_URL from '../config';
 
 const Register = React.memo(function Register({ navigation }) {
     const { login } = useContext(AuthContext);
@@ -14,11 +14,13 @@ const Register = React.memo(function Register({ navigation }) {
 
     const handleRegister = useCallback(async () => {
         try {
-            const response = await axios.post(`${DATABASE_URL}/api/users/register`, {
+            // Envoyer les données avec l'email normalisé
+            const response = await axios.post(`${API_URL}/api/users/register`, {
                 name,
-                email,
+                email: email.trim().toLowerCase(), // Normalisation de l'email
                 password
             });
+    
             if (response.data.token) {
                 login(response.data.token);
                 setMessage('Inscription réussie, connexion en cours...');
@@ -26,9 +28,11 @@ const Register = React.memo(function Register({ navigation }) {
                 setMessage('Erreur lors de la génération du token.');
             }
         } catch (error) {
-            setMessage("Erreur lors de l'inscription");
+            console.error('Erreur Axios:', error.response || error.message);
+            setMessage(error.response?.data?.message || "Erreur lors de l'inscription");
         }
     }, [name, email, password, login]);
+    
 
     return (
         <Box flex={1} justifyContent="center" alignItems="center" p={5} bg="white">

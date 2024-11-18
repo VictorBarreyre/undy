@@ -11,7 +11,11 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
-        trim: true,
+        lowercase: true, // Force les emails en minuscules
+        match: [
+            /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+            'Veuillez entrer un email valide',
+        ],
     },
     password: {
         type: String,

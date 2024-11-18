@@ -10,9 +10,8 @@ const generateToken = (id) => {
     });
 };
 
-// Inscription d'un utilisateur
 exports.registerUser = async (req, res) => {
-    const { name, email, password } = req.body;
+    let { name, email, password } = req.body;
 
     console.log(req.body); // Ajout du log pour vérifier les données
 
@@ -21,6 +20,9 @@ exports.registerUser = async (req, res) => {
     }
 
     try {
+        // Normaliser l'email en minuscules
+        email = email.trim().toLowerCase();
+
         // Vérifier si l'utilisateur existe déjà
         const userExists = await User.findOne({ email });
         if (userExists) {
@@ -41,14 +43,16 @@ exports.registerUser = async (req, res) => {
             token: generateToken(user._id),
         });
     } catch (error) {
+        console.error('Erreur lors de l\'inscription :', error);
         res.status(500).json({ message: 'Erreur lors de l\'inscription' });
     }
 };
 
 
 
+
 exports.loginUser = async (req, res) => {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
 
     console.log('Données reçues :', req.body); // Vérifier les données reçues
 
@@ -57,6 +61,9 @@ exports.loginUser = async (req, res) => {
     }
 
     try {
+        // Normaliser l'email en minuscules
+        email = email.trim().toLowerCase();
+
         // Vérifier si l'utilisateur existe
         const user = await User.findOne({ email });
 
@@ -110,7 +117,7 @@ exports.updateUserProfile = async (req, res) => {
         // Mettre à jour les informations de profil
         if (user) {
             user.name = req.body.name || user.name;
-            user.email = req.body.email || user.email;
+            user.email = req.body.email ? req.body.email.trim().toLowerCase() : user.email;
 
             // Sauvegarder les modifications dans la base de données
             const updatedUser = await user.save();
@@ -128,4 +135,5 @@ exports.updateUserProfile = async (req, res) => {
         res.status(500).json({ message: 'Erreur lors de la mise à jour du profil' });
     }
 };
+
 

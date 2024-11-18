@@ -14,7 +14,7 @@ const Login = React.memo(function Login({ navigation }) {
     const handleLogin = useCallback(async () => {
         try {
             const response = await axios.post(`${API_URL}/api/users/login`, {
-                email,
+                email: email.trim().toLowerCase(), // Supprime les espaces et met en minuscules
                 password
             });
     
@@ -26,7 +26,9 @@ const Login = React.memo(function Login({ navigation }) {
             }
         } catch (error) {
             console.error('Erreur Axios:', error.response || error.message);
-            setMessage('Erreur lors de la connexion');
+            setMessage(
+                error.response?.data?.message || 'Erreur lors de la connexion'
+            );
         }
     }, [email, password, login]);
 
