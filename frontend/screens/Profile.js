@@ -5,7 +5,6 @@ import { TouchableOpacity } from 'react-native';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { FontAwesome } from '@expo/vector-icons';
-import { DATABASE_URL } from '@env';
 
 export default function Profile({ navigation }) {
     const { userToken, logout } = useContext(AuthContext);

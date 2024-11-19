@@ -7,7 +7,7 @@ import { AuthProvider, AuthContext } from './context/AuthContext';
 import Register from './components/Register';
 import Login from './components/Login';
 import DrawerNavigator from './Layout'; // Import du DrawerNavigator
-import { DATABASE_URL } from '@env';
+
 
 const Stack = createStackNavigator();
 
@@ -26,7 +26,6 @@ const App = React.memo(function App() {
 const StackNavigator = React.memo(() => {
     const { isLoggedIn } = useContext(AuthContext);
  
-    console.log(DATABASE_URL)
     return (
         <Stack.Navigator>
             {isLoggedIn ? (
