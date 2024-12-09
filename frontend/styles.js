@@ -1,0 +1,65 @@
+// styles.js
+import { StyleSheet } from 'react-native';
+
+export const styles = StyleSheet.create({
+  h1: {
+    fontSize: 36,
+    lineHeight: 46,
+    fontWeight: '700',
+    fontFamily: 'SF-Pro-Display-Bold',
+  },
+  h2: {
+    fontSize: 28,
+    lineHeight: 36,
+    fontWeight: '700',
+    fontFamily: 'SF-Pro-Display-Bold',
+  },
+  h3: {
+    fontSize: 24,
+    lineHeight:30,
+    fontWeight: '600',
+    fontFamily: 'SF-Pro-Display-Semibold',
+  },
+  h4: {
+    fontSize: 20,
+    lineHeight:28,
+    fontWeight: '600',
+    fontFamily: 'SF-Pro-Display-Semibold',
+  },
+  h5: {
+    fontSize: 16,
+    lineHeight: 18,
+    fontWeight: '600',
+    fontFamily: 'SF-Pro-Display-Semibold',
+  },
+  body: {
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '400',
+    fontFamily: 'SF-Pro-Display-Regular',
+  },
+  cta: {
+    fontSize: 16,
+    lineHeight: 28,
+    fontWeight: '700',
+    fontFamily: 'SF-Pro-Display-Bold',
+  },
+  subtitle: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '400',
+    fontFamily: 'SF-Pro-Display-Regular',
+  },
+  caption: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '500',
+    fontFamily: 'SF-Pro-Display-Medium',
+  },
+  littleCaption: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '500',
+    fontFamily: 'SF-Pro-Display-Medium',
+  },
+});

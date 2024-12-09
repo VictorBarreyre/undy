@@ -1,4 +1,3 @@
-// themes.js
 import { extendTheme } from 'native-base';
 
 // Thème clair
@@ -16,29 +15,58 @@ const lightTheme = extendTheme({
             800: "#14518a",
             900: "#104176",
         },
-        background: "#ffffff",
-        text: "#000000",
+        background: "#EFEFEF",
+       
     },
-});
+    
 
-// Thème sombre
-const darkTheme = extendTheme({
-    colors: {
-        primary: {
-            50: "#1a1a1b",
-            100: "#252526",
-            200: "#3b3b3c",
-            300: "#484849",
-            400: "#5a5a5c",
-            500: "#6a6a6c", // Couleur principale sombre
-            600: "#7d7d7e",
-            700: "#a4a4a5",
-            800: "#c1c1c2",
-            900: "#e2e2e3",
+    components: {        
+        Input: {
+            baseStyle: {
+                paddingTop: 4,
+                paddingBottom: 4,
+                paddingLeft: 6,
+                paddingRight: 8,
+                w:'100%',
+                borderRadius: 30,
+                borderColor:'transparent',
+                backgroundColor:'white',
+                _focus: {
+                    borderColor: "#F97794",
+                    backgroundColor:'white',
+                },
+                _placeholder: {
+                    color: "#94A3B8", // Ici, vous pouvez mettre la couleur que vous souhaitez
+                    fontSize: '14px', // Vous pouvez aussi changer la taille du texte du placeholder
+                },
+            },
+            defaultProps: {
+                placeholderTextColor: "#94A3B8",
+                variant: 'primary',
+                fontSize: '14px',
+            },
         },
-        background: "#121212",
-        text: "#ffffff",
+
+      
+        Button: {
+            baseStyle: {
+                paddingTop: 4,
+                paddingBottom: 4,
+                paddingLeft: 6,
+                paddingRight: 8,
+                borderRadius: 30,
+                backgroundColor:'black',
+                _text: {
+                    color: 'white',
+                    fontWeight: 'bold',
+                },
+            },
+            defaultProps: {
+                variant: 'primary',
+            },
+        },
     },
 });
 
-export { lightTheme, darkTheme };
+
+export { lightTheme };
