@@ -50,6 +50,15 @@ export const styles = StyleSheet.create({
     fontWeight: '400',
     fontFamily: 'SF-Pro-Display-Regular',
   },
+
+  subtitleLink: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '400',
+    fontFamily: 'SF-Pro-Display-Regular',
+    textDecoration:'underline'
+  },
+
   caption: {
     fontSize: 14,
     lineHeight: 18,
