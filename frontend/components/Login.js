@@ -90,7 +90,11 @@ const Login = React.memo(function Login({ navigation }) {
               />
 
 
-              <Link _text={{ color: "#F97794" }}>Mot de passe oublié ? </Link>
+              <Link _text={{ color: "#F97794" }}>
+              <DynamicGradientText fontSize={16} fontFamily="SF-Pro-Display-Regular" fontWeight="400">
+              Mot de passe oublié ? 
+              </DynamicGradientText>
+              </Link>
       
               <Button style={styles.cta} onPress={handleLogin} backgroundColor="black" w="100%">
                 Se connecter

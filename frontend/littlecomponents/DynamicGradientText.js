@@ -29,7 +29,7 @@ export function DynamicGradientText({ children, fontSize = 16, fontWeight = '400
         // Étape 2 : maintenant qu'on a la largeur, on rend GradientText
         // On ajoute une marge pour être sûr que le texte ne touche pas le bord
         <GradientText
-          width={textWidth + 20}
+          width={textWidth}
           height={fontSize * 3} // Ajustez la hauteur selon votre besoin
           fontSize={fontSize}
           fontWeight={fontWeight}
