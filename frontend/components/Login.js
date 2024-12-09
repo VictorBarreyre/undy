@@ -89,8 +89,7 @@ const Login = React.memo(function Login({ navigation }) {
                 }
               />
 
-
-              <Link _text={{ color: "#F97794" }}>
+              <Link _text={{ color: "#F97794" }} pb={0}>
               <DynamicGradientText fontSize={16} fontFamily="SF-Pro-Display-Regular" fontWeight="400">
               Mot de passe oublié ? 
               </DynamicGradientText>
@@ -110,7 +109,7 @@ const Login = React.memo(function Login({ navigation }) {
                 </HStack>
 
                 {/* Boutons de connexion avec services tiers */}
-                <VStack space={4} w="90%">
+                <VStack mt={5} space={4} w="90%">
                     <Button
                         w="100%"
                         bg="white"

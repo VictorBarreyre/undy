@@ -83,7 +83,7 @@ const Register = React.memo(function Register({ navigation }) {
                 </HStack>
 
                 {/* Boutons de connexion avec services tiers */}
-                <VStack space={4} w="90%">
+                <VStack mt={5} space={4} w="90%">
                     <Button
                         w="100%"
                         bg="white"
