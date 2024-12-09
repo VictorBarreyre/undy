@@ -102,10 +102,10 @@ const Login = React.memo(function Login({ navigation }) {
               {message ? <Text color="red.500">{message}</Text> : null}
             </VStack>
          {/* Ligne "Ou avec" */}
-         <HStack alignItems="center" space={2} mt={8} mb={4}>
-                    <Box flex={1} height="1px" bg="gray.300" />
-                    <Text style={styles.caption} color="gray.500">Ou avec</Text>
-                    <Box flex={1} height="1px" bg="gray.300" />
+         <HStack alignItems="center" w="85%" space={2} mt={8} mb={4}>
+                    <Box flex={1} height="1px" bg="#94A3B8" />
+                    <Text style={styles.caption} color="#94A3B8">Ou avec</Text>
+                    <Box flex={1} height="1px" bg="#94A3B8" />
                 </HStack>
 
                 {/* Boutons de connexion avec services tiers */}
