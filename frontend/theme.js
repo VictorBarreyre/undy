@@ -23,8 +23,8 @@ const lightTheme = extendTheme({
     components: {        
         Input: {
             baseStyle: {
-                paddingTop: 4,
-                paddingBottom: 4,
+                paddingTop: 3,
+                paddingBottom: 3,
                 paddingLeft: 6,
                 paddingRight: 8,
                 w:'100%',
@@ -50,8 +50,8 @@ const lightTheme = extendTheme({
       
         Button: {
             baseStyle: {
-                paddingTop: 4,
-                paddingBottom: 4,
+                paddingTop: 3,
+                paddingBottom: 3,
                 paddingLeft: 6,
                 paddingRight: 8,
                 borderRadius: 30,
