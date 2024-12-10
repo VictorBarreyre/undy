@@ -10,6 +10,7 @@ import { DynamicGradientText } from '../littlecomponents/DynamicGradientText';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faGoogle, faFacebookF, faApple } from '@fortawesome/free-brands-svg-icons';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import LogoSvg from '../littlecomponents/Undy';
 
 const Register = React.memo(function Register({ navigation }) {
     const { login } = useContext(AuthContext);
@@ -77,15 +78,8 @@ const Register = React.memo(function Register({ navigation }) {
             <ScrollView flex={1} pt={20} pb={20} p={4}>
                 <Box flex={1} justifyContent="space-between" py={10}>
                     <Box justifyContent="center" alignItems="center">
-                        <Image
-                            source={require('../assets/images/u1.png')}
-                            alt="Logo de l'application"
-                            style={{ width: 50, height: 50, marginBottom: 1, resizeMode: 'contain' }}
-                        />
                         <VStack space={4} alignItems="center" w="90%">
-                            <Text style={styles.h2} marginBottom="3">
-                                Inscription
-                            </Text>
+                        <LogoSvg />
                             <Input style={styles.caption} placeholder="Nom" value={name} onChangeText={setName} />
                             <Input style={styles.caption} placeholder="Email" value={email} onChangeText={setEmail} />
                             <Input

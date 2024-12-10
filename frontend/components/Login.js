@@ -11,6 +11,7 @@ import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faFacebookF, faApple } from '@fortawesome/free-brands-svg-icons';
 import { styles } from '../styles';
 import { BlurView } from '@react-native-community/blur';
+import LogoSvg from '../littlecomponents/Undy';
 
 
 
@@ -83,14 +84,9 @@ const Login = React.memo(function Login({ navigation }) {
       <ScrollView cflex={1} pt={20} pb={20} p={4}>
       <Box flex={1}  justifyContent="space-between" py={10}>
         <Box alignItems="center" justifyContent="center" >
-          <Image
-            source={require('../assets/images/u1.png')}
-            alt="Logo de l'application"
-            style={{ width: 50, height: 50, marginBottom: 1, resizeMode: 'contain' }}
-          />
+        
           <VStack space={4} alignItems="center" w="90%">
-            <Text style={customStyles.h2} marginBottom="3">Connexion</Text>
-
+          <LogoSvg />
             <Input
               style={customStyles.caption}
               placeholder="Email"
