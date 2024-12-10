@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native';
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
+    
 },
 backgroundImage: {
     position: 'absolute',
@@ -21,7 +22,7 @@ overlay: {
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.6)', // White with reduced opacity
+    backgroundColor: 'rgba(255, 255, 255, 0.8)', // White with reduced opacity
     zIndex: -1, // Between background and content
     backdropFilter: 'blur(50px)',
 },
@@ -51,8 +52,8 @@ content: {
     fontFamily: 'SF-Pro-Display-Semibold',
   },
   h4: {
-    fontSize: 20,
-    lineHeight:28,
+    fontSize: 18,
+    lineHeight:20,
     fontWeight: '600',
     fontFamily: 'SF-Pro-Display-Semibold',
   },

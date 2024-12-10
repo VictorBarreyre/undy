@@ -1,15 +1,14 @@
 import React, { useState, useContext, useCallback, useRef, useEffect } from 'react';
-import { VStack, Box, Input, Button, Text, Pressable, Link, Image, HStack, ScrollView } from 'native-base';
-import { Animated, StyleSheet, View } from 'react-native';
+import { VStack, Box, Button, Text, Link, ScrollView, HStack } from 'native-base';
+import { Animated, View } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import API_URL from '../config';
 import { styles } from '../styles';
-import { DynamicGradientText } from '../littlecomponents/DynamicGradientText';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faGoogle, faFacebookF, faApple } from '@fortawesome/free-brands-svg-icons';
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faGoogle, faApple } from '@fortawesome/free-brands-svg-icons';
+import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
 import LogoSvg from '../littlecomponents/Undy';
 
 const Register = React.memo(function Register({ navigation }) {
@@ -18,7 +17,6 @@ const Register = React.memo(function Register({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
 
     // Animation setup
     const rotateValue = useRef(new Animated.Value(0)).current;
@@ -27,7 +25,7 @@ const Register = React.memo(function Register({ navigation }) {
         Animated.loop(
             Animated.timing(rotateValue, {
                 toValue: 1,
-                duration: 10000, // 10 seconds for a full rotation
+                duration: 10000, // 10 seconds for full rotation
                 useNativeDriver: true,
             })
         ).start();
@@ -62,99 +60,104 @@ const Register = React.memo(function Register({ navigation }) {
         <View style={styles.container}>
             {/* Background rotating animation */}
             <Animated.Image
-                source={require('../assets/images/background.png')} // Remplacez par le chemin de votre image
+                source={require('../assets/images/background.png')}
                 style={[styles.backgroundImage, { transform: [{ rotate: rotateAnimation }] }]}
             />
 
             {/* Overlay with blur effect */}
             <BlurView
                 style={styles.overlay}
-                blurType="light" // Types : "light", "dark", "extraLight"
-                blurAmount={100} // Intensité du flou
-                reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.6)" // Couleur fallback si le blur n'est pas supporté
+                blurType="light"
+                blurAmount={100}
+                reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.6)"
             />
 
-            {/* Registration Content */}
-            <ScrollView flex={1} pt={20} pb={20} p={4}>
-                <Box flex={1} justifyContent="space-between" py={10}>
-                    <Box justifyContent="center" alignItems="center">
-                        <VStack space={4} alignItems="center" w="90%">
-                        <LogoSvg />
-                            <Input style={styles.caption} placeholder="Nom" value={name} onChangeText={setName} />
-                            <Input style={styles.caption} placeholder="Email" value={email} onChangeText={setEmail} />
-                            <Input
-                                style={styles.caption}
-                                placeholder="Mot de passe"
-                                value={password}
-                                secureTextEntry={!showPassword}
-                                onChangeText={setPassword}
-                                InputRightElement={
-                                    <Pressable onPress={() => setShowPassword(!showPassword)} mr={4}>
-                                        <FontAwesomeIcon
-                                            icon={showPassword ? faEyeSlash : faEye}
-                                            size={16}
-                                            color="#94A3B8"
-                                        />
-                                    </Pressable>
-                                }
-                            />
+            {/* Content with spacing between top and bottom sections */}
+            <ScrollView
+                contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between' }}
+                p={4}
+            >
+                {/* Section du haut : Logo */}
+                <Box alignItems="center" mt={10}>
+                    <LogoSvg />
+                </Box>
 
-                            <Button style={styles.cta} onPress={handleRegister} w="100%">
-                                S'inscrire
-                            </Button>
-                            {message ? <Text color="red.500">{message}</Text> : null}
-                        </VStack>
+                {/* Section du bas : Texte + Boutons + Lien */}
+                <Box alignItems="center" mb={1}>
+                    <Text
+                        style={styles.h4}
+                        mt={10}
+                        textAlign="center"
+                    >
+                        Créez un compte ou{'\n'}connectez-vous
+                    </Text>
 
-                        {/* Ligne "Ou avec" */}
-                        <HStack alignItems="center" w="85%" space={2} mt={8} mb={4}>
-                            <Box flex={1} height="1px" bg="#94A3B8" />
-                            <Text style={styles.caption} color="#94A3B8">Ou avec</Text>
-                            <Box flex={1} height="1px" bg="#94A3B8" />
-                        </HStack>
-
-                        {/* Boutons de connexion avec services tiers */}
-                        <VStack mt={5} space={4} w="90%">
-                            <Button
-                                w="100%"
-                                bg="white"
-                                borderWidth={1}
-                                borderColor="gray.300"
-                                leftIcon={<FontAwesomeIcon icon={faGoogle} size={16} color="#000" />}
-                                _text={{ color: 'black', fontFamily: 'SF-Pro-Display-Bold' }}
-                            >
-                                Continue with Google
-                            </Button>
-
-                            <Button
-                                w="100%"
-                                bg="#1877F2"
-                                leftIcon={<FontAwesomeIcon icon={faFacebookF} size={16} color="#fff" />}
-                                _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
-                            >
-                                Continue with Facebook
-                            </Button>
-
-                            <Button
-                                w="100%"
-                                bg="black"
-                                leftIcon={<FontAwesomeIcon icon={faApple} size={16} color="#fff" />}
-                                _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
-                            >
-                                Continue with Apple
-                            </Button>
-                        </VStack>
-                    </Box>
-
-                    <Box alignItems="center" mt={10} mb={10}>
-                        <Link
-                            onPress={() => navigation.navigate('Login')}
-                            _text={{ color: 'primary.500' }}
+                    <VStack mt={4} space={2} w="90%">
+                        {/* Bouton Apple */}
+                        <Button
+                            w="100%"
+                            bg="black"
+                            _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
+                            justifyContent="center"
                         >
-                            <DynamicGradientText fontSize={16} fontFamily="SF-Pro-Display-Regular" fontWeight="400">
-                                Déjà un compte ? Connectez-vous ici
-                            </DynamicGradientText>
-                        </Link>
-                    </Box>
+                            <HStack space={2} alignItems="center" justifyContent="center">
+                                <FontAwesomeIcon icon={faApple} size={16} color="#fff" />
+                                <Text color="white" fontFamily="SF-Pro-Display-Bold">
+                                    Continue with Apple
+                                </Text>
+                            </HStack>
+                        </Button>
+
+                        {/* Bouton Google */}
+                        <Button
+                            w="100%"
+                            bg="white"
+                          
+                            _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
+                            justifyContent="center"
+                        >
+                            <HStack space={2} alignItems="center" justifyContent="center">
+                                <FontAwesomeIcon icon={faGoogle} size={16} color="#000" />
+                                <Text color="black" fontFamily="SF-Pro-Display-Bold">
+                                    Continue with Google
+                                </Text>
+                            </HStack>
+                        </Button>
+
+                        {/* Bouton Email (remplace Facebook) */}
+                        <Button
+                            w="100%"
+                            bg="black"
+                            _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
+                            justifyContent="center"
+                            onPress={() => navigation.navigate('Login')} // Navigation vers Login
+                        >
+                            <HStack space={2} alignItems="center" justifyContent="center">
+                                <FontAwesomeIcon icon={faEnvelope} size={16} color="#fff" />
+                                <Text color="white" fontFamily="SF-Pro-Display-Bold">
+                                    Continue avec l'adresse mail
+                                </Text>
+                            </HStack>
+                        </Button>
+                    </VStack>
+
+                    <Link
+                        px={10}
+                        mt={4}
+                        style={styles.littleCaption}
+                        onPress={() => navigation.navigate('Login')}
+                        _text={{
+                            color: 'black',
+                            fontFamily: 'SF-Pro-Display-Regular',
+                            fontSize: '12',
+                            textAlign: 'center',
+                            lineHeight: '16',
+                            textDecoration: 'none'
+                        }}
+                    >
+                        En vous inscrivant vous acceptez nos Conditions d’utilisation et
+                        Politiques de confidentialité
+                    </Link>
                 </Box>
             </ScrollView>
         </View>
