@@ -1,5 +1,7 @@
-import React, { useState, useContext, useCallback } from 'react';
+import React, { useState, useContext, useCallback, useRef, useEffect } from 'react';
 import { VStack, Box, Input, Button, Text, Pressable, Link, Image, HStack, ScrollView } from 'native-base';
+import { Animated, StyleSheet, View } from 'react-native';
+import { BlurView } from '@react-native-community/blur';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import API_URL from '../config';
@@ -7,7 +9,7 @@ import { styles } from '../styles';
 import { DynamicGradientText } from '../littlecomponents/DynamicGradientText';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faGoogle, faFacebookF, faApple } from '@fortawesome/free-brands-svg-icons';
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'; // si vous en avez besoin pour l'œil
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 
 const Register = React.memo(function Register({ navigation }) {
     const { login } = useContext(AuthContext);
@@ -16,6 +18,24 @@ const Register = React.memo(function Register({ navigation }) {
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+
+    // Animation setup
+    const rotateValue = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.timing(rotateValue, {
+                toValue: 1,
+                duration: 10000, // 10 seconds for a full rotation
+                useNativeDriver: true,
+            })
+        ).start();
+    }, []);
+
+    const rotateAnimation = rotateValue.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg'],
+    });
 
     const handleRegister = useCallback(async () => {
         try {
@@ -38,95 +58,112 @@ const Register = React.memo(function Register({ navigation }) {
     }, [name, email, password, login]);
 
     return (
-        <ScrollView flex={1} bg="#EFEFEF"  pt={20} pb={20} p={4}>
-       <Box flex={1} bg="#EFEFEF" justifyContent="space-between" py={10}>
-       <Box flex={1} justifyContent="center" alignItems="center">
-                <Image
-                    source={require('../assets/images/u1.png')}
-                    alt="Logo de l'application"
-                    style={{ width: 50, height: 50, marginBottom: 1, resizeMode: 'contain' }}
-                />
-                <VStack space={4} alignItems="center" w="90%">
-                    <Text style={styles.h2} marginBottom="3">
-                        Inscription
-                    </Text>
-                    <Input style={styles.caption} placeholder="Nom" value={name} onChangeText={setName} />
-                    <Input style={styles.caption} placeholder="Email" value={email} onChangeText={setEmail} />
-                    <Input
-                        style={styles.caption}
-                        placeholder="Mot de passe"
-                        value={password}
-                        secureTextEntry={!showPassword}
-                        onChangeText={setPassword}
-                        InputRightElement={
-                            <Pressable onPress={() => setShowPassword(!showPassword)} mr={4}>
-                                <FontAwesomeIcon
-                                    icon={showPassword ? faEyeSlash : faEye}
-                                    size={16}
-                                   color="#94A3B8"
-                                />
-                            </Pressable>
-                        }
-                    />
+        <View style={styles.container}>
+            {/* Background rotating animation */}
+            <Animated.Image
+                source={require('../assets/images/background.png')} // Remplacez par le chemin de votre image
+                style={[styles.backgroundImage, { transform: [{ rotate: rotateAnimation }] }]}
+            />
 
-                    <Button style={styles.cta} onPress={handleRegister} w="100%">
-                        S'inscrire
-                    </Button>
-                    {message ? <Text color="red.500">{message}</Text> : null}
-                </VStack>
+            {/* Overlay with blur effect */}
+            <BlurView
+                style={styles.overlay}
+                blurType="light" // Types : "light", "dark", "extraLight"
+                blurAmount={10} // Intensité du flou
+                reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.6)" // Couleur fallback si le blur n'est pas supporté
+            />
 
-                {/* Ligne "Ou avec" */}
-                <HStack alignItems="center"  w="85%" space={2} mt={8} mb={4}>
-                    <Box flex={1} height="1px" bg="#94A3B8" />
-                    <Text style={styles.caption} color="#94A3B8">Ou avec</Text>
-                    <Box flex={1} height="1px" bg="#94A3B8" />
-                </HStack>
+            {/* Registration Content */}
+            <ScrollView flex={1} pt={20} pb={20} p={4}>
+                <Box flex={1} justifyContent="space-between" py={10}>
+                    <Box justifyContent="center" alignItems="center">
+                        <Image
+                            source={require('../assets/images/u1.png')}
+                            alt="Logo de l'application"
+                            style={{ width: 50, height: 50, marginBottom: 1, resizeMode: 'contain' }}
+                        />
+                        <VStack space={4} alignItems="center" w="90%">
+                            <Text style={styles.h2} marginBottom="3">
+                                Inscription
+                            </Text>
+                            <Input style={styles.caption} placeholder="Nom" value={name} onChangeText={setName} />
+                            <Input style={styles.caption} placeholder="Email" value={email} onChangeText={setEmail} />
+                            <Input
+                                style={styles.caption}
+                                placeholder="Mot de passe"
+                                value={password}
+                                secureTextEntry={!showPassword}
+                                onChangeText={setPassword}
+                                InputRightElement={
+                                    <Pressable onPress={() => setShowPassword(!showPassword)} mr={4}>
+                                        <FontAwesomeIcon
+                                            icon={showPassword ? faEyeSlash : faEye}
+                                            size={16}
+                                            color="#94A3B8"
+                                        />
+                                    </Pressable>
+                                }
+                            />
 
-                {/* Boutons de connexion avec services tiers */}
-                <VStack mt={5} space={4} w="90%">
-                    <Button
-                        w="100%"
-                        bg="white"
-                        borderWidth={1}
-                        borderColor="gray.300"
-                        leftIcon={<FontAwesomeIcon icon={faGoogle} size={16} color="#000" />}
-                        _text={{ color: 'black', fontFamily: 'SF-Pro-Display-Bold' }}
-                    >
-                        Continue with Google
-                    </Button>
+                            <Button style={styles.cta} onPress={handleRegister} w="100%">
+                                S'inscrire
+                            </Button>
+                            {message ? <Text color="red.500">{message}</Text> : null}
+                        </VStack>
 
-                    <Button
-                        w="100%"
-                        bg="#1877F2"
-                        leftIcon={<FontAwesomeIcon icon={faFacebookF} size={16} color="#fff" />}
-                        _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
-                    >
-                        Continue with Facebook
-                    </Button>
+                        {/* Ligne "Ou avec" */}
+                        <HStack alignItems="center" w="85%" space={2} mt={8} mb={4}>
+                            <Box flex={1} height="1px" bg="#94A3B8" />
+                            <Text style={styles.caption} color="#94A3B8">Ou avec</Text>
+                            <Box flex={1} height="1px" bg="#94A3B8" />
+                        </HStack>
 
-                    <Button
-                        w="100%"
-                        bg="black"
-                        leftIcon={<FontAwesomeIcon icon={faApple} size={16} color="#fff" />}
-                        _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
-                    >
-                        Continue with Apple
-                    </Button>
-                </VStack>
-            </Box>
+                        {/* Boutons de connexion avec services tiers */}
+                        <VStack mt={5} space={4} w="90%">
+                            <Button
+                                w="100%"
+                                bg="white"
+                                borderWidth={1}
+                                borderColor="gray.300"
+                                leftIcon={<FontAwesomeIcon icon={faGoogle} size={16} color="#000" />}
+                                _text={{ color: 'black', fontFamily: 'SF-Pro-Display-Bold' }}
+                            >
+                                Continue with Google
+                            </Button>
 
-            <Box alignItems="center" mt={10} mb={10}>
-                <Link
-                    onPress={() => navigation.navigate('Login')}
-                    _text={{ color: 'primary.500' }}
-                >
-                    <DynamicGradientText fontSize={16} fontFamily="SF-Pro-Display-Regular" fontWeight="400">
-                        Déjà un compte ? Connectez-vous ici
-                    </DynamicGradientText>
-                </Link>
-            </Box>
-        </Box>
-        </ScrollView>
+                            <Button
+                                w="100%"
+                                bg="#1877F2"
+                                leftIcon={<FontAwesomeIcon icon={faFacebookF} size={16} color="#fff" />}
+                                _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
+                            >
+                                Continue with Facebook
+                            </Button>
+
+                            <Button
+                                w="100%"
+                                bg="black"
+                                leftIcon={<FontAwesomeIcon icon={faApple} size={16} color="#fff" />}
+                                _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
+                            >
+                                Continue with Apple
+                            </Button>
+                        </VStack>
+                    </Box>
+
+                    <Box alignItems="center" mt={10} mb={10}>
+                        <Link
+                            onPress={() => navigation.navigate('Login')}
+                            _text={{ color: 'primary.500' }}
+                        >
+                            <DynamicGradientText fontSize={16} fontFamily="SF-Pro-Display-Regular" fontWeight="400">
+                                Déjà un compte ? Connectez-vous ici
+                            </DynamicGradientText>
+                        </Link>
+                    </Box>
+                </Box>
+            </ScrollView>
+        </View>
     );
 });
 

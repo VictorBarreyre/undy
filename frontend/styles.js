@@ -1,7 +1,37 @@
 // styles.js
 import { StyleSheet } from 'react-native';
 
+
+
 export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+},
+backgroundImage: {
+    position: 'absolute',
+    width: '150%',
+    height: '150%',
+    top: '-25%',
+    left: '-25%',
+    zIndex: -2, // Behind everything
+},
+overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)', // White with reduced opacity
+    zIndex: -1, // Between background and content
+    backdropFilter: 'blur(50px)',
+},
+content: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+},
+
   h1: {
     fontSize: 36,
     lineHeight: 46,
@@ -72,3 +102,4 @@ export const styles = StyleSheet.create({
     fontFamily: 'SF-Pro-Display-Medium',
   },
 });
+
