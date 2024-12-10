@@ -13,10 +13,7 @@ import LogoSvg from '../littlecomponents/Undy';
 
 const Register = React.memo(function Register({ navigation }) {
     const { login } = useContext(AuthContext);
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [message, setMessage] = useState('');
+  
 
     // Animation setup
     const rotateValue = useRef(new Animated.Value(0)).current;
@@ -35,26 +32,6 @@ const Register = React.memo(function Register({ navigation }) {
         inputRange: [0, 1],
         outputRange: ['0deg', '360deg'],
     });
-
-    const handleRegister = useCallback(async () => {
-        try {
-            const response = await axios.post(`${API_URL}/api/users/register`, {
-                name,
-                email: email.trim().toLowerCase(),
-                password,
-            });
-
-            if (response.data.token) {
-                login(response.data.token);
-                setMessage('Inscription réussie, connexion en cours...');
-            } else {
-                setMessage('Erreur lors de la génération du token.');
-            }
-        } catch (error) {
-            console.error('Erreur Axios:', error.response || error.message);
-            setMessage(error.response?.data?.message || "Erreur lors de l'inscription");
-        }
-    }, [name, email, password, login]);
 
     return (
         <View style={styles.container}>
@@ -130,7 +107,7 @@ const Register = React.memo(function Register({ navigation }) {
                             bg="black"
                             _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
                             justifyContent="center"
-                            onPress={() => navigation.navigate('Login')} // Navigation vers Login
+                            onPress={() => navigation.navigate('Inscription')} // Navigation vers Login
                         >
                             <HStack space={2} alignItems="center" justifyContent="center">
                                 <FontAwesomeIcon icon={faEnvelope} size={16} color="#fff" />

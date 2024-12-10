@@ -5,6 +5,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import Register from './components/Register';
+import Inscription from './components/Inscription';
 import Login from './components/Login';
 import DrawerNavigator from './Layout'; // Import du DrawerNavigator
 import { lightTheme } from './theme';
@@ -59,7 +60,7 @@ const StackNavigator = React.memo(() => {
             ) : (
                 <>
                     <Stack.Screen name="Register" component={Register} options={{ headerShown: false }} />
-                    <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
+                    <Stack.Screen name="Inscription" component={Inscription} options={{ headerShown: false }} />
                 </>
             )}
         </Stack.Navigator>

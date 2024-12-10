@@ -27,17 +27,22 @@ const lightTheme = extendTheme({
                 paddingBottom: 3,
                 paddingLeft: 6,
                 paddingRight: 8,
-                w:'100%',
+                w: '100%',
                 borderRadius: 30,
-                borderColor:'transparent',
-                backgroundColor:'white',
+                borderColor: 'transparent',
+                backgroundColor: 'white',
+                shadowColor: '#7957CC', // Couleur de l'ombre interne
+                shadowOffset: { width: 0, height: 2 }, // Position de l'ombre
+                shadowOpacity: 0.2, // Opacité de l'ombre
+                shadowRadius: 2, // Rayon de flou
+                elevation: 1, // Ombre sur Android
                 _focus: {
                     borderColor: "#F97794",
-                    backgroundColor:'white',
+                    backgroundColor: 'white',
                 },
                 _placeholder: {
-                    color: "#94A3B8", // Ici, vous pouvez mettre la couleur que vous souhaitez
-                    fontSize: '14px', // Vous pouvez aussi changer la taille du texte du placeholder
+                    color: "#94A3B8", // Couleur du placeholder
+                    fontSize: '14px', // Taille du placeholder
                 },
             },
             defaultProps: {
