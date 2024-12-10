@@ -41,7 +41,7 @@ const Login = React.memo(function Login({ navigation }) {
 
     return (
         <ScrollView flex={1} bg="#EFEFEF" pt={20} pb={20} p={4}>
-        <Box flex={1}  mb={20}  bg="#EFEFEF">
+       <Box flex={1} bg="#EFEFEF" justifyContent="space-between" py={10}>
           {/* Partie haute (centrée) */}
           <Box flex={1} justifyContent="center" alignItems="center">
             <Image 

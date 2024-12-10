@@ -39,8 +39,8 @@ const Register = React.memo(function Register({ navigation }) {
 
     return (
         <ScrollView flex={1} bg="#EFEFEF"  pt={20} pb={20} p={4}>
-        <Box flex={1} bg="#EFEFEF" mb={20} >
-            <Box flex={1} justifyContent="center" alignItems="center">
+       <Box flex={1} bg="#EFEFEF" justifyContent="space-between" py={10}>
+       <Box flex={1} justifyContent="center" alignItems="center">
                 <Image
                     source={require('../assets/images/u1.png')}
                     alt="Logo de l'application"
