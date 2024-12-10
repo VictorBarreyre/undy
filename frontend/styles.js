@@ -52,8 +52,8 @@ content: {
     fontFamily: 'SF-Pro-Display-Semibold',
   },
   h4: {
-    fontSize: 18,
-    lineHeight:20,
+    fontSize: 20,
+    lineHeight:22,
     fontWeight: '600',
     fontFamily: 'SF-Pro-Display-Semibold',
   },

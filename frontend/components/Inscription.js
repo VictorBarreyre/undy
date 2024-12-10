@@ -152,7 +152,7 @@ const Inscription = ({ navigation }) => {
                             lineHeight: '16px',
                             textDecoration: 'none',
                         }}
-                        onPress={() => navigation.navigate('Login')}
+                        onPress={() => navigation.navigate('Register')}
                     >
                         J’ai déjà un compte{' '}
                         <Text color="black" fontFamily="SF-Pro-Display-Regular" fontSize="14px">
