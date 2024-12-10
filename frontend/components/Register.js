@@ -78,12 +78,12 @@ const Register = React.memo(function Register({ navigation }) {
                 p={4}
             >
                 {/* Section du haut : Logo */}
-                <Box alignItems="center" mt={10}>
+                <Box alignItems="center" mt={16}>
                     <LogoSvg />
                 </Box>
 
                 {/* Section du bas : Texte + Boutons + Lien */}
-                <Box alignItems="center" mb={1}>
+                <Box alignItems="center" mb={4}>
                     <Text
                         style={styles.h4}
                         mt={10}
@@ -151,7 +151,7 @@ const Register = React.memo(function Register({ navigation }) {
                             fontFamily: 'SF-Pro-Display-Regular',
                             fontSize: '12',
                             textAlign: 'center',
-                            lineHeight: '16',
+                            lineHeight: '14',
                             textDecoration: 'none'
                         }}
                     >
