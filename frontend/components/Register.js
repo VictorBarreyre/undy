@@ -70,7 +70,7 @@ const Register = React.memo(function Register({ navigation }) {
             <BlurView
                 style={styles.overlay}
                 blurType="light" // Types : "light", "dark", "extraLight"
-                blurAmount={10} // Intensité du flou
+                blurAmount={100} // Intensité du flou
                 reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.6)" // Couleur fallback si le blur n'est pas supporté
             />
 
