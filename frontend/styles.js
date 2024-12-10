@@ -9,9 +9,9 @@ export const styles = StyleSheet.create({
 },
 backgroundImage: {
     position: 'absolute',
-    width: '150%',
+    width: '350%',
     height: '150%',
-    top: '-25%',
+    top: '-50%',
     left: '-25%',
     zIndex: -2, // Behind everything
 },
