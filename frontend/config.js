@@ -1,15 +1,14 @@
-import { DATABASE_URL_PRODUCTION, DATABASE_URL_DEVELOPMENT } from '@env';
+import * as Network from 'expo-network';
+import { DATABASE_URL_PRODUCTION } from '@env';
 
-const getAPIURL = () => {
-    // En production, utilisez l'URL Heroku
+const getAPIURL = async () => {
     if (process.env.NODE_ENV === 'production') {
-        return DATABASE_URL_PRODUCTION;
+        return DATABASE_URL_PRODUCTION; // Utilise l'URL de production
     }
 
-    // En développement, utilisez l'URL locale
-    return DATABASE_URL_DEVELOPMENT;
+    // En développement, récupère l'adresse IP locale dynamiquement
+    const localIP = await Network.getIpAddressAsync();
+    return `http://${localIP}:5000`; // Remplacez le port si nécessaire
 };
 
-const API_URL = getAPIURL();
-
-export default API_URL;
+export default getAPIURL;

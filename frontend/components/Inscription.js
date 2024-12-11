@@ -9,6 +9,7 @@ import { AuthContext } from '../context/AuthContext';
 import API_URL from '../config';
 import { styles } from '../styles';
 import LogoSvg from '../littlecomponents/Undy';
+import createAxiosInstance from '../axiosInstance';
 
 const Inscription = ({ navigation }) => {
     const { login } = useContext(AuthContext);
@@ -39,7 +40,8 @@ const Inscription = ({ navigation }) => {
 
     const handleRegister = useCallback(async () => {
         try {
-            const response = await axios.post(`${API_URL}/api/users/register`, {
+            const axiosInstance = await createAxiosInstance();
+            const response = await axiosInstance.post(`${API_URL}/api/users/register`, {
                 name,
                 email: email.trim().toLowerCase(),
                 password,

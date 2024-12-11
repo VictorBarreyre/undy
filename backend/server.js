@@ -25,6 +25,12 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
+// Middleware pour journaliser les requêtes
+app.use((req, res, next) => {
+    console.log(`Requête reçue de ${req.ip} : ${req.method} ${req.path}`);
+    next();
+});
+
 // **Configuration du Proxy en développement**
 // Ce middleware redirige les requêtes locales vers l'API sur Heroku
 if (process.env.NODE_ENV === 'development') {
@@ -36,12 +42,6 @@ if (process.env.NODE_ENV === 'development') {
         })
     );
 }
-
-// Middleware pour journaliser les requêtes
-app.use((req, res, next) => {
-    console.log(`Requête reçue : ${req.method} ${req.path}`);
-    next();
-});
 
 // Importer les routes
 const userRoutes = require('./routes/userRoutes');

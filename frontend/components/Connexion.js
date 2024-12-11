@@ -9,6 +9,7 @@ import { AuthContext } from '../context/AuthContext';
 import API_URL from '../config';
 import { styles } from '../styles';
 import LogoSvg from '../littlecomponents/Undy';
+import createAxiosInstance from '../axiosInstance';
 
 const Connexion = ({ navigation }) => {
     const { login } = useContext(AuthContext);
@@ -38,7 +39,8 @@ const Connexion = ({ navigation }) => {
 
     const handleLogin = useCallback(async () => {
         try {
-            const response = await axios.post(`${API_URL}/api/users/login`, {
+            const axiosInstance = await createAxiosInstance();
+            const response = await axiosInstance.post('/api/users/login', {
                 email: email.trim().toLowerCase(),
                 password,
             });
