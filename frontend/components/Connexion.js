@@ -10,14 +10,13 @@ import API_URL from '../config';
 import { styles } from '../styles';
 import LogoSvg from '../littlecomponents/Undy';
 
-const Inscription = ({ navigation }) => {
+const Connexion = ({ navigation }) => {
     const { login } = useContext(AuthContext);
 
-    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
     const [message, setMessage] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     // Animation setup for background rotation
     const rotateValue = useRef(new Animated.Value(0)).current;
@@ -37,25 +36,26 @@ const Inscription = ({ navigation }) => {
         outputRange: ['0deg', '360deg'],
     });
 
-    const handleRegister = useCallback(async () => {
+    const handleLogin = useCallback(async () => {
         try {
-            const response = await axios.post(`${API_URL}/api/users/register`, {
-                name,
+            const response = await axios.post(`${API_URL}/api/users/login`, {
                 email: email.trim().toLowerCase(),
                 password,
             });
 
             if (response.data.token) {
                 login(response.data.token);
-                setMessage('Inscription réussie, connexion en cours...');
+                setMessage('Connexion réussie');
             } else {
                 setMessage('Erreur lors de la génération du token.');
             }
         } catch (error) {
             console.error('Erreur Axios:', error.response || error.message);
-            setMessage(error.response?.data?.message || "Erreur lors de l'inscription");
+            setMessage(
+                error.response?.data?.message || 'Erreur lors de la connexion'
+            );
         }
-    }, [name, email, password, login]);
+    }, [email, password, login]);
 
     return (
         <View style={styles.container}>
@@ -84,12 +84,12 @@ const Inscription = ({ navigation }) => {
 
                 {/* Form Section */}
                 <Box alignItems="center" mb={4}>
-                <Text
+                    <Text
                         style={styles.h4}
                         mt={10}
                         textAlign="center"
                     >
-                        Inscrivez-vous
+                        Connexion
                     </Text>
 
                     <VStack mt={4} space={2} w="90%">
@@ -100,14 +100,6 @@ const Inscription = ({ navigation }) => {
                             onChangeText={setEmail}
                             autoCapitalize="none"
                             keyboardType="email-address"
-                        />
-
-                        {/* Name */}
-                        <Input
-                            placeholder="Nom"
-                            value={name}
-                            onChangeText={setName}
-                            autoCapitalize="words"
                         />
 
                         {/* Password */}
@@ -129,18 +121,18 @@ const Inscription = ({ navigation }) => {
                         />
                     </VStack>
 
-                    {/* CTA - Register Button */}
+                    {/* CTA - Login Button */}
                     <Button
                         mt={5}
                         w="90%"
                         bg="black"
                         _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
-                        onPress={handleRegister}
+                        onPress={handleLogin}
                     >
-                        S'inscrire
+                        Se connecter
                     </Button>
 
-                    {/* Link to Login */}
+                    {/* Link to Register */}
                     <Link
                         px={10}
                         mt={4}
@@ -152,9 +144,9 @@ const Inscription = ({ navigation }) => {
                             lineHeight: '16px',
                             textDecoration: 'none',
                         }}
-                        onPress={() => navigation.navigate('Connexion')}
+                        onPress={() => navigation.navigate('Inscription')}
                     >
-                        J’ai déjà un compte{' '}
+                        Enfait je n’ai pas de compte{' '}
                         <Text color="black" fontFamily="SF-Pro-Display-Regular" fontSize="14px">
                             🙂
                         </Text>
@@ -165,4 +157,4 @@ const Inscription = ({ navigation }) => {
     );
 };
 
-export default Inscription;
+export default Connexion;

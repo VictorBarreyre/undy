@@ -6,7 +6,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import Register from './components/Register';
 import Inscription from './components/Inscription';
-import Login from './components/Login';
+import Connexion from './components/Connexion';
 import DrawerNavigator from './Layout'; // Import du DrawerNavigator
 import { lightTheme } from './theme';
 import * as Font from 'expo-font';
@@ -61,6 +61,7 @@ const StackNavigator = React.memo(() => {
                 <>
                     <Stack.Screen name="Register" component={Register} options={{ headerShown: false }} />
                     <Stack.Screen name="Inscription" component={Inscription} options={{ headerShown: false }} />
+                    <Stack.Screen name="Connexion" component={Connexion} options={{ headerShown: false }} />
                 </>
             )}
         </Stack.Navigator>

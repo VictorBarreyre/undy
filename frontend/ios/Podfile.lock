@@ -1290,7 +1290,7 @@ PODS:
     - React-Core
   - RNDateTimePicker (8.2.0):
     - React-Core
-  - RNGestureHandler (2.21.2):
+  - RNGestureHandler (2.21.1):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1704,7 +1704,7 @@ SPEC CHECKSUMS:
   RNAppleAuthentication: e00c76acb03351f5544373c78fa7f359bef6d5d3
   RNCAsyncStorage: 826b603ae9c0f88b5ac4e956801f755109fa4d5c
   RNDateTimePicker: 40ffda97d071a98a10fdca4fa97e3977102ccd14
-  RNGestureHandler: 38b7949a58a56ae0e2a3c38920cb6852cafb6b9f
+  RNGestureHandler: 24319e102e61fe219c69ba68fac5e3091fc7134b
   RNGoogleSignin: 9e68b9bcc3888219357924e32ee563624745647d
   RNReanimated: d51431fd3597a8f8320319dce8e42cee82a5445f
   RNScreens: 30249f9331c3b00ae7cb7922e11f58b3ed369c07
