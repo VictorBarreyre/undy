@@ -40,6 +40,7 @@ const Inscription = ({ navigation }) => {
 
     const handleRegister = useCallback(async () => {
         try {
+            console.log('Tentative d\'inscription...');
             const axiosInstance = await createAxiosInstance();
             const response = await axiosInstance.post(`${API_URL}/api/users/register`, {
                 name,
@@ -48,9 +49,11 @@ const Inscription = ({ navigation }) => {
             });
 
             if (response.data.token) {
+                console.log('Inscription réussie:', response.data);
                 login(response.data.token);
                 setMessage('Inscription réussie, connexion en cours...');
             } else {
+                console.error('Erreur: Token non reçu.');
                 setMessage('Erreur lors de la génération du token.');
             }
         } catch (error) {
@@ -58,6 +61,7 @@ const Inscription = ({ navigation }) => {
             setMessage(error.response?.data?.message || "Erreur lors de l'inscription");
         }
     }, [name, email, password, login]);
+
 
     return (
         <View style={styles.container}>
@@ -84,9 +88,17 @@ const Inscription = ({ navigation }) => {
                     <LogoSvg />
                 </Box>
 
+                {message ? (
+                    <Box mt={4} p={4} bg="red.100" borderRadius="md">
+                        <Text color="red.500" fontFamily="SF-Pro-Display-Regular">
+                            {message}
+                        </Text>
+                    </Box>
+                ) : null}
+
                 {/* Form Section */}
                 <Box alignItems="center" mb={4}>
-                <Text
+                    <Text
                         style={styles.h4}
                         mt={10}
                         textAlign="center"

@@ -39,6 +39,7 @@ const Connexion = ({ navigation }) => {
 
     const handleLogin = useCallback(async () => {
         try {
+            console.log('Tentative de connexion...');
             const axiosInstance = await createAxiosInstance();
             const response = await axiosInstance.post('/api/users/login', {
                 email: email.trim().toLowerCase(),
@@ -46,18 +47,19 @@ const Connexion = ({ navigation }) => {
             });
 
             if (response.data.token) {
+                console.log('Connexion réussie:', response.data);
                 login(response.data.token);
-                setMessage('Connexion réussie');
+                setMessage('Connexion réussie !');
             } else {
+                console.error('Erreur: Token non reçu.');
                 setMessage('Erreur lors de la génération du token.');
             }
         } catch (error) {
             console.error('Erreur Axios:', error.response || error.message);
-            setMessage(
-                error.response?.data?.message || 'Erreur lors de la connexion'
-            );
+            setMessage(error.response?.data?.message || 'Erreur lors de la connexion');
         }
     }, [email, password, login]);
+
 
     return (
         <View style={styles.container}>
@@ -83,6 +85,14 @@ const Connexion = ({ navigation }) => {
                 <Box alignItems="center" mt={16}>
                     <LogoSvg />
                 </Box>
+
+                {message ? (
+                    <Box mt={4} p={4} bg="red.100" borderRadius="md">
+                        <Text color="red.500" fontFamily="SF-Pro-Display-Regular">
+                            {message}
+                        </Text>
+                    </Box>
+                ) : null}
 
                 {/* Form Section */}
                 <Box alignItems="center" mb={4}>

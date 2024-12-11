@@ -55,16 +55,21 @@ const lightTheme = extendTheme({
                 paddingLeft: 6,
                 paddingRight: 8,
                 borderRadius: 30,
-                backgroundColor:'black',
+                backgroundColor: 'black',
                 _text: {
                     color: 'white',
                     fontWeight: 'bold',
+                },
+                _pressed: {
+                    backgroundColor: 'gray.700', // Change la couleur lorsqu'appuyé
+                    transform: [{ scale: 0.95 }], // Ajoute un léger effet de réduction
                 },
             },
             defaultProps: {
                 variant: 'primary',
             },
         },
+        
     },
 });
 
