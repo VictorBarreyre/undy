@@ -1,15 +1,20 @@
 import axios from 'axios';
-import getAPIURL from './config';
+import getAPIURL from './config'; // Assurez-vous que l'import est correct
 
 const createAxiosInstance = async () => {
-    const baseURL = await getAPIURL();
-    return axios.create({
-        baseURL, // URL dynamique obtenue depuis config.js
-        timeout: 10000, // Timeout des requêtes (facultatif)
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    });
+    try {
+        const baseURL = await getAPIURL(); // Assurez-vous d'appeler la fonction correctement
+        return axios.create({
+            baseURL, // URL dynamique
+            timeout: 10000,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+    } catch (error) {
+        console.error('Erreur lors de la création de l\'instance Axios :', error);
+        throw error; // Réexpédie l'erreur pour la gestion en aval
+    }
 };
 
 export default createAxiosInstance;
