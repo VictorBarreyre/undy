@@ -21,6 +21,13 @@ const lightTheme = extendTheme({
     
 
     components: {        
+
+        Box: {
+            baseStyle: {
+                backgroundColor: 'transparent', // Transparent par défaut
+            },
+        },
+        
         Input: {
             baseStyle: {
                 paddingTop: 3,

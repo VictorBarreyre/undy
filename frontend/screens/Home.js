@@ -1,14 +1,24 @@
-import React, { useContext } from 'react';
-import { VStack, Box, Button, Text } from 'native-base';
-import { AuthContext } from '../context/AuthContext'; // Importer le contexte d'authentification
+import React from 'react';
+import { VStack, Box, Text } from 'native-base';
+import FilterBar from '../littlecomponents/Filter.bar';
 
 export default function Home() {
-
     return (
-        <Box flex={1} justifyContent="center" alignItems="center" p={5} bg="white">
-            <VStack space={4} alignItems="center">
+        <Box flex={1} >
+            {/* Barre de filtres en haut */}
+            <Box top={0} width="100%" bg="white" p={4} >
+                <FilterBar />
+            </Box>
+
+            {/* Contenu principal */}
+            <VStack flex={1} space={4} mt="20" alignItems="center" p={5}>
                 <Text fontSize="2xl" fontWeight="bold" color="black">
-                    Bienvenue sur Undy ! 
+                    Bienvenue sur Undy !
+                </Text>
+
+                {/* Ajoutez ici d'autres composants comme la carte ou les contenus */}
+                <Text fontSize="md" textAlign="center" color="gray.600">
+                    Explorez les filtres ci-dessus pour découvrir plus d'options.
                 </Text>
             </VStack>
         </Box>

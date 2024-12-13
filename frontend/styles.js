@@ -4,17 +4,32 @@ import { StyleSheet } from 'react-native';
 
 
 export const styles = StyleSheet.create({
+  staticBackground: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    zIndex: 1, // Positionne derrière tous les autres éléments
+  },
+  // Style pour les conteneurs ou overlays
   container: {
     flex: 1,
-    
+    zIndex: 1, // Assure que le contenu est au-dessus du background
+  },
+  
+safeArea: {
+  flex: 1,
+  paddingTop: 20,
+  backgroundColor: 'white', // Ajoutez un fond global si nécessaire
 },
+
+// Fond spécifique pour les écrans Connexion et Inscription
 backgroundImage: {
-    position: 'absolute',
-    width: '350%',
-    height: '150%',
-    top: '-50%',
-    left: '-25%',
-    zIndex: -2, // Behind everything
+  position: 'absolute',
+  width: '350%',
+  height: '150%',
+  top: '-50%',
+  left: '-25%',
+  zIndex: -2, // Position pour les besoins spécifiques
 },
 overlay: {
     position: 'absolute',
