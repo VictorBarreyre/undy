@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, StatusBar, StyleSheet, Image } from 'react-native';
+import { Platform, StatusBar, StyleSheet, Image, SafeAreaView } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -7,24 +7,23 @@ import { faUser, faHome } from '@fortawesome/free-solid-svg-icons';
 import Home from './screens/Home';
 import Profile from './screens/Profile';
 import { Box } from 'native-base';
-import { styles } from './styles'
+import { styles } from './styles';
 
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
 
-const STATUSBAR_HEIGHT = Platform.OS === 'android' ? StatusBar.currentHeight : 50;
 
 export function Background({ children }) {
     return (
-        <Box flex={1}>
+        <Box flex={1} position="relative">
             {/* Fond statique derrière tout */}
             <Image
                 source={require('./assets/images/bgstatic.png')}
-                style={styles.staticBackground} // Style spécifique
+                style={styles.staticBackground} // zIndex: -1 est appliqué ici
                 resizeMode="cover"
             />
             {/* Contenu des enfants */}
-            <Box flex={1} zIndex={1}> {/* Assurez-vous que le contenu a un zIndex supérieur */}
+            <Box flex={1} zIndex={1} backgroundColor="transparent">
                 {children}
             </Box>
         </Box>
@@ -48,7 +47,7 @@ function TabNavigator() {
                 tabBarActiveTintColor: 'black',
                 tabBarInactiveTintColor: 'gray',
                 tabBarStyle: {
-                    backgroundColor: 'white', // Transparent pour laisser apparaître le fond
+                    backgroundColor: 'transparent', // Transparent pour afficher le fond
                     elevation: 0, // Supprime l'ombre sur Android
                     borderTopWidth: 0, // Supprime la bordure sur iOS
                 },
@@ -58,6 +57,7 @@ function TabNavigator() {
                 name="Home"
                 component={Home}
                 options={{ headerShown: false }}
+
             />
             <Tab.Screen
                 name="Profile"
@@ -68,12 +68,20 @@ function TabNavigator() {
     );
 }
 
-
 function DrawerNavigator() {
     return (
         <Background>
-            <Box flex={1}backgroundColor="transparent">
-                <Drawer.Navigator initialRouteName="Tabs">
+            <SafeAreaView style={styles.safeArea}>
+
+            <Box flex={1} backgroundColor="transparent">
+                <Drawer.Navigator
+                    initialRouteName="Tabs"
+                    screenOptions={{
+                        drawerStyle: {
+                            backgroundColor: 'transparent', // Transparent pour afficher le fond
+                        },
+                    }}
+                >
                     <Drawer.Screen
                         name="Tabs"
                         component={TabNavigator}
@@ -81,10 +89,9 @@ function DrawerNavigator() {
                     />
                 </Drawer.Navigator>
             </Box>
+            </SafeAreaView>
         </Background>
     );
 }
-
-
 
 export default DrawerNavigator;

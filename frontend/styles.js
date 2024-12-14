@@ -8,7 +8,7 @@ export const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
-    zIndex: 1, // Positionne derrière tous les autres éléments
+    zIndex: -1, // Positionne derrière tous les autres éléments
   },
   // Style pour les conteneurs ou overlays
   container: {
@@ -19,7 +19,7 @@ export const styles = StyleSheet.create({
 safeArea: {
   flex: 1,
   paddingTop: 20,
-  backgroundColor: 'white', // Ajoutez un fond global si nécessaire
+  backgroundColor: 'transparent', // Ajoutez un fond global si nécessaire
 },
 
 // Fond spécifique pour les écrans Connexion et Inscription

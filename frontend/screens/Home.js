@@ -4,11 +4,11 @@ import FilterBar from '../littlecomponents/Filter.bar';
 
 export default function Home() {
     return (
-        <Box flex={1} >
+        <Box bg="transparent" flex={1} >
             {/* Barre de filtres en haut */}
-            <Box top={0} width="100%" bg="white" p={4} >
+            <Box top={0} width="100%" bg="transparent" p={4} >
                 <FilterBar />
-            </Box>
+            </Box> 
 
             {/* Contenu principal */}
             <VStack flex={1} space={4} mt="20" alignItems="center" p={5}>

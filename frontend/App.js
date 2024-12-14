@@ -36,7 +36,13 @@ const App = () => {
     return (
         <AuthProvider>
             <NativeBaseProvider theme={lightTheme}>
-                <NavigationContainer>
+                <NavigationContainer
+                    theme={{
+                        colors: {
+                            background: 'transparent', // S'assure que le fond est transparent
+                        },
+                    }}
+                >
                     <StackNavigator />
                 </NavigationContainer>
             </NativeBaseProvider>
@@ -48,7 +54,7 @@ const StackNavigator = () => {
     const { isLoggedIn } = useContext(AuthContext);
 
     return (
-        <Stack.Navigator>
+        <Stack.Navigator >
             {isLoggedIn ? (
                 <Stack.Screen name="App" component={DrawerNavigator} options={{ headerShown: false }} />
             ) : (

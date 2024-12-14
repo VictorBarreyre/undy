@@ -15,7 +15,7 @@ const lightTheme = extendTheme({
             800: "#14518a",
             900: "#104176",
         },
-        background: "#EFEFEF",
+        background: "transparent", 
        
     },
     
