@@ -4,10 +4,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUser, faHome } from '@fortawesome/free-solid-svg-icons';
-import Home from './screens/Home';
-import Profile from './screens/Profile';
+import Home from '../presentation/screens/Home';
+import Profile from '../presentation/screens/Profile';
 import { Box } from 'native-base';
-import { styles } from './styles';
+import { styles } from '../infrastructure/theme/styles';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
@@ -20,7 +20,7 @@ export function Background({ children }) {
         <Box flex={1} position="relative">
             {/* Fond statique derrière tout */}
             <Image
-                source={require('./assets/images/bgstatic.png')}
+                source={require('../assets/images/bgstatic.png')}
                 style={styles.staticBackground} // zIndex: -1 est appliqué ici
                 resizeMode="cover"
             />
@@ -49,7 +49,7 @@ function TabNavigator() {
                 tabBarActiveTintColor: 'black',
                 tabBarInactiveTintColor: 'gray',
                 tabBarStyle: {
-                    backgroundColor: 'transparent', // Transparent pour afficher le fond
+                    backgroundColor: 'white', // Transparent pour afficher le fond
                     elevation: 0, // Supprime l'ombre sur Android
                     borderTopWidth: 0, // Supprime la bordure sur iOS
                 },

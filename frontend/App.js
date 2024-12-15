@@ -3,13 +3,14 @@ import 'react-native-gesture-handler';
 import { NativeBaseProvider } from 'native-base';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { AuthProvider, AuthContext } from './context/AuthContext';
-import Register from './components/Register';
-import Inscription from './components/Inscription';
-import Connexion from './components/Connexion';
-import DrawerNavigator from './Layout';
-import { lightTheme } from './theme';
+import { AuthProvider, AuthContext } from './infrastructure/context/AuthContext';
+import Register from './presentation/screens/Register';
+import Inscription from './presentation/screens/Inscription';
+import Connexion from './presentation/screens/Connexion';
+import DrawerNavigator from './navigation/Layout';
 import * as Font from 'expo-font';
+import {lightTheme} from './infrastructure/theme/theme'
+
 
 const Stack = createStackNavigator();
 

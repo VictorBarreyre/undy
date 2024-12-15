@@ -1,5 +1,5 @@
 import axios from 'axios';
-import getAPIURL from './config'; // Assurez-vous que l'import est correct
+import getAPIURL from '../../infrastructure/config/config'; // Assurez-vous que l'import est correct
 
 const createAxiosInstance = async () => {
     try {

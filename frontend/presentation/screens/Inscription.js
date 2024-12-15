@@ -2,22 +2,22 @@ import React, { useState, useContext, useCallback, useRef, useEffect } from 'rea
 import { VStack, Box, Input, Button, Text, Link, ScrollView, Pressable, Icon } from 'native-base';
 import { Animated, View } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import { AuthContext } from '../context/AuthContext';
-import API_URL from '../config';
-import { styles } from '../styles';
+import { AuthContext } from '../../infrastructure/context/AuthContext';
+import API_URL from '../../infrastructure/config/config';
+import { styles } from '../../infrastructure/theme/styles';
 import LogoSvg from '../littlecomponents/Undy';
-import createAxiosInstance from '../axiosInstance';
+import createAxiosInstance from '../../data/api/axiosInstance';
 
-const Connexion = ({ navigation }) => {
+const Inscription = ({ navigation }) => {
     const { login } = useContext(AuthContext);
 
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [message, setMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [message, setMessage] = useState('');
 
     // Animation setup for background rotation
     const rotateValue = useRef(new Animated.Value(0)).current;
@@ -37,35 +37,36 @@ const Connexion = ({ navigation }) => {
         outputRange: ['0deg', '360deg'],
     });
 
-    const handleLogin = useCallback(async () => {
+    const handleRegister = useCallback(async () => {
         try {
-            console.log('Tentative de connexion...');
+            console.log('Tentative d\'inscription...');
             const axiosInstance = await createAxiosInstance();
-            const response = await axiosInstance.post('/api/users/login', {
+            const response = await axiosInstance.post(`${API_URL}/api/users/register`, {
+                name,
                 email: email.trim().toLowerCase(),
                 password,
             });
 
             if (response.data.token) {
-                console.log('Connexion réussie:', response.data);
+                console.log('Inscription réussie:', response.data);
                 login(response.data.token);
-                setMessage('Connexion réussie !');
+                setMessage('Inscription réussie, connexion en cours...');
             } else {
                 console.error('Erreur: Token non reçu.');
                 setMessage('Erreur lors de la génération du token.');
             }
         } catch (error) {
             console.error('Erreur Axios:', error.response || error.message);
-            setMessage(error.response?.data?.message || 'Erreur lors de la connexion');
+            setMessage(error.response?.data?.message || "Erreur lors de l'inscription");
         }
-    }, [email, password, login]);
+    }, [name, email, password, login]);
 
 
     return (
         <View style={styles.container}>
             {/* Background rotating animation */}
             <Animated.Image
-                source={require('../assets/images/background.png')}
+                source={require('../../assets/images/background.png')}
                 style={[styles.backgroundImage, { transform: [{ rotate: rotateAnimation }] }]}
             />
 
@@ -101,7 +102,7 @@ const Connexion = ({ navigation }) => {
                         mt={10}
                         textAlign="center"
                     >
-                        Connexion
+                        Inscrivez-vous
                     </Text>
 
                     <VStack mt={4} space={2} w="90%">
@@ -112,6 +113,14 @@ const Connexion = ({ navigation }) => {
                             onChangeText={setEmail}
                             autoCapitalize="none"
                             keyboardType="email-address"
+                        />
+
+                        {/* Name */}
+                        <Input
+                            placeholder="Nom"
+                            value={name}
+                            onChangeText={setName}
+                            autoCapitalize="words"
                         />
 
                         {/* Password */}
@@ -133,18 +142,18 @@ const Connexion = ({ navigation }) => {
                         />
                     </VStack>
 
-                    {/* CTA - Login Button */}
+                    {/* CTA - Register Button */}
                     <Button
                         mt={5}
                         w="90%"
                         bg="black"
                         _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
-                        onPress={handleLogin}
+                        onPress={handleRegister}
                     >
-                        Se connecter
+                        S'inscrire
                     </Button>
 
-                    {/* Link to Register */}
+                    {/* Link to Login */}
                     <Link
                         px={10}
                         mt={4}
@@ -156,9 +165,9 @@ const Connexion = ({ navigation }) => {
                             lineHeight: '16px',
                             textDecoration: 'none',
                         }}
-                        onPress={() => navigation.navigate('Inscription')}
+                        onPress={() => navigation.navigate('Connexion')}
                     >
-                        Enfait je n’ai pas de compte{' '}
+                        J’ai déjà un compte{' '}
                         <Text color="black" fontFamily="SF-Pro-Display-Regular" fontSize="14px">
                             🙂
                         </Text>
@@ -169,4 +178,4 @@ const Connexion = ({ navigation }) => {
     );
 };
 
-export default Connexion;
+export default Inscription;

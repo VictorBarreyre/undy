@@ -3,7 +3,7 @@ import { Platform, VStack, Box, Text, Button, Pressable, Modal, Input, HStack, S
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TouchableOpacity } from 'react-native';
 import axios from 'axios';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome } from '@expo/vector-icons';
 
 export default function Profile({ navigation }) {

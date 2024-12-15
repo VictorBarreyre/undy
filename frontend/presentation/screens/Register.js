@@ -3,9 +3,9 @@ import { VStack, Box, Button, Text, Link, ScrollView, HStack } from 'native-base
 import { Animated, View } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import axios from 'axios';
-import { AuthContext } from '../context/AuthContext';
-import API_URL from '../config';
-import { styles } from '../styles';
+import { AuthContext } from '../../infrastructure/context/AuthContext';
+import API_URL from '../../infrastructure/config/config';
+import { styles } from '../../infrastructure/theme/styles';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faGoogle, faApple } from '@fortawesome/free-brands-svg-icons';
 import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
@@ -37,7 +37,7 @@ const Register = React.memo(function Register({ navigation }) {
         <View style={styles.container}>
             {/* Background rotating animation */}
             <Animated.Image
-                source={require('../assets/images/background.png')}
+                source={require('../../assets/images/background.png')}
                 style={[styles.backgroundImage, { transform: [{ rotate: rotateAnimation }] }]}
             />
 

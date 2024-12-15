@@ -1,6 +1,6 @@
 import React from 'react';
 import { VStack, Box, Text } from 'native-base';
-import FilterBar from '../littlecomponents/Filter.bar';
+import FilterBar from '../components/Filter.bar';
 
 export default function Home() {
     return (
