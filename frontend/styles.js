@@ -1,5 +1,6 @@
 // styles.js
 import { StyleSheet } from 'react-native';
+import { Platform } from 'react-native';
 
 
 
@@ -17,6 +18,7 @@ export const styles = StyleSheet.create({
   },
   
 safeArea: {
+  paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, // SafeArea pour le haut uniquement
   flex: 1,
   paddingTop: 20,
   backgroundColor: 'transparent', // Ajoutez un fond global si nécessaire

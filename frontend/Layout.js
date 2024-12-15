@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, StatusBar, StyleSheet, Image, SafeAreaView } from 'react-native';
+import {  Image, SafeAreaView } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -8,6 +8,8 @@ import Home from './screens/Home';
 import Profile from './screens/Profile';
 import { Box } from 'native-base';
 import { styles } from './styles';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
@@ -69,11 +71,13 @@ function TabNavigator() {
 }
 
 function DrawerNavigator() {
+    const insets = useSafeAreaInsets();
+
     return (
         <Background>
-            <SafeAreaView style={styles.safeArea}>
+            <SafeAreaProvider >
 
-            <Box flex={1} backgroundColor="transparent">
+            <Box style={{ paddingTop: insets.top || (Platform.OS === 'android' ? StatusBar.currentHeight : 0) }} flex={1}>
                 <Drawer.Navigator
                     initialRouteName="Tabs"
                     screenOptions={{
@@ -89,7 +93,7 @@ function DrawerNavigator() {
                     />
                 </Drawer.Navigator>
             </Box>
-            </SafeAreaView>
+            </SafeAreaProvider>
         </Background>
     );
 }
