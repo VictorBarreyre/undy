@@ -2,9 +2,7 @@ import React, { useState, useContext, useCallback, useRef, useEffect } from 'rea
 import { VStack, Box, Button, Text, Link, ScrollView, HStack } from 'native-base';
 import { Animated, View } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
-import axios from 'axios';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
-import API_URL from '../../infrastructure/config/config';
 import { styles } from '../../infrastructure/theme/styles';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faGoogle, faApple } from '@fortawesome/free-brands-svg-icons';

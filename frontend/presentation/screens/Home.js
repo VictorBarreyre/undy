@@ -6,7 +6,7 @@ export default function Home() {
     return (
         <Box bg="transparent" flex={1} >
             {/* Barre de filtres en haut */}
-            <Box top={0} width="100%" bg="transparent" p={4} >
+            <Box top={0} width="100%" bg="transparent" px={0} py={4} >
                 <FilterBar />
             </Box> 
 

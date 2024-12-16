@@ -119,5 +119,31 @@ content: {
     fontWeight: '500',
     fontFamily: 'SF-Pro-Display-Medium',
   },
+
+  buttonContainer: {
+    borderRadius: 999, // Boutons arrondis
+    overflow: 'hidden', // Contenir le dégradé dans le bouton
+    position: 'relative',
+  },
+  gradientBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 0,
+    opacity: 1,
+    // Simuler le dégradé avec une couleur de base dégradée
+    backgroundImage:
+      'linear-gradient(to right, rgba(249, 119, 148, 1), rgba(243, 108, 140, 1))',
+  },
+  buttonContent: {
+    zIndex: 1,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
 });
 

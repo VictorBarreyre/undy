@@ -54,29 +54,46 @@ const lightTheme = extendTheme({
             },
         },
 
-      
         Button: {
             baseStyle: {
-                paddingTop: 3,
-                paddingBottom: 3,
-                paddingLeft: 6,
-                paddingRight: 8,
-                borderRadius: 30,
+              paddingTop: 3,
+              paddingBottom: 3,
+              paddingLeft: 6,
+              paddingRight: 8,
+              borderRadius: 30,
+              _text: {
+                fontWeight: 'bold',
+              },
+              _pressed: {
+                backgroundColor: 'gray.700',
+                transform: [{ scale: 0.95 }],
+              },
+            },
+            variants: {
+              primary: {
                 backgroundColor: 'black',
                 _text: {
-                    color: 'white',
-                    fontWeight: 'bold',
+                  color: 'white',
                 },
+              },
+              secondary: {
+                paddingTop: 1,
+                paddingBottom: 1,
+                paddingLeft: 3,
+                paddingRight: 4,
+                backgroundColor: 'transparent',
+                borderColor: '#F97794', // Border color for secondary button
+                borderWidth: 2,
                 _pressed: {
-                    backgroundColor: 'gray.700', // Change la couleur lorsqu'appuyé
-                    transform: [{ scale: 0.95 }], // Ajoute un léger effet de réduction
+                  backgroundColor: 'rgba(249, 119, 148, 0.2)', // Lighter background when pressed
                 },
+              },
             },
             defaultProps: {
-                variant: 'primary',
+              variant: 'primary', // Default variant
             },
-        },
-        
+          },
+
     },
 });
 
