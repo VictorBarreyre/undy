@@ -1,5 +1,4 @@
-import React, { useContext, useState } from 'react';
-import 'react-native-gesture-handler';
+import React, { useState, useContext } from 'react';
 import { NativeBaseProvider } from 'native-base';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -9,8 +8,7 @@ import Inscription from './presentation/screens/Inscription';
 import Connexion from './presentation/screens/Connexion';
 import DrawerNavigator from './navigation/Layout';
 import * as Font from 'expo-font';
-import {lightTheme} from './infrastructure/theme/theme'
-
+import { lightTheme } from './infrastructure/theme/theme';
 
 const Stack = createStackNavigator();
 
@@ -31,19 +29,13 @@ const App = () => {
     }, []);
 
     if (!fontsLoaded) {
-        return null; // Écran vide pendant le chargement des polices
+        return null; // Affiche un écran vide en attendant le chargement des polices
     }
 
     return (
         <AuthProvider>
             <NativeBaseProvider theme={lightTheme}>
-                <NavigationContainer
-                    theme={{
-                        colors: {
-                            background: 'transparent', // S'assure que le fond est transparent
-                        },
-                    }}
-                >
+                <NavigationContainer>
                     <StackNavigator />
                 </NavigationContainer>
             </NativeBaseProvider>
@@ -55,7 +47,7 @@ const StackNavigator = () => {
     const { isLoggedIn } = useContext(AuthContext);
 
     return (
-        <Stack.Navigator >
+        <Stack.Navigator>
             {isLoggedIn ? (
                 <Stack.Screen name="App" component={DrawerNavigator} options={{ headerShown: false }} />
             ) : (

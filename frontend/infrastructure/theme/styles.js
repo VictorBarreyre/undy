@@ -1,8 +1,8 @@
 // styles.js
 import { StyleSheet } from 'react-native';
-import { Platform } from 'react-native';
+import { Platform, Dimensions } from 'react-native';
 
-
+const { width } = Dimensions.get('window'); // Largeur de l'écran
 
 export const styles = StyleSheet.create({
   staticBackground: {
@@ -92,6 +92,14 @@ content: {
     fontWeight: '700',
     fontFamily: 'SF-Pro-Display-Bold',
   },
+
+  ctalittle: {
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: '700',
+    fontFamily: 'SF-Pro-Display-Bold',
+  },
+
   subtitle: {
     fontSize: 16,
     lineHeight: 22,
@@ -144,6 +152,21 @@ content: {
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+  listContainer: {
+    paddingLeft: width * 0.1, // Pour laisser un peu d'espace avant la première carte
+  },
+  cardContainer: {
+    width: width * 0.75, // Largeur de la carte
+    justifyContent: 'center',
+    alignItems: 'center', // Contenu centré dans chaque carte
+    marginRight: width * 0.05, // Espacement entre les cartes
+    borderRadius: 12,
+  },
   
+  listContainer: {
+    justifyContent: 'flex-start', // Alignement à gauche pour les cartes
+    paddingLeft: 0, // Supprime le padding gauche initial
+  },
 });
 

@@ -42,13 +42,9 @@ const FilterBar = () => {
               bg='white'
               borderColor={selectedFilter === filter.id ? '#F3B8A8' : 'transparent'}
               rounded="full"
-              _text={{
-                color: 'black',
-                fontWeight: 'bold',
-                fontSize: '12', // Reduce text size
-              }}
+           
               startIcon={
-                <Image source={filter.icon} style={{ width: 20, height: 20 }} /> // Display custom image icon
+                <Image source={filter.icon} alt="icon" style={{ width: 20, height: 20 }} /> // Display custom image icon
               }
             >
               {filter.label}

@@ -11,11 +11,16 @@ export const AuthProvider = ({ children }) => {
     // Vérifie si l'utilisateur est déjà connecté (token dans AsyncStorage)
     useEffect(() => {
         const checkUserToken = async () => {
-            const token = await AsyncStorage.getItem('token');
-            if (token) {
-                setUserToken(token);
-                setIsLoggedIn(true);
-            } else {
+            try {
+                const token = await AsyncStorage.getItem('token');
+                if (token) {
+                    setUserToken(token);
+                    setIsLoggedIn(true);
+                } else {
+                    setIsLoggedIn(false);
+                }
+            } catch (error) {
+                console.error('Error fetching token from AsyncStorage:', error);
                 setIsLoggedIn(false);
             }
         };
@@ -23,14 +28,12 @@ export const AuthProvider = ({ children }) => {
         checkUserToken();
     }, []);
 
-    // Fonction pour se connecter (enregistre le token)
     const login = async (token) => {
         setUserToken(token);
         setIsLoggedIn(true);
         await AsyncStorage.setItem('token', token);
     };
 
-    // Fonction pour se déconnecter (supprime le token)
     const logout = async () => {
         setUserToken(null);
         setIsLoggedIn(false);

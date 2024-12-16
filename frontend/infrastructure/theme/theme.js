@@ -87,6 +87,12 @@ const lightTheme = extendTheme({
                 _pressed: {
                   backgroundColor: 'rgba(249, 119, 148, 0.2)', // Lighter background when pressed
                 },
+                _text: {
+                  fontWeight: 'Semibold',
+                  fontSize: 14,  // Font size for secondary variant
+                  lineHeight: 22,
+                  fontFamily: 'SF-Pro-Display-Bold',
+              },
               },
             },
             defaultProps: {
