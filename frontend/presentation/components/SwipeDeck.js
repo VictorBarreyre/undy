@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { Animated, PanResponder, Dimensions, StyleSheet } from 'react-native';
+import { Animated, PanResponder, Dimensions, StyleSheet, Text } from 'react-native';
 import { Box } from 'native-base'; 
 import CardHome from './CardHome';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;  // Récupérer la hauteur de l'écran
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 250;
 
@@ -30,7 +31,7 @@ const SwipeDeck = ({ data, renderCard, onSwipeRight, onSwipeLeft }) => {
   ).current;
 
   const forceSwipe = (direction) => {
-    const x = direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH;
+    const x = direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH;  // Déplacement horizontal
     Animated.timing(position, {
       toValue: { x, y: 0 },
       duration: SWIPE_OUT_DURATION,
@@ -51,18 +52,18 @@ const SwipeDeck = ({ data, renderCard, onSwipeRight, onSwipeLeft }) => {
       useNativeDriver: false,
     }).start();
   };
-
   const getCardStyle = () => {
     const rotate = position.x.interpolate({
       inputRange: [-SCREEN_WIDTH * 1.5, 0, SCREEN_WIDTH * 1.5],
       outputRange: ['-120deg', '0deg', '120deg']
     });
-
+  
     return {
       ...position.getLayout(),
-      transform: [{ rotate }]
+      transform: [{ rotate }]  // Applique la rotation pendant l'animation
     };
   };
+  
 
   if (index >= data.length) {
     return (
@@ -87,14 +88,19 @@ const SwipeDeck = ({ data, renderCard, onSwipeRight, onSwipeLeft }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    height:'100%',
+    height: SCREEN_HEIGHT,  // Utilisez la hauteur totale de l'écran
+    width: '100%',
+    justifyContent: 'center',  // Centrer verticalement
+    alignItems: 'center',      // Centrer horizontalement
+  },
+
+  cardStyle: {
+    width: SCREEN_WIDTH * 0.9,  // Carte de 90% de la largeur de l'écran
+    position: 'absolute',       // Positionner la carte de manière absolue
+    height: '80%',              // Définit une hauteur relative pour la carte
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  cardStyle: {
-    width: SCREEN_WIDTH * 0.9,
-    position: 'absolute',
-    height:'100%',
+    // Supprimez `left: '5%'`, afin que la carte puisse bouger librement pendant l'animation
   }
 });
 

@@ -26,7 +26,8 @@ const FilterBar = () => {
             backgroundColor="transparent"
             rounded="full"
             borderColor="transparent"
-            width="2%"
+            width="1.5%"
+            paddingLeft='2'
             onPress={() => console.log('Filter settings clicked')}
             _icon={{ size: 'xs' }}  // Reduce icon size
             _text={{ fontSize: 'sm' }} // Reduce text size

@@ -5,9 +5,7 @@ import { styles } from '../../infrastructure/theme/styles'
 
 export default function CardHome() {
     return (
-  
-        
-        
+
         <Box
             width="100%"
             height="80%"

@@ -16,7 +16,12 @@ export const styles = StyleSheet.create({
     flex: 1,
     zIndex: 1, // Assure que le contenu est au-dessus du background
   },
-  
+  containerHome: {
+    flex: 1,
+    paddingBottom: 20,
+    paddingLeft:20,  // Assure que le contenu est au-dessus du background
+  },
+
 safeArea: {
   paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, // SafeArea pour le haut uniquement
   flex: 1,

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import SwipeDeck from '../components/SwipeDeck'; 
 import FilterBar from '../components/Filter.bar';
+import {styles} from '../../infrastructure/theme/styles'
 
 
 const Home = () => {
@@ -25,9 +26,9 @@ const Home = () => {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.containerHome}>
       <FilterBar/>
-      <SwipeDeck
+      <SwipeDeck 
         data={data}
         renderCard={renderCard}
         onSwipeRight={onSwipeRight}
