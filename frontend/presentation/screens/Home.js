@@ -1,22 +1,12 @@
+// screens/Home.js
 import React from 'react';
 import { View, Text } from 'react-native';
 import SwipeDeck from '../components/SwipeDeck'; 
 import FilterBar from '../components/Filter.bar';
+import { CardDataProvider } from '../../infrastructure/context/CardDataContexte';  // Importer le fournisseur du contexte
 import {styles} from '../../infrastructure/theme/styles'
 
-
 const Home = () => {
-  const data = [
-    { id: 1, text: 'Card 1' },
-    { id: 2, text: 'Card 2' },
-  ];
-
-  const renderCard = item => (
-    <View>
-      <Text>{item.text}</Text>
-    </View>
-  );
-
   const onSwipeRight = item => {
     console.log('Swiped right on:', item);
   };
@@ -26,15 +16,15 @@ const Home = () => {
   };
 
   return (
-    <View style={styles.containerHome}>
-      <FilterBar/>
-      <SwipeDeck 
-        data={data}
-        renderCard={renderCard}
-        onSwipeRight={onSwipeRight}
-        onSwipeLeft={onSwipeLeft}
-      />
-    </View>
+    <CardDataProvider>
+      <View style={styles.containerHome}>
+        <FilterBar/>
+        <SwipeDeck 
+          onSwipeRight={onSwipeRight}
+          onSwipeLeft={onSwipeLeft}
+        />
+      </View>
+    </CardDataProvider>
   );
 };
 

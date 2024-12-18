@@ -1,14 +1,18 @@
+// components/SwipeDeck.js
 import React, { useState, useRef } from 'react';
 import { Animated, PanResponder, Dimensions, StyleSheet, Text } from 'react-native';
 import { Box } from 'native-base'; 
-import CardHome from './CardHome';
+import { useCardData } from '../../infrastructure/context/CardDataContexte'; // Importer le hook pour accéder au contexte
+import CardHome from './CardHome'; // Le composant CardHome qui va consommer les données du contexte
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;  // Récupérer la hauteur de l'écran
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
-const SWIPE_OUT_DURATION = 250;
+const SWIPE_OUT_DURATION = 550;
 
-const SwipeDeck = ({ data, renderCard, onSwipeRight, onSwipeLeft }) => {
+const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
+  const { data } = useCardData(); // Accéder aux données du contexte
+
   const [index, setIndex] = useState(0);
   const position = useRef(new Animated.ValueXY()).current;
 
@@ -43,7 +47,7 @@ const SwipeDeck = ({ data, renderCard, onSwipeRight, onSwipeLeft }) => {
     const item = data[index];
     direction === 'right' ? onSwipeRight(item) : onSwipeLeft(item);
     position.setValue({ x: 0, y: 0 });
-    setIndex(index + 1);
+    setIndex(prevIndex => prevIndex + 1);  // Mise à jour de l'index
   };
 
   const resetPosition = () => {
@@ -52,18 +56,18 @@ const SwipeDeck = ({ data, renderCard, onSwipeRight, onSwipeLeft }) => {
       useNativeDriver: false,
     }).start();
   };
+
   const getCardStyle = () => {
     const rotate = position.x.interpolate({
       inputRange: [-SCREEN_WIDTH * 1.5, 0, SCREEN_WIDTH * 1.5],
       outputRange: ['-120deg', '0deg', '120deg']
     });
-  
+
     return {
       ...position.getLayout(),
       transform: [{ rotate }]  // Applique la rotation pendant l'animation
     };
   };
-  
 
   if (index >= data.length) {
     return (
@@ -79,7 +83,7 @@ const SwipeDeck = ({ data, renderCard, onSwipeRight, onSwipeLeft }) => {
         style={[getCardStyle(), styles.cardStyle]}
         {...panResponder.panHandlers}
       >
-        <CardHome {...data[index]} />
+        <CardHome />
       </Animated.View>
     </Box>
   );
@@ -103,6 +107,5 @@ const styles = StyleSheet.create({
     // Supprimez `left: '5%'`, afin que la carte puisse bouger librement pendant l'animation
   }
 });
-
 
 export default SwipeDeck;
