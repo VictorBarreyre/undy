@@ -1,8 +1,10 @@
-// components/CardHome.js
 import React from 'react';
+import { styles } from '../../infrastructure/theme/styles';
 import { Box, Text, HStack, VStack, Image, Icon } from 'native-base';
+import { BlurView } from '@react-native-community/blur';
+import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useCardData } from '../../infrastructure/context/CardDataContexte'; // Importer le hook pour accéder au contexte
+
 
 export default function CardHome() {
   const { data } = useCardData(); // Accéder aux données via le contexte
@@ -14,7 +16,7 @@ export default function CardHome() {
   return (
     <Box
       width="100%"
-      height="80%"
+      height="100%"
       marginX="auto"
       borderRadius="lg"
       overflow="hidden"
@@ -25,16 +27,28 @@ export default function CardHome() {
       {/* Afficher l'image de la carte */}
       <Image
         source={data[0]?.image} // Utilisation de l'image de la carte à partir du contexte
-        alt={data[0]?.title || "Carte"}
+        alt={data[0]?.title || 'Carte'}
         width="100%"
         height={200}
       />
 
       {/* Contenu texte */}
       <VStack padding={4} space={2}>
-        <Text style={{ fontSize: 18 }}>
-          {data[0]?.description || "Aucune description disponible."}
-        </Text>
+        {/* Wrapper for the text with blur effect */}
+        <Box position="relative" overflow="hidden">
+          {/* Texte */}
+          <Text left='2' width='95%' style={styles.h4} >
+            {data[0]?.description || 'Aucune description disponible.'}
+          </Text>
+
+          {/* Overlay avec flou */}
+          <BlurView
+            style={styles.overlayCard}
+            blurType="light"
+            blurAmount={3}
+            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.4)"
+          />
+        </Box>
       </VStack>
 
       {/* Section des statistiques */}
@@ -70,9 +84,10 @@ export default function CardHome() {
 
         {/* Label */}
         <Text color="gray.500" fontSize="sm">
-          {data[0]?.label || "Label indisponible"}
+          {data[0]?.label || 'Label indisponible'}
         </Text>
       </HStack>
     </Box>
   );
 }
+

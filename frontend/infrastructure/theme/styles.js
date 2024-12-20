@@ -17,9 +17,11 @@ export const styles = StyleSheet.create({
     zIndex: 1, // Assure que le contenu est au-dessus du background
   },
   containerHome: {
+    backgroundColor:'transparent',
     flex: 1,
     paddingBottom: 20,
-    paddingLeft:20,  // Assure que le contenu est au-dessus du background
+    paddingLeft:20,
+    paddingRight:20,  // Assure que le contenu est au-dessus du background
   },
 
 safeArea: {
@@ -47,6 +49,14 @@ overlay: {
     backgroundColor: 'rgba(255, 255, 255, 0.6)', // White with reduced opacity
     zIndex: -1, // Between background and content
     backdropFilter: 'blur(50px)',
+},
+overlayCard: {
+  position: 'absolute',
+  top: 18,
+  left: -50,
+  width: '150%',
+  height: '100%',
+  zIndex: 1, // Assure que l'overlay est au-dessus
 },
 content: {
     flexGrow: 1,

@@ -1,10 +1,11 @@
 // screens/Home.js
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
+import { Button, Text, VStack } from 'native-base'; // Import NativeBase components
 import SwipeDeck from '../components/SwipeDeck'; 
 import FilterBar from '../components/Filter.bar';
-import { CardDataProvider } from '../../infrastructure/context/CardDataContexte';  // Importer le fournisseur du contexte
-import {styles} from '../../infrastructure/theme/styles'
+import { CardDataProvider } from '../../infrastructure/context/CardDataContexte'; // Importer le fournisseur du contexte
+import { styles } from '../../infrastructure/theme/styles';
 
 const Home = () => {
   const onSwipeRight = item => {
@@ -15,15 +16,29 @@ const Home = () => {
     console.log('Swiped left on:', item);
   };
 
+  const handleRevealSecret = () => {
+    console.log('Secret revealed!');
+  };
+
   return (
     <CardDataProvider>
-      <View style={styles.containerHome}>
-        <FilterBar/>
+      <VStack style={styles.containerHome} space={4}>
+        <FilterBar />
         <SwipeDeck 
           onSwipeRight={onSwipeRight}
           onSwipeLeft={onSwipeLeft}
         />
-      </View>
+        <Button
+          onPress={handleRevealSecret}
+          borderRadius="full"
+          variant="primary"
+          alignSelf="center"
+          mt={6}
+        
+        >
+          Dévoiler le secret 👀
+        </Button>
+      </VStack>
     </CardDataProvider>
   );
 };

@@ -72,6 +72,7 @@ const lightTheme = extendTheme({
             variants: {
               primary: {
                 backgroundColor: 'black',
+                width:'100%',
                 _text: {
                   color: 'white',
                 },
