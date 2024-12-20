@@ -14,6 +14,7 @@ export const CardDataProvider = ({ children }) => {
   const [data, setData] = useState([
     {
       id: 1,
+      posterpar:'Alice Martin',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Les vacances d'été",
       description: "Le Lorem Ipsum est simplement du faux texte utilisé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard.",
@@ -24,6 +25,7 @@ export const CardDataProvider = ({ children }) => {
     },
     {
       id: 2,
+      posterpar:'Joh Cohen',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Le projet immobilier",
       description: "Voici un aperçu d'un projet immobilier qui attire l'attention des investisseurs du monde entier.",
@@ -34,6 +36,7 @@ export const CardDataProvider = ({ children }) => {
     },
     {
       id: 3,
+      posterpar:'David Lisnard',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Événements de la ville",
       description: "Les événements de la ville sont nombreux ce mois-ci, avec des activités pour tous les goûts.",
@@ -44,6 +47,7 @@ export const CardDataProvider = ({ children }) => {
     },
     {
       id: 4,
+      posterpar:'Jean Luc Melenchon',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Technologie et innovation",
       description: "Les avancées technologiques changent le monde, découvrez les dernières innovations qui façonnent notre futur.",

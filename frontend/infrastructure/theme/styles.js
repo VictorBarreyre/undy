@@ -30,7 +30,9 @@ safeArea: {
   paddingTop: 20,
   backgroundColor: 'transparent', // Ajoutez un fond global si nécessaire
 },
-
+swipper : {
+  backgroundColor: 'transparent',
+},
 // Fond spécifique pour les écrans Connexion et Inscription
 backgroundImage: {
   position: 'absolute',
@@ -52,10 +54,10 @@ overlay: {
 },
 overlayCard: {
   position: 'absolute',
-  top: 18,
+  top:-15 ,
   left: -50,
   width: '150%',
-  height: '100%',
+  height: '150%',
   zIndex: 1, // Assure que l'overlay est au-dessus
 },
 content: {
@@ -64,7 +66,36 @@ content: {
     alignItems: 'center',
     paddingVertical: 20,
 },
-
+row: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+statsContainer: {
+  position: 'absolute', // Positionne la barre en bas
+    bottom: 0, // Aligné en bas du conteneur parent
+    width: '100%', // S'assure qu'il occupe toute la largeur
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingLeft:22,
+  },
+stats: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+iconContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginRight: 16, // Espacement entre les statistiques
+},
+label: {
+  textAlign: 'right',
+  fontWeight: '600',
+  fontSize: 14,
+  color: '#FF5A7D',
+},
   h1: {
     fontSize: 36,
     lineHeight: 46,

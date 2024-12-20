@@ -25,6 +25,7 @@ const Home = () => {
       <VStack style={styles.containerHome} space={4}>
         <FilterBar />
         <SwipeDeck 
+          style={styles.swipper}
           onSwipeRight={onSwipeRight}
           onSwipeLeft={onSwipeLeft}
         />
@@ -34,7 +35,6 @@ const Home = () => {
           variant="primary"
           alignSelf="center"
           mt={6}
-        
         >
           Dévoiler le secret 👀
         </Button>

@@ -4,6 +4,11 @@ import { Box, Text, HStack, VStack, Image, Icon } from 'native-base';
 import { BlurView } from '@react-native-community/blur';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { faHeart, faComment, faPaperPlane } from '@fortawesome/free-regular-svg-icons'; // Import des icônes "vides"
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { View } from 'native-base';
+
+
 
 
 export default function CardHome() {
@@ -16,7 +21,7 @@ export default function CardHome() {
   return (
     <Box
       width="100%"
-      height="100%"
+      height="auto"
       marginX="auto"
       borderRadius="lg"
       overflow="hidden"
@@ -24,69 +29,76 @@ export default function CardHome() {
       marginTop={2}
       shadow={0}
     >
-      {/* Afficher l'image de la carte */}
-      <Image
-        source={data[0]?.image} // Utilisation de l'image de la carte à partir du contexte
-        alt={data[0]?.title || 'Carte'}
-        width="100%"
-        height={200}
-      />
-
+   
       {/* Contenu texte */}
       <VStack padding={4} space={2}>
+      <HStack alignItems="center" justifyContent="space-between" width="100%">
+        {/* Texte aligné à gauche */}
+        <Box flex={1} mr={4}>
+          <Text left={2} style={styles.h2}>
+            {data[0]?.posterpar || 'Aucune description disponible.'}
+          </Text>
+        </Box>
+
+        {/* Image alignée à droite */}
+        <Image
+          source={data[0]?.image} // Image du contexte
+          alt={data[0]?.title || 'Carte'}
+          width={45} // Ajustez la taille de l'image ici
+          height={45} // Ajustez la taille de l'image ici
+          borderRadius="full" // Rendre l'image ronde
+        />
+      </HStack>
         {/* Wrapper for the text with blur effect */}
-        <Box position="relative" overflow="hidden">
+        <Box height='60%' position="relative" overflow="hidden">
           {/* Texte */}
-          <Text left='2' width='95%' style={styles.h4} >
+          <Text top='2' left='2' width='95%' style={styles.h3} >
             {data[0]?.description || 'Aucune description disponible.'}
           </Text>
-
           {/* Overlay avec flou */}
           <BlurView
             style={styles.overlayCard}
             blurType="light"
-            blurAmount={3}
+            blurAmount={5}
             reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.4)"
           />
         </Box>
       </VStack>
 
-      {/* Section des statistiques */}
-      <HStack
-        paddingX={4}
-        paddingBottom={4}
-        justifyContent="space-between"
-        alignItems="center"
-      >
-        {/* Statistiques : likes */}
-        <HStack space={1} alignItems="center">
-          <Icon as={FontAwesome5} name="heart" color="pink.500" />
-          <Text color="gray.500" fontSize="sm">
-            {data[0]?.likes || 0}
-          </Text>
-        </HStack>
+       {/* Section des statistiques */}
+       <View style={[styles.statsContainer]}>
+        {/* Conteneur des icônes des statistiques */}
+        <View style={[styles.row, styles.stats]}>
+          {/* Statistiques : likes */}
+          <View style={styles.iconContainer}>
+            <FontAwesomeIcon icon={faHeart} color="#FF5A7D" size={20} />
+            <Text style={styles.caption} ml={2}>
+              {data[0]?.likes || 0}
+            </Text>
+          </View>
 
-        {/* Statistiques : commentaires */}
-        <HStack space={1} alignItems="center">
-          <Icon as={FontAwesome5} name="comment-alt" color="gray.500" />
-          <Text color="gray.500" fontSize="sm">
-            {data[0]?.comments || 0}
-          </Text>
-        </HStack>
+          {/* Statistiques : commentaires */}
+          <View style={styles.iconContainer}>
+            <FontAwesomeIcon icon={faComment} color="#FF5A7D" size={20} />
+            <Text style={styles.caption} ml={2}>
+              {data[0]?.comments || 0}
+            </Text>
+          </View>
 
-        {/* Statistiques : partages */}
-        <HStack space={1} alignItems="center">
-          <Icon as={FontAwesome5} name="share-alt" color="gray.500" />
-          <Text color="gray.500" fontSize="sm">
-            {data[0]?.shares || 0}
-          </Text>
-        </HStack>
+          {/* Statistiques : partages */}
+          <View style={styles.iconContainer}>
+            <FontAwesomeIcon icon={faPaperPlane} color="#FF5A7D" size={20} />
+            <Text style={styles.caption} ml={2}>
+              {data[0]?.shares || 0}
+            </Text>
+          </View>
+        </View>
 
-        {/* Label */}
-        <Text color="gray.500" fontSize="sm">
+        {/* Label aligné à droite */}
+        <Text style={[styles.caption, styles.ctalittle]} color="#FF5A7D">
           {data[0]?.label || 'Label indisponible'}
         </Text>
-      </HStack>
+      </View>
     </Box>
   );
 }
