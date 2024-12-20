@@ -57,7 +57,7 @@ overlayCard: {
   top:-15 ,
   left: -50,
   width: '150%',
-  height: '150%',
+  height: '180%',
   zIndex: 1, // Assure que l'overlay est au-dessus
 },
 content: {
@@ -71,7 +71,6 @@ row: {
   alignItems: 'center',
 },
 statsContainer: {
-  position: 'absolute', // Positionne la barre en bas
     bottom: 0, // Aligné en bas du conteneur parent
     width: '100%', // S'assure qu'il occupe toute la largeur
     flexDirection: 'row',

@@ -20,7 +20,8 @@ export default function CardHome() {
 
   return (
     <Box
-      width="100%"
+    display="flex" // Utilise le modèle Flexbox
+    width="100%"
       height="auto"
       marginX="auto"
       borderRadius="lg"
@@ -29,30 +30,28 @@ export default function CardHome() {
       marginTop={2}
       shadow={0}
     >
-   
       {/* Contenu texte */}
       <VStack padding={4} space={2}>
-      <HStack alignItems="center" justifyContent="space-between" width="100%">
-        {/* Texte aligné à gauche */}
-        <Box flex={1} mr={4}>
-          <Text left={2} style={styles.h2}>
-            {data[0]?.posterpar || 'Aucune description disponible.'}
-          </Text>
-        </Box>
-
-        {/* Image alignée à droite */}
-        <Image
-          source={data[0]?.image} // Image du contexte
-          alt={data[0]?.title || 'Carte'}
-          width={45} // Ajustez la taille de l'image ici
-          height={45} // Ajustez la taille de l'image ici
-          borderRadius="full" // Rendre l'image ronde
-        />
-      </HStack>
+        <HStack alignItems="center" justifyContent="space-between" width="100%">
+          {/* Texte aligné à gauche */}
+          <Box flex={1} mr={4}>
+            <Text left={2} style={styles.h2}>
+              {data[0]?.posterpar || 'Aucune description disponible.'}
+            </Text>
+          </Box>
+          {/* Image alignée à droite */}
+          <Image
+            source={data[0]?.image} // Image du contexte
+            alt={data[0]?.title || 'Carte'}
+            width={45} // Ajustez la taille de l'image ici
+            height={45} // Ajustez la taille de l'image ici
+            borderRadius="full" // Rendre l'image ronde
+          />
+        </HStack>
         {/* Wrapper for the text with blur effect */}
-        <Box height='60%' position="relative" overflow="hidden">
+        <Box height='auto' position="relative" overflow="hidden">
           {/* Texte */}
-          <Text top='2' left='2' width='95%' style={styles.h3} >
+          <Text top='1' left='2' paddingBottom='2' width='95%' style={styles.h2} >
             {data[0]?.description || 'Aucune description disponible.'}
           </Text>
           {/* Overlay avec flou */}
@@ -65,8 +64,8 @@ export default function CardHome() {
         </Box>
       </VStack>
 
-       {/* Section des statistiques */}
-       <View style={[styles.statsContainer]}>
+      {/* Section des statistiques */}
+      <View style={[styles.statsContainer]}>
         {/* Conteneur des icônes des statistiques */}
         <View style={[styles.row, styles.stats]}>
           {/* Statistiques : likes */}
