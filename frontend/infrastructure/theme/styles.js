@@ -58,7 +58,7 @@ overlay: {
 },
 overlayCard: {
   position: 'absolute',
-  top:30 ,
+  top:33 ,
   left: -50,
   width: '150%',
   height: '120%',
@@ -76,13 +76,12 @@ row: {
 },
 statsContainer: {
     bottom: 0, // Aligné en bas du conteneur parent
-    width: '100%', // S'assure qu'il occupe toute la largeur
+    width: '90%', // S'assure qu'il occupe toute la largeur
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingLeft:22,
+    marginTop:18,
+
   },
 stats: {
   flexDirection: 'row',
@@ -146,7 +145,7 @@ label: {
     fontSize: 14,
     lineHeight: 22,
     fontWeight: '700',
-    fontFamily: 'SF-Pro-Display-Bold',
+    fontFamily: 'SF-Pro-Display-Medium',
   },
 
   subtitle: {

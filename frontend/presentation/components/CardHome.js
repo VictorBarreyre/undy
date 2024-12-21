@@ -32,26 +32,30 @@ export default function CardHome() {
       overflow="hidden"
       backgroundColor="white"
       marginTop={2}
-      shadow={0}
+      shadow={10}
+      paddingTop={1}
+      paddingBottom={1}
+      
     >
       {/* Contenu texte */}
       <VStack padding={4} space={2}>
-        <HStack alignItems="center" justifyContent="space-between" width="100%">
+             <HStack mt={1} alignItems="center" justifyContent="space-between" width="95%">
           {/* Texte aligné à gauche */}
-          <Box flex={1} mr={4}>
-            <Text left={2} style={styles.h2}>
-              {data[0]?.posterpar || 'Aucune description disponible.'}
+          <Box flex={1} mr={4} ml={2} >
+            <Text left={2} style={styles.h5}>
+            Posté par {data[0]?.posterpar || 'Aucune description disponible.'}
             </Text>
           </Box>
           {/* Image alignée à droite */}
           <Image
             source={data[0]?.image} // Image du contexte
             alt={data[0]?.title || 'Carte'}
-            width={45} // Ajustez la taille de l'image ici
-            height={45} // Ajustez la taille de l'image ici
+            width={35} // Ajustez la taille de l'image ici
+            height={35} // Ajustez la taille de l'image ici
             borderRadius="full" // Rendre l'image ronde
           />
         </HStack>
+        
         {/* Wrapper for the text with blur effect */}
         <Box
           height="auto"
@@ -61,7 +65,7 @@ export default function CardHome() {
           alignItems="center" // Centre horizontalement les enfants
         >
           {/* Texte */}
-          <Text top="1" left="2" paddingBottom="2" width="95%" style={styles.h3}>
+          <Text    ellipsizeMode="tail" top="1" left="2" paddingBottom="2" width="95%" style={styles.h3}>
             {`"${data[0]?.description || 'Aucune description disponible.'}"`}
           </Text>
 
@@ -70,6 +74,7 @@ export default function CardHome() {
             style={styles.overlayCard}
             blurType="light"
             blurAmount={5}
+            backgroundColor='rgba(255, 255, 255, 0.6)'
             reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
           />
 
@@ -85,11 +90,9 @@ export default function CardHome() {
           </Button>
         </Box>
 
-
-      </VStack>
-
-      {/* Section des statistiques */}
-      <View style={[styles.statsContainer]}>
+   
+   {/* Section des statistiques */}
+   <View ml={4} style={[styles.statsContainer]}>
         {/* Conteneur des icônes des statistiques */}
         <View style={[styles.row, styles.stats]}>
           {/* Statistiques : likes */}
@@ -118,10 +121,14 @@ export default function CardHome() {
         </View>
 
         {/* Label aligné à droite */}
-        <Text style={[styles.caption, styles.ctalittle]} color="#FF5A7D">
+        <Text style={[styles.caption, styles.ctalittle]} >
           {data[0]?.label || 'Label indisponible'}
         </Text>
       </View>
+
+      </VStack>
+
+   
     </Box>
   );
 }
