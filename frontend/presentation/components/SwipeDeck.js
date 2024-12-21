@@ -1,12 +1,11 @@
-// components/SwipeDeck.js
 import React, { useState, useRef } from 'react';
 import { Animated, PanResponder, Dimensions, StyleSheet, Text } from 'react-native';
-import { Box } from 'native-base'; 
+import { Box } from 'native-base';
 import { useCardData } from '../../infrastructure/context/CardDataContexte'; // Importer le hook pour accéder au contexte
 import CardHome from './CardHome'; // Le composant CardHome qui va consommer les données du contexte
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height;  // Récupérer la hauteur de l'écran
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 550;
 
@@ -35,7 +34,7 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
   ).current;
 
   const forceSwipe = (direction) => {
-    const x = direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH;  // Déplacement horizontal
+    const x = direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH;
     Animated.timing(position, {
       toValue: { x, y: 0 },
       duration: SWIPE_OUT_DURATION,
@@ -47,7 +46,7 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
     const item = data[index];
     direction === 'right' ? onSwipeRight(item) : onSwipeLeft(item);
     position.setValue({ x: 0, y: 0 });
-    setIndex(prevIndex => prevIndex + 1);  // Mise à jour de l'index
+    setIndex((prevIndex) => prevIndex + 1);
   };
 
   const resetPosition = () => {
@@ -60,13 +59,45 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
   const getCardStyle = () => {
     const rotate = position.x.interpolate({
       inputRange: [-SCREEN_WIDTH * 1.5, 0, SCREEN_WIDTH * 1.5],
-      outputRange: ['-120deg', '0deg', '120deg']
+      outputRange: ['-10deg', '0deg', '10deg'],
     });
 
     return {
       ...position.getLayout(),
-      transform: [{ rotate }]  // Applique la rotation pendant l'animation
+      transform: [{ rotate }],
     };
+  };
+
+  const renderCards = () => {
+    return data
+      .map((item, i) => {
+        if (i < index) {
+          // Les cartes déjà swipées ne sont pas affichées
+          return null;
+        }
+
+        const isCurrentCard = i === index;
+        const style = isCurrentCard
+          ? [getCardStyle(), styles.cardStyle]
+          : [
+              styles.cardStyle,
+              {
+                top: 25 * (i - index), // Décale les cartes suivantes
+                transform: [{ scale: 1 - 0.05 * (i - index) }], // Réduit légèrement la taille des cartes suivantes
+              },
+            ];
+
+        return (
+          <Animated.View
+            key={item.id || i}
+            style={style}
+            {...(isCurrentCard ? panResponder.panHandlers : {})}
+          >
+            <CardHome data={item} />
+          </Animated.View>
+        );
+      })
+      .reverse(); // Empile les cartes dans l'ordre correct
   };
 
   if (index >= data.length) {
@@ -77,35 +108,24 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
     );
   }
 
-  return (
-    <Box style={styles.container}>
-      <Animated.View
-        style={[getCardStyle(), styles.cardStyle]}
-        {...panResponder.panHandlers}
-      >
-        <CardHome />
-      </Animated.View>
-    </Box>
-  );
+  return <Box style={styles.container}>{renderCards()}</Box>;
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    height: SCREEN_HEIGHT,  // Utilisez la hauteur totale de l'écran
+    height: SCREEN_HEIGHT,
     width: '100%',
-    justifyContent: 'center',  // Centrer verticalement
-    alignItems: 'center',      // Centrer horizontalement
-  },
-
-  cardStyle: {
-    width: SCREEN_WIDTH * 0.9,  // Carte de 90% de la largeur de l'écran
-    position: 'absolute',       // Positionner la carte de manière absolue
-    height: '80%',              // Définit une hauteur relative pour la carte
     justifyContent: 'center',
     alignItems: 'center',
-    // Supprimez `left: '5%'`, afin que la carte puisse bouger librement pendant l'animation
-  }
+  },
+  cardStyle: {
+    width: SCREEN_WIDTH * 0.9,
+    position: 'absolute',
+    height: '80%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
 
 export default SwipeDeck;
