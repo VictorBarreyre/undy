@@ -47,6 +47,13 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
     direction === 'right' ? onSwipeRight(item) : onSwipeLeft(item);
     position.setValue({ x: 0, y: 0 });
     setIndex((prevIndex) => prevIndex + 1);
+      // Ajoute une animation douce pour la carte suivante
+      Animated.spring(position, {
+        toValue: { x: 0, y: 0 },
+        friction: 6, // Augmentez cette valeur pour ralentir davantage
+        tension: 70, // Réduisez cette valeur pour une animation plus douce
+        useNativeDriver: false,
+      }).start();
   };
 
   const resetPosition = () => {

@@ -21,7 +21,7 @@ export const CardDataProvider = ({ children }) => {
       likes: 150,
       comments: 35,
       shares: 12,
-      label: "Vacances 🌴"
+      label: "Vacances "
     },
     {
       id: 2,
@@ -32,7 +32,7 @@ export const CardDataProvider = ({ children }) => {
       likes: 250,
       comments: 50,
       shares: 20,
-      label: "Immobilier 🏠"
+      label: "Immobilier "
     },
     {
       id: 3,
@@ -43,7 +43,7 @@ export const CardDataProvider = ({ children }) => {
       likes: 300,
       comments: 75,
       shares: 25,
-      label: "Événements 🎉"
+      label: "Événements "
     },
     {
       id: 4,
@@ -54,7 +54,7 @@ export const CardDataProvider = ({ children }) => {
       likes: 100,
       comments: 40,
       shares: 18,
-      label: "Tech 💻"
+      label: "Tech "
     },
     {
       id: 5,
@@ -65,7 +65,7 @@ export const CardDataProvider = ({ children }) => {
       likes: 100,
       comments: 40,
       shares: 18,
-      label: "Tech 💻"
+      label: "Tech "
     },
     {
       id: 6,
@@ -76,7 +76,7 @@ export const CardDataProvider = ({ children }) => {
       likes: 100,
       comments: 40,
       shares: 18,
-      label: "Tech 💻"
+      label: "Tech "
     }
   ]);
 
