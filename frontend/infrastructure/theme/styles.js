@@ -14,24 +14,28 @@ export const styles = StyleSheet.create({
   // Style pour les conteneurs ou overlays
   container: {
     flex: 1,
-    zIndex: 1, // Assure que le contenu est au-dessus du background
+    zIndex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+     // Assure que le contenu est au-dessus du background
   },
   containerHome: {
     backgroundColor:'transparent',
     flex: 1,
     paddingBottom: 20,
     paddingLeft:20,
-    paddingRight:20,  // Assure que le contenu est au-dessus du background
+    paddingRight:20,
+ // Assure que le contenu est au-dessus du background
   },
-
 safeArea: {
   paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, // SafeArea pour le haut uniquement
   flex: 1,
   paddingTop: 20,
   backgroundColor: 'transparent', // Ajoutez un fond global si nécessaire
 },
-swipper : {
+swipper: {
   backgroundColor: 'transparent',
+  flex: 1,
 },
 // Fond spécifique pour les écrans Connexion et Inscription
 backgroundImage: {
@@ -54,10 +58,10 @@ overlay: {
 },
 overlayCard: {
   position: 'absolute',
-  top:-15 ,
+  top:30 ,
   left: -50,
   width: '150%',
-  height: '180%',
+  height: '120%',
   zIndex: 1, // Assure que l'overlay est au-dessus
 },
 content: {
@@ -77,7 +81,7 @@ statsContainer: {
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingLeft:22,
   },
 stats: {

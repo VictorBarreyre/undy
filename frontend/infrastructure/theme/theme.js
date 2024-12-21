@@ -62,7 +62,10 @@ const lightTheme = extendTheme({
               paddingRight: 8,
               borderRadius: 30,
               _text: {
-                fontWeight: 'bold',
+                color: 'white',
+                lineHeight: 28, // Ajout depuis `cta`
+                fontWeight: '700', // Ajout depuis `cta`
+                fontFamily: 'SF-Pro-Display-Bold', // Ajout depuis `cta`
               },
               _pressed: {
                 backgroundColor: 'gray.700',
@@ -75,6 +78,10 @@ const lightTheme = extendTheme({
                 width:'100%',
                 _text: {
                   color: 'white',
+                  fontSize: 18, // Ajout depuis `cta`
+                  lineHeight: 28, // Ajout depuis `cta`
+                  fontWeight: '700', // Ajout depuis `cta`
+                  fontFamily: 'SF-Pro-Display-Bold', // Ajout depuis `cta`
                 },
               },
               secondary: {
@@ -93,6 +100,7 @@ const lightTheme = extendTheme({
                   fontSize: 14,  // Font size for secondary variant
                   lineHeight: 22,
                   fontFamily: 'SF-Pro-Display-Bold',
+                  color: 'black',
               },
               },
             },

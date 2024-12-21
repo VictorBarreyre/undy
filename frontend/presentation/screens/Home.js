@@ -1,11 +1,11 @@
-// screens/Home.js
 import React from 'react';
 import { View } from 'react-native';
-import { Button, Text, VStack } from 'native-base'; // Import NativeBase components
-import SwipeDeck from '../components/SwipeDeck'; 
+import { Button, VStack, Box } from 'native-base'; // Import NativeBase components
+import SwipeDeck from '../components/SwipeDeck';
 import FilterBar from '../components/Filter.bar';
 import { CardDataProvider } from '../../infrastructure/context/CardDataContexte'; // Importer le fournisseur du contexte
 import { styles } from '../../infrastructure/theme/styles';
+import { Background } from '../../navigation/Layout'; // Import du composant Background
 
 const Home = () => {
   const onSwipeRight = item => {
@@ -16,30 +16,23 @@ const Home = () => {
     console.log('Swiped left on:', item);
   };
 
-  const handleRevealSecret = () => {
-    console.log('Secret revealed!');
-  };
 
   return (
-    <CardDataProvider>
-      <VStack style={styles.containerHome} space={4}>
+    <Background>
+      <CardDataProvider>
         <FilterBar />
-        <SwipeDeck 
-          style={styles.swipper}
-          onSwipeRight={onSwipeRight}
-          onSwipeLeft={onSwipeLeft}
-        />
-        <Button
-          onPress={handleRevealSecret}
-          borderRadius="full"
-          variant="primary"
-          alignSelf="center"
-          mt={6}
-        >
-          Dévoiler le secret 👀
-        </Button>
-      </VStack>
-    </CardDataProvider>
+        <VStack style={styles.containerHome} space={4}>
+          <Box flex={1} justifyContent="center" alignItems="center">
+            <SwipeDeck
+              style={styles.swipper}
+              onSwipeRight={onSwipeRight}
+              onSwipeLeft={onSwipeLeft}
+            />
+  
+          </Box>
+        </VStack>
+      </CardDataProvider>
+    </Background>
   );
 };
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { styles } from '../../infrastructure/theme/styles';
-import { Box, Text, HStack, VStack, Image, Icon } from 'native-base';
+import { Box, Text, HStack, VStack, Image, Button } from 'native-base';
 import { BlurView } from '@react-native-community/blur';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -18,10 +18,14 @@ export default function CardHome() {
     return <Text>No data available</Text>;
   }
 
+  const handleRevealSecret = () => {
+    console.log('Secret revealed!');
+  };
+
   return (
     <Box
-    display="flex" // Utilise le modèle Flexbox
-    width="100%"
+      display="flex" // Utilise le modèle Flexbox
+      width="100%"
       height="auto"
       marginX="auto"
       borderRadius="lg"
@@ -49,19 +53,39 @@ export default function CardHome() {
           />
         </HStack>
         {/* Wrapper for the text with blur effect */}
-        <Box height='auto' position="relative" overflow="hidden">
+        <Box
+          height="auto"
+          position="relative"
+          overflow="hidden"
+          justifyContent="center" // Centre verticalement les enfants
+          alignItems="center" // Centre horizontalement les enfants
+        >
           {/* Texte */}
-          <Text top='1' left='2' paddingBottom='2' width='95%' style={styles.h2} >
-            {data[0]?.description || 'Aucune description disponible.'}
+          <Text top="1" left="2" paddingBottom="2" width="95%" style={styles.h3}>
+            {`"${data[0]?.description || 'Aucune description disponible.'}"`}
           </Text>
+
           {/* Overlay avec flou */}
           <BlurView
             style={styles.overlayCard}
             blurType="light"
             blurAmount={5}
-            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.4)"
+            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
           />
+
+          {/* Bouton centré */}
+          <Button
+            width='80%'
+            zIndex="5"
+            onClick={handleRevealSecret}
+            variant="primary"
+            style={{ position: 'absolute', bottom: 50, }} // Optionnel : place le bouton en bas
+          >
+            Dévoiler le secret pour 2$
+          </Button>
         </Box>
+
+
       </VStack>
 
       {/* Section des statistiques */}

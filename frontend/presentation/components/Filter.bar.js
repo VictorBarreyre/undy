@@ -14,7 +14,7 @@ const FilterBar = () => {
   ];
 
   return (
-    <Box>
+    <Box paddingLeft='4' paddingTop='4' >
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
