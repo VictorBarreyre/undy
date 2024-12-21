@@ -70,24 +70,36 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
 
   const renderCards = () => {
     return data
-      .map((item, i) => {
-        if (i < index) {
-          // Les cartes déjà swipées ne sont pas affichées
-          return null;
-        }
+    .map((item, i) => {
+      if (i < index) {
+        // Les cartes déjà swipées ne sont pas affichées
+        return null;
+      }
+
+      if (i >= index + 4) {
+        // Ne rend que les 5 cartes suivantes après l'index
+        return null;
+      }
 
         const isCurrentCard = i === index;
+        const shadowOpacity = isCurrentCard
+        ? 0.3 // Ombre plus forte pour la carte en haut
+        : 0.1 * (5 - (i - index)); // Ombre plus douce pour les cartes en arrière-plan
         const style = isCurrentCard
           ? [getCardStyle(), styles.cardStyle]
           : [
               styles.cardStyle,
-              {
+              { shadowOpacity,
+                shadowColor: 'violet',
+                shadowRadius: 5,
+                elevation: 3,
                 top: 25 * (i - index), // Décale les cartes suivantes
                 transform: [{ scale: 1 - 0.05 * (i - index) }], // Réduit légèrement la taille des cartes suivantes
               },
             ];
 
         return (
+          
           <Animated.View
             key={item.id || i}
             style={style}
@@ -95,6 +107,7 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
           >
             <CardHome data={item} />
           </Animated.View>
+          
         );
       })
       .reverse(); // Empile les cartes dans l'ordre correct
@@ -122,7 +135,7 @@ const styles = StyleSheet.create({
   cardStyle: {
     width: SCREEN_WIDTH * 0.9,
     position: 'absolute',
-    height: '80%',
+    height:"auto",
     justifyContent: 'center',
     alignItems: 'center',
   },

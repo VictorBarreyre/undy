@@ -55,6 +55,28 @@ export const CardDataProvider = ({ children }) => {
       comments: 40,
       shares: 18,
       label: "Tech 💻"
+    },
+    {
+      id: 5,
+      posterpar:'Jean Luc Melenchon',
+      image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
+      title: "Technologie et innovation",
+      description: "Les avancées technologiques changent le monde, découvrez les dernières innovations qui façonnent notre futur.",
+      likes: 100,
+      comments: 40,
+      shares: 18,
+      label: "Tech 💻"
+    },
+    {
+      id: 6,
+      posterpar:'Jean Luc Melenchon',
+      image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
+      title: "Technologie et innovation",
+      description: "Les avancées technologiques changent le monde, découvrez les dernières innovations qui façonnent notre futur.",
+      likes: 100,
+      comments: 40,
+      shares: 18,
+      label: "Tech 💻"
     }
   ]);
 

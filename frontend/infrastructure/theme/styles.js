@@ -16,12 +16,14 @@ export const styles = StyleSheet.create({
     flex: 1,
     zIndex: 1,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+  
      // Assure que le contenu est au-dessus du background
   },
   containerHome: {
     backgroundColor:'transparent',
     flex: 1,
+    marginTop:20,
     paddingBottom: 20,
     paddingLeft:20,
     paddingRight:20,
@@ -36,6 +38,14 @@ safeArea: {
 swipper: {
   backgroundColor: 'transparent',
   flex: 1,
+},
+
+boxShadow: {
+  shadowColor: 'purple', // Couleur de l'ombre
+  shadowOffset: { width: 0, height: 4 }, // Décalage de l'ombre
+  shadowOpacity: 0.2, // Opacité de l'ombre
+  shadowRadius: 6, // Rayon de diffusion
+  elevation: 10, // Ombre Android
 },
 // Fond spécifique pour les écrans Connexion et Inscription
 backgroundImage: {
@@ -58,7 +68,7 @@ overlay: {
 },
 overlayCard: {
   position: 'absolute',
-  top:33 ,
+  top:42 ,
   left: -50,
   width: '150%',
   height: '120%',

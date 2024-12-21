@@ -35,7 +35,7 @@ export default function CardHome() {
       shadow={10}
       paddingTop={1}
       paddingBottom={1}
-      
+      style={styles.boxShadow} 
     >
       {/* Contenu texte */}
       <VStack padding={4} space={2}>
@@ -65,7 +65,7 @@ export default function CardHome() {
           alignItems="center" // Centre horizontalement les enfants
         >
           {/* Texte */}
-          <Text    ellipsizeMode="tail" top="1" left="2" paddingBottom="2" width="95%" style={styles.h3}>
+          <Text    ellipsizeMode="tail" top="1" left="2" paddingBottom="2" width="95%" style={styles.h2}>
             {`"${data[0]?.description || 'Aucune description disponible.'}"`}
           </Text>
 
@@ -79,15 +79,6 @@ export default function CardHome() {
           />
 
           {/* Bouton centré */}
-          <Button
-            width='80%'
-            zIndex="5"
-            onClick={handleRevealSecret}
-            variant="primary"
-            style={{ position: 'absolute', bottom: 50, }} // Optionnel : place le bouton en bas
-          >
-            Dévoiler le secret pour 2$
-          </Button>
         </Box>
 
    
