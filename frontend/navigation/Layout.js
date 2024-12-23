@@ -20,7 +20,7 @@ export function Background({ children }) {
         <Box flex={1} position="relative">
             {/* Fond statique derrière tout */}
             <Image
-                source={require('../assets/images/bgstatic.png')}
+                source={require('../assets/images/backgroundbp.png')}
                 style={styles.staticBackground} // zIndex: -1 est appliqué ici
                 resizeMode="cover"
             />

@@ -34,7 +34,7 @@ const lightTheme = extendTheme({
                 paddingBottom: 3,
                 paddingLeft: 6,
                 paddingRight: 8,
-             
+                w:'100%',
                 borderRadius: 30,
                 borderColor:'transparent',
                 backgroundColor:'white',

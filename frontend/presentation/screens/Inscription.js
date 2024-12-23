@@ -79,6 +79,7 @@ const Inscription = ({ navigation }) => {
             />
 
             <ScrollView
+                width='100%'
                 contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between' }}
                 p={4}
             >
@@ -96,7 +97,7 @@ const Inscription = ({ navigation }) => {
                 ) : null}
 
                 {/* Form Section */}
-                <Box alignItems="center" mb={4}>
+                <Box alignItems="center" width='100%' mb={4}>
                     <Text
                         style={styles.h4}
                         mt={10}
@@ -108,6 +109,7 @@ const Inscription = ({ navigation }) => {
                     <VStack mt={4} space={2} w="90%">
                         {/* Email */}
                         <Input
+                            width='100%'
                             placeholder="Email"
                             value={email}
                             onChangeText={setEmail}

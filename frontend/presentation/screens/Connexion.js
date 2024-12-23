@@ -76,6 +76,7 @@ const Connexion = ({ navigation }) => {
             />
 
             <ScrollView
+                 width='100%'
                 contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between' }}
                 p={4}
             >

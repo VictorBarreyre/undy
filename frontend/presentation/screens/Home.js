@@ -1,11 +1,13 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Text, VStack, Box, Button } from 'native-base'; // Import NativeBase components
+import { Text, VStack, Box, Button, Icon } from 'native-base'; // Import NativeBase components
 import SwipeDeck from '../components/SwipeDeck';
 import FilterBar from '../components/Filter.bar';
 import { CardDataProvider } from '../../infrastructure/context/CardDataContexte'; // Importer le fournisseur du contexte
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Layout'; // Import du composant Background
+import { faUnlock } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 
 const Home = () => {
   const onSwipeRight = item => {
@@ -30,7 +32,19 @@ const Home = () => {
               onSwipeRight={onSwipeRight}
               onSwipeLeft={onSwipeLeft}
             />
-            <Button>Dévoiler le secret pour 2,90€</Button>
+        <Button
+  leftIcon={
+    <Icon
+      as={<FontAwesomeIcon icon={faUnlock} />}
+      size="sm"
+      color="white"
+      marginRight={1}
+    />
+  }
+  variant="primary" // Utilise le style "primary" défini dans votre thème
+>
+  Dévoiler le secret pour 2,90€
+</Button>
           </Box>
         </VStack>
       </CardDataProvider>

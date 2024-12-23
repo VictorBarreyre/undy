@@ -4,6 +4,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 
+
 const FilterBar = () => {
   const [selectedFilter, setSelectedFilter] = useState(null);
 
@@ -23,6 +24,7 @@ const FilterBar = () => {
 
         {/* Champ de recherche */}
         <Box
+          
           flex={1} // Prend tout l'espace disponible
           borderRadius="full"
           overflow="hidden"
@@ -30,10 +32,14 @@ const FilterBar = () => {
           backgroundColor="white"
           maxWidth="100%"
           style={{
-            elevation: 1, // Ombre sur Android
+            shadowColor: '#000',
+            shadowOffset: { width: -4, height: -4 }, // Décalage de l'ombre intérieure
+            shadowOpacity: 0.1,
+            shadowRadius: 6,
+            elevation: 2, // Ombre Android
           }}
         >
-          <HStack alignItems="center" paddingX={4} paddingY={2}>
+          <HStack  alignItems="center" paddingX={4} paddingY={2}>
             {/* Icône */}
             <Icon
               as={<FontAwesomeIcon icon={faSearch} />}

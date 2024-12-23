@@ -226,5 +226,23 @@ label: {
     justifyContent: 'flex-start', // Alignement à gauche pour les cartes
     paddingLeft: 0, // Supprime le padding gauche initial
   },
+
+  shadowContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: -4, height: -4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5, // Pour Android
+    padding: 10,
+  },
+
+    inputBox: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 16,
+    height: 50,
+  },
+
 });
 
