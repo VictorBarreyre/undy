@@ -80,7 +80,7 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
         : [
             styles.cardStyle,
             {
-              top: 20 * i, // Décale verticalement les cartes suivantes
+              top: 25 * i, // Décale verticalement les cartes suivantes
               transform: [{ scale: 1 - 0.05 * i }], // Réduit légèrement la taille des cartes suivantes
             },
           ];
@@ -118,9 +118,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 10,
-    shadowColor: 'violet',
+    shadowColor: 'orange',
     shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 5,
     elevation: 5,
   },
