@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Text, VStack, Box, Button, Icon } from 'native-base'; // Import NativeBase components
 import SwipeDeck from '../components/SwipeDeck';
@@ -10,20 +10,26 @@ import { faUnlock } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 
 const Home = () => {
-  const onSwipeRight = item => {
+
+  const [currentPrice, setCurrentPrice] = useState('2,90€'); // État pour le prix
+
+
+  const onSwipeRight = (item) => {
     console.log('Swiped right on:', item);
+    setCurrentPrice(`${item.price}€`); // Met à jour le prix en fonction de la carte swipée
   };
 
-  const onSwipeLeft = item => {
+  const onSwipeLeft = (item) => {
     console.log('Swiped left on:', item);
+    setCurrentPrice(`${item.price}€`); // Met à jour le prix en fonction de la carte swipée
   };
 
 
   return (
     <Background>
       <CardDataProvider>
-      <Box paddingTop={2} width="100%" >
-        <FilterBar />
+        <Box paddingTop={2} width="100%" >
+          <FilterBar />
         </Box>
         <VStack style={styles.containerHome} space={4}>
           <Box flex={1} justifyContent="center" alignItems="center">
@@ -32,19 +38,19 @@ const Home = () => {
               onSwipeRight={onSwipeRight}
               onSwipeLeft={onSwipeLeft}
             />
-        <Button
-  leftIcon={
-    <Icon
-      as={<FontAwesomeIcon icon={faUnlock} />}
-      size="sm"
-      color="white"
-      marginRight={1}
-    />
-  }
-  variant="primary" // Utilise le style "primary" défini dans votre thème
->
-  Dévoiler le secret pour 2,90€
-</Button>
+            <Button
+              leftIcon={
+                <Icon
+                  as={<FontAwesomeIcon icon={faUnlock} />}
+                  size="sm"
+                  color="white"
+                  marginRight={1}
+                />
+              }
+              variant="primary" // Utilise le style "primary" défini dans votre thème
+            >
+              Dévoiler le secret pour {currentPrice}
+            </Button>
           </Box>
         </VStack>
       </CardDataProvider>

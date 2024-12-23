@@ -109,7 +109,7 @@ export default function CardHome({ cardData }) {
           <BlurView
             style={styles.overlayCard}
             blurType="light"
-            blurAmount={5}
+            blurAmount={4}
             backgroundColor='rgba(255, 255, 255, 0.6)'
             reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
           />

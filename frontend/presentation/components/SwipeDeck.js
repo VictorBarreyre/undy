@@ -40,12 +40,17 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
       useNativeDriver: false,
     }).start(() => onSwipeComplete(direction));
   };
-
+  
   const onSwipeComplete = (direction) => {
-    const currentItem = data[index % data.length];
-    direction === 'right' ? onSwipeRight(currentItem) : onSwipeLeft(currentItem);
+    const currentItem = data[index];
+    if (direction === 'right') {
+      onSwipeRight(currentItem); // Transmet la bonne carte au parent
+    } else {
+      onSwipeLeft(currentItem); // Transmet la bonne carte au parent
+    }
 
-    setIndex((prevIndex) => (prevIndex + 1) % data.length); // Réinitialise l'index pour boucle infinie
+    const nextIndex = (index + 1) % data.length;
+    setIndex(nextIndex); // Met à jour l'index
     position.setValue({ x: 0, y: 0 }); // Réinitialise la position
   };
 
