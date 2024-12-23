@@ -1,55 +1,59 @@
 import React, { useState } from 'react';
-import { Box, ScrollView, Button, Icon, HStack, Image } from 'native-base';
+import { Box, Button, Icon, HStack, Input } from 'native-base';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { faSearch } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 
 const FilterBar = () => {
   const [selectedFilter, setSelectedFilter] = useState(null);
 
-  const filters = [
-    { id: 'love', label: 'Amour' },
-    { id: 'work', label: 'Travail' },
-    { id: 'events', label: 'Events'},
-    { id: 'family', label: 'Famille' },
-    { id: 'hot', label: 'Hot' }
-  ];
-
   return (
-    <Box paddingLeft='4' paddingTop='4' >
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        _contentContainerStyle={{ py: 2 }}
-      >
-        <HStack space={2}>
-          <Button
-            variant="outline"
-            backgroundColor="transparent"
-            rounded="full"
-            borderColor="transparent"
-            width="1.5%"
-            paddingLeft='2'
-            onPress={() => console.log('Filter settings clicked')}
-            _icon={{ size: 'xs' }}  // Reduce icon size
-          >
-            <Icon as={FontAwesome5} name="sliders-h" size="md" color="black" />
-          </Button>
+    <Box width="100%" paddingRight={5} paddingY={2}>
+      <HStack space={0} alignItems="center" width="100%">
+        {/* Bouton pour les filtres */}
+        <Button
+          variant="outline"
+          backgroundColor="transparent"
+          rounded="full"
+          borderColor="transparent"
+          onPress={() => console.log('Filter settings clicked')}
+        >
+          <Icon as={FontAwesome5} name="sliders-h" size="md" color="black" />
+        </Button>
 
-          {filters.map((filter) => (
-            <Button
-              key={filter.id}
-              onPress={() => setSelectedFilter(filter.id)}
-              variant="secondary"          
-              bg='white'
-              borderColor={selectedFilter === filter.id ? '#F3B8A8' : 'transparent'}
-              rounded="full"
-           
-            
-            >
-              {filter.label}
-            </Button>
-          ))}
-        </HStack>
-      </ScrollView>
+        {/* Champ de recherche */}
+        <Box
+          flex={1} // Prend tout l'espace disponible
+          borderRadius="full"
+          overflow="hidden"
+          shadow={2}
+          backgroundColor="white"
+          maxWidth="100%"
+          style={{
+            elevation: 1, // Ombre sur Android
+          }}
+        >
+          <HStack alignItems="center" paddingX={4} paddingY={2}>
+            {/* Icône */}
+            <Icon
+              as={<FontAwesomeIcon icon={faSearch} />}
+              size="5"
+              color="gray.400"
+            />
+            {/* Champ de saisie */}
+            <Input
+              flex={1}
+              placeholder="Rechercher un secret ou un utilisateur"
+              variant="unstyled"
+              fontSize="14"
+              _focus={{
+                borderColor: 'transparent', // Supprime la bordure focus
+              }}
+              placeholderTextColor="gray.400"
+            />
+          </HStack>
+        </Box>
+      </HStack>
     </Box>
   );
 };

@@ -20,9 +20,10 @@ const Home = () => {
   return (
     <Background>
       <CardDataProvider>
+      <Box paddingTop={2} width="100%" >
         <FilterBar />
+        </Box>
         <VStack style={styles.containerHome} space={4}>
-        <Text style={styles.h3}>Les derniers secrets</Text>
           <Box flex={1} justifyContent="center" alignItems="center">
             <SwipeDeck
               style={styles.swipper}

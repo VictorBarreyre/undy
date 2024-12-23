@@ -24,7 +24,7 @@ export const styles = StyleSheet.create({
     backgroundColor:'transparent',
     flex: 1,
     marginTop:20,
-    paddingBottom: 20,
+    paddingBottom: 40,
     paddingLeft:20,
     paddingRight:20,
  // Assure que le contenu est au-dessus du background
@@ -68,7 +68,7 @@ overlay: {
 },
 overlayCard: {
   position: 'absolute',
-  top:42 ,
+  top:58 ,
   left: -50,
   width: '150%',
   height: '120%',
@@ -100,7 +100,7 @@ stats: {
 iconContainer: {
   flexDirection: 'row',
   alignItems: 'center',
-  marginRight: 16, // Espacement entre les statistiques
+  marginRight: 4, // Espacement entre les statistiques
 },
 label: {
   textAlign: 'right',
