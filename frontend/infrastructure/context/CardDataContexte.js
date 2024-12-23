@@ -15,6 +15,7 @@ export const CardDataProvider = ({ children }) => {
     {
       id: 1,
       posterpar:'Alice Martin',
+      price:'3.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Les vacances d'été",
       description: "Le Lorem Ipsum est simplement du faux texte utilisé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard.",
@@ -26,6 +27,7 @@ export const CardDataProvider = ({ children }) => {
     {
       id: 2,
       posterpar:'Joh Cohen',
+      price:'322.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Le projet immobilier",
       description: "Voici un aperçu d'un projet immobilier qui attire l'attention des investisseurs du monde entier.",
@@ -37,6 +39,7 @@ export const CardDataProvider = ({ children }) => {
     {
       id: 3,
       posterpar:'David Lisnard',
+      price:'13.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Événements de la ville",
       description: "Les événements de la ville sont nombreux ce mois-ci, avec des activités pour tous les goûts.",
@@ -48,6 +51,7 @@ export const CardDataProvider = ({ children }) => {
     {
       id: 4,
       posterpar:'Jean Luc Melenchon',
+      price:'8.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Technologie et innovation",
       description: "Les avancées technologiques changent le monde, découvrez les dernières innovations qui façonnent notre futur.",
@@ -59,6 +63,7 @@ export const CardDataProvider = ({ children }) => {
     {
       id: 5,
       posterpar:'Jean Luc Melenchon',
+      price:'7.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Technologie et innovation",
       description: "Les avancées technologiques changent le monde, découvrez les dernières innovations qui façonnent notre futur.",
@@ -70,6 +75,7 @@ export const CardDataProvider = ({ children }) => {
     {
       id: 6,
       posterpar:'Jean Luc Melenchon',
+      price:'34.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Technologie et innovation",
       description: "Les avancées technologiques changent le monde, découvrez les dernières innovations qui façonnent notre futur.",

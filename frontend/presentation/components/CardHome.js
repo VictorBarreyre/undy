@@ -4,7 +4,7 @@ import { Box, Text, HStack, VStack, Image, Button } from 'native-base';
 import { BlurView } from '@react-native-community/blur';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { faShare } from '@fortawesome/free-solid-svg-icons'; // Importer l'icône "share"
+import { faPaperPlane } from '@fortawesome/free-solid-svg-icons'; // Importer l'icône "share"
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { View } from 'native-base';
 
@@ -34,7 +34,7 @@ export default function CardHome() {
       marginTop={2}
       shadow={10}
       paddingTop={1}
-      paddingBottom={3}
+      paddingBottom={4}
       style={styles.boxShadow}
     >
       {/* Contenu texte */}
@@ -94,7 +94,7 @@ export default function CardHome() {
 
             {/* Statistiques : partages */}
             <View style={styles.iconContainer}>
-            <FontAwesomeIcon icon={faShare} color="black" size={20} />
+            <FontAwesomeIcon icon={faPaperPlane} color="black" size={20} />
             </View>
           </View>
 

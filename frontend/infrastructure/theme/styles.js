@@ -24,7 +24,7 @@ export const styles = StyleSheet.create({
     backgroundColor:'transparent',
     flex: 1,
     marginTop:20,
-    paddingBottom: 40,
+    paddingBottom: 45,
     paddingLeft:20,
     paddingRight:20,
  // Assure que le contenu est au-dessus du background

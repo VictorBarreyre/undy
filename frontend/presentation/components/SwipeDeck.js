@@ -7,13 +7,12 @@ import CardHome from './CardHome'; // Le composant CardHome qui va consommer les
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
-const SWIPE_OUT_DURATION = 550;
+const SWIPE_OUT_DURATION = 300;
 
 const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
-  const { data } = useCardData(); // Accéder aux données du contexte
-
-  const [index, setIndex] = useState(0);
+  const { data } = useCardData();
   const position = useRef(new Animated.ValueXY()).current;
+  const [index, setIndex] = useState(0);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -29,7 +28,7 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
         } else {
           resetPosition();
         }
-      }
+      },
     })
   ).current;
 
@@ -43,29 +42,25 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
   };
 
   const onSwipeComplete = (direction) => {
-    const item = data[index];
-    direction === 'right' ? onSwipeRight(item) : onSwipeLeft(item);
-    position.setValue({ x: 0, y: 0 });
-    setIndex((prevIndex) => prevIndex + 1);
-      // Ajoute une animation douce pour la carte suivante
-      Animated.spring(position, {
-        toValue: { x: 0, y: 0 },
-        friction: 6, // Augmentez cette valeur pour ralentir davantage
-        tension: 70, // Réduisez cette valeur pour une animation plus douce
-        useNativeDriver: false,
-      }).start();
+    const currentItem = data[index % data.length];
+    direction === 'right' ? onSwipeRight(currentItem) : onSwipeLeft(currentItem);
+
+    setIndex((prevIndex) => (prevIndex + 1) % data.length); // Réinitialise l'index pour boucle infinie
+    position.setValue({ x: 0, y: 0 }); // Réinitialise la position
   };
 
   const resetPosition = () => {
     Animated.spring(position, {
       toValue: { x: 0, y: 0 },
+      friction: 8,
+      tension: 50,
       useNativeDriver: false,
     }).start();
   };
 
   const getCardStyle = () => {
     const rotate = position.x.interpolate({
-      inputRange: [-SCREEN_WIDTH * 1.5, 0, SCREEN_WIDTH * 1.5],
+      inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
       outputRange: ['-10deg', '0deg', '10deg'],
     });
 
@@ -76,57 +71,33 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
   };
 
   const renderCards = () => {
-    return data
-    .map((item, i) => {
-      if (i < index) {
-        // Les cartes déjà swipées ne sont pas affichées
-        return null;
-      }
+    const cardsToRender = [...Array(5)].map((_, i) => {
+      const cardIndex = (index + i) % data.length;
+      const isCurrentCard = i === 0;
 
-      if (i >= index + 4) {
-        // Ne rend que les 5 cartes suivantes après l'index
-        return null;
-      }
+      const cardStyle = isCurrentCard
+        ? [getCardStyle(), styles.cardStyle]
+        : [
+            styles.cardStyle,
+            {
+              top: 20 * i, // Décale verticalement les cartes suivantes
+              transform: [{ scale: 1 - 0.05 * i }], // Réduit légèrement la taille des cartes suivantes
+            },
+          ];
 
-        const isCurrentCard = i === index;
-        const shadowOpacity = isCurrentCard
-        ? 0.3 // Ombre plus forte pour la carte en haut
-        : 0.1 * (5 - (i - index)); // Ombre plus douce pour les cartes en arrière-plan
-        const style = isCurrentCard
-          ? [getCardStyle(), styles.cardStyle]
-          : [
-              styles.cardStyle,
-              { shadowOpacity,
-                shadowColor: 'violet',
-                shadowRadius: 5,
-                elevation: 3,
-                top: 25 * (i - index), // Décale les cartes suivantes
-                transform: [{ scale: 1 - 0.05 * (i - index) }], // Réduit légèrement la taille des cartes suivantes
-              },
-            ];
+      return (
+        <Animated.View
+          key={cardIndex}
+          style={cardStyle}
+          {...(isCurrentCard ? panResponder.panHandlers : {})}
+        >
+          <CardHome data={data[cardIndex]} />
+        </Animated.View>
+      );
+    });
 
-        return (
-          
-          <Animated.View
-            key={item.id || i}
-            style={style}
-            {...(isCurrentCard ? panResponder.panHandlers : {})}
-          >
-            <CardHome data={item} />
-          </Animated.View>
-          
-        );
-      })
-      .reverse(); // Empile les cartes dans l'ordre correct
+    return cardsToRender.reverse(); // Empile les cartes dans l'ordre correct
   };
-
-  if (index >= data.length) {
-    return (
-      <Box style={styles.container}>
-        <Text>No more cards</Text>
-      </Box>
-    );
-  }
 
   return <Box style={styles.container}>{renderCards()}</Box>;
 };
@@ -142,9 +113,16 @@ const styles = StyleSheet.create({
   cardStyle: {
     width: SCREEN_WIDTH * 0.9,
     position: 'absolute',
-    height:"auto",
+    height: 'auto',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    shadowColor: 'violet',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
   },
 });
 
