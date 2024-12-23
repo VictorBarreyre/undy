@@ -50,7 +50,7 @@ export const CardDataProvider = ({ children }) => {
     },
     {
       id: 4,
-      posterpar:'Jean Luc Melenchon',
+      posterpar:'Jean Marie Bigard',
       price:'8.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Technologie et innovation",
@@ -62,7 +62,7 @@ export const CardDataProvider = ({ children }) => {
     },
     {
       id: 5,
-      posterpar:'Jean Luc Melenchon',
+      posterpar:'Thierry Ardisson',
       price:'7.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Technologie et innovation",
@@ -74,7 +74,7 @@ export const CardDataProvider = ({ children }) => {
     },
     {
       id: 6,
-      posterpar:'Jean Luc Melenchon',
+      posterpar:'Laurent Baffie',
       price:'34.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Technologie et innovation",

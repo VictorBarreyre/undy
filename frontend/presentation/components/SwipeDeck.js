@@ -91,7 +91,7 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
           style={cardStyle}
           {...(isCurrentCard ? panResponder.panHandlers : {})}
         >
-          <CardHome data={data[cardIndex]} />
+          <CardHome cardData={data[cardIndex]}  />
         </Animated.View>
       );
     });

@@ -6,12 +6,9 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { faPaperPlane } from '@fortawesome/free-solid-svg-icons'; // Importer l'icône "share"
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { View } from 'native-base';
+import { View, Platform, Alert, Share, Linking } from 'react-native';
 
-
-
-
-export default function CardHome() {
+export default function CardHome({ cardData }) {
   const { data } = useCardData(); // Accéder aux données via le contexte
 
   if (!data || data.length === 0) {
@@ -20,6 +17,45 @@ export default function CardHome() {
 
   const handleRevealSecret = () => {
     console.log('Secret revealed!');
+  };
+
+  const handleShare = async () => {
+    const secretUrl = `https://myapp.com/secret/${data[0]?.id}`;
+    const appScheme = 'myapp://secret/';
+    const storeUrl =
+      Platform.OS === 'ios'
+        ? 'https://apps.apple.com/app/id123456789' // Remplacez par votre ID App Store
+        : 'https://play.google.com/store/apps/details?id=com.myapp'; // Remplacez par votre package Play Store
+
+    try {
+      // Vérifie si l'application est installée
+      const isAppInstalled = await Linking.canOpenURL(appScheme);
+
+      if (isAppInstalled) {
+        // Ouvre l'application avec l'URL du secret
+        Linking.openURL(`${appScheme}${data[0]?.id}`);
+      } else {
+        // Partage le lien ou redirige vers le store
+        const result = await Share.share({
+          message: `Découvrez ce secret : ${secretUrl}`,
+          url: secretUrl, // Partage également l'URL
+        });
+
+        if (result.action === Share.dismissedAction) {
+          // Si annulé, propose de rediriger vers le store
+          Alert.alert(
+            'Téléchargez notre application',
+            'Pour profiter pleinement, téléchargez notre application.',
+            [
+              { text: 'Annuler', style: 'cancel' },
+              { text: 'Télécharger', onPress: () => Linking.openURL(storeUrl) },
+            ]
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors du partage:', error);
+    }
   };
 
   return (
@@ -43,7 +79,7 @@ export default function CardHome() {
           {/* Texte aligné à gauche */}
           <Box flex={1} mr={4} ml={2} >
             <Text left={2} style={styles.h5}>
-              Posté par {data[0]?.posterpar || 'Aucune description disponible.'}
+            Posté par {cardData.posterpar || 'Aucune description disponible.'}
             </Text>
           </Box>
           {/* Image alignée à droite */}
@@ -66,7 +102,7 @@ export default function CardHome() {
         >
           {/* Texte */}
           <Text ellipsizeMode="tail" top="5" left="2" paddingBottom="5" width="95%" style={styles.h2}>
-            {`"${data[0]?.description || 'Aucune description disponible.'}"`}
+          {`"${cardData.description || 'Aucune description disponible.'}"`}
           </Text>
 
           {/* Overlay avec flou */}
@@ -82,29 +118,28 @@ export default function CardHome() {
         </Box>
 
         {/* Section des statistiques */}
-        <View ml={4} style={[styles.statsContainer]}>
+        <View style={[styles.statsContainer]}>
 
-          <Text style={[styles.caption, styles.ctalittle]} >
-            {data[0]?.label || 'Label indisponible'}
+          <Text ml={4} style={[styles.caption, styles.ctalittle]} >
+          {cardData.label || 'Label indisponible'}
           </Text>
 
           {/* Conteneur des icônes des statistiques */}
           <View style={[styles.row, styles.stats]}>
-            {/* Statistiques : likes */}
-
             {/* Statistiques : partages */}
             <View style={styles.iconContainer}>
-            <FontAwesomeIcon icon={faPaperPlane} color="black" size={20} />
+              <FontAwesomeIcon
+                icon={faPaperPlane}
+                color="black"
+                size={20}
+                onPress={handleShare} // Appeler la fonction de partage
+              />
             </View>
           </View>
-
 
         </View>
 
       </VStack>
-
-
     </Box>
   );
 }
-

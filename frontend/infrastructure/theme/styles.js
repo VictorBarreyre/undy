@@ -86,7 +86,7 @@ row: {
 },
 statsContainer: {
     bottom: 0, // Aligné en bas du conteneur parent
-    width: '90%', // S'assure qu'il occupe toute la largeur
+    width: '95%', // S'assure qu'il occupe toute la largeur
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
