@@ -119,7 +119,7 @@ const SwipeDeck = () => {
             transform: pressed ? [{ scale: 0.96 }] : [{ scale: 1 }], // Ajoute un effet de réduction
             borderRadius: 20,
           },
-          { width: '100%', alignSelf: 'center', position: 'absolute', bottom: 20, padding: 18, borderRadius:30 },
+          { width: '100%', alignSelf: 'center', position: 'absolute', bottom: 0, padding: 18, borderRadius:30 },
         ]}
       >
         <HStack alignItems="center" justifyContent="center" space={2}>
@@ -139,6 +139,7 @@ const SwipeDeck = () => {
 
 const styles = StyleSheet.create({
   container: {
+    display:'flex',
     flex: 1,
     height: SCREEN_HEIGHT,
     width: '100%',
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
   cardStyle: {
     width: SCREEN_WIDTH * 0.9,
     position: 'absolute',
-    height: 'auto',
+    height: '75%', // modifie la taille des cartes
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'white',

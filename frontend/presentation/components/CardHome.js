@@ -62,8 +62,8 @@ export default function CardHome({ cardData }) {
     <Box
       display="flex" // Utilise le modèle Flexbox
       width="100%"
-      height="auto"
       marginX="auto"
+      height='100%'
       borderRadius="lg"
       overflow="hidden"
       backgroundColor="white"
@@ -71,11 +71,12 @@ export default function CardHome({ cardData }) {
       shadow={10}
       paddingTop={1}
       paddingBottom={4}
+      justifyContent="space-between"
       style={styles.boxShadow}
     >
       {/* Contenu texte */}
-      <VStack padding={4} space={2}>
-        <HStack mt={1} alignItems="center" justifyContent="space-between" width="95%">
+      <VStack height={'100%'} justifyContent="space-between"  padding={4} space={2}>
+        <HStack  alignItems="center" justifyContent="space-between" width="95%">
           {/* Texte aligné à gauche */}
           <Box flex={1} mr={4} ml={2} >
             <Text left={2} style={styles.h5}>

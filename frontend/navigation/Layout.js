@@ -84,6 +84,7 @@ function DrawerNavigator() {
                         drawerStyle: {
                             backgroundColor: 'transparent', // Transparent pour afficher le fond
                         },
+                        swipeEnabled: false,
                     }}
                 >
                     <Drawer.Screen

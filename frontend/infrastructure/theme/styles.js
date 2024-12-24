@@ -17,7 +17,6 @@ export const styles = StyleSheet.create({
     zIndex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  
      // Assure que le contenu est au-dessus du background
   },
   containerHome: {
