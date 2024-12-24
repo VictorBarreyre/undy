@@ -63,7 +63,7 @@ const lightTheme = extendTheme({
               borderRadius: 30,
               _text: {
                 color: 'white',
-                lineHeight: 28, // Ajout depuis `cta`
+                lineHeight: 24, // Ajout depuis `cta`
                 fontWeight: '700', // Ajout depuis `cta`
                 fontFamily: 'SF-Pro-Display-Bold', // Ajout depuis `cta`
               },

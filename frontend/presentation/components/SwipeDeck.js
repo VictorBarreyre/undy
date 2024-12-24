@@ -1,18 +1,21 @@
 import React, { useState, useRef } from 'react';
-import { Animated, PanResponder, Dimensions, StyleSheet, Text } from 'react-native';
-import { Box } from 'native-base';
-import { useCardData } from '../../infrastructure/context/CardDataContexte'; // Importer le hook pour accéder au contexte
-import CardHome from './CardHome'; // Le composant CardHome qui va consommer les données du contexte
+import { Animated, PanResponder, Dimensions, StyleSheet, Pressable } from 'react-native';
+import { Box, Button, Icon, HStack, Text } from 'native-base';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faUnlock } from '@fortawesome/free-solid-svg-icons';
+import { useCardData } from '../../infrastructure/context/CardDataContexte';
+import CardHome from './CardHome';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 300;
 
-const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
+const SwipeDeck = () => {
   const { data } = useCardData();
   const position = useRef(new Animated.ValueXY()).current;
   const [index, setIndex] = useState(0);
+  const [currentPrice, setCurrentPrice] = useState(data[0]?.price || '0.00');
 
   const panResponder = useRef(
     PanResponder.create({
@@ -40,18 +43,17 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
       useNativeDriver: false,
     }).start(() => onSwipeComplete(direction));
   };
-  
+
   const onSwipeComplete = (direction) => {
     const currentItem = data[index];
-    if (direction === 'right') {
-      onSwipeRight(currentItem); // Transmet la bonne carte au parent
-    } else {
-      onSwipeLeft(currentItem); // Transmet la bonne carte au parent
-    }
+    console.log(`Swiped ${direction} on:`, currentItem);
+
+    // Met à jour le prix basé sur l'élément swipé
+    setCurrentPrice(currentItem.price);
 
     const nextIndex = (index + 1) % data.length;
-    setIndex(nextIndex); // Met à jour l'index
-    position.setValue({ x: 0, y: 0 }); // Réinitialise la position
+    setIndex(nextIndex);
+    position.setValue({ x: 0, y: 0 });
   };
 
   const resetPosition = () => {
@@ -83,12 +85,12 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
       const cardStyle = isCurrentCard
         ? [getCardStyle(), styles.cardStyle]
         : [
-            styles.cardStyle,
-            {
-              top: 25 * i, // Décale verticalement les cartes suivantes
-              transform: [{ scale: 1 - 0.05 * i }], // Réduit légèrement la taille des cartes suivantes
-            },
-          ];
+          styles.cardStyle,
+          {
+            top: 25 * i,
+            transform: [{ scale: 1 - 0.05 * i }],
+          },
+        ];
 
       return (
         <Animated.View
@@ -96,15 +98,43 @@ const SwipeDeck = ({ onSwipeRight, onSwipeLeft }) => {
           style={cardStyle}
           {...(isCurrentCard ? panResponder.panHandlers : {})}
         >
-          <CardHome cardData={data[cardIndex]}  />
+          <CardHome cardData={data[cardIndex]} />
         </Animated.View>
       );
     });
 
-    return cardsToRender.reverse(); // Empile les cartes dans l'ordre correct
+    return cardsToRender.reverse();
   };
 
-  return <Box style={styles.container}>{renderCards()}</Box>;
+  return (
+    <Box style={styles.container}>
+      {renderCards()}
+      <Pressable
+        onPress={() => {
+          console.log("Bouton cliqué !");
+        }}
+        style={({ pressed }) => [
+          {
+            backgroundColor: pressed ? 'gray.800' : 'black', // Change la couleur au clic
+            transform: pressed ? [{ scale: 0.96 }] : [{ scale: 1 }], // Ajoute un effet de réduction
+            borderRadius: 20,
+          },
+          { width: '100%', alignSelf: 'center', position: 'absolute', bottom: 20, padding: 18, borderRadius:30 },
+        ]}
+      >
+        <HStack alignItems="center" justifyContent="center" space={2}>
+          {/* Icône */}
+          <FontAwesomeIcon icon={faUnlock} size={20} color="white" />
+
+          {/* Texte avec prix */}
+          <Text fontSize="md" color="white" fontWeight="bold">
+            Dévoiler le secret pour {currentPrice} €
+          </Text>
+        </HStack>
+      </Pressable>
+
+    </Box>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -129,6 +159,7 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5,
   },
+
 });
 
 export default SwipeDeck;
