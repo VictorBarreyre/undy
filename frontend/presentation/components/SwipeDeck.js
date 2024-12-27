@@ -15,7 +15,7 @@ const SwipeDeck = () => {
   const { data } = useCardData();
   const position = useRef(new Animated.ValueXY()).current;
   const [index, setIndex] = useState(0);
-  const [currentPrice, setCurrentPrice] = useState(data[0]?.price || '0.00');
+  const [currentItem, setCurrentItem] = useState(data[0]); // Gardez une référence explicite à l'élément actuel
 
   const panResponder = useRef(
     PanResponder.create({
@@ -45,14 +45,17 @@ const SwipeDeck = () => {
   };
 
   const onSwipeComplete = (direction) => {
-    const currentItem = data[index];
-    console.log(`Swiped ${direction} on:`, currentItem);
-
-    // Met à jour le prix basé sur l'élément swipé
-    setCurrentPrice(currentItem.price);
-
-    const nextIndex = (index + 1) % data.length;
-    setIndex(nextIndex);
+    setIndex((prevIndex) => {
+      const nextIndex = (prevIndex + 1) % data.length;
+  
+      // Mettre à jour immédiatement `currentItem`
+      setCurrentItem(data[nextIndex]);
+  
+      console.log("Index mis à jour :", nextIndex); // Affiche la valeur mise à jour
+  
+      return nextIndex; // Retourne le nouvel index
+    });
+  
     position.setValue({ x: 0, y: 0 });
   };
 
@@ -85,12 +88,12 @@ const SwipeDeck = () => {
       const cardStyle = isCurrentCard
         ? [getCardStyle(), styles.cardStyle]
         : [
-          styles.cardStyle,
-          {
-            top: 25 * i,
-            transform: [{ scale: 1 - 0.05 * i }],
-          },
-        ];
+            styles.cardStyle,
+            {
+              top: 25 * i,
+              transform: [{ scale: 1 - 0.05 * i }],
+            },
+          ];
 
       return (
         <Animated.View
@@ -111,28 +114,24 @@ const SwipeDeck = () => {
       {renderCards()}
       <Pressable
         onPress={() => {
-          console.log("Bouton cliqué !");
+          console.log('Bouton cliqué !');
         }}
         style={({ pressed }) => [
           {
-            backgroundColor: pressed ? 'gray.800' : 'black', // Change la couleur au clic
-            transform: pressed ? [{ scale: 0.96 }] : [{ scale: 1 }], // Ajoute un effet de réduction
+            backgroundColor: pressed ? 'gray.800' : 'black',
+            transform: pressed ? [{ scale: 0.96 }] : [{ scale: 1 }],
             borderRadius: 20,
           },
-          { width: '100%', alignSelf: 'center', position: 'absolute', bottom: 0, padding: 18, borderRadius:30 },
+          { width: '100%', alignSelf: 'center', position: 'absolute', bottom: 0, padding: 18, borderRadius: 30 },
         ]}
       >
         <HStack alignItems="center" justifyContent="center" space={2}>
-          {/* Icône */}
           <FontAwesomeIcon icon={faUnlock} size={20} color="white" />
-
-          {/* Texte avec prix */}
           <Text fontSize="md" color="white" fontWeight="bold">
-            Dévoiler le secret pour {currentPrice} €
+            Dévoiler le secret pour {currentItem?.price || '0.00'} €
           </Text>
         </HStack>
       </Pressable>
-
     </Box>
   );
 };
