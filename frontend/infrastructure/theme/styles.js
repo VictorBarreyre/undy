@@ -17,45 +17,82 @@ export const styles = StyleSheet.create({
     zIndex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-     // Assure que le contenu est au-dessus du background
+    // Assure que le contenu est au-dessus du background
   },
   containerHome: {
-    backgroundColor:'transparent',
+    backgroundColor: 'transparent',
     flex: 1,
-    marginTop:20,
+    marginTop: 20,
     paddingBottom: 45,
-    paddingLeft:20,
-    paddingRight:20,
- // Assure que le contenu est au-dessus du background
+    paddingLeft: 20,
+    paddingRight: 20,
+    // Assure que le contenu est au-dessus du background
   },
-safeArea: {
-  paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, // SafeArea pour le haut uniquement
-  flex: 1,
-  paddingTop: 20,
-  backgroundColor: 'transparent', // Ajoutez un fond global si nécessaire
-},
-swipper: {
-  backgroundColor: 'transparent',
-  flex: 1,
-},
+  safeArea: {
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, // SafeArea pour le haut uniquement
+    flex: 1,
+    paddingTop: 20,
+    backgroundColor: 'transparent', // Ajoutez un fond global si nécessaire
+  },
+  swipper: {
+    backgroundColor: 'transparent',
+    flex: 1,
+  },
 
-boxShadow: {
-  shadowColor: 'purple', // Couleur de l'ombre
-  shadowOffset: { width: 0, height: 4 }, // Décalage de l'ombre
-  shadowOpacity: 0.2, // Opacité de l'ombre
-  shadowRadius: 6, // Rayon de diffusion
-  elevation: 10, // Ombre Android
-},
-// Fond spécifique pour les écrans Connexion et Inscription
-backgroundImage: {
-  position: 'absolute',
-  width: '350%',
-  height: '150%',
-  top: '-50%',
-  left: '-25%',
-  zIndex: -2, // Position pour les besoins spécifiques
-},
-overlay: {
+  filterOption: {
+    fontSize: 16,
+    marginVertical: 10,
+  },
+
+   blurBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  overlayModal: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)', // White with reduced opacity
+    backdropFilter: 'blur(50px)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlayContent: {
+    width: '95%',
+    height: '100%',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+    padding:100
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 75,
+    right: 15,
+    zIndex: 10,
+  },
+
+  boxShadow: {
+    shadowColor: 'purple', // Couleur de l'ombre
+    shadowOffset: { width: 0, height: 4 }, // Décalage de l'ombre
+    shadowOpacity: 0.2, // Opacité de l'ombre
+    shadowRadius: 6, // Rayon de diffusion
+    elevation: 10, // Ombre Android
+  },
+  // Fond spécifique pour les écrans Connexion et Inscription
+  backgroundImage: {
+    position: 'absolute',
+    width: '350%',
+    height: '150%',
+    top: '-50%',
+    left: '-25%',
+    zIndex: -2, // Position pour les besoins spécifiques
+  },
+  overlay: {
     position: 'absolute',
     top: 0,
     left: 0,
@@ -64,49 +101,49 @@ overlay: {
     backgroundColor: 'rgba(255, 255, 255, 0.6)', // White with reduced opacity
     zIndex: -1, // Between background and content
     backdropFilter: 'blur(50px)',
-},
-overlayCard: {
-  position: 'absolute',
-  top:58 ,
-  left: -50,
-  width: '150%',
-  height: '120%',
-  zIndex: 1, // Assure que l'overlay est au-dessus
-},
-content: {
+  },
+  overlayCard: {
+    position: 'absolute',
+    top: 58,
+    left: -50,
+    width: '150%',
+    height: '120%',
+    zIndex: 1, // Assure que l'overlay est au-dessus
+  },
+  content: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 20,
-},
-row: {
-  flexDirection: 'row',
-  alignItems: 'center',
-},
-statsContainer: {
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statsContainer: {
     bottom: 0, // Aligné en bas du conteneur parent
     width: '95%', // S'assure qu'il occupe toute la largeur
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop:18,
+    marginTop: 18,
 
   },
-stats: {
-  flexDirection: 'row',
-  alignItems: 'center',
-},
-iconContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginRight: 4, // Espacement entre les statistiques
-},
-label: {
-  textAlign: 'right',
-  fontWeight: '600',
-  fontSize: 14,
-  color: '#FF5A7D',
-},
+  stats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 4, // Espacement entre les statistiques
+  },
+  label: {
+    textAlign: 'right',
+    fontWeight: '600',
+    fontSize: 14,
+    color: '#FF5A7D',
+  },
   h1: {
     fontSize: 36,
     lineHeight: 46,
@@ -121,13 +158,13 @@ label: {
   },
   h3: {
     fontSize: 24,
-    lineHeight:30,
+    lineHeight: 30,
     fontWeight: '600',
     fontFamily: 'SF-Pro-Display-Semibold',
   },
   h4: {
     fontSize: 20,
-    lineHeight:22,
+    lineHeight: 22,
     fontWeight: '600',
     fontFamily: 'SF-Pro-Display-Semibold',
   },
@@ -169,7 +206,7 @@ label: {
     lineHeight: 22,
     fontWeight: '400',
     fontFamily: 'SF-Pro-Display-Regular',
-    textDecoration:'underline'
+    textDecoration: 'underline'
   },
 
   caption: {
@@ -220,7 +257,7 @@ label: {
     marginRight: width * 0.05, // Espacement entre les cartes
     borderRadius: 12,
   },
-  
+
   listContainer: {
     justifyContent: 'flex-start', // Alignement à gauche pour les cartes
     paddingLeft: 0, // Supprime le padding gauche initial
@@ -237,7 +274,7 @@ label: {
     padding: 10,
   },
 
-    inputBox: {
+  inputBox: {
     backgroundColor: '#f9f9f9',
     borderRadius: 16,
     height: 50,
