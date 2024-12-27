@@ -62,18 +62,21 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   overlayContent: {
-    width: '95%',
+    width: '100%',
     height: '100%',
     borderRadius: 10,
-    padding: 20,
+    paddingTop: 100,
+    padding:40,
     alignItems: 'center',
-    padding:100
+
   },
   closeButton: {
-    position: 'absolute',
-    top: 75,
-    right: 15,
     zIndex: 10,
+  },
+
+  checkbox: {
+    marginBottom: 10,
+    width:'100%'
   },
 
   boxShadow: {
