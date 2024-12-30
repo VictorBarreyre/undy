@@ -18,6 +18,8 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   const [filteredData, setFilteredData] = useState(data);
   const [currentItem, setCurrentItem] = useState(data[0]); 
 
+  console.log(currentItem)
+
   // Met à jour les données filtrées lorsque les filtres changent
   useEffect(() => {
     const filtered = selectedFilters.length > 0

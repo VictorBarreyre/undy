@@ -14,6 +14,8 @@ const FilterBar = ({ onFilterChange }) => {
   const [isOverlayVisible, setOverlayVisible] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState([]);
 
+  console.log(selectedFilters)
+
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
   const labels = [...new Set(data.map((card) => card.label?.trim()).filter(Boolean))];
 
