@@ -1,59 +1,18 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import { Platform, VStack, Box, Text, Button, Pressable, Modal, Input, HStack, Spinner } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TouchableOpacity } from 'react-native';
-import axios from 'axios';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome } from '@expo/vector-icons';
 
 export default function Profile({ navigation }) {
-    const { userToken, logout } = useContext(AuthContext);
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [birthdate, setBirthdate] = useState('');
-    const [phone, setPhone] = useState('');
+    const { userData, isLoadingUserData, updateUserData, logout } = useContext(AuthContext);
+    const [selectedField, setSelectedField] = useState(null);
+    const [tempValue, setTempValue] = useState('');
+    const [modalVisible, setModalVisible] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
     const [message, setMessage] = useState('');
     const [isSuccess, setIsSuccess] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [selectedField, setSelectedField] = useState(null);
-    const [modalVisible, setModalVisible] = useState(false);
-    const [tempValue, setTempValue] = useState('');
-    const [showDatePicker, setShowDatePicker] = useState(false);
-
-    useEffect(() => {
-        const loadProfile = async () => {
-            try {
-                const response = await axios.get(`${DATABASE_URL}/api/users/profile`, {
-                    headers: { Authorization: `Bearer ${userToken}` }
-                });
-                setName(response.data.name);
-                setEmail(response.data.email);
-                setBirthdate(response.data.birthdate || '');
-                setPhone(response.data.phone || '');
-            } catch (error) {
-                setMessage(error.response?.data.message || 'Erreur lors du chargement des informations du profil.');
-                setIsSuccess(false);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        loadProfile();
-    }, [userToken]);
-
-    const handleUpdateProfile = async () => {
-        try {
-            const response = await axios.put(
-                `${DATABASE_URL}/api/users/profile`,
-                { name, email, birthdate, phone },
-                { headers: { Authorization: `Bearer ${userToken}` } }
-            );
-            setMessage('Profil mis à jour avec succès.');
-            setIsSuccess(true);
-        } catch (error) {
-            setMessage('Erreur lors de la mise à jour du profil.');
-            setIsSuccess(false);
-        }
-    };
 
     const openEditModal = (field, currentValue) => {
         setSelectedField(field);
@@ -61,13 +20,12 @@ export default function Profile({ navigation }) {
         setModalVisible(true);
     };
 
-    const saveChanges = () => {
-        if (selectedField === 'name') setName(tempValue);
-        if (selectedField === 'email') setEmail(tempValue);
-        if (selectedField === 'birthdate') setBirthdate(tempValue);
-        if (selectedField === 'phone') setPhone(tempValue);
+    const saveChanges = async () => {
+        const updatedData = { ...userData, [selectedField]: tempValue };
+        const result = await updateUserData(updatedData);
+        setMessage(result.message);
+        setIsSuccess(result.success);
         setModalVisible(false);
-        handleUpdateProfile();
     };
 
     const handleDateChange = (event, selectedDate) => {
@@ -76,7 +34,7 @@ export default function Profile({ navigation }) {
         setTempValue(currentDate.toISOString().split('T')[0]);
     };
 
-    if (isLoading) {
+    if (isLoadingUserData) {
         return (
             <Box flex={1} justifyContent="center" alignItems="center">
                 <Spinner size="lg" />
@@ -91,55 +49,53 @@ export default function Profile({ navigation }) {
                     Mon Profil
                 </Text>
 
-                <Pressable onPress={() => openEditModal('name', name)}>
+                <Pressable onPress={() => openEditModal('name', userData?.name)}>
                     <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
                         <Box>
                             <Text fontSize="md" color="gray.500">Nom</Text>
-                            <Text fontSize="lg" color="black">{name}</Text>
+                            <Text fontSize="lg" color="black">{userData?.name}</Text>
                         </Box>
                         <FontAwesome name="chevron-right" size={10} color="gray" />
                     </HStack>
                 </Pressable>
 
-                <Pressable onPress={() => openEditModal('email', email)}>
+                <Pressable onPress={() => openEditModal('email', userData?.email)}>
                     <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
                         <Box>
                             <Text fontSize="md" color="gray.500">Email</Text>
-                            <Text fontSize="lg" color="black">{email}</Text>
+                            <Text fontSize="lg" color="black">{userData?.email}</Text>
                         </Box>
                         <FontAwesome name="chevron-right" size={10} color="gray" />
                     </HStack>
                 </Pressable>
 
-                <Pressable onPress={() => openEditModal('birthdate', birthdate)}>
+                <Pressable onPress={() => openEditModal('birthdate', userData?.birthdate)}>
                     <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
                         <Box>
                             <Text fontSize="md" color="gray.500">Date de naissance</Text>
-                            <Text fontSize="lg" color="black">{birthdate || 'Non renseignée'}</Text>
+                            <Text fontSize="lg" color="black">{userData?.birthdate || 'Non renseignée'}</Text>
                         </Box>
                         <FontAwesome name="chevron-right" size={10} color="gray" />
                     </HStack>
                 </Pressable>
 
-                <Pressable onPress={() => openEditModal('phone', phone)}>
+                <Pressable onPress={() => openEditModal('phone', userData?.phone)}>
                     <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
                         <Box>
                             <Text fontSize="md" color="gray.500">Numéro de téléphone</Text>
-                            <Text fontSize="lg" color="black">{phone || 'Non renseigné'}</Text>
+                            <Text fontSize="lg" color="black">{userData?.phone || 'Non renseigné'}</Text>
                         </Box>
                         <FontAwesome name="chevron-right" size={10} color="gray" />
                     </HStack>
                 </Pressable>
 
-              
                 {message ? (
                     <Text color={isSuccess ? "green.500" : "red.500"} textAlign="center" mt={2}>
                         {message}
                     </Text>
                 ) : null}
 
-                  {/* Texte de déconnexion en rouge */}
-                  <Pressable onPress={logout}>
+                <Pressable onPress={logout}>
                     <Text color="red.500" py={3} px={4} fontSize="md" textAlign="left" mt={5}>
                         Déconnexion
                     </Text>

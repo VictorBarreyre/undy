@@ -10,7 +10,6 @@ const AddSecret = () => {
     
     return (
         <Background>
-            
                 <Box flex={1} padding={5}>
                     <VStack space={4} alignItems="center" justifyContent="center" flex={1}>
                         <Text fontSize="lg" fontWeight="bold">
@@ -37,7 +36,7 @@ const AddSecret = () => {
                                     {/* Texte aligné à gauche */}
                                     <Box flex={1} mr={4} ml={2} >
                                         <Text left={2} style={styles.h5}>
-                                            Posté par {cardData.posterpar || 'Aucune description disponible.'}
+                                            Posté par {data.posterpar || 'Aucune description disponible.'}
                                         </Text>
                                     </Box>
                                     {/* Image alignée à droite */}
@@ -58,45 +57,12 @@ const AddSecret = () => {
                                     justifyContent="center" // Centre verticalement les enfants
                                     alignItems="center" // Centre horizontalement les enfants
                                 >
-                                    {/* Texte */}
-                                    <Text ellipsizeMode="tail" top="5" left="2" paddingBottom="5" width="95%" style={styles.h2}>
-                                        {`"${cardData.description || 'Aucune description disponible.'}"`}
-                                    </Text>
-
-                                    {/* Overlay avec flou */}
-                                    <BlurView
-                                        style={styles.overlayCard}
-                                        blurType="light"
-                                        blurAmount={4}
-                                        backgroundColor='rgba(255, 255, 255, 0.6)'
-                                        reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
-                                    />
-
+                               
+                            
                                     {/* Bouton centré */}
                                 </Box>
 
-                                {/* Section des statistiques */}
-                                <View style={[styles.statsContainer]}>
-
-                                    <Text ml={4} style={[styles.caption, styles.ctalittle]} >
-                                        {cardData.label || 'Label indisponible'}
-                                    </Text>
-
-                                    {/* Conteneur des icônes des statistiques */}
-                                    <View style={[styles.row, styles.stats]}>
-                                        {/* Statistiques : partages */}
-                                        <View style={styles.iconContainer}>
-                                            <FontAwesomeIcon
-                                                icon={faPaperPlane}
-                                                color="black"
-                                                size={20}
-                                                onPress={handleShare} // Appeler la fonction de partage
-                                            />
-                                        </View>
-                                    </View>
-
-                                </View>
-
+                         
                             </VStack>
                         </Box>
                     </VStack>
