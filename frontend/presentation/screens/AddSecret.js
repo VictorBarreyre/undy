@@ -1,12 +1,12 @@
-import React from 'react';
+import React, {useContext} from 'react';
 import { Background } from '../../navigation/Background'; // Assurez-vous que ce chemin est correct
-import { useCardData } from '../../infrastructure/context/CardDataContexte';
+import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { Box, Text, HStack, VStack, Image, Button } from 'native-base';
 import { styles } from '../../infrastructure/theme/styles';
 
 const AddSecret = () => {
 
-      const { data } = useCardData(); // Accéder aux données via le contexte
+    const { userData } = useContext(AuthContext); // Utilisation correcte de useContext
     
     return (
         <Background>
@@ -36,7 +36,7 @@ const AddSecret = () => {
                                     {/* Texte aligné à gauche */}
                                     <Box flex={1} mr={4} ml={2} >
                                         <Text left={2} style={styles.h5}>
-                                            Posté par {data.posterpar || 'Aucune description disponible.'}
+                                            Posté par {userData.posterpar || 'Aucune description disponible.'}
                                         </Text>
                                     </Box>
                                     {/* Image alignée à droite */}
