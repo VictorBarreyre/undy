@@ -16,9 +16,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   const position = useRef(new Animated.ValueXY()).current;
   const [index, setIndex] = useState(0);
   const [filteredData, setFilteredData] = useState(data);
-  const [currentItem, setCurrentItem] = useState(data[0]); 
-
-  console.log(currentItem)
+  const [currentItem, setCurrentItem] = useState(data[0]);
 
   // Met à jour les données filtrées lorsque les filtres changent
   useEffect(() => {
@@ -26,14 +24,14 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       ? data.filter((card) => selectedFilters.includes(card.label))
       : data;
 
-    setFilteredData(filtered);
+    setFilteredData(filtered.length > 0 ? filtered : data); // Si aucune carte filtrée, revenir à toutes les cartes
     setIndex(0); // Réinitialise l'index pour recommencer avec la première carte
   }, [selectedFilters, data]);
 
   // Met à jour `currentItem` lorsque `index` ou `filteredData` change
   useEffect(() => {
     if (filteredData.length > 0) {
-      setCurrentItem(filteredData[index]);
+      setCurrentItem(filteredData[index % filteredData.length]); // Boucler avec mod (%) pour éviter les erreurs
     }
   }, [index, filteredData]);
 
@@ -64,16 +62,8 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     }).start(() => onSwipeComplete(direction));
   };
 
-  const onSwipeComplete = (direction) => {
-    setIndex((prevIndex) => {
-      const nextIndex = (prevIndex + 1) % filteredData.length;
-      
-      // Met à jour `currentItem` avec la carte correspondante dans `filteredData`
-      setCurrentItem(filteredData[nextIndex]);
-      
-      return nextIndex; // Retourne le nouvel index
-    });
-
+  const onSwipeComplete = () => {
+    setIndex((prevIndex) => (prevIndex + 1) % filteredData.length); // Boucle sur les cartes
     position.setValue({ x: 0, y: 0 });
   };
 
@@ -99,35 +89,9 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   };
 
   const renderCards = () => {
-    if (filteredData.length === 0) {
-      return (
-        <Box alignItems="center" justifyContent="center" flex={1}>
-          <Text fontSize="md" fontWeight="bold" color="gray.500">
-            Aucune carte disponible pour les filtres sélectionnés.
-          </Text>
-          <Pressable
-            onPress={() => setFilteredData(data)} // Réinitialiser les filtres
-            style={({ pressed }) => [
-              {
-                backgroundColor: pressed ? 'gray.800' : 'black',
-                transform: pressed ? [{ scale: 0.96 }] : [{ scale: 1 }],
-                borderRadius: 20,
-                marginTop: 20,
-                paddingHorizontal: 24,
-                paddingVertical: 12,
-              },
-            ]}
-          >
-            <Text color="white" fontWeight="bold">
-              Réinitialiser les filtres
-            </Text>
-          </Pressable>
-        </Box>
-      );
-    }
-
     const cardsToRender = [...Array(5)].map((_, i) => {
-      const cardIndex = (index + i) % filteredData.length;
+      const cardIndex = (index + i) % filteredData.length; // Boucler avec mod (%)
+      const card = filteredData[cardIndex];
       const isCurrentCard = i === 0;
 
       const cardStyle = isCurrentCard
@@ -142,7 +106,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
       return (
         <Animated.View
-          key={filteredData[cardIndex].id}
+        key={`${card.id}-${cardIndex}-${i}`} // Assurez-vous que chaque clé est unique
           style={cardStyle}
           {...(isCurrentCard ? panResponder.panHandlers : {})}
         >

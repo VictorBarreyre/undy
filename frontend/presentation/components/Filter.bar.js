@@ -14,8 +14,6 @@ const FilterBar = ({ onFilterChange }) => {
   const [isOverlayVisible, setOverlayVisible] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState([]);
 
-  console.log(selectedFilters)
-
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
   const labels = [...new Set(data.map((card) => card.label?.trim()).filter(Boolean))];
 
@@ -63,35 +61,36 @@ const FilterBar = ({ onFilterChange }) => {
                   </Pressable>
                 </HStack>
                 <Box marginTop={6} width="100%">
-                  {labels.map((label, index) => (
-                    <Box key={`${label}-${index}`}>
-                      <HStack
-                        width="100%"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        paddingY={5}
-                      >
-                        <Text style={styles.h5}>{label}</Text>
-                        <Checkbox
-                          value={label}
-                          aria-label={label}
-                          _unchecked={{
-                            borderColor: 'gray.500',
-                            borderWidth: 2,
-                            bg: 'transparent',
-                          }}
-                          _checked={{
-                            bg: 'black',
-                            borderColor: 'black',
-                            _icon: { color: 'white' },
-                          }}
-                          isChecked={selectedFilters.includes(label)}
-                          onChange={() => handleCheckboxChange(label)}
-                        />
-                      </HStack>
-                      <Divider opacity={30} bg="#94A3B8" />
-                    </Box>
-                  ))}
+                {labels.map((label, index) => (
+  <Box key={`${label}-${index}`}>
+    <HStack
+      width="100%"
+      justifyContent="space-between"
+      alignItems="center"
+      paddingY={5}
+    >
+      <Text style={styles.h5}>{label}</Text>
+      <Checkbox
+        value={label}
+        aria-label={label}
+        _unchecked={{
+          borderColor: 'gray.500',
+          borderWidth: 2,
+          bg: 'transparent',
+        }}
+        _checked={{
+          bg: 'black',
+          borderColor: 'black',
+          _icon: { color: 'white' },
+        }}
+        isChecked={selectedFilters.includes(label)}
+        onChange={() => handleCheckboxChange(label)}
+      />
+    </HStack>
+    <Divider opacity={30} bg="#94A3B8" />
+  </Box>
+))}
+
                 </Box>
               </Box>
             </View>
