@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Animated, PanResponder, Dimensions, StyleSheet, Pressable } from 'react-native';
 import { Box, Button, Icon, HStack, Text } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -11,11 +11,22 @@ const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 300;
 
-const SwipeDeck = () => {
+const SwipeDeck = ({ selectedFilters = [] }) => {
   const { data } = useCardData();
   const position = useRef(new Animated.ValueXY()).current;
   const [index, setIndex] = useState(0);
+  const [filteredData, setFilteredData] = useState(data);
   const [currentItem, setCurrentItem] = useState(data[0]); // Gardez une référence explicite à l'élément actuel
+
+  // Met à jour les données filtrées lorsque les filtres changent
+  useEffect(() => {
+    const filtered = selectedFilters.length > 0
+      ? data.filter((card) => selectedFilters.includes(card.label))
+      : data;
+
+    setFilteredData(filtered);
+    setIndex(0); // Réinitialise l'index pour recommencer avec la première carte
+  }, [selectedFilters, data]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -44,18 +55,8 @@ const SwipeDeck = () => {
     }).start(() => onSwipeComplete(direction));
   };
 
-  const onSwipeComplete = (direction) => {
-    setIndex((prevIndex) => {
-      const nextIndex = (prevIndex + 1) % data.length;
-  
-      // Mettre à jour immédiatement `currentItem`
-      setCurrentItem(data[nextIndex]);
-  
-      console.log("Index mis à jour :", nextIndex); // Affiche la valeur mise à jour
-  
-      return nextIndex; // Retourne le nouvel index
-    });
-  
+  const onSwipeComplete = () => {
+    setIndex((prevIndex) => (prevIndex + 1) % filteredData.length);
     position.setValue({ x: 0, y: 0 });
   };
 
@@ -81,8 +82,35 @@ const SwipeDeck = () => {
   };
 
   const renderCards = () => {
+    if (filteredData.length === 0) {
+      return (
+        <Box alignItems="center" justifyContent="center" flex={1}>
+          <Text fontSize="md" fontWeight="bold" color="gray.500">
+            Aucune carte disponible pour les filtres sélectionnés.
+          </Text>
+          <Pressable
+            onPress={() => setFilteredData(data)} // Réinitialiser les filtres
+            style={({ pressed }) => [
+              {
+                backgroundColor: pressed ? 'gray.800' : 'black',
+                transform: pressed ? [{ scale: 0.96 }] : [{ scale: 1 }],
+                borderRadius: 20,
+                marginTop: 20,
+                paddingHorizontal: 24,
+                paddingVertical: 12,
+              },
+            ]}
+          >
+            <Text color="white" fontWeight="bold">
+              Réinitialiser les filtres
+            </Text>
+          </Pressable>
+        </Box>
+      );
+    }
+
     const cardsToRender = [...Array(5)].map((_, i) => {
-      const cardIndex = (index + i) % data.length;
+      const cardIndex = (index + i) % filteredData.length;
       const isCurrentCard = i === 0;
 
       const cardStyle = isCurrentCard
@@ -97,17 +125,18 @@ const SwipeDeck = () => {
 
       return (
         <Animated.View
-          key={cardIndex}
+          key={filteredData[cardIndex].id}
           style={cardStyle}
           {...(isCurrentCard ? panResponder.panHandlers : {})}
         >
-          <CardHome cardData={data[cardIndex]} />
+          <CardHome cardData={filteredData[cardIndex]} />
         </Animated.View>
       );
     });
 
     return cardsToRender.reverse();
   };
+  
 
   return (
     <Box style={styles.container}>
@@ -122,7 +151,7 @@ const SwipeDeck = () => {
             transform: pressed ? [{ scale: 0.96 }] : [{ scale: 1 }],
             borderRadius: 20,
           },
-          { width: '100%', alignSelf: 'center', position: 'absolute', bottom: 0, padding: 18, borderRadius: 30 },
+          { width: '100%', alignSelf: 'center', position: 'absolute', bottom: -6, padding: 18, borderRadius: 30 },
         ]}
       >
         <HStack alignItems="center" justifyContent="center" space={2}>
