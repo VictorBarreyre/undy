@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Box, VStack } from 'native-base';
 import SwipeDeck from '../components/SwipeDeck';
 import FilterBar from '../components/Filter.bar';
-import { CardDataProvider } from '../../infrastructure/context/CardDataContexte';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 
@@ -12,7 +11,6 @@ const Home = () => {
 
   return (
     <Background>
-      <CardDataProvider>
         <Box paddingTop={2} width="100%">
           <FilterBar onFilterChange={setSelectedFilters} />
         </Box>
@@ -21,7 +19,6 @@ const Home = () => {
             <SwipeDeck selectedFilters={selectedFilters} style={styles.swipper} />
           </Box>
         </VStack>
-      </CardDataProvider>
     </Background>
   );
 };

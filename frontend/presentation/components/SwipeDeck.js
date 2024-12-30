@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Animated, PanResponder, Dimensions, StyleSheet, Pressable } from 'react-native';
-import { Box, Button, Icon, HStack, Text } from 'native-base';
+import { Box, HStack, Text } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUnlock } from '@fortawesome/free-solid-svg-icons';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
@@ -16,7 +16,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   const position = useRef(new Animated.ValueXY()).current;
   const [index, setIndex] = useState(0);
   const [filteredData, setFilteredData] = useState(data);
-    const [currentItem, setCurrentItem] = useState(data[0]); // Gardez une référence explicite à l'élément actuel
+  const [currentItem, setCurrentItem] = useState(data[0]); 
 
   // Met à jour les données filtrées lorsque les filtres changent
   useEffect(() => {
@@ -27,6 +27,13 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     setFilteredData(filtered);
     setIndex(0); // Réinitialise l'index pour recommencer avec la première carte
   }, [selectedFilters, data]);
+
+  // Met à jour `currentItem` lorsque `index` ou `filteredData` change
+  useEffect(() => {
+    if (filteredData.length > 0) {
+      setCurrentItem(filteredData[index]);
+    }
+  }, [index, filteredData]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -55,8 +62,16 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     }).start(() => onSwipeComplete(direction));
   };
 
-  const onSwipeComplete = () => {
-    setIndex((prevIndex) => (prevIndex + 1) % filteredData.length);
+  const onSwipeComplete = (direction) => {
+    setIndex((prevIndex) => {
+      const nextIndex = (prevIndex + 1) % filteredData.length;
+      
+      // Met à jour `currentItem` avec la carte correspondante dans `filteredData`
+      setCurrentItem(filteredData[nextIndex]);
+      
+      return nextIndex; // Retourne le nouvel index
+    });
+
     position.setValue({ x: 0, y: 0 });
   };
 
@@ -136,7 +151,6 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
     return cardsToRender.reverse();
   };
-  
 
   return (
     <Box style={styles.container}>
@@ -167,7 +181,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
 const styles = StyleSheet.create({
   container: {
-    display:'flex',
+    display: 'flex',
     flex: 1,
     height: SCREEN_HEIGHT,
     width: '100%',
@@ -188,7 +202,6 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5,
   },
-
 });
 
 export default SwipeDeck;

@@ -3,7 +3,6 @@ import { styles } from '../../infrastructure/theme/styles';
 import { Box, Text, HStack, VStack, Image, Button } from 'native-base';
 import { BlurView } from '@react-native-community/blur';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
-import { FontAwesome5 } from '@expo/vector-icons';
 import { faPaperPlane } from '@fortawesome/free-solid-svg-icons'; // Importer l'icône "share"
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { View, Platform, Alert, Share, Linking } from 'react-native';

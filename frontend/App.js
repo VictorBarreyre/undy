@@ -9,6 +9,7 @@ import Connexion from './presentation/screens/Connexion';
 import DrawerNavigator from './navigation/Layout';
 import * as Font from 'expo-font';
 import { lightTheme } from './infrastructure/theme/theme';
+import { CardDataProvider } from './infrastructure/context/CardDataContexte';
 
 const Stack = createStackNavigator();
 
@@ -33,12 +34,15 @@ const App = () => {
     }
 
     return (
+
         <AuthProvider>
-            <NativeBaseProvider theme={lightTheme}>
-                <NavigationContainer>
-                    <StackNavigator />
-                </NavigationContainer>
-            </NativeBaseProvider>
+            <CardDataProvider>
+                <NativeBaseProvider theme={lightTheme}>
+                    <NavigationContainer>
+                        <StackNavigator />
+                    </NavigationContainer>
+                </NativeBaseProvider>
+            </CardDataProvider>
         </AuthProvider>
     );
 };
