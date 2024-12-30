@@ -16,7 +16,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   const position = useRef(new Animated.ValueXY()).current;
   const [index, setIndex] = useState(0);
   const [filteredData, setFilteredData] = useState(data);
-  const [currentItem, setCurrentItem] = useState(data[0]); // Gardez une référence explicite à l'élément actuel
+    const [currentItem, setCurrentItem] = useState(data[0]); // Gardez une référence explicite à l'élément actuel
 
   // Met à jour les données filtrées lorsque les filtres changent
   useEffect(() => {
@@ -183,8 +183,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 10,
     shadowColor: 'violet',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 5,
   },

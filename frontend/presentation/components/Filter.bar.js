@@ -68,9 +68,10 @@ const FilterBar = ({ onFilterChange }) => {
                         alignItems="center"
                         paddingY={5}
                       >
-                        <Text>{label}</Text>
+                        <Text style={styles.h5}>{label}</Text>
                         <Checkbox
                           value={label}
+                          aria-label={label}
                           _unchecked={{
                             borderColor: 'gray.500',
                             borderWidth: 2,
@@ -85,7 +86,7 @@ const FilterBar = ({ onFilterChange }) => {
                           onChange={() => handleCheckboxChange(label)}
                         />
                       </HStack>
-                      <Divider bg="#94A3B8" />
+                      <Divider opacity={30} bg="#94A3B8" />
                     </Box>
                   ))}
                 </Box>
