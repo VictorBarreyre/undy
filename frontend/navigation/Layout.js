@@ -9,7 +9,8 @@ import Profile from '../presentation/screens/Profile';
 import { Box } from 'native-base';
 import { styles } from '../infrastructure/theme/styles';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import AddSecret from '../presentation/screens/AddSecret';
+import TabNavigator from './TabNavigator';
 
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
@@ -32,43 +33,6 @@ export function Background({ children }) {
     );
 }
 
-function TabNavigator() {
-    return (
-        <Tab.Navigator
-            screenOptions={({ route }) => ({
-                tabBarIcon: ({ color, size }) => {
-                    let icon;
-                    if (route.name === 'Home') {
-                        icon = faHome;
-                    } else if (route.name === 'Profile') {
-                        icon = faUser;
-                    }
-                    return <FontAwesomeIcon icon={icon} size={size} color={color} />;
-                },
-                tabBarShowLabel: false,
-                tabBarActiveTintColor: 'black',
-                tabBarInactiveTintColor: 'gray',
-                tabBarStyle: {
-                    backgroundColor: 'white', // Transparent pour afficher le fond
-                    elevation: 0, // Supprime l'ombre sur Android
-                    borderTopWidth: 0, // Supprime la bordure sur iOS
-                },
-            })}
-        >
-            <Tab.Screen
-                name="Home"
-                component={Home}
-                options={{ headerShown: false }}
-
-            />
-            <Tab.Screen
-                name="Profile"
-                component={Profile}
-                options={{ headerShown: false }}
-            />
-        </Tab.Navigator>
-    );
-}
 
 function DrawerNavigator() {
     const insets = useSafeAreaInsets();
