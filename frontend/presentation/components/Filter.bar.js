@@ -14,7 +14,8 @@ const FilterBar = ({ onFilterChange }) => {
   const [isOverlayVisible, setOverlayVisible] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState([]);
 
-  const labels = [...new Set(data.map((card) => card.label))];
+  // Nettoyage des données pour éviter les doublons ou les valeurs invalides
+  const labels = [...new Set(data.map((card) => card.label?.trim()).filter(Boolean))];
 
   const handleCheckboxChange = (value) => {
     const updatedFilters = selectedFilters.includes(value)
@@ -60,8 +61,8 @@ const FilterBar = ({ onFilterChange }) => {
                   </Pressable>
                 </HStack>
                 <Box marginTop={6} width="100%">
-                  {labels.map((label) => (
-                    <Box key={label}>
+                  {labels.map((label, index) => (
+                    <Box key={`${label}-${index}`}>
                       <HStack
                         width="100%"
                         justifyContent="space-between"

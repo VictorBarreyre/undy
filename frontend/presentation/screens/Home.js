@@ -4,7 +4,7 @@ import SwipeDeck from '../components/SwipeDeck';
 import FilterBar from '../components/Filter.bar';
 import { CardDataProvider } from '../../infrastructure/context/CardDataContexte';
 import { styles } from '../../infrastructure/theme/styles';
-import { Background } from '../../navigation/Layout';
+import { Background } from '../../navigation/Background';
 
 const Home = () => {
 
