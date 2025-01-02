@@ -61,35 +61,35 @@ const FilterBar = ({ onFilterChange }) => {
                   </Pressable>
                 </HStack>
                 <Box marginTop={6} width="100%">
-                {labels.map((label, index) => (
-  <Box key={`${label}-${index}`}>
-    <HStack
-      width="100%"
-      justifyContent="space-between"
-      alignItems="center"
-      paddingY={5}
-    >
-      <Text style={styles.h5}>{label}</Text>
-      <Checkbox
-        value={label}
-        aria-label={label}
-        _unchecked={{
-          borderColor: 'gray.500',
-          borderWidth: 2,
-          bg: 'transparent',
-        }}
-        _checked={{
-          bg: 'black',
-          borderColor: 'black',
-          _icon: { color: 'white' },
-        }}
-        isChecked={selectedFilters.includes(label)}
-        onChange={() => handleCheckboxChange(label)}
-      />
-    </HStack>
-    <Divider opacity={30} bg="#94A3B8" />
-  </Box>
-))}
+                  {labels.map((label, index) => (
+                    <Box key={`${label}-${index}`}>
+                      <HStack
+                        width="100%"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        paddingY={5}
+                      >
+                        <Text style={styles.h5}>{label}</Text>
+                        <Checkbox
+                          value={label}
+                          aria-label={label}
+                          _unchecked={{
+                            borderColor: 'gray.500',
+                            borderWidth: 2,
+                            bg: 'transparent',
+                          }}
+                          _checked={{
+                            bg: 'black',
+                            borderColor: 'black',
+                            _icon: { color: 'white' },
+                          }}
+                          isChecked={selectedFilters.includes(label)}
+                          onChange={() => handleCheckboxChange(label)}
+                        />
+                      </HStack>
+                      <Divider opacity={30} bg="#94A3B8" />
+                    </Box>
+                  ))}
 
                 </Box>
               </Box>
@@ -116,7 +116,7 @@ const FilterBar = ({ onFilterChange }) => {
             <Icon
               as={<FontAwesomeIcon icon={faSearch} />}
               size="5"
-              color="gray.400"
+              color="#94A3B8"
             />
             {/* Champ de saisie */}
             <Input
@@ -127,7 +127,7 @@ const FilterBar = ({ onFilterChange }) => {
               _focus={{
                 borderColor: 'transparent', // Supprime la bordure focus
               }}
-              placeholderTextColor="gray.400"
+              placeholderTextColor="#94A3B8"
             />
           </HStack>
         </Box>

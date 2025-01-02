@@ -26,7 +26,7 @@ const TabNavigator = () => {
                 },
                 tabBarShowLabel: false,
                 tabBarActiveTintColor: '#FF78B2',
-                tabBarInactiveTintColor: 'gray',
+                tabBarInactiveTintColor: '#94A3B8',
                 tabBarStyle: {
                     backgroundColor: 'white', // Transparent pour afficher le fond
                     elevation: 0, // Supprime l'ombre sur Android
