@@ -1,15 +1,26 @@
-import React, { useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { Background } from '../../navigation/Background'; // Assurez-vous que ce chemin est correct
 import { AuthContext } from '../../infrastructure/context/AuthContext';
-import { Box, Text, HStack, VStack, Image, Button } from 'native-base';
-import { styles } from '../../infrastructure/theme/styles';
-import { Pressable } from 'react-native';
+import { Box, Text, HStack, VStack, Image, Button, Input } from 'native-base';
+import { Pressable, Dimensions, StyleSheet } from 'react-native';
+import { styles } from '../../infrastructure/theme/styles'; 
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
 
 const AddSecret = () => {
 
     const { userData } = useContext(AuthContext); // Utilisation correcte de useContext
+    const [secretText, setSecretText] = useState(''); 
 
     console.log(userData)
+
+
+    const handlePostSecret = () => {
+        console.log(`Nouveau secret : ${secretText}`);
+        // Logique pour envoyer le secret au backend ou effectuer une action
+        setSecretText(''); // Réinitialise le champ après l'envoi
+    };
 
     return (
         <Background>
@@ -19,22 +30,20 @@ const AddSecret = () => {
                         Ajouter un Secret
                     </Text>
                     <Box
-                        display="flex" // Utilise le modèle Flexbox
+                        display="flex"
                         width="100%"
                         marginX="auto"
-                        height='75%'
+                        height="75%"
                         borderRadius="lg"
-                        overflow="hidden"
                         backgroundColor="white"
                         marginTop={2}
-                        shadow={10}
                         paddingTop={1}
                         paddingBottom={4}
                         justifyContent="space-between"
-                        style={styles.boxShadow}
+                        style={[styles.cardStyle, customStyles.shadowBox]} 
                     >
                         {/* Contenu texte */}
-                        <VStack height={'100%'} justifyContent="space-between" padding={4} space={2}>
+                        <VStack backgroundColor="white" height={'100%'} justifyContent="space-between" padding={4} space={2}>
                             <HStack alignItems="center" justifyContent="space-between" width="95%">
                                 {/* Texte aligné à gauche */}
                                 <Box flex={1} mr={4} ml={2} >
@@ -45,6 +54,23 @@ const AddSecret = () => {
                                 {/* Image alignée à droite */}
 
                             </HStack>
+
+                            <Box  ml={2}  width="95%" >
+                                <Text fontSize="md" color="gray.500" mb={2}>
+                                    Entrez votre secret
+                                </Text>
+                                <Input
+                                    value={secretText}
+                                    onChangeText={(text) => setSecretText(text)}
+                                    placeholder="Tapez ici votre secret..."
+                                    backgroundColor="gray.100"
+                                    borderRadius="md"
+                                    fontSize="md"
+                                    p={4}
+                                    multiline
+                                    numberOfLines={4}
+                                />
+                            </Box>
 
                         </VStack>
                     </Box>
@@ -72,5 +98,16 @@ const AddSecret = () => {
         </Background>
     );
 };
+
+const customStyles = StyleSheet.create({
+    shadowBox: {
+        shadowColor: 'violet',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 5
+    },
+  });
+
 
 export default AddSecret;
