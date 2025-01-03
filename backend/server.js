@@ -45,9 +45,10 @@ if (process.env.NODE_ENV === 'development') {
     );
 }
 
-// Importer les routes
-const userRoutes = require('./routes/userRoutes');
+
 app.use('/api/users', userRoutes);
+app.use('/api/secrets', secretRoutes);
+
 
 // Route de vérification du serveur
 app.get('/', (req, res) => {
