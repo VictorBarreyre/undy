@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { createSecret, getAllSecrets, purchaseSecret, getSecret } = require('../controllers/secretController');
-const { protect } = require('../middleware/authMiddleware');
+const protect  = require('../middleware/authMiddleware');
+
 
 // Routes publiques
 router.get('/', getAllSecrets); // Récupérer tous les secrets
