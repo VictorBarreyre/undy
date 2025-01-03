@@ -1,8 +1,6 @@
 const Secret = require('../models/Secret');
 
-// @desc    Créer un secret
-// @route   POST /api/secrets
-// @access  Private
+
 exports.createSecret = async (req, res) => {
     const { title, content, price } = req.body;
 
@@ -24,9 +22,7 @@ exports.createSecret = async (req, res) => {
     }
 };
 
-// @desc    Afficher tous les secrets
-// @route   GET /api/secrets
-// @access  Public
+
 exports.getAllSecrets = async (req, res) => {
     try {
         const secrets = await Secret.find().populate('user', 'name'); // Inclut le nom de l'utilisateur
@@ -36,9 +32,7 @@ exports.getAllSecrets = async (req, res) => {
     }
 };
 
-// @desc    Acheter un secret
-// @route   POST /api/secrets/:id/purchase
-// @access  Private
+
 exports.purchaseSecret = async (req, res) => {
     try {
         const secret = await Secret.findById(req.params.id);
@@ -64,9 +58,7 @@ exports.purchaseSecret = async (req, res) => {
     }
 };
 
-// @desc    Voir un secret acheté
-// @route   GET /api/secrets/:id
-// @access  Private
+
 exports.getSecret = async (req, res) => {
     try {
         const secret = await Secret.findById(req.params.id);
