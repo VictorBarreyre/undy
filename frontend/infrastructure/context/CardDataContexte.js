@@ -1,5 +1,7 @@
 import React, { createContext, useState, useContext } from 'react';
 import { DATABASE_URL } from '@env'
+import axios from 'axios';
+
 
 // Créer le contexte pour les données des cartes
 const CardDataContext = createContext();
@@ -12,10 +14,10 @@ export const useCardData = () => {
 // Fournisseur du contexte
 export const CardDataProvider = ({ children }) => {
 
-  const handlePostSecret = async () => {
+  const handlePostSecret = async ({ secretText, selectedLabel, price, authToken }) => {
     try {
         const response = await axios.post(
-            `${DATABASE_URL}/api/secrets`,
+            `${DATABASE_URL}/api/secrets/createsecrets`,
             {
                 title: secretText,
                 category: selectedLabel,

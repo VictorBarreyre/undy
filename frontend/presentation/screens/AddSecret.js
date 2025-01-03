@@ -34,7 +34,8 @@ const AddSecret = () => {
                 secretText,
                 selectedLabel,
                 price,
-                userData,
+                authToken: userData.token, // Ajoutez le token de l'utilisateur
+                
             });
 
             // Réinitialiser les champs
@@ -53,6 +54,7 @@ const AddSecret = () => {
         setSecretPostAvailable(
             secretText.trim().length > 0 && selectedLabel.trim().length > 0 && price.trim().length > 0
         );
+        console.log(secretText,selectedLabel, price)
     }, [secretText, selectedLabel, price]);
 
     return (

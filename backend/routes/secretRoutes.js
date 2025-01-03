@@ -8,7 +8,7 @@ const protect  = require('../middleware/authMiddleware');
 router.get('/', getAllSecrets); // Récupérer tous les secrets
 
 // Routes privées
-router.post('/', protect, createSecret); // Créer un secret
+router.post('/createsecrets', protect, createSecret); // Créer un secret
 router.post('/:id/purchase', protect, purchaseSecret); // Acheter un secret
 router.get('/:id', protect, getSecret); // Voir un secret acheté
 
