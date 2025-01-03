@@ -3,8 +3,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { createProxyMiddleware } = require('http-proxy-middleware');
-const userRoutes = require('./routes/userRoutes');
-const secretRoutes = require('./routes/secretRoutes');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -45,6 +43,8 @@ if (process.env.NODE_ENV === 'development') {
     );
 }
 
+const userRoutes = require('./routes/userRoutes');
+const secretRoutes = require('./routes/secretRoutes');
 
 app.use('/api/users', userRoutes);
 app.use('/api/secrets', secretRoutes);
