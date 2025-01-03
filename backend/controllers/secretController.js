@@ -3,7 +3,7 @@ const Secret = require('../models/Secret');
 // @desc    Créer un secret
 // @route   POST /api/secrets
 // @access  Private
-const createSecret = async (req, res) => {
+exports.createSecret = async (req, res) => {
     const { title, content, price } = req.body;
 
     if (!title || !content || price == null) {
@@ -27,7 +27,7 @@ const createSecret = async (req, res) => {
 // @desc    Afficher tous les secrets
 // @route   GET /api/secrets
 // @access  Public
-const getAllSecrets = async (req, res) => {
+exports.getAllSecrets = async (req, res) => {
     try {
         const secrets = await Secret.find().populate('user', 'name'); // Inclut le nom de l'utilisateur
         res.status(200).json(secrets);
@@ -39,7 +39,7 @@ const getAllSecrets = async (req, res) => {
 // @desc    Acheter un secret
 // @route   POST /api/secrets/:id/purchase
 // @access  Private
-const purchaseSecret = async (req, res) => {
+exports.purchaseSecret = async (req, res) => {
     try {
         const secret = await Secret.findById(req.params.id);
 
@@ -67,7 +67,7 @@ const purchaseSecret = async (req, res) => {
 // @desc    Voir un secret acheté
 // @route   GET /api/secrets/:id
 // @access  Private
-const getSecret = async (req, res) => {
+exports.getSecret = async (req, res) => {
     try {
         const secret = await Secret.findById(req.params.id);
 
@@ -84,11 +84,4 @@ const getSecret = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Erreur serveur.' });
     }
-};
-
-module.exports = {
-    createSecret,
-    getAllSecrets,
-    purchaseSecret,
-    getSecret,
 };

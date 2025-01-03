@@ -1,5 +1,5 @@
-// context/CardDataContext.js
 import React, { createContext, useState, useContext } from 'react';
+import { DATABASE_URL } from '@env'
 
 // Créer le contexte pour les données des cartes
 const CardDataContext = createContext();
@@ -11,6 +11,35 @@ export const useCardData = () => {
 
 // Fournisseur du contexte
 export const CardDataProvider = ({ children }) => {
+
+  const handlePostSecret = async () => {
+    try {
+        const response = await axios.post(
+            `${DATABASE_URL}/api/secrets`,
+            {
+                title: secretText,
+                category: selectedLabel,
+                price: parseFloat(price),
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                },
+            }
+        );
+
+        console.log('Secret envoyé avec succès :', response.data);
+
+        setSecretText('');
+        setSelectedLabel('');
+        setPrice('');
+    } catch (error) {
+        console.error('Erreur lors de l\'envoi du secret :', error.message);
+        Alert.alert('Erreur', error.response?.data?.message || error.message);
+    }
+};
+
+
   const [data, setData] = useState([
     {
       id: 1,
@@ -87,7 +116,7 @@ export const CardDataProvider = ({ children }) => {
   ]);
 
   return (
-    <CardDataContext.Provider value={{ data, setData }}>
+    <CardDataContext.Provider value={{ data, setData, handlePostSecret }}>
       {children}
     </CardDataContext.Provider>
   );

@@ -3,11 +3,9 @@ import { Background } from '../../navigation/Background'; // Assurez-vous que ce
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { Box, Text, HStack, VStack, Image, Select, Input, CheckIcon } from 'native-base';
-import { Pressable, Dimensions, StyleSheet, View, KeyboardAvoidingView, Keyboard, Platform, TouchableWithoutFeedback } from 'react-native';
+import { Alert, Pressable, Dimensions, StyleSheet, View, KeyboardAvoidingView, Keyboard, Platform, TouchableWithoutFeedback } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
 import { FontAwesome } from '@expo/vector-icons'; // Assurez-vous que FontAwesome est disponible
-
-
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -16,7 +14,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const AddSecret = () => {
 
     const { userData } = useContext(AuthContext); // Utilisation correcte de useContext
-    const { data } = useCardData();
+    const { data, handlePostSecret } = useCardData();
     const [secretText, setSecretText] = useState('');
     const [selectedLabel, setSelectedLabel] = useState(''); // État pour la sélection du label
     const [price, setPrice] = useState(''); // État pour le prix
@@ -29,15 +27,26 @@ const AddSecret = () => {
 
     console.log(userData)
 
-    const handlePostSecret = () => {
-        if (secretPostAvailable) {
-            console.log(`Nouveau secret : ${secretText}, catégorie : ${selectedLabel}, prix : ${price}`);
-            // Logique pour envoyer le secret au backend ou effectuer une action
-            setSecretText(''); // Réinitialise le champ après l'envoi
-            setSelectedLabel(''); // Réinitialise le label
-            setPrice(''); // Réinitialise le prix
+
+    const handlePress = async () => {
+        try {
+            await handlePostSecret({
+                secretText,
+                selectedLabel,
+                price,
+                userData,
+            });
+
+            // Réinitialiser les champs
+            setSecretText('');
+            setSelectedLabel('');
+            setPrice('');
+            Alert.alert('Succès', 'Votre secret a été posté avec succès !');
+        } catch (error) {
+            Alert.alert('Erreur', error.message);
         }
     };
+
 
      // Surveille les changements dans les champs et met à jour l'état de `secretPostAvailable`
      useEffect(() => {
@@ -176,7 +185,7 @@ const AddSecret = () => {
                                 </VStack>
                             </Box>
                             <Pressable
-                                onPress={handlePostSecret}
+                                onPress={handlePress}
                                 disabled={!secretPostAvailable} // Désactive le bouton si l'état est faux
                                 style={({ pressed }) => [
                                     {
