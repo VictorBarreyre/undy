@@ -146,7 +146,7 @@ const AddSecret = () => {
                                         </Box>
 
                                         {/* Champ pour définir le prix */}
-                                        <Box justifyContent="start" alignContent='center' alignItems='center' mt={6} width="45%">
+                                        <Box justifyContent="center" alignContent='center' alignItems='center' mt={6} width="45%">
                                             <Text style={styles.ctalittle} >
                                                 Son prix
                                             </Text>
