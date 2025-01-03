@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createSecret,getAllSecrets,purchaseSecret,getSecret,} = require('../controllers/secretController');
+const { createSecret, getAllSecrets, purchaseSecret, getSecret } = require('../controllers/secretController');
 const { protect } = require('../middleware/authMiddleware');
 
 // Routes publiques
