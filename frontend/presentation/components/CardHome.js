@@ -79,7 +79,7 @@ export default function CardHome({ cardData }) {
           {/* Texte aligné à gauche */}
           <Box flex={1} mr={4} ml={2} >
             <Text left={2} style={styles.h5}>
-            Posté par {cardData.posterpar || 'Aucune description disponible.'}
+            Posté par {cardData.user.name || 'Aucune description disponible.'}
             </Text>
           </Box>
           {/* Image alignée à droite */}
@@ -102,7 +102,7 @@ export default function CardHome({ cardData }) {
         >
           {/* Texte */}
           <Text ellipsizeMode="tail" top="5" left="2" paddingBottom="5" width="95%" style={styles.h2}>
-          {`"${cardData.description || 'Aucune description disponible.'}"`}
+          {`"${cardData.content || 'Aucune description disponible.'}"`}
           </Text>
 
           {/* Overlay avec flou */}

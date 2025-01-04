@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 
 const SecretSchema = new mongoose.Schema({
-    title: {
+    label: {
         type: String,
         required: true,
         trim: true,
     },
-    content: {
+    description: {
         type: String,
         required: true,
     },

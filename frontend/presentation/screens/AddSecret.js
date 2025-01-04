@@ -25,15 +25,6 @@ const AddSecret = () => {
     const labels = [...new Set(data.map((item) => item.label))];
 
 
-    useEffect(() => {
-        if (userData && userData.token) {
-            console.log('Token utilisateur :', userData.token);
-        } else {
-            console.log('Token utilisateur non disponible.');
-        }
-    }, [userData]);
-    
-
 
     const handlePress = async () => {
         try {

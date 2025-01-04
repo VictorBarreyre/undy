@@ -12,11 +12,32 @@ const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 300;
 
 const SwipeDeck = ({ selectedFilters = [] }) => {
-  const { data } = useCardData();
+  const { data, fetchAllSecrets } = useCardData();
   const position = useRef(new Animated.ValueXY()).current;
   const [index, setIndex] = useState(0);
   const [filteredData, setFilteredData] = useState(data);
   const [currentItem, setCurrentItem] = useState(data[0]);
+
+  const [secrets, setSecrets] = useState();
+
+
+  useEffect(() => {
+    const loadSecrets = async () => {
+      try {
+        const secrets = await fetchAllSecrets(); // Appel à la fonction pour récupérer les secrets
+        console.log('Secrets récupérés avec succès :', secrets); // Log des secrets récupérés
+        setFilteredData(secrets); // Mise à jour de l'état avec les secrets récupérés
+        setCurrentItem(secrets[0]); // Définir le premier secret comme élément courant
+      } catch (error) {
+        console.error('Erreur lors de la récupération des secrets :', error.message);
+      }
+    };
+
+    loadSecrets(); // Exécution de la fonction pour charger les secrets
+  }, [fetchAllSecrets]);
+
+  
+  
 
   // Met à jour les données filtrées lorsque les filtres changent
   useEffect(() => {

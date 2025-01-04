@@ -14,38 +14,48 @@ export const useCardData = () => {
 // Fournisseur du contexte
 export const CardDataProvider = ({ children }) => {
 
-  const handlePostSecret = async ({ secretText, selectedLabel, price, authToken }) => {
+  const handlePostSecret = async ({  selectedLabel, secretText, price, authToken }) => {
     try {
-        const response = await axios.post(
-            `${DATABASE_URL}/api/secrets/createsecrets`,
-            {
-                title: secretText,
-                content: selectedLabel,
-                price: parseFloat(price),
-            },
-            {
-              headers: {
-                  Authorization: `Bearer ${authToken}`,
-              },
-          }
+      const response = await axios.post(
+        `${DATABASE_URL}/api/secrets/createsecrets`,
+        {
+          label: selectedLabel,
+          content: secretText,
+          price: parseFloat(price),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
       );
       console.log('Secret envoyé avec succès :', response.data);
       return response.data; // Retournez la réponse du backend
-  } catch (error) {
+    } catch (error) {
       console.error('Erreur lors de l\'envoi du secret :', error.message);
       throw error; // Laissez le composant gérer l'erreur
-  }
+    }
+  };
+
+  const fetchAllSecrets = async () => {
+    try {
+        const response = await axios.get(`${DATABASE_URL}/api/secrets`);
+        return response.data; 
+    } catch (error) {
+        console.error('Erreur lors de la récupération des secrets :', error.response?.data || error.message);
+        throw error;
+    }
 };
 
 
   const [data, setData] = useState([
     {
       id: 1,
-      posterpar:'Alice Martin',
-      price:'3.90',
+      posterpar: 'Alice Martin',
+      price: '3.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Les vacances d'été",
-      description: "Le Lorem Ipsum est simplement du faux texte utilisé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard.",
+      content: "Le Lorem Ipsum est simplement du faux texte utilisé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard.",
       likes: 150,
       comments: 35,
       shares: 12,
@@ -53,11 +63,11 @@ export const CardDataProvider = ({ children }) => {
     },
     {
       id: 2,
-      posterpar:'Joh Cohen',
-      price:'322.90',
+      user: 'Joh Cohen',
+      price: '322.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Le projet immobilier",
-      description: "Voici un aperçu d'un projet immobilier qui attire l'attention des investisseurs du monde entier.",
+      content: "Voici un aperçu d'un projet immobilier qui attire l'attention des investisseurs du monde entier.",
       likes: 250,
       comments: 50,
       shares: 20,
@@ -65,11 +75,11 @@ export const CardDataProvider = ({ children }) => {
     },
     {
       id: 3,
-      posterpar:'David Lisnard',
-      price:'13.90',
+      user: 'David Lisnard',
+      price: '13.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Événements de la ville",
-      description: "Les événements de la ville sont nombreux ce mois-ci, avec des activités pour tous les goûts.",
+      content: "Les événements de la ville sont nombreux ce mois-ci, avec des activités pour tous les goûts.",
       likes: 300,
       comments: 75,
       shares: 25,
@@ -77,11 +87,11 @@ export const CardDataProvider = ({ children }) => {
     },
     {
       id: 4,
-      posterpar:'Jean Marie Bigard',
-      price:'8.90',
+      user: 'Jean Marie Bigard',
+      price: '8.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Technologie et innovation",
-      description: "Les avancées technologiques changent le monde, découvrez les dernières innovations qui façonnent notre futur.",
+      content: "Les avancées technologiques changent le monde, découvrez les dernières innovations qui façonnent notre futur.",
       likes: 100,
       comments: 40,
       shares: 18,
@@ -89,11 +99,11 @@ export const CardDataProvider = ({ children }) => {
     },
     {
       id: 5,
-      posterpar:'Thierry Ardisson',
-      price:'7.90',
+      user: 'Thierry Ardisson',
+      price: '7.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Technologie et innovation",
-      description: "Les avancées technologiques changent le monde, découvrez les dernières innovations qui façonnent notre futur.",
+      content: "Les avancées technologiques changent le monde, découvrez les dernières innovations qui façonnent notre futur.",
       likes: 100,
       comments: 40,
       shares: 18,
@@ -101,11 +111,11 @@ export const CardDataProvider = ({ children }) => {
     },
     {
       id: 6,
-      posterpar:'Laurent Baffie',
-      price:'34.90',
+      user: 'Laurent Baffie',
+      price: '34.90',
       image: require('../../assets/images/card-image.png'), // Image spécifique à la carte
       title: "Technologie et innovation",
-      description: "Les avancées technologiques changent le monde, découvrez les dernières innovations qui façonnent notre futur.",
+      content: "Les avancées technologiques changent le monde, découvrez les dernières innovations qui façonnent notre futur.",
       likes: 100,
       comments: 40,
       shares: 18,
@@ -114,7 +124,7 @@ export const CardDataProvider = ({ children }) => {
   ]);
 
   return (
-    <CardDataContext.Provider value={{ data, setData, handlePostSecret }}>
+    <CardDataContext.Provider value={{ data, setData, handlePostSecret, fetchAllSecrets }}>
       {children}
     </CardDataContext.Provider>
   );
