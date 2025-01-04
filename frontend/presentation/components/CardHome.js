@@ -79,7 +79,7 @@ export default function CardHome({ cardData }) {
           {/* Texte aligné à gauche */}
           <Box flex={1} mr={4} ml={2} >
             <Text left={2} style={styles.h5}>
-            Posté par {cardData.user.name || 'Aucune description disponible.'}
+            Posté par {cardData.user?.name || 'Aucune description disponible.'}
             </Text>
           </Box>
           {/* Image alignée à droite */}

@@ -2,15 +2,15 @@ const Secret = require('../models/Secret');
 
 
 exports.createSecret = async (req, res) => {
-    const { title, content, price } = req.body;
+    const { label, content, price } = req.body;
 
-    if (!title || !content || price == null) {
+    if (!label || !content || price == null) {
         return res.status(400).json({ message: 'Tous les champs sont requis.' });
     }
 
     try {
         const secret = await Secret.create({
-            title,
+            label,
             content,
             price,
             user: req.user.id, // ID de l'utilisateur connecté
