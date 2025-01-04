@@ -40,13 +40,14 @@ export const AuthProvider = ({ children }) => {
             const response = await axios.get(`${DATABASE_URL}/api/users/profile`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            setUserData(response.data); // Stocke les données utilisateur dans le state
+            setUserData({ ...response.data, token }); // Ajoutez le token à userData
         } catch (error) {
             console.error('Error fetching user data:', error.response?.data || error.message);
         } finally {
             setIsLoadingUserData(false);
         }
     };
+    
 
     // Fonction pour mettre à jour les données utilisateur
     const updateUserData = async (updatedData) => {

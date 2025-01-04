@@ -20,25 +20,21 @@ export const CardDataProvider = ({ children }) => {
             `${DATABASE_URL}/api/secrets/createsecrets`,
             {
                 title: secretText,
-                category: selectedLabel,
+                content: selectedLabel,
                 price: parseFloat(price),
             },
             {
-                headers: {
-                    Authorization: `Bearer ${authToken}`,
-                },
-            }
-        );
-
-        console.log('Secret envoyé avec succès :', response.data);
-
-        setSecretText('');
-        setSelectedLabel('');
-        setPrice('');
-    } catch (error) {
-        console.error('Erreur lors de l\'envoi du secret :', error.message);
-        Alert.alert('Erreur', error.response?.data?.message || error.message);
-    }
+              headers: {
+                  Authorization: `Bearer ${authToken}`,
+              },
+          }
+      );
+      console.log('Secret envoyé avec succès :', response.data);
+      return response.data; // Retournez la réponse du backend
+  } catch (error) {
+      console.error('Erreur lors de l\'envoi du secret :', error.message);
+      throw error; // Laissez le composant gérer l'erreur
+  }
 };
 
 
