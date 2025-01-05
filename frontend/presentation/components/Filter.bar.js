@@ -7,11 +7,10 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { BlurView } from '@react-native-community/blur';
 import { styles } from '../../infrastructure/theme/styles';
 
-
-
 const FilterBar = ({ onFilterChange }) => {
   const { data } = useCardData();
   const [isOverlayVisible, setOverlayVisible] = useState(false);
+  const [isSearchModalVisible, setSearchModalVisible] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState([]);
 
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
@@ -26,9 +25,13 @@ const FilterBar = ({ onFilterChange }) => {
     onFilterChange(updatedFilters); // Remonte les filtres au parent
   };
 
+  console.log(isSearchModalVisible)
+
+
   return (
     <Box width="100%" paddingRight={5} paddingY={2}>
       <HStack space={0} alignItems="center" width="100%">
+        {/* Bouton pour ouvrir le filtre */}
         <Button
           variant="outline"
           backgroundColor="transparent"
@@ -37,8 +40,9 @@ const FilterBar = ({ onFilterChange }) => {
           onPress={() => setOverlayVisible(true)}
           leftIcon={<FontAwesomeIcon icon={faSlidersH} size={18} color="black" />}
         />
+        {/* Première modale : Préférences */}
         <Modal
-          animationType="slide"
+          animationType="fade"
           transparent={true}
           visible={isOverlayVisible}
           onRequestClose={() => setOverlayVisible(false)}
@@ -90,12 +94,13 @@ const FilterBar = ({ onFilterChange }) => {
                       <Divider opacity={30} bg="#94A3B8" />
                     </Box>
                   ))}
-
                 </Box>
               </Box>
             </View>
           </BlurView>
         </Modal>
+
+        {/* Barre de recherche */}
         <Box
           flex={1} // Prend tout l'espace disponible
           borderRadius="full"
@@ -128,9 +133,43 @@ const FilterBar = ({ onFilterChange }) => {
                 borderColor: 'transparent', // Supprime la bordure focus
               }}
               placeholderTextColor="#94A3B8"
+              onFocus={() => setSearchModalVisible(true)} // Ouvrir la modale
             />
           </HStack>
         </Box>
+
+        {/* Deuxième modale : Recherche */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={isSearchModalVisible}
+          onRequestClose={() => setSearchModalVisible(false)}
+        >
+          <BlurView
+            style={styles.blurBackground}
+            blurType="light"
+            blurAmount={8}
+            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+          >
+            <View style={styles.overlayModal}>
+              <Box style={styles.overlayContent}>
+                <HStack justifyContent="space-between" alignItems="center" width="100%">
+                  <Text style={styles.h3}>Recherche</Text>
+                  <Pressable
+                    style={styles.closeButton}
+                    onPress={() => setSearchModalVisible(false)}
+                  >
+                    <FontAwesomeIcon icon={faTimes} size={24} color="black" />
+                  </Pressable>
+                </HStack>
+                <Box marginTop={6} width="100%">
+                  <Text>Vous pouvez effectuer votre recherche ici.</Text>
+                  {/* Ajoutez ici des éléments spécifiques à votre recherche */}
+                </Box>
+              </Box>
+            </View>
+          </BlurView>
+        </Modal>
       </HStack>
     </Box>
   );
