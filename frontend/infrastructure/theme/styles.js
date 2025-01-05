@@ -107,7 +107,6 @@ export const styles = StyleSheet.create({
   },
   overlayCard: {
     position: 'absolute',
-    top: 58,
     left: -50,
     width: '150%',
     height: '120%',

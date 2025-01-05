@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import { styles } from '../../infrastructure/theme/styles';
 import { Box, Text, HStack, VStack, Image, Button } from 'native-base';
 import { BlurView } from '@react-native-community/blur';
@@ -9,6 +9,8 @@ import { View, Platform, Alert, Share, Linking } from 'react-native';
 
 export default function CardHome({ cardData }) {
   const { data } = useCardData(); // Accéder aux données via le contexte
+  const [isSingleLine, setIsSingleLine] = useState(true);
+
 
   if (!data || data.length === 0) {
     return <Text>No data available</Text>;
@@ -57,6 +59,30 @@ export default function CardHome({ cardData }) {
     }
   };
 
+
+  const handleTextLayout = (event) => {
+    const { height } = event.nativeEvent.layout;
+
+    // Supposons que la hauteur d'une ligne est de 20 (à ajuster selon votre style)
+    const isSingle = height <= 1;
+    setIsSingleLine(isSingle);
+  };
+
+
+  useEffect(() => {
+    const checkContentLength = () => {
+      // Exemple simple : considérer une chaîne supérieure à 50 caractères comme plus d'une ligne
+      if (cardData?.content?.length > 20) {
+        setIsSingleLine(false);
+      } else {
+        setIsSingleLine(true);
+      }
+    };
+
+    checkContentLength();
+  }, [cardData]);
+
+
   return (
     <Box
       display="flex" // Utilise le modèle Flexbox
@@ -74,12 +100,12 @@ export default function CardHome({ cardData }) {
       style={styles.boxShadow}
     >
       {/* Contenu texte */}
-      <VStack height={'100%'} justifyContent="space-between"  padding={4} space={2}>
-        <HStack  alignItems="center" justifyContent="space-between" width="95%">
+      <VStack height={'100%'} justifyContent="space-between" padding={4} space={2}>
+        <HStack alignItems="center" justifyContent="space-between" width="95%">
           {/* Texte aligné à gauche */}
           <Box flex={1} mr={4} ml={2} >
             <Text left={2} style={styles.h5}>
-            Posté par {cardData.user?.name || 'Aucune description disponible.'}
+              Posté par {cardData.user?.name || 'Aucune description disponible.'}
             </Text>
           </Box>
           {/* Image alignée à droite */}
@@ -102,12 +128,12 @@ export default function CardHome({ cardData }) {
         >
           {/* Texte */}
           <Text ellipsizeMode="tail" top="5" left="2" paddingBottom="5" width="95%" style={styles.h2}>
-          {`"${cardData.content || 'Aucune description disponible.'}"`}
+            {`"${cardData.content || 'Aucune description disponible.'}"`}
           </Text>
 
           {/* Overlay avec flou */}
           <BlurView
-            style={styles.overlayCard}
+            style={[styles.overlayCard, { top: isSingleLine ? 0 : 58 }]} // Change la valeur de top dynamiquement
             blurType="light"
             blurAmount={4}
             backgroundColor='rgba(255, 255, 255, 0.6)'
@@ -120,8 +146,8 @@ export default function CardHome({ cardData }) {
         {/* Section des statistiques */}
         <View style={[styles.statsContainer]}>
 
-          <Text ml={4} style={[styles.caption, styles.ctalittle]} >
-          {cardData.label || 'Label indisponible'}
+          <Text  ml={4} style={[styles.caption, styles.ctalittle]} >
+            {cardData.label || 'Label indisponible'}
           </Text>
 
           {/* Conteneur des icônes des statistiques */}
