@@ -119,6 +119,17 @@ export const styles = StyleSheet.create({
     height: '120%',
     zIndex: 1, // Assure que l'overlay est au-dessus
   },
+
+  resultItem: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  resultContainer: {
+    flexDirection: "column",
+    marginBottom:"20",
+  },
+
   content: {
     flexGrow: 1,
     justifyContent: 'center',

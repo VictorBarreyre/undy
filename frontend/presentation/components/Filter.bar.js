@@ -277,9 +277,24 @@ const FilterBar = ({ onFilterChange }) => {
                         // Gérer la redirection ou l'action ici
                       }}
                     >
-                      <Text style={styles.resultText}>
-                        {item.content} - {item.user?.name}
-                      </Text>
+                      <View style={styles.resultContainer}>
+                      <HStack justifyContent="space-between" alignItems="center" marginBottom={3}>
+                        <Text style={styles.h5}>
+                          Posté par : {item.user?.name || "Anonyme"}
+                        </Text>
+                        </HStack>
+
+                        {/* Contenu du secret */}
+                        <Text  style={styles.h5} numberOfLines={2}>
+                          {item.content}
+                        </Text>
+
+                        {/* Informations supplémentaires (label et prix) */}
+                        <HStack justifyContent="space-between" alignItems="center" marginTop={3}>
+                          <Text style={styles.h5}>{item.label}</Text>
+                          <Text style={styles.h5}>{item.price} €</Text>
+                        </HStack>
+                      </View>
                     </Pressable>
                   )}
                 />
