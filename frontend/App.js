@@ -53,8 +53,6 @@ const StackNavigator = () => {
   const { isLoggedIn, isLoadingUserData } = useContext(AuthContext);
   const { isLoadingData } = useCardData();
 
-  console.log('isLoadingUserData:', isLoadingUserData);
-  console.log('isLoadingData:', isLoadingData);
 
   // Affichez le loader tant que l'utilisateur ou les données des cartes chargent
   if (isLoadingUserData || isLoadingData) {

@@ -1,12 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Box, Button, Icon, HStack, Input, Checkbox, Divider } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faSearch, faSlidersH, faTimes } from '@fortawesome/free-solid-svg-icons';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { Modal, Pressable, Text, View, FlatList } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { BlurView } from '@react-native-community/blur';
 import { styles } from '../../infrastructure/theme/styles';
-import { Background } from '../../navigation/Background';
 
 const FilterBar = ({ onFilterChange }) => {
   const { data } = useCardData();
@@ -15,6 +14,8 @@ const FilterBar = ({ onFilterChange }) => {
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [isInputFocused, setInputFocused] = useState(false); // Contrôle manuel du focus
   const inputRef = useRef(null); // Référence pour l'élément Input
+  const [searchQuery, setSearchQuery] = useState(""); // État pour l'entrée de recherche
+  const [filteredResults, setFilteredResults] = useState([]); // Résultats filtrés
 
 
 
@@ -44,6 +45,23 @@ const FilterBar = ({ onFilterChange }) => {
       setInputFocused(true); // Marque l'Input comme actif
     }
   };
+
+
+    // Filtrer les données en fonction de l'entrée utilisateur
+    useEffect(() => {
+      if (searchQuery.trim() === "") {
+        setFilteredResults([]); // Si aucune recherche, pas de résultats
+      } else {
+        const query = searchQuery.toLowerCase();
+        const results = data.filter(
+          (item) =>
+            item.content.toLowerCase().includes(query) || // Rechercher dans le contenu des secrets
+            item.user?.name.toLowerCase().includes(query) // Rechercher dans les noms des utilisateurs
+        );
+        setFilteredResults(results);
+      }
+    }, [searchQuery, data]);
+  
 
   return (
     <Box width="100%" paddingX={5} paddingY={2}>
@@ -239,18 +257,37 @@ const FilterBar = ({ onFilterChange }) => {
                         borderColor: 'transparent', // Supprime la bordure focus
                       }}
                       placeholderTextColor="#94A3B8"
-                      onFocus={() => {
-                        if (!isInputFocused) {
-                          openSearchModal(); // Ouvrir la modale
-                        }
-                      }}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
                     />
                   </HStack>
 
                 </HStack>
                 <Box marginTop={6} width="100%">
 
-                  {/* Ajoutez ici des éléments spécifiques à votre recherche */}
+                {filteredResults.length > 0 ? (
+                <FlatList
+                  data={filteredResults}
+                  keyExtractor={(item) => item._id}
+                  renderItem={({ item }) => (
+                    <Pressable
+                      style={styles.resultItem}
+                      onPress={() => {
+                        console.log("Résultat sélectionné :", item);
+                        // Gérer la redirection ou l'action ici
+                      }}
+                    >
+                      <Text style={styles.resultText}>
+                        {item.content} - {item.user?.name}
+                      </Text>
+                    </Pressable>
+                  )}
+                />
+              ) : (
+                searchQuery.trim() !== "" && (
+                  <Text style={styles.noResultsText}>Aucun résultat trouvé</Text>
+                )
+              )}
                 </Box>
               </Box>
             </View>

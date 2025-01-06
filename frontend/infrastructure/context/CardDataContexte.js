@@ -60,8 +60,8 @@ export const CardDataProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    console.log('Chargement initial des secrets');
     fetchAllSecrets();
+    console.log(data)
   }, []);
   
 
