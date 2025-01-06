@@ -15,6 +15,8 @@ export const useCardData = () => {
 export const CardDataProvider = ({ children }) => {
 
   const [data, setData] = useState([]);
+  const [isLoadingData, setIsLoadingData] = useState(true); // État de chargement
+
 
   const handlePostSecret = async ({  selectedLabel, secretText, price, authToken }) => {
     try {
@@ -40,6 +42,7 @@ export const CardDataProvider = ({ children }) => {
   };
 
   const fetchAllSecrets = async () => {
+    setIsLoadingData(true); // Début du chargement
     try {
       const response = await axios.get(`${DATABASE_URL}/api/secrets`);
       if (response.data && Array.isArray(response.data)) {
@@ -51,6 +54,8 @@ export const CardDataProvider = ({ children }) => {
     } catch (error) {
       console.error('Erreur lors de la récupération des secrets :', error.response?.data || error.message);
       setData([]); // Définit un tableau vide en cas d'erreur
+    } finally {
+      setIsLoadingData(false); // Fin du chargement
     }
   };
 
@@ -62,7 +67,7 @@ export const CardDataProvider = ({ children }) => {
 
 
   return (
-    <CardDataContext.Provider value={{ data, setData, handlePostSecret, fetchAllSecrets }}>
+    <CardDataContext.Provider value={{ data, setData, handlePostSecret, fetchAllSecrets, isLoadingData }}>
       {children}
     </CardDataContext.Provider>
   );
