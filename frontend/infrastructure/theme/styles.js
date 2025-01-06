@@ -65,8 +65,8 @@ export const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 10,
-    paddingTop: 100,
-    padding:40,
+    paddingTop: 80,
+    padding:30,
     alignItems: 'center',
 
   },
