@@ -12,49 +12,27 @@ const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 300;
 
 const SwipeDeck = ({ selectedFilters = [] }) => {
-  const { data, fetchAllSecrets } = useCardData();
+  const { data } = useCardData();
   const position = useRef(new Animated.ValueXY()).current;
   const [index, setIndex] = useState(0);
   const [filteredData, setFilteredData] = useState(data);
-  const [currentItem, setCurrentItem] = useState(data[0]);
-
-  const [secrets, setSecrets] = useState();
+  const [currentItem, setCurrentItem] = useState(null);
 
 
-  useEffect(() => {
-    const loadSecrets = async () => {
-      try {
-        const secrets = await fetchAllSecrets(); // Appel à la fonction pour récupérer les secrets
-        console.log('Secrets récupérés avec succès :', secrets); // Log des secrets récupérés
-        setFilteredData(secrets); // Mise à jour de l'état avec les secrets récupérés
-        setCurrentItem(secrets[0]); // Définir le premier secret comme élément courant
-      } catch (error) {
-        console.error('Erreur lors de la récupération des secrets :', error.message);
-      }
-    };
-
-    loadSecrets(); // Exécution de la fonction pour charger les secrets
-  }, [fetchAllSecrets]);
-
-  
-  
-
-  // Met à jour les données filtrées lorsque les filtres changent
   useEffect(() => {
     const filtered = selectedFilters.length > 0
       ? data.filter((card) => selectedFilters.includes(card.label))
       : data;
 
-    setFilteredData(filtered.length > 0 ? filtered : data); // Si aucune carte filtrée, revenir à toutes les cartes
-    setIndex(0); // Réinitialise l'index pour recommencer avec la première carte
-  }, [selectedFilters, data]);
+    setFilteredData(filtered);
 
-  // Met à jour `currentItem` lorsque `index` ou `filteredData` change
-  useEffect(() => {
-    if (filteredData.length > 0) {
-      setCurrentItem(filteredData[index % filteredData.length]); // Boucler avec mod (%) pour éviter les erreurs
+    if (filtered.length > 0) {
+      setCurrentItem(filtered[index % filtered.length]);
+    } else {
+      setCurrentItem(null);
     }
-  }, [index, filteredData]);
+  }, [selectedFilters, data, index]);
+
 
   const panResponder = useRef(
     PanResponder.create({
@@ -118,16 +96,16 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       const cardStyle = isCurrentCard
         ? [getCardStyle(), styles.cardStyle]
         : [
-            styles.cardStyle,
-            {
-              top: 25 * i,
-              transform: [{ scale: 1 - 0.05 * i }],
-            },
-          ];
+          styles.cardStyle,
+          {
+            top: 25 * i,
+            transform: [{ scale: 1 - 0.05 * i }],
+          },
+        ];
 
       return (
         <Animated.View
-        key={`${card.id}-${cardIndex}-${i}`} // Assurez-vous que chaque clé est unique
+          key={`${card.id}-${cardIndex}-${i}`} // Assurez-vous que chaque clé est unique
           style={cardStyle}
           {...(isCurrentCard ? panResponder.panHandlers : {})}
         >
@@ -138,6 +116,14 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
     return cardsToRender.reverse();
   };
+
+  if (!filteredData.length) {
+    return (
+      <Box style={styles.container}>
+        <Text>Aucune donnée disponible</Text>
+      </Box>
+    );
+  }
 
   return (
     <Box style={styles.container}>
@@ -158,7 +144,9 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
         <HStack alignItems="center" justifyContent="center" space={2}>
           <FontAwesomeIcon icon={faUnlock} size={20} color="white" />
           <Text fontSize="md" color="white" fontWeight="bold">
-            Dévoiler le secret pour {currentItem?.price || '0.00'} €
+            {currentItem
+              ? `Dévoiler le secret pour ${currentItem.price || '0.00'} €`
+              : 'Chargement...'}
           </Text>
         </HStack>
       </Pressable>

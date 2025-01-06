@@ -19,6 +19,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     // Assure que le contenu est au-dessus du background
   },
+  containerLoader: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "white",
+  },
   containerHome: {
     backgroundColor: 'transparent',
     flex: 1,

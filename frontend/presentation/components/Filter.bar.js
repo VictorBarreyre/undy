@@ -16,7 +16,6 @@ const FilterBar = ({ onFilterChange }) => {
   const [isInputFocused, setInputFocused] = useState(false); // Contrôle manuel du focus
   const inputRef = useRef(null); // Référence pour l'élément Input
 
-  const uncheckedColor = '#94A3B8'
 
 
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides

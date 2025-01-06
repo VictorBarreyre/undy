@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
     const [userData, setUserData] = useState(null); // Stocke les données utilisateur
     const [isLoadingUserData, setIsLoadingUserData] = useState(false);
 
-    // Vérifie si l'utilisateur est déjà connecté (token dans AsyncStorage)
+
     useEffect(() => {
         const checkUserToken = async () => {
             try {
@@ -20,16 +20,18 @@ export const AuthProvider = ({ children }) => {
                 if (token) {
                     setUserToken(token);
                     setIsLoggedIn(true);
-                    fetchUserData(token); // Charge les données utilisateur dès que le token est présent
+                    await fetchUserData(token); // Assurez-vous que cette promesse se résout correctement
                 } else {
                     setIsLoggedIn(false);
                 }
             } catch (error) {
                 console.error('Error fetching token from AsyncStorage:', error);
                 setIsLoggedIn(false);
+            } finally {
+                setIsLoadingUserData(false); // Assurez-vous que cet état est bien mis à jour
             }
         };
-
+    
         checkUserToken();
     }, []);
 
