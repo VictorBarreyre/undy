@@ -81,7 +81,7 @@ const FilterBar = ({ onFilterChange }) => {
           >
             <View style={styles.overlayModal}>
               <Box style={styles.overlayContent}>
-                <HStack justifyContent="space-between" alignItems="center" width="100%">
+                <HStack paddingY={2} justifyContent="space-between" alignItems="center" width="100%">
                   <Text style={styles.h3}>Préférences</Text>
                   <Pressable
                     style={styles.closeButton}
