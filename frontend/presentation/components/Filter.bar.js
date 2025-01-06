@@ -201,7 +201,7 @@ const FilterBar = ({ onFilterChange }) => {
           >
             <View style={styles.overlayModal}>
               <Box style={styles.overlayContent}>
-                <HStack space={5} justifyContent="space-between" alignItems="center" width="100%" paddingRight={2} paddingBottom={4}>
+                <HStack space={4} justifyContent="space-between" alignItems="center" width="100%" paddingRight={1} paddingBottom={4}>
                   <Pressable
                     style={styles.closeButton}
                     onPress={() => setSearchModalVisible(false)}
@@ -223,6 +223,7 @@ const FilterBar = ({ onFilterChange }) => {
                       as={<FontAwesomeIcon icon={faSearch} />}
                       size="5"
                       color="#94A3B8"
+                      marginRight={0}
                     // Ajoute un espace entre l'icône et le texte
                     />
                     {/* Champ de saisie */}
@@ -233,6 +234,7 @@ const FilterBar = ({ onFilterChange }) => {
                       variant="unstyled"
                       fontSize="14"
                       paddingX={4}
+                      paddingLeft={3}
                       _focus={{
                         borderColor: 'transparent', // Supprime la bordure focus
                       }}
