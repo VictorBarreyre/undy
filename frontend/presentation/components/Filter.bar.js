@@ -16,6 +16,8 @@ const FilterBar = ({ onFilterChange }) => {
   const [isInputFocused, setInputFocused] = useState(false); // Contrôle manuel du focus
   const inputRef = useRef(null); // Référence pour l'élément Input
 
+  const uncheckedColor = '#94A3B8'
+
 
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
   const labels = [...new Set(data.map((card) => card.label?.trim()).filter(Boolean))];
@@ -103,14 +105,13 @@ const FilterBar = ({ onFilterChange }) => {
                         <Checkbox
                           value={label}
                           aria-label={label}
-                          _unchecked={{
-                            borderColor: 'gray.500',
-                            borderWidth: 2,
-                            bg: 'transparent',
+                          style={{
+                            borderColor: selectedFilters.includes(label) ? '#FF78B2' : '#FF78B2',
+                            borderWidth: 1,
                           }}
                           _checked={{
-                            bg: 'black',
-                            borderColor: 'black',
+                            bg: '#FF78B2',
+                            borderColor: '#FF78B2',
                             _icon: { color: 'white' },
                           }}
                           isChecked={selectedFilters.includes(label)}
