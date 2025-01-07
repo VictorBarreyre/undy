@@ -29,7 +29,12 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: false, // Champ optionnel pour le numéro de téléphone
         trim: true,
-    }
+    },
+    profilePicture: {
+        type: String, // Stocke l'URL de la photo de profil
+        required: false, // Champ optionnel
+        default: "https://via.placeholder.com/150", // URL par défaut si aucune photo n'est fournie
+    },
 }, { timestamps: true });
 
 // Avant de sauvegarder, hacher le mot de passe
