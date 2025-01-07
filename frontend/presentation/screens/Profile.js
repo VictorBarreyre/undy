@@ -42,6 +42,8 @@ export default function Profile({ navigation }) {
         );
     }
 
+    console.log(userData)
+
     return (
         <Box flex={1} p={5} bg="white">
             <VStack space={4} width="100%">
