@@ -5,6 +5,8 @@ const dotenv = require('dotenv');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const userRoutes = require('./routes/userRoutes');
 const secretRoutes = require('./routes/secretRoutes');
+const path = require('path');
+
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -45,6 +47,8 @@ if (process.env.NODE_ENV === 'development') {
     );
 }
 
+// Servir les fichiers statiques du dossier "uploads"
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 app.use('/api/users', userRoutes);

@@ -33,7 +33,7 @@ const UserSchema = new mongoose.Schema({
     profilePicture: {
         type: String, // Stocke l'URL de la photo de profil
         required: false, // Champ optionnel
-        default: "https://via.placeholder.com/150", // URL par défaut si aucune photo n'est fournie
+        default: "/uploads/default.png",  // URL par défaut si aucune photo n'est fournie
     },
 }, { timestamps: true });
 

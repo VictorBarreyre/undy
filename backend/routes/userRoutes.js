@@ -1,7 +1,8 @@
 // routes/userRoutes.js
 const express = require('express');
-const { registerUser, loginUser,updateUserProfile, getUserProfile } = require('../controllers/userController');
+const { registerUser, loginUser,updateUserProfile, getUserProfile, uploadProfilePicture } = require('../controllers/userController');
 const protect = require('../middleware/authMiddleware'); // Importation du middleware
+const upload = require('../middleware/uploadMiddleware'); 
 
 const router = express.Router();
 
@@ -16,5 +17,8 @@ router.put('/profile', protect, updateUserProfile);
 
 // Route protégée pour obtenir le profil de l'utilisateur connecté
 router.get('/profile', protect, getUserProfile); // Utilisation du middleware "protect"
+
+// Route pour télécharger une photo de profil
+router.put('/profile-picture', protect, upload.single('profilePicture'), uploadProfilePicture);
 
 module.exports = router;

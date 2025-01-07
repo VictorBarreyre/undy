@@ -11,16 +11,16 @@ const generateToken = (id) => {
 };
 
 exports.registerUser = async (req, res) => {
-    let { name, email, password } = req.body;
+    let { name, email, password, profilePicture } = req.body; // Inclure profilePicture
 
-    console.log(req.body); // Ajout du log pour vérifier les données
+    console.log(req.body); // Vérifier les données reçues
 
     if (!name || !email || !password) {
-        return res.status(400).json({ message: 'Tous les champs sont requis.' });
+        return res.status(400).json({ message: 'Tous les champs obligatoires doivent être remplis.' });
     }
 
     try {
-        // Normaliser l'email en minuscules
+        // Normaliser l'email
         email = email.trim().toLowerCase();
 
         // Vérifier si l'utilisateur existe déjà
@@ -33,13 +33,15 @@ exports.registerUser = async (req, res) => {
         const user = await User.create({
             name,
             email,
-            password, // Le mot de passe sera haché automatiquement par le modèle
+            password,
+            profilePicture: profilePicture || undefined, // Utiliser la valeur par défaut si aucune photo n'est fournie
         });
 
         res.status(201).json({
             _id: user._id,
             name: user.name,
             email: user.email,
+            profilePicture: user.profilePicture,
             token: generateToken(user._id),
         });
     } catch (error) {
@@ -47,6 +49,7 @@ exports.registerUser = async (req, res) => {
         res.status(500).json({ message: 'Erreur lors de l\'inscription' });
     }
 };
+
 
 
 
@@ -95,7 +98,6 @@ exports.loginUser = async (req, res) => {
 
 
 
-// controllers/userController.js
 exports.getUserProfile = async (req, res) => {
     try {
         const user = req.user; // L'utilisateur authentifié est attaché à la requête par le middleware "protect"
@@ -103,11 +105,14 @@ exports.getUserProfile = async (req, res) => {
             _id: user._id,
             name: user.name,
             email: user.email,
+            profilePicture: user.profilePicture, // Inclure la photo de profil
         });
     } catch (error) {
+        console.error('Erreur lors de la récupération du profil utilisateur :', error);
         res.status(500).json({ message: 'Erreur lors de la récupération du profil utilisateur' });
     }
 };
+
 
 exports.updateUserProfile = async (req, res) => {
     try {
@@ -118,6 +123,7 @@ exports.updateUserProfile = async (req, res) => {
         if (user) {
             user.name = req.body.name || user.name;
             user.email = req.body.email ? req.body.email.trim().toLowerCase() : user.email;
+            user.profilePicture = req.body.profilePicture || user.profilePicture; // Met à jour la photo de profil si fournie
 
             // Sauvegarder les modifications dans la base de données
             const updatedUser = await user.save();
@@ -126,14 +132,37 @@ exports.updateUserProfile = async (req, res) => {
                 _id: updatedUser._id,
                 name: updatedUser.name,
                 email: updatedUser.email,
+                profilePicture: updatedUser.profilePicture, // Inclure la photo de profil dans la réponse
                 token: generateToken(updatedUser._id), // Renouveler le token si besoin
             });
         } else {
             res.status(404).json({ message: 'Utilisateur non trouvé' });
         }
     } catch (error) {
+        console.error('Erreur lors de la mise à jour du profil :', error);
         res.status(500).json({ message: 'Erreur lors de la mise à jour du profil' });
     }
 };
 
+exports.uploadProfilePicture = async (req, res) => {
+    try {
+        const user = req.user; // Récupérer l'utilisateur connecté (grâce au middleware "protect")
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'Aucun fichier envoyé.' });
+        }
+
+        // Mettre à jour la photo de profil
+        user.profilePicture = `/uploads/${req.file.filename}`;
+        await user.save();
+
+        res.status(200).json({
+            message: 'Photo de profil mise à jour avec succès.',
+            profilePicture: user.profilePicture,
+        });
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour de la photo de profil :', error);
+        res.status(500).json({ message: 'Erreur lors de la mise à jour de la photo de profil.' });
+    }
+};
 
