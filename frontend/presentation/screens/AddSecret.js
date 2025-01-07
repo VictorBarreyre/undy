@@ -91,6 +91,8 @@ const AddSecret = () => {
                                             </Text>
                                         </Box>
                                         <Image
+                                            src={userData.profilePicture}
+                                            alt={`${userData?.name || 'User'}'s profile picture`}
                                             width={35} // Ajustez la taille de l'image ici
                                             height={35} // Ajustez la taille de l'image ici
                                             borderRadius="full" // Rendre l'image ronde
