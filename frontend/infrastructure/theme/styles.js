@@ -93,6 +93,7 @@ export const styles = StyleSheet.create({
     shadowRadius: 6, // Rayon de diffusion
     elevation: 10, // Ombre Android
   },
+
   // Fond spécifique pour les écrans Connexion et Inscription
   backgroundImage: {
     position: 'absolute',

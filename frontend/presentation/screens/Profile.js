@@ -1,9 +1,11 @@
 import React, { useState, useContext } from 'react';
 import { Platform, VStack, Box, Text, Button, Pressable, Modal, Input, HStack, Spinner } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
+import { styles } from '../../infrastructure/theme/styles';
+import { Background } from '../../navigation/Background';
 
 export default function Profile({ navigation }) {
     const { userData, isLoadingUserData, updateUserData, logout } = useContext(AuthContext);
@@ -45,108 +47,49 @@ export default function Profile({ navigation }) {
     console.log(userData)
 
     return (
-        <Box flex={1} p={5} bg="white">
-            <VStack space={4} width="100%">
-                <Text fontSize="2xl" fontWeight="bold" color="black" textAlign="center">
-                    Mon Profil
-                </Text>
+        <Background>
+          <Box flex={1} justifyContent="flex-start" padding={5}>
+            <VStack space={6}>
+                <HStack alignItems="center" justifyContent="space-between" width="100%">
+                    {/* Icône Back */}
+                    <Pressable onPress={() => console.log('Retour en arrière')}>
+                        <FontAwesome name="chevron-left" size={18} color="black" />
+                    </Pressable>
 
-                <Pressable onPress={() => openEditModal('name', userData?.name)}>
-                    <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
-                        <Box>
-                            <Text fontSize="md" color="gray.500">Nom</Text>
-                            <Text fontSize="lg" color="black">{userData?.name}</Text>
-                        </Box>
-                        <FontAwesome name="chevron-right" size={10} color="gray" />
-                    </HStack>
-                </Pressable>
-
-                <Pressable onPress={() => openEditModal('email', userData?.email)}>
-                    <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
-                        <Box>
-                            <Text fontSize="md" color="gray.500">Email</Text>
-                            <Text fontSize="lg" color="black">{userData?.email}</Text>
-                        </Box>
-                        <FontAwesome name="chevron-right" size={10} color="gray" />
-                    </HStack>
-                </Pressable>
-
-                <Pressable onPress={() => openEditModal('birthdate', userData?.birthdate)}>
-                    <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
-                        <Box>
-                            <Text fontSize="md" color="gray.500">Date de naissance</Text>
-                            <Text fontSize="lg" color="black">{userData?.birthdate || 'Non renseignée'}</Text>
-                        </Box>
-                        <FontAwesome name="chevron-right" size={10} color="gray" />
-                    </HStack>
-                </Pressable>
-
-                <Pressable onPress={() => openEditModal('phone', userData?.phone)}>
-                    <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
-                        <Box>
-                            <Text fontSize="md" color="gray.500">Numéro de téléphone</Text>
-                            <Text fontSize="lg" color="black">{userData?.phone || 'Non renseigné'}</Text>
-                        </Box>
-                        <FontAwesome name="chevron-right" size={10} color="gray" />
-                    </HStack>
-                </Pressable>
-
-                {message ? (
-                    <Text color={isSuccess ? "green.500" : "red.500"} textAlign="center" mt={2}>
-                        {message}
+                    {/* Texte */}
+                    <Text fontSize="2xl" fontWeight="bold" color="black" textAlign="center">
+                        Mon Profil
                     </Text>
-                ) : null}
 
-                <Pressable onPress={logout}>
-                    <Text color="red.500" py={3} px={4} fontSize="md" textAlign="left" mt={5}>
-                        Déconnexion
-                    </Text>
-                </Pressable>
+                    {/* Icône Settings */}
+                    <Pressable onPress={() => console.log('Paramètres')}>
+                    <FontAwesome5 name="cog" size={26} color="black" solid={false} />
+                    </Pressable>
+                </HStack>
             </VStack>
-
-            <Modal isOpen={modalVisible} onClose={() => setModalVisible(false)}>
-                <Modal.Content maxWidth="400px">
-                    <Modal.CloseButton />
-                    <Modal.Header>Modifier {selectedField === 'name' ? 'Nom' : selectedField === 'email' ? 'Email' : selectedField === 'birthdate' ? 'Date de naissance' : 'Numéro de téléphone'}</Modal.Header>
-                    <Modal.Body>
-                        {selectedField === 'birthdate' ? (
-                            Platform.OS === 'web' ? (
-                                <Input
-                                    type="date"
-                                    value={tempValue}
-                                    onChange={(e) => setTempValue(e.target.value)}
-                                    backgroundColor="#E0E0E0"
-                                    padding={2}
-                                    borderRadius={5}
-                                />
-                            ) : (
-                                <>
-                                    <TouchableOpacity onPress={() => setShowDatePicker(true)} style={{ backgroundColor: "#E0E0E0", padding: 10, borderRadius: 5, alignItems: 'center' }}>
-                                        <Text>Sélectionner une date</Text>
-                                    </TouchableOpacity>
-                                    {showDatePicker && (
-                                        <DateTimePicker
-                                            value={tempValue ? new Date(tempValue) : new Date()}
-                                            mode="date"
-                                            display="calendar"
-                                            onChange={handleDateChange}
-                                        />
-                                    )}
-                                </>
-                            )
-                        ) : (
-                            <Input
-                                placeholder={`Nouveau ${selectedField}`}
-                                value={tempValue}
-                                onChangeText={(text) => setTempValue(text)}
-                            />
-                        )}
-                    </Modal.Body>
-                    <Modal.Footer>
-                        <Button backgroundColor='black' onPress={saveChanges}>Enregistrer</Button>
-                    </Modal.Footer>
-                </Modal.Content>
-            </Modal>
         </Box>
+        </Background>
     );
-}
+};
+
+const customStyles = StyleSheet.create({
+
+    container: {
+        display: 'flex',
+        flex: 1,
+        height: 'auto',
+        width: '100%',
+        justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
+        alignItems: 'start',
+        alignContent: 'start'
+    },
+
+
+    shadowBox: {
+        shadowColor: 'violet',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 5
+    },
+});
