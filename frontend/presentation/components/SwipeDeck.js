@@ -143,7 +143,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
           { width: '100%', alignSelf: 'center', padding: 18, borderRadius: 30 },
         ]}
       >
-        <HStack alignItems="center" justifyContent="center" space={2}>
+        <HStack alignItems="center" justifyContent="center" space={3}>
           <FontAwesomeIcon icon={faUnlock} size={20} color="white" />
           <Text fontSize="md" color="white" fontWeight="bold">
             {currentItem

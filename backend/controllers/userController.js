@@ -97,15 +97,17 @@ exports.loginUser = async (req, res) => {
 };
 
 
-
 exports.getUserProfile = async (req, res) => {
     try {
         const user = req.user; // L'utilisateur authentifié est attaché à la requête par le middleware "protect"
+        const baseUrl = `${req.protocol}://${req.get('host')}`; // URL de base du serveur
         res.json({
             _id: user._id,
             name: user.name,
             email: user.email,
-            profilePicture: user.profilePicture, // Inclure la photo de profil
+            profilePicture: user.profilePicture
+                ? `${baseUrl}${user.profilePicture}`
+                : null, // Ajoute l'URL de base si la photo existe
         });
     } catch (error) {
         console.error('Erreur lors de la récupération du profil utilisateur :', error);
