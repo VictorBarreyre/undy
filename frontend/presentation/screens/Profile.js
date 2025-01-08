@@ -57,7 +57,7 @@ export default function Profile({ navigation }) {
                     </Pressable>
 
                     {/* Texte */}
-                    <Text fontSize="2xl" fontWeight="bold" color="black" textAlign="center">
+                    <Text style={styles.h3} textAlign="center">
                         Mon Profil
                     </Text>
 
