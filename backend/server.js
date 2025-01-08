@@ -18,6 +18,13 @@ const PORT = process.env.PORT || 5000;
 // Middleware pour analyser les requêtes JSON
 app.use(express.json());
 
+app.use((req, res, next) => {
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+        return res.redirect(`https://${req.hostname}${req.url}`);
+    }
+    next();
+});
+
 // Configuration CORS pour autoriser les origines en développement
 const corsOptions = {
     origin: '*', // Autorise toutes les origines
