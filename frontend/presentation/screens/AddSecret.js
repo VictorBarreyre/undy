@@ -21,7 +21,7 @@ const AddSecret = () => {
     const [price, setPrice] = useState(''); // État pour le prix
     const [secretPostAvailable, setSecretPostAvailable] = useState('false')
 
-
+    console.log(userData)
 
     const labels = [...new Set(data.map((item) => item.label))];
 

@@ -18,8 +18,12 @@ const PORT = process.env.PORT || 5000;
 // Middleware pour analyser les requêtes JSON
 app.use(express.json());
 
+// Activer "trust proxy" pour gérer les redirections HTTPS (nécessaire pour Heroku ou tout proxy)
+app.set('trust proxy', 1);
+
+// Middleware pour forcer HTTPS
 app.use((req, res, next) => {
-    if (req.headers['x-forwarded-proto'] !== 'https') {
+    if (req.headers['x-forwarded-proto'] !== 'https' && process.env.NODE_ENV === 'production') {
         return res.redirect(`https://${req.hostname}${req.url}`);
     }
     next();
@@ -42,6 +46,12 @@ app.use((req, res, next) => {
     next();
 });
 
+app.use('/uploads', (req, res, next) => {
+    req.protocol = 'https'; // Forcer le protocole HTTPS
+    next();
+}, express.static(path.join(__dirname, 'uploads')));
+
+
 // **Configuration du Proxy en développement**
 // Ce middleware redirige les requêtes locales vers l'API sur Heroku
 if (process.env.NODE_ENV === 'development') {
@@ -54,8 +64,6 @@ if (process.env.NODE_ENV === 'development') {
     );
 }
 
-// Servir les fichiers statiques du dossier "uploads"
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 app.use('/api/users', userRoutes);
@@ -64,7 +72,10 @@ app.use('/api/secrets', secretRoutes);
 
 // Route de vérification du serveur
 app.get('/', (req, res) => {
-    res.send('Server is running');
+    const baseUrl = process.env.NODE_ENV === 'production'
+        ? `https://${req.hostname}`
+        : `http://${req.hostname}:${PORT}`;
+    res.send(`Server is running. Base URL: ${baseUrl}`);
 });
 
 // Connexion à MongoDB

@@ -39,13 +39,23 @@
 	<string>1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/> <!-- Permet les requêtes locales pendant le développement -->
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
+<key>NSAppTransportSecurity</key>
+<dict>
+    <key>NSExceptionDomains</key>
+    <dict>
+        <key>undy-5948c5547ec9.herokuapp.com</key> <!-- Remplacez par votre domaine -->
+        <dict>
+            <key>NSIncludesSubdomains</key>
+            <true/>
+            <key>NSExceptionAllowsInsecureHTTPLoads</key>
+            <false/> <!-- HTTP non autorisé -->
+            <key>NSExceptionRequiresForwardSecrecy</key>
+            <false/> <!-- Si le certificat ne supporte pas PFS -->
+            <key>NSRequiresCertificateTransparency</key>
+            <false/> <!-- Si le certificat ne respecte pas la transparence -->
+        </dict>
+    </dict>
+</dict>
 	<key>UILaunchStoryboardName</key>
 	<string>SplashScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
