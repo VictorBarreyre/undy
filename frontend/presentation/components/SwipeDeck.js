@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Animated, PanResponder, Dimensions, StyleSheet, Pressable } from 'react-native';
-import { Box, HStack, Text } from 'native-base';
+import { Box, HStack, Text, VStack } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUnlock } from '@fortawesome/free-solid-svg-icons';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
@@ -126,8 +126,10 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   }
 
   return (
-    <Box style={styles.container}>
-      {renderCards()}
+    <VStack style={styles.container}> 
+    <Box style={styles.cardContainer}> 
+       {renderCards()}
+       </Box>
       <Pressable
         onPress={() => {
           console.log('Bouton cliqué !');
@@ -138,7 +140,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
             transform: pressed ? [{ scale: 0.96 }] : [{ scale: 1 }],
             borderRadius: 20,
           },
-          { width: '100%', alignSelf: 'center', position: 'absolute', bottom: -6, padding: 18, borderRadius: 30 },
+          { width: '100%', alignSelf: 'center', padding: 18, borderRadius: 30 },
         ]}
       >
         <HStack alignItems="center" justifyContent="center" space={2}>
@@ -150,7 +152,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
           </Text>
         </HStack>
       </Pressable>
-    </Box>
+    </VStack>
   );
 };
 
@@ -160,13 +162,20 @@ const styles = StyleSheet.create({
     flex: 1,
     height: SCREEN_HEIGHT,
     width: '100%',
-    justifyContent: 'center',
+    justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
     alignItems: 'center',
   },
+
+  cardContainer: {
+    position: 'relative', // Conserve les cartes avec position absolue à l'intérieur
+    width: '100%',
+    height: '92%', // modifie la taille des cartes pour espace ac cta à jour avec cardStyle
+  },
+
   cardStyle: {
     width: SCREEN_WIDTH * 0.9,
     position: 'absolute',
-    height: '75%', // modifie la taille des cartes
+    height: '80%', // modifie la taille des cartes pour espace ac cta
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'white',
@@ -176,6 +185,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 5,
+
   },
 });
 

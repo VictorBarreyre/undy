@@ -21,7 +21,7 @@ const Home = () => {
           <FilterBar onFilterChange={setSelectedFilters} />
         </Box>
         <VStack style={styles.containerHome} space={4}>
-          <Box flex={1} justifyContent="center" alignItems="center">
+          <Box flex={1} justifyContent="center" alignContent='center' alignItems="center">
             <SwipeDeck selectedFilters={selectedFilters} style={styles.swipper} />
           </Box>
         </VStack>

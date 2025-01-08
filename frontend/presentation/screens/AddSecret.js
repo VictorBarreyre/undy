@@ -9,6 +9,7 @@ import { FontAwesome } from '@expo/vector-icons'; // Assurez-vous que FontAwesom
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 
 const AddSecret = () => {
@@ -64,8 +65,8 @@ const AddSecret = () => {
                 {/* Fermer le clavier en cliquant en dehors */}
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <Box flex={1} padding={5} paddingTop={1}>
-                        <VStack space={4} alignItems="center" justifyContent="start" flex={1}>
-                            <Text style={styles.h2} fontSize="lg" fontWeight="bold">
+                      <VStack style={styles.container} space={6}> 
+                            <Text style={styles.h3} fontSize="lg" fontWeight="bold">
                                 Ajouter un Secret
                             </Text>
                             <Box
@@ -122,7 +123,6 @@ const AddSecret = () => {
                                     </Box>
 
                                     <HStack mt={6} alignItems="center" justifyContent="space-between" alignContent='center' width="100%">
-
                                         {/* Section des categ et prix */}
                                         <Box ml={2} mt={6} width="55%">
                                             <Text left={2} style={styles.ctalittle} >
@@ -199,11 +199,10 @@ const AddSecret = () => {
                                         transform: pressed && secretPostAvailable ? [{ scale: 0.96 }] : [{ scale: 1 }],
                                         borderRadius: 20,
                                     },
-                                    { width: '100%', alignSelf: 'center', marginTop: 18, padding: 18, borderRadius: 30 },
+                                    { width: '100%', alignSelf: 'center',  padding: 18, borderRadius: 30 },
                                 ]}
                             >
-                                <HStack alignItems="center" justifyContent="center" space={2}>
-                                    
+                                <HStack alignItems="center" justifyContent="center" space={2}>    
                                     <Text fontSize="md" color="white" fontWeight="bold">
                                     { !secretPostAvailable ? "Il manque des infos sur votre secret" : "Poster le secret" }
                                     </Text>
@@ -219,6 +218,16 @@ const AddSecret = () => {
 };
 
 const customStyles = StyleSheet.create({
+
+    container: {
+        display: 'flex',
+        flex: 1,
+        height: SCREEN_HEIGHT,
+        width: '100%',
+        justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
+        alignItems: 'center',
+      },
+
     shadowBox: {
         shadowColor: 'violet',
         shadowOffset: { width: 0, height: 4 },
