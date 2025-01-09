@@ -85,8 +85,12 @@ exports.getSecret = async (req, res) => {
 
 exports.getSecretsCountByUser = async (req, res) => {
     try {
+        console.log('Utilisateur connecté dans getSecretsCountByUser:', req.user);
+
         // Étape 1 : Récupérer tous les secrets créés par cet utilisateur
         const secrets = await Secret.find({ user: req.user.id });
+
+        console.log('Secrets trouvés :', secrets);
 
         // Étape 2 : Calculer le nombre en mémoire
         const count = secrets.length;

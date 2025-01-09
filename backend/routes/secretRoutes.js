@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { createSecret, getAllSecrets, purchaseSecret, getSecret, getSecretsCountByUser } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
+const Secret = require('../models/Secret');
 
 
 // Routes publiques
@@ -21,6 +22,9 @@ router.get('/user-secrets', protect, async (req, res) => {
         res.status(500).json({ message: 'Erreur serveur.' });
     }
 });
+
+router.get('/count', protect, getSecretsCountByUser);
+
 
 
 module.exports = router;

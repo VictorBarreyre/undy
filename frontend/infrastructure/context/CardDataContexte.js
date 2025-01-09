@@ -67,7 +67,7 @@ export const CardDataProvider = ({ children }) => {
 
   const fetchSecretsCountByUser = async (authToken) => {
     try {
-        const response = await axios.get(`${DATABASE_URL}/api/secrets/user-secrets`, {
+        const response = await axios.get(`${DATABASE_URL}/api/secrets/count`, {
             headers: { Authorization: `Bearer ${authToken}` },
         });
 
