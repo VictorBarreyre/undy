@@ -90,7 +90,7 @@ exports.getSecretsCountByUser = async (req, res) => {
             return res.status(400).json({ message: 'Utilisateur non authentifié.' });
         }
 
-        const secrets = await Secret.find({ user: req.user.id });
+        const secrets = await Secret.find({ user: mongoose.Types.ObjectId(req.user.id) });
         console.log('Secrets récupérés pour l\'utilisateur:', secrets); // Log résultats
 
         const count = secrets.length;
