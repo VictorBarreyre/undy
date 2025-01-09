@@ -79,11 +79,25 @@ export const CardDataProvider = ({ children }) => {
     }
 };
 
+const fetchUserSecrets = async (authToken) => {
+  try {
+    // Endpoint pour récupérer les secrets de l'utilisateur connecté
+    const response = await axios.get(`${DATABASE_URL}/api/secrets/user-secrets`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+
+    console.log('Secrets de l\'utilisateur récupérés avec succès :', response.data.secrets); // Debugging
+    return response.data.secrets; // Retourne les secrets récupérés
+  } catch (error) {
+    console.error('Erreur lors de la récupération des secrets de l\'utilisateur :', error.response?.data || error.message);
+    return []; // Retourne un tableau vide en cas d'erreur
+  }
+};
 
 
 
   return (
-    <CardDataContext.Provider value={{ data, setData, handlePostSecret, fetchAllSecrets,fetchSecretsCountByUser, isLoadingData }}>
+    <CardDataContext.Provider value={{ data, setData, handlePostSecret, fetchAllSecrets,fetchUserSecrets, fetchSecretsCountByUser, isLoadingData }}>
       {children}
     </CardDataContext.Provider>
   );

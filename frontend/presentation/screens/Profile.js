@@ -10,20 +10,31 @@ import { Background } from '../../navigation/Background';
 
 export default function Profile({ navigation }) {
     const { userData, userToken } = useContext(AuthContext);
-    const { fetchSecretsCountByUser } = useCardData();
+    const { fetchSecretsCountByUser, fetchUserSecrets } = useCardData();
     const [secretCount, setSecretCount] = useState(null);
+    const [userSecrets, setUserSecrets] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
 
 
     useEffect(() => {
-        const loadSecretCount = async () => {
+        const loadUserData = async () => {
             console.log('Token utilisateur:', userToken);
             if (userToken) {
+                // Charger le nombre de secrets
                 const count = await fetchSecretsCountByUser(userToken);
                 console.log('Nombre de secrets récupérés:', count);
                 setSecretCount(count);
+    
+                // Charger les détails des secrets
+                const secrets = await fetchUserSecrets(userToken);
+                console.log('Secrets récupérés:', secrets);
+                setUserSecrets(secrets);
             }
+            setIsLoading(false); // Désactive le spinner après le chargement
         };
-        loadSecretCount();
+    
+        loadUserData();
     }, [userToken]);
     
 
