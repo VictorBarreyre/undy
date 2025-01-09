@@ -25,8 +25,13 @@ exports.createSecret = async (req, res) => {
 
 exports.getAllSecrets = async (req, res) => {
     try {
-        const secrets = await Secret.find().populate('user', 'name'); // Inclut le nom de l'utilisateur
-        res.status(200).json(secrets);
+        const { page = 1, limit = 10 } = req.query; // Paramètres de pagination
+        const secrets = await Secret.find()
+        .populate('user', 'name')
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .exec();
+                res.status(200).json(secrets);
     } catch (error) {
         res.status(500).json({ message: 'Erreur serveur.' });
     }

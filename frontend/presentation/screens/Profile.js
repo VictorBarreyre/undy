@@ -1,4 +1,4 @@
-import React, { useState, useContext,useEffect } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Platform, VStack, Box, Text, Button, Pressable, Image, Input, HStack, Spinner } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TouchableOpacity, StyleSheet } from 'react-native';
@@ -9,7 +9,7 @@ import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 
 export default function Profile({ navigation }) {
-    const { userData, userToken} = useContext(AuthContext);
+    const { userData, userToken } = useContext(AuthContext);
     const { fetchSecretsCountByUser } = useCardData();
     const [secretCount, setSecretCount] = useState(null);
 
@@ -25,7 +25,7 @@ export default function Profile({ navigation }) {
     }, [userToken]);
 
 
-    console.log(userData)
+    console.log(secretCount)
 
 
     return (
@@ -56,10 +56,10 @@ export default function Profile({ navigation }) {
                             width={75} // Ajustez la taille de l'image ici
                             height={75} // Ajustez la taille de l'image ici
                             borderRadius="full" // Rendre l'image ronde
-                            >
+                        >
                         </Image>
 
- <Text fontSize="md">Nombre de secrets créés : {secretCount}</Text>
+                        <Text fontSize="md">Nombre de secrets créés : {secretCount}</Text>
 
                     </HStack>
                 </VStack>

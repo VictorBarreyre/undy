@@ -65,9 +65,24 @@ export const CardDataProvider = ({ children }) => {
   }, []);
   
 
+  const fetchSecretsCountByUser = async (authToken) => {
+    try {
+        const response = await axios.get(`${DATABASE_URL}/api/secrets/count`, {
+            headers: { Authorization: `Bearer ${authToken}` },
+          
+        });
+        return response.data.count; 
+        console.log(response.data.count)// Retourne le nombre de secrets
+    } catch (error) {
+        console.error('Erreur lors de la récupération du nombre de secrets :', error.response?.data || error.message);
+        return 0; // Retourne 0 en cas d'erreur
+    }
+};
+
+
 
   return (
-    <CardDataContext.Provider value={{ data, setData, handlePostSecret, fetchAllSecrets, isLoadingData }}>
+    <CardDataContext.Provider value={{ data, setData, handlePostSecret, fetchAllSecrets,fetchSecretsCountByUser, isLoadingData }}>
       {children}
     </CardDataContext.Provider>
   );
