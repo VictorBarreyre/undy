@@ -24,9 +24,11 @@ export default function Profile({ navigation }) {
         };
         loadSecretCount();
     }, [userToken]);
-    
+
 
     console.log(secretCount)
+
+    console.log(userData)
 
 
     return (
@@ -50,7 +52,7 @@ export default function Profile({ navigation }) {
                         </Pressable>
                     </HStack>
 
-                    <HStack>
+                    <HStack alignItems="center">
                         <Image
                             src={userData.profilePicture}
                             alt={`${userData?.name || 'User'}'s profile picture`}
@@ -60,7 +62,16 @@ export default function Profile({ navigation }) {
                         >
                         </Image>
 
-                        <Text fontSize="md">Nombre de secrets créés : {secretCount}</Text>
+                        <VStack alignItems="center">
+                            {/* Nombre de secrets */}
+                            <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
+                                {secretCount || 0}
+                            </Text>
+                            {/* Texte "secret" */}
+                            <Text style={styles.caption} textAlign="center">
+                                Secrets 
+                            </Text>
+                        </VStack>
 
                     </HStack>
                 </VStack>

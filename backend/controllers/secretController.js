@@ -27,11 +27,11 @@ exports.getAllSecrets = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query; // Paramètres de pagination
         const secrets = await Secret.find()
-        .populate('user', 'name')
-        .limit(limit * 1)
-        .skip((page - 1) * limit)
-        .exec();
-                res.status(200).json(secrets);
+            .populate('user', 'name')
+            .limit(limit * 1)
+            .skip((page - 1) * limit)
+            .exec();
+        res.status(200).json(secrets);
     } catch (error) {
         res.status(500).json({ message: 'Erreur serveur.' });
     }
@@ -94,7 +94,8 @@ exports.getSecretsCountByUser = async (req, res) => {
         console.log('Nombre de secrets pour cet utilisateur:', count); // Ajout de log
         res.status(200).json({ count });
     } catch (error) {
-        console.error('Erreur dans getSecretsCountByUser:', error);
-        res.status(500).json({ message: 'Erreur serveur.' });
+        console.log('User ID:', req.user.id);
+        console.error('Erreur:', error.message);
+        res.status(500).json({ message: 'Erreur serveur.', details: error.message });
     }
 };
