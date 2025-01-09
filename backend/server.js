@@ -6,6 +6,7 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const userRoutes = require('./routes/userRoutes');
 const secretRoutes = require('./routes/secretRoutes');
 const path = require('path');
+const helmet = require('helmet');
 
 
 // Charger les variables d'environnement
@@ -14,6 +15,9 @@ dotenv.config();
 // Initialiser l'application Express
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+
+app.use(helmet());
 
 // Middleware pour analyser les requêtes JSON
 app.use(express.json());
@@ -28,6 +32,7 @@ app.use((req, res, next) => {
     }
     next();
 });
+
 
 // Configuration CORS pour autoriser les origines en développement
 const corsOptions = {
