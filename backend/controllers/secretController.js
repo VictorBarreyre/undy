@@ -85,9 +85,16 @@ exports.getSecret = async (req, res) => {
 
 exports.getSecretsCountByUser = async (req, res) => {
     try {
-        const count = await Secret.countDocuments({ user: req.user.id }); // Filtre par ID utilisateur
+        console.log('Middleware protect:', req.user); // Vérifiez si req.user est défini
+        if (!req.user || !req.user.id) {
+            return res.status(400).json({ message: 'Utilisateur non authentifié' });
+        }
+
+        const count = await Secret.countDocuments({ user: req.user.id });
+        console.log('Nombre de secrets pour cet utilisateur:', count); // Ajout de log
         res.status(200).json({ count });
     } catch (error) {
+        console.error('Erreur dans getSecretsCountByUser:', error);
         res.status(500).json({ message: 'Erreur serveur.' });
     }
 };

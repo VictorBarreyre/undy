@@ -15,6 +15,7 @@ export default function Profile({ navigation }) {
 
 
     useEffect(() => {
+        console.log('Token utilisateur:', userToken); // Ajout de log
         const loadSecretCount = async () => {
             if (userToken) {
                 const count = await fetchSecretsCountByUser(userToken);
@@ -23,7 +24,7 @@ export default function Profile({ navigation }) {
         };
         loadSecretCount();
     }, [userToken]);
-
+    
 
     console.log(secretCount)
 
