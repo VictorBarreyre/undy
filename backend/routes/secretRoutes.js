@@ -11,6 +11,16 @@ router.get('/', getAllSecrets); // Récupérer tous les secrets
 router.post('/createsecrets', protect, createSecret); // Créer un secret
 router.post('/:id/purchase', protect, purchaseSecret); // Acheter un secret
 router.get('/:id', protect, getSecret); // Voir un secret acheté
-router.get('/count', protect, getSecretsCountByUser); // Filtrer les secrets par user
+
+router.get('/user-secrets', protect, async (req, res) => {
+    try {
+        const secrets = await Secret.find({ user: req.user.id });
+        res.status(200).json({ secrets });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des secrets :', error);
+        res.status(500).json({ message: 'Erreur serveur.' });
+    }
+});
+
 
 module.exports = router;

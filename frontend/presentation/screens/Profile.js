@@ -15,15 +15,17 @@ export default function Profile({ navigation }) {
 
 
     useEffect(() => {
-        console.log('Token utilisateur:', userToken); // Ajout de log
         const loadSecretCount = async () => {
+            console.log('Token utilisateur:', userToken);
             if (userToken) {
                 const count = await fetchSecretsCountByUser(userToken);
+                console.log('Nombre de secrets récupérés:', count);
                 setSecretCount(count);
             }
         };
         loadSecretCount();
     }, [userToken]);
+    
 
 
     console.log(secretCount)

@@ -85,23 +85,17 @@ exports.getSecret = async (req, res) => {
 
 exports.getSecretsCountByUser = async (req, res) => {
     try {
-        // Vérifiez si req.user est défini
-        if (!req.user) {
-            console.error('User not found in request');
-            return res.status(401).json({ message: 'Non autorisé. Utilisateur non trouvé.' });
-        }
+        // Étape 1 : Récupérer tous les secrets créés par cet utilisateur
+        const secrets = await Secret.find({ user: req.user.id });
 
-        console.log('User from request:', req.user);
+        // Étape 2 : Calculer le nombre en mémoire
+        const count = secrets.length;
 
-        // Compter les secrets associés à l'utilisateur
-        const count = await Secret.countDocuments({ user: req.user.id });
-
-        console.log('Query to count secrets:', { user: req.user.id }, 'Result:', count);
-
+        // Étape 3 : Retourner le résultat
         res.status(200).json({ count });
     } catch (error) {
-        console.error('Erreur dans getSecretsCountByUser:', error.message);
-        res.status(500).json({ message: 'Erreur serveur.', details: error.message });
+        console.error('Erreur lors du comptage des secrets:', error);
+        res.status(500).json({ message: 'Erreur serveur.' });
     }
 };
 
