@@ -1,73 +1,69 @@
-import React, { useState, useContext } from 'react';
-import { Platform, VStack, Box, Text, Button, Pressable, Modal, Input, HStack, Spinner } from 'native-base';
+import React, { useState, useContext,useEffect } from 'react';
+import { Platform, VStack, Box, Text, Button, Pressable, Image, Input, HStack, Spinner } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
+import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 
 export default function Profile({ navigation }) {
-    const { userData, isLoadingUserData, updateUserData, logout } = useContext(AuthContext);
-    const [selectedField, setSelectedField] = useState(null);
-    const [tempValue, setTempValue] = useState('');
-    const [modalVisible, setModalVisible] = useState(false);
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [message, setMessage] = useState('');
-    const [isSuccess, setIsSuccess] = useState(false);
+    const { userData, userToken} = useContext(AuthContext);
+    const { fetchSecretsCountByUser } = useCardData();
+    const [secretCount, setSecretCount] = useState(null);
 
-    const openEditModal = (field, currentValue) => {
-        setSelectedField(field);
-        setTempValue(currentValue);
-        setModalVisible(true);
-    };
 
-    const saveChanges = async () => {
-        const updatedData = { ...userData, [selectedField]: tempValue };
-        const result = await updateUserData(updatedData);
-        setMessage(result.message);
-        setIsSuccess(result.success);
-        setModalVisible(false);
-    };
+    useEffect(() => {
+        const loadSecretCount = async () => {
+            if (userToken) {
+                const count = await fetchSecretsCountByUser(userToken);
+                setSecretCount(count);
+            }
+        };
+        loadSecretCount();
+    }, [userToken]);
 
-    const handleDateChange = (event, selectedDate) => {
-        const currentDate = selectedDate || new Date(tempValue);
-        setShowDatePicker(false);
-        setTempValue(currentDate.toISOString().split('T')[0]);
-    };
-
-    if (isLoadingUserData) {
-        return (
-            <Box flex={1} justifyContent="center" alignItems="center">
-                <Spinner size="lg" />
-            </Box>
-        );
-    }
 
     console.log(userData)
 
+
     return (
         <Background>
-          <Box flex={1} justifyContent="flex-start" padding={5}>
-            <VStack space={6}>
-                <HStack alignItems="center" justifyContent="space-between" width="100%">
-                    {/* Icône Back */}
-                    <Pressable onPress={() => console.log('Retour en arrière')}>
-                        <FontAwesome name="chevron-left" size={18} color="black" />
-                    </Pressable>
+            <Box flex={1} justifyContent="flex-start" padding={5}>
+                <VStack space={6}>
+                    <HStack alignItems="center" justifyContent="space-between" width="100%">
+                        {/* Icône Back */}
+                        <Pressable onPress={() => console.log('Retour en arrière')}>
+                            <FontAwesome name="chevron-left" size={18} color="black" />
+                        </Pressable>
 
-                    {/* Texte */}
-                    <Text style={styles.h3} textAlign="center">
-                        Mon Profil
-                    </Text>
+                        {/* Texte */}
+                        <Text style={styles.h3} textAlign="center">
+                            Mon Profil
+                        </Text>
 
-                    {/* Icône Settings */}
-                    <Pressable onPress={() => console.log('Paramètres')}>
-                    <FontAwesome5 name="cog" size={26} color="black" solid={false} />
-                    </Pressable>
-                </HStack>
-            </VStack>
-        </Box>
+                        {/* Icône Settings */}
+                        <Pressable onPress={() => console.log('Paramètres')}>
+                            <FontAwesome5 name="cog" size={26} color="black" solid={false} />
+                        </Pressable>
+                    </HStack>
+
+                    <HStack>
+                        <Image
+                            src={userData.profilePicture}
+                            alt={`${userData?.name || 'User'}'s profile picture`}
+                            width={75} // Ajustez la taille de l'image ici
+                            height={75} // Ajustez la taille de l'image ici
+                            borderRadius="full" // Rendre l'image ronde
+                            >
+                        </Image>
+
+ <Text fontSize="md">Nombre de secrets créés : {secretCount}</Text>
+
+                    </HStack>
+                </VStack>
+            </Box>
         </Background>
     );
 };

@@ -77,3 +77,12 @@ exports.getSecret = async (req, res) => {
         res.status(500).json({ message: 'Erreur serveur.' });
     }
 };
+
+exports.getSecretsCountByUser = async (req, res) => {
+    try {
+        const count = await Secret.countDocuments({ user: req.user.id }); // Filtre par ID utilisateur
+        res.status(200).json({ count });
+    } catch (error) {
+        res.status(500).json({ message: 'Erreur serveur.' });
+    }
+};

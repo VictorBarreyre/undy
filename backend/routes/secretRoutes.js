@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createSecret, getAllSecrets, purchaseSecret, getSecret } = require('../controllers/secretController');
+const { createSecret, getAllSecrets, purchaseSecret, getSecret, getSecretsCountByUser } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 
 
@@ -11,5 +11,6 @@ router.get('/', getAllSecrets); // Récupérer tous les secrets
 router.post('/createsecrets', protect, createSecret); // Créer un secret
 router.post('/:id/purchase', protect, purchaseSecret); // Acheter un secret
 router.get('/:id', protect, getSecret); // Voir un secret acheté
+router.get('/count', protect, getSecretsCountByUser); // Filtrer les secrets par user
 
 module.exports = router;
