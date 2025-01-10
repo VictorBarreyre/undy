@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Platform, VStack, Box, Text, Button, Pressable, Image, Input, HStack, Spinner } from 'native-base';
+import { Platform, VStack, Box, Text, Button, Pressable, Image, Input, HStack, Tabs } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
@@ -14,7 +14,23 @@ export default function Profile({ navigation }) {
     const [secretCount, setSecretCount] = useState(null);
     const [userSecrets, setUserSecrets] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [activeTab, setActiveTab] = useState(0);
 
+    const tabs = [
+        { title: 'Vos secrets', content: 'Contenu 1' },
+        { title: 'Ceux des autres', content: 'Contenu 2' },
+    ];
+
+
+    const truncateText = (text) => {
+        const maxLength = 100; // Ajustez selon vos besoins
+        return text.length > maxLength
+            ? text.slice(0, maxLength) + '... '
+            : text;
+    };
+
+    const content = "Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l'imprimerie depuis les années 1500, quand un imprimeur anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n'a pas fait que survivre cinq siècles, mais s'est aussi adapté à la bureautique informatique, sans que son contenu n'en soit modifié"
 
 
     useEffect(() => {
@@ -25,7 +41,7 @@ export default function Profile({ navigation }) {
                 const count = await fetchSecretsCountByUser(userToken);
                 console.log('Nombre de secrets récupérés:', count);
                 setSecretCount(count);
-    
+
                 // Charger les détails des secrets
                 const secrets = await fetchUserSecrets(userToken);
                 console.log('Secrets récupérés:', secrets);
@@ -33,10 +49,10 @@ export default function Profile({ navigation }) {
             }
             setIsLoading(false); // Désactive le spinner après le chargement
         };
-    
+
         loadUserData();
     }, [userToken]);
-    
+
 
 
     console.log(secretCount)
@@ -55,7 +71,7 @@ export default function Profile({ navigation }) {
                         </Pressable>
 
                         {/* Texte */}
-                        <Text style={styles.h3} textAlign="center">
+                        <Text style={styles.h3} width='auto' textAlign="center">
                             Mon Profil
                         </Text>
 
@@ -65,29 +81,107 @@ export default function Profile({ navigation }) {
                         </Pressable>
                     </HStack>
 
-                    <HStack alignItems="center">
+                    <HStack space={5} justifyContent='space-between' alignItems="center">
                         <Image
                             src={userData.profilePicture}
                             alt={`${userData?.name || 'User'}'s profile picture`}
-                            width={75} // Ajustez la taille de l'image ici
-                            height={75} // Ajustez la taille de l'image ici
-                            borderRadius="full" // Rendre l'image ronde
-                        >
-                        </Image>
+                            width={75}
+                            height={75}
+                            borderRadius="full"
+                        />
 
-                        <VStack alignItems="center">
-                            {/* Nombre de secrets */}
-                            <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
-                                {secretCount || 0}
-                            </Text>
-                            {/* Texte "secret" */}
-                            <Text style={styles.caption} textAlign="center">
-                                Secrets 
-                            </Text>
-                        </VStack>
+                        <HStack space={5} paddingX='24px' justifyContent='space-between' alignItems="center" >
+                            <VStack justifyContent='space-between' alignItems="center">
+                                <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
+                                    {secretCount || 0}
+                                </Text>
+                                <Text style={styles.caption} textAlign="center">
+                                    Secrets
+                                </Text>
+                            </VStack>
+                            <VStack alignItems="center">
+                                <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
+                                    {secretCount || 0}
+                                </Text>
+                                <Text style={styles.caption} textAlign="center">
+                                    Abonnés
+                                </Text>
+                            </VStack>
+                            <VStack alignItems="center">
+                                <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
+                                    {secretCount || 0}
+                                </Text>
+                                <Text style={styles.caption} textAlign="center">
+                                    Abonnements
+                                </Text>
+                            </VStack>
+                        </HStack>
 
                     </HStack>
+
+
+                    <VStack space={2}>
+                        <Text style={styles.h4}>{userData.name} </Text>
+                        <Text color='#94A3B8'>
+                            {!isExpanded ? (
+                                <>
+
+                                    <Text style={styles.caption}>
+                                        {truncateText(content)}
+                                    </Text>
+                                    <Text
+                                        style={styles.caption}
+                                        color="#FF78B2"
+                                        onPress={() => setIsExpanded(true)}
+                                    >
+                                        Voir plus
+                                    </Text>
+                                </>
+                            ) : (
+                                <>
+                                    {content}
+                                    <Text
+                                        style={styles.caption}
+                                        color="blue.500"
+                                        onPress={() => setIsExpanded(false)}
+                                    >
+                                        {" "}Voir moins
+                                    </Text>
+                                </>
+                            )}
+                        </Text>
+                    </VStack>
+
+                    <HStack  
+                    borderBottomColor="#94A3B8"  
+                    borderBottomWidth={2}  
+                    justifyContent="space-around">
+                        {tabs.map((tab, index) => (
+                            <Pressable 
+                                alignContent='center'
+                                alignItems='center'
+                                width='50%'
+                                key={index}
+                                onPress={() => setActiveTab(index)}
+                                borderBottomWidth={activeTab === index ? 2 : 0}
+                                borderBottomColor="#FF78B2"
+                                paddingBottom={2}
+                                zIndex={activeTab === index ? 1 : 0}
+                            >
+                                <Text style={styles.h5}>{tab.title}</Text>
+                            </Pressable>
+                        ))}
+                    </HStack>
+
+                    <Box mt={4}>
+                        <Text>{tabs[activeTab].content}</Text>
+                    </Box>
+
+
                 </VStack>
+
+
+
             </Box>
         </Background>
     );
