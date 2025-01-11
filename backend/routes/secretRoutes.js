@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { createSecret, getAllSecrets, purchaseSecret, getUserSecrets, getSecretsCountByUser } = require('../controllers/secretController');
+const { createSecret, getAllSecrets, purchaseSecret, getUserSecretsWithCount, getSecret } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
-const Secret = require('../models/Secret');
-
 
 // Routes publiques
 router.get('/', getAllSecrets); // Récupérer tous les secrets
@@ -11,20 +9,9 @@ router.get('/', getAllSecrets); // Récupérer tous les secrets
 // Routes privées
 router.post('/createsecrets', protect, createSecret); // Créer un secret
 router.post('/:id/purchase', protect, purchaseSecret); // Acheter un secret
-router.get('/:id', protect, getUserSecrets); // Voir un secret acheté
+router.get('/:id', protect, getSecret); // Voir un secret acheté
 
-router.get('/user-secrets', protect, async (req, res) => {
-    try {
-        const secrets = await Secret.find({ user: req.user.id });
-        res.status(200).json({ secrets });
-    } catch (error) {
-        console.error('Erreur lors de la récupération des secrets :', error);
-        res.status(500).json({ message: 'Erreur serveur.' });
-    }
-});
-
-router.get('/count', protect, getSecretsCountByUser);
-
-
+// Nouvelle route combinée pour récupérer les secrets de l'utilisateur et leur nombre
+router.get('/user-secrets-with-count', protect, getUserSecretsWithCount);
 
 module.exports = router;

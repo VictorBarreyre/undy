@@ -65,33 +65,22 @@ exports.purchaseSecret = async (req, res) => {
 };
 
 
-exports.getSecretsCountByUser = async (req, res) => {
-    try {
-        const count = await Secret
-            .countDocuments({ user: req.user._id })
-            .lean();
-        
-        // Renvoyer directement le nombre sans l'envelopper dans un objet
-        return res.status(200).json(count);
-    } catch (error) {
-        console.error('Erreur comptage:', error);
-        return res.status(500).json(0);
-    }
-};
-
-// Dans le contrôleur backend
-exports.getUserSecrets = async (req, res) => {
+exports.getUserSecretsWithCount = async (req, res) => {
     try {
         const secrets = await Secret
             .find({ user: req.user._id })
-            .select('label content price createdAt') // Sélectionner uniquement les champs nécessaires
-            .lean(); // Convertir en objets JS simples au lieu d'instances Mongoose
+            .select('label content price createdAt')
+            .lean();
         
-        return res.status(200).json(secrets);
+        return res.status(200).json({
+            secrets: secrets,
+            count: secrets.length
+        });
     } catch (error) {
-        console.error('Erreur getUserSecrets:', error);
-        return res.status(500).json({ message: 'Erreur serveur.' });
+        console.error('Erreur getUserSecretsWithCount:', error);
+        return res.status(500).json({ message: 'Erreur serveur.', secrets: [], count: 0 });
     }
 };
+
 
 
