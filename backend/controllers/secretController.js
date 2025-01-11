@@ -83,26 +83,19 @@ exports.getSecretsCountByUser = async (req, res) => {
     }
 };
 
+
+// Dans le contrôleur backend
 exports.getUserSecrets = async (req, res) => {
     try {
-        console.log('User dans getUserSecrets:', req.user);
+        const secrets = await Secret
+            .find({ user: req.user._id })
+            .select('label content price createdAt') // Sélectionner uniquement les champs nécessaires
+            .lean(); // Convertir en objets JS simples au lieu d'instances Mongoose
         
-        // Rechercher les secrets de l'utilisateur
-        const secrets = await Secret.find({ user: req.user._id });
-        console.log('Secrets trouvés:', secrets);
-
-        // Si aucun secret n'est trouvé, retourner un tableau vide
-        if (!secrets || secrets.length === 0) {
-            return res.status(200).json({ secrets: [] });
-        }
-
-        return res.status(200).json({ secrets });
+        return res.status(200).json(secrets);
     } catch (error) {
         console.error('Erreur getUserSecrets:', error);
-        return res.status(500).json({ 
-            message: 'Erreur serveur.',
-            error: error.message 
-        });
+        return res.status(500).json({ message: 'Erreur serveur.' });
     }
 };
 
