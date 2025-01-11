@@ -1,4 +1,5 @@
 const Secret = require('../models/Secret');
+const mongoose = require('mongoose');
 
 
 exports.createSecret = async (req, res) => {
@@ -85,21 +86,18 @@ exports.getSecret = async (req, res) => {
 
 exports.getSecretsCountByUser = async (req, res) => {
     try {
-        console.log('Middleware protect a défini req.user:', req.user); // Log utilisateur
-        if (!req.user) {
-            return res.status(400).json({ message: 'Utilisateur non authentifié.' });
-        }
-
-        const secrets = await Secret.find({ user: mongoose.Types.ObjectId(req.user.id) });
-        console.log('Secrets récupérés pour l\'utilisateur:', secrets); // Log résultats
-
-        const count = secrets.length;
-        console.log('Nombre de secrets:', count); // Log nombre
-
-        res.status(200).json({ count });
+        console.log('User ID from token:', req.user.id);
+        
+        const count = await Secret.countDocuments({ user: req.user.id });
+        console.log('Count result:', count);
+        
+        return res.status(200).json({ count: count });
     } catch (error) {
-        console.error('Erreur lors du comptage des secrets:', error); // Log erreur
-        res.status(500).json({ message: 'Erreur serveur.' });
+        console.error('Server error:', error);
+        return res.status(500).json({ 
+            message: 'Erreur serveur.',
+            error: error.message 
+        });
     }
 };
 
