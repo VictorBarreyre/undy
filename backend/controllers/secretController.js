@@ -67,22 +67,17 @@ exports.purchaseSecret = async (req, res) => {
 
 exports.getSecretsCountByUser = async (req, res) => {
     try {
-        console.log('User dans getSecretsCountByUser:', req.user);
+        const count = await Secret
+            .countDocuments({ user: req.user._id })
+            .lean();
         
-        // Utilisez directement l'ID de l'utilisateur du middleware
-        const count = await Secret.countDocuments({ user: req.user._id });
-        console.log('Nombre de secrets trouvés:', count);
-        
-        return res.status(200).json({ count });
+        // Renvoyer directement le nombre sans l'envelopper dans un objet
+        return res.status(200).json(count);
     } catch (error) {
-        console.error('Erreur getSecretsCountByUser:', error);
-        return res.status(500).json({ 
-            message: 'Erreur serveur.',
-            error: error.message 
-        });
+        console.error('Erreur comptage:', error);
+        return res.status(500).json(0);
     }
 };
-
 
 // Dans le contrôleur backend
 exports.getUserSecrets = async (req, res) => {
