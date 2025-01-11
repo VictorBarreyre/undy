@@ -7,7 +7,6 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import CardHome from './CardHome';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 300;
 
@@ -17,6 +16,8 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   const [index, setIndex] = useState(0);
   const [filteredData, setFilteredData] = useState(data);
   const [currentItem, setCurrentItem] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
 
 
   useEffect(() => {
@@ -32,6 +33,12 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       setCurrentItem(null);
     }
   }, [selectedFilters, data, index]);
+
+  useEffect(() => {
+    // Simuler un chargement
+    setTimeout(() => setIsLoading(false), 1000);
+  }, []);
+  
 
 
   const panResponder = useRef(
@@ -160,7 +167,7 @@ const styles = StyleSheet.create({
   container: {
     display: 'flex',
     flex: 1,
-    height: SCREEN_HEIGHT,
+    height: '100%',
     width: '100%',
     justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
     alignItems: 'center',
@@ -175,7 +182,7 @@ const styles = StyleSheet.create({
   cardStyle: {
     width: SCREEN_WIDTH * 0.9,
     position: 'absolute',
-    height: '80%', // modifie la taille des cartes pour espace ac cta
+    height: 450, // modifie la taille des cartes pour espace ac cta
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'white',

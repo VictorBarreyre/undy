@@ -8,13 +8,8 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 
 const Home = () => {
 
-    const { isLoadingData } = useCardData();
     const [selectedFilters, setSelectedFilters] = useState([]);
 
-    if (isLoadingData) {
-      return <TypewriterLoader />;
-    }
-  
     return (
       <Background>
         <Box paddingTop={2} width="100%">

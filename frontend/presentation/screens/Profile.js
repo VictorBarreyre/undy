@@ -10,12 +10,13 @@ import { Background } from '../../navigation/Background';
 
 export default function Profile({ navigation }) {
     const { userData, userToken } = useContext(AuthContext);
-    const { fetchSecretsCountByUser, fetchUserSecrets } = useCardData();
-    const [secretCount, setSecretCount] = useState(null);
+    const { fetchUserSecretsWithCount } = useCardData();
+    const [secretCount, setSecretCount] = useState(0);
     const [userSecrets, setUserSecrets] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isExpanded, setIsExpanded] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
+    const [error, setError] = useState(null);
 
     const tabs = [
         { title: 'Vos secrets', content: 'Contenu 1' },
@@ -35,29 +36,31 @@ export default function Profile({ navigation }) {
 
     useEffect(() => {
         const loadUserData = async () => {
-            console.log('Token utilisateur:', userToken);
-            if (userToken) {
-                // Charger le nombre de secrets
-                const count = await fetchSecretsCountByUser(userToken);
-                console.log('Nombre de secrets récupérés:', count);
-                setSecretCount(count);
-
-                // Charger les détails des secrets
-                const secrets = await fetchUserSecrets(userToken);
-                console.log('Secrets récupérés:', secrets);
+            try {
+                setIsLoading(true);
+                setError(null);
+                
+                if (!userToken) {
+                    throw new Error('Token non disponible');
+                }
+        
+                // Charger les secrets et leur nombre en une seule requête
+                const { secrets, count } = await fetchUserSecretsWithCount(userToken);
                 setUserSecrets(secrets);
+                setSecretCount(count);
+                
+            } catch (error) {
+                console.error('Erreur chargement données:', error);
+                setError(error.message);
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false); // Désactive le spinner après le chargement
         };
-
+    
         loadUserData();
     }, [userToken]);
+    
 
-
-
-    console.log(secretCount)
-
-    console.log(userData)
 
 
     return (
@@ -101,7 +104,7 @@ export default function Profile({ navigation }) {
                             </VStack>
                             <VStack alignItems="center">
                                 <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
-                                    {secretCount || 0}
+                                    {0}
                                 </Text>
                                 <Text style={styles.caption} textAlign="center">
                                     Abonnés
@@ -109,7 +112,7 @@ export default function Profile({ navigation }) {
                             </VStack>
                             <VStack alignItems="center">
                                 <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
-                                    {secretCount || 0}
+                                    {0}
                                 </Text>
                                 <Text style={styles.caption} textAlign="center">
                                     Abonnements

@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import { styles } from '../../infrastructure/theme/styles';
-import { Box, Text, HStack, VStack, Image, Button } from 'native-base';
+import { Box, Text, HStack, VStack, Image } from 'native-base';
 import { BlurView } from '@react-native-community/blur';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { faPaperPlane } from '@fortawesome/free-solid-svg-icons'; // Importer l'icône "share"
@@ -10,6 +10,8 @@ import { View, Platform, Alert, Share, Linking } from 'react-native';
 export default function CardHome({ cardData }) {
   const { data } = useCardData(); // Accéder aux données via le contexte
   const [isSingleLine, setIsSingleLine] = useState(true);
+  const [textHeight, setTextHeight] = useState(0);
+
 
 
   if (!data || data.length === 0) {
@@ -61,11 +63,7 @@ export default function CardHome({ cardData }) {
 
 
   const handleTextLayout = (event) => {
-    const { height } = event.nativeEvent.layout;
-
-    // Supposons que la hauteur d'une ligne est de 20 (à ajuster selon votre style)
-    const isSingle = height <= 1;
-    setIsSingleLine(isSingle);
+    setTextHeight(event.nativeEvent.layout.height);
   };
 
 
@@ -127,7 +125,7 @@ export default function CardHome({ cardData }) {
           alignItems="center" // Centre horizontalement les enfants
         >
           {/* Texte */}
-          <Text ellipsizeMode="tail" top="5" left="2" paddingBottom="5" width="95%" style={styles.h2}>
+          <Text  onLayout={handleTextLayout} ellipsizeMode="tail" top="5" left="2" paddingBottom="5" width="95%" style={styles.h2}>
             {`"${cardData.content || 'Aucune description disponible.'}"`}
           </Text>
 

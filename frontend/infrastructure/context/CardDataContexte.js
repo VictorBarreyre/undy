@@ -61,43 +61,29 @@ export const CardDataProvider = ({ children }) => {
 
   useEffect(() => {
     fetchAllSecrets();
-    console.log(data)
   }, []);
   
 
-  const fetchSecretsCountByUser = async (authToken) => {
+  const fetchUserSecretsWithCount = async (authToken) => {
     try {
-        const response = await axios.get(`${DATABASE_URL}/api/secrets/count`, {
-            headers: { Authorization: `Bearer ${authToken}` },
+        const { data } = await axios.get(`${DATABASE_URL}/api/secrets/user-secrets-with-count`, {
+            headers: { Authorization: `Bearer ${authToken}` }
         });
 
-        console.log('Réponse API :', response.data); // Debugging
-        return response.data.count;
+
+        return {
+            secrets: Array.isArray(data.secrets) ? data.secrets : [],
+            count: typeof data.count === 'number' ? data.count : 0
+        };
     } catch (error) {
-        console.error('Erreur lors de la récupération du nombre de secrets :', error.response?.data || error.message);
-        return 0;
+        console.error('Erreur récupération secrets et comptage:', error.message);
+        return { secrets: [], count: 0 };
     }
 };
 
-const fetchUserSecrets = async (authToken) => {
-  try {
-    // Endpoint pour récupérer les secrets de l'utilisateur connecté
-    const response = await axios.get(`${DATABASE_URL}/api/secrets/user-secrets`, {
-      headers: { Authorization: `Bearer ${authToken}` },
-    });
-
-    console.log('Secrets de l\'utilisateur récupérés avec succès :', response.data.secrets); // Debugging
-    return response.data.secrets; // Retourne les secrets récupérés
-  } catch (error) {
-    console.error('Erreur lors de la récupération des secrets de l\'utilisateur :', error.response?.data || error.message);
-    return []; // Retourne un tableau vide en cas d'erreur
-  }
-};
-
-
 
   return (
-    <CardDataContext.Provider value={{ data, setData, handlePostSecret, fetchAllSecrets,fetchUserSecrets, fetchSecretsCountByUser, isLoadingData }}>
+    <CardDataContext.Provider value={{ data, setData, handlePostSecret, fetchAllSecrets,fetchUserSecretsWithCount, isLoadingData }}>
       {children}
     </CardDataContext.Provider>
   );
