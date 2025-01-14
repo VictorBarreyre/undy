@@ -7,6 +7,7 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import CardHome from './CardHome';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 300;
 
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
   cardStyle: {
     width: SCREEN_WIDTH * 0.9,
     position: 'absolute',
-    height: 450, // modifie la taille des cartes pour espace ac cta
+    height: SCREEN_HEIGHT * 0.5, // modifie la taille des cartes pour espace ac cta
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'white',
