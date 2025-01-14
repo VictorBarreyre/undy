@@ -47,21 +47,34 @@ const FilterBar = ({ onFilterChange }) => {
   };
 
 
-    // Filtrer les données en fonction de l'entrée utilisateur
-    useEffect(() => {
-      if (searchQuery.trim() === "") {
-        setFilteredResults([]); // Si aucune recherche, pas de résultats
-      } else {
-        const query = searchQuery.toLowerCase();
-        const results = data.filter(
-          (item) =>
-            item.content.toLowerCase().includes(query) || // Rechercher dans le contenu des secrets
-            item.user?.name.toLowerCase().includes(query) // Rechercher dans les noms des utilisateurs
-        );
-        setFilteredResults(results);
-      }
-    }, [searchQuery, data]);
-  
+  const getTimeAgo = (createdAt) => {
+    const diffTime = Date.now() - new Date(createdAt);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "Aujourd'hui";
+    if (diffDays === 1) return "Hier";
+    if (diffDays < 7) return `Il y a ${diffDays} jours`;
+    if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} semaine${Math.floor(diffDays / 7) > 1 ? 's' : ''}`;
+    if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
+    return `Il y a ${Math.floor(diffDays / 365)} an${Math.floor(diffDays / 365) > 1 ? 's' : ''}`;
+  };
+
+
+  // Filtrer les données en fonction de l'entrée utilisateur
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredResults([]); // Si aucune recherche, pas de résultats
+    } else {
+      const query = searchQuery.toLowerCase();
+      const results = data.filter(
+        (item) =>
+          item.content.toLowerCase().includes(query) || // Rechercher dans le contenu des secrets
+          item.user?.name.toLowerCase().includes(query) // Rechercher dans les noms des utilisateurs
+      );
+      setFilteredResults(results);
+    }
+  }, [searchQuery, data]);
+
 
   return (
     <Box width="100%" paddingX={5} paddingY={2}>
@@ -263,51 +276,67 @@ const FilterBar = ({ onFilterChange }) => {
                   </HStack>
 
                 </HStack>
-                <Box marginTop={6} width="100%">
 
-                {filteredResults.length > 0 ? (
-                <FlatList
-                  data={filteredResults}
-                  keyExtractor={(item) => item._id}
-                  renderItem={({ item }) => (
-                    <Pressable
-                      style={styles.resultItem}
-                      onPress={() => {
-                        console.log("Résultat sélectionné :", item);
-                        // Gérer la redirection ou l'action ici
-                      }}
-                    >
-                      <View style={styles.resultContainer}>
-                      <HStack justifyContent="space-between" alignItems="center" marginBottom={3}>
-                        <Text style={styles.h5}>
-                          Posté par : {item.user?.name || "Anonyme"}
-                        </Text>
-                        </HStack>
 
-                        {/* Contenu du secret */}
-                        <Text  style={styles.h5} numberOfLines={2}>
-                          {item.content}
-                        </Text>
+                <Box width="100%">
+                  {filteredResults.length > 0 ? (
+                    <FlatList
+                      data={filteredResults}
+                      keyExtractor={(item) => item._id}
+                      renderItem={({ item }) => (
+                        <Pressable
+                          style={styles.resultItem}
+                          onPress={() => {
+                            console.log("Résultat sélectionné :", item);
+                            // Gérer la redirection ou l'action ici
+                          }}
+                        >
+                          <Box
+                            width='100%'
+                            borderRadius="md"
+                            paddingX={4}
+                            paddingY={6}
+                            mb={3}
+                            backgroundColor="white"
+                          >
+                            <HStack space={2} justifyContent="space-between" flexWrap="wrap" marginBottom={5}>
+                              <Text style={{ ...styles.h5, flexShrink: 1 }}>
+                                Posté par vous
+                              </Text>
+                              <Text style={{ ...styles.caption, color: '#94A3B8', fontSize: 14 }}>{getTimeAgo(item.createdAt)}</Text>
+                            </HStack>
 
-                        {/* Informations supplémentaires (label et prix) */}
-                        <HStack justifyContent="space-between" alignItems="center" marginTop={3}>
-                          <Text style={styles.h5}>{item.label}</Text>
-                          <Text style={styles.h5}>{item.price} €</Text>
-                        </HStack>
-                      </View>
-                      <Divider opacity={30} bg="#94A3B8" />
-                    </Pressable>
-                    
+                            {/* Contenu du secret */}
+                            <Text style={{  ...styles.caption, fontSize: 16, flexShrink: 1 }}>
+                              <Text style={{ color: "#FF78B2", fontSize: 16 }}>Secret : </Text>
+                              {item.content}
+                            </Text>
+
+                            {/* Informations supplémentaires (label et prix) */}
+                            <HStack justifyContent="space-between" alignItems="center" marginTop={5}>
+                              <Text style={{...styles.h5, fontSize: 16 }}>{item.label}</Text>
+                              <Button paddingY={2.5} paddingRight={6} color='dark' width='auto'>
+                                <HStack alignItems="center" justifyContent="center" space={3}>
+                                  <Text style={{ ...styles.ctalittle, color: "white"}}>
+                                  Déverouiller pour {item.price} €
+                                  </Text>
+                                </HStack>
+                              </Button>
+                             
+                            </HStack>
+                          </Box>
+                        </Pressable>
+                      )}
+                    />
+                  ) : (
+                    searchQuery.trim() !== "" && (
+                      <Text style={{ fontSize: 18 }}>Aucun résultat trouvé</Text>
+                    )
                   )}
-                />
-              ) : (
-                searchQuery.trim() !== "" && (
-                  <Text style={styles.noResultsText}>Aucun résultat trouvé</Text>
-                )
-              )}
                 </Box>
 
-               
+
+
 
               </Box>
             </View>

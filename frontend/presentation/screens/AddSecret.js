@@ -84,7 +84,7 @@ const AddSecret = () => {
                             >
                                 {/* Contenu texte */}
                                 <VStack backgroundColor="white" height={'100%'} justifyContent="space-between" padding={4} space={2}>
-                                    <HStack alignItems="center" justifyContent="space-between" width="95%">
+                                    <HStack alignItems="center" justifyContent="space-between" width="97%">
                                         {/* Texte aligné à gauche */}
                                         <Box flex={1} mr={4} ml={2} >
                                             <Text left={2} style={styles.h5}>
@@ -94,8 +94,8 @@ const AddSecret = () => {
                                         <Image
                                             src={userData.profilePicture}
                                             alt={`${userData?.name || 'User'}'s profile picture`}
-                                            width={35} // Ajustez la taille de l'image ici
-                                            height={35} // Ajustez la taille de l'image ici
+                                            width={45} // Ajustez la taille de l'image ici
+                                            height={45} // Ajustez la taille de l'image ici
                                             borderRadius="full" // Rendre l'image ronde
                                         />
 
@@ -157,7 +157,7 @@ const AddSecret = () => {
                                         </Box>
 
                                         {/* Champ pour définir le prix */}
-                                        <Box justifyContent="center" alignContent='center' alignItems='center' mt={6} width="45%">
+                                        <Box justifyContent="center" alignContent='center' alignItems='center' mt={6} width="55%">
                                             <Text style={styles.ctalittle} >
                                                 Son prix
                                             </Text>

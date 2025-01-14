@@ -55,14 +55,14 @@ const SecretCard = ({ secret }) => {
                 <Text color='#94A3B8' style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
             </HStack>
 
-            <HStack width='100%' flexWrap="wrap">
+            
             <Text style={styles.caption} flexShrink={1} >
                     <Text style={styles.caption} color="#FF78B2">Secret : </Text>
                     {secret.content}
                 </Text>
-            </HStack>
-            <Text style={styles.caption}>Prix : {secret.price} €</Text>
-            <Text style={styles.caption} >{secret.label}</Text>
+       
+            <Text style={styles.h5}>Prix : {secret.price} €</Text>
+            <Text style={styles.h5} >{secret.label}</Text>
         </VStack>
     </HStack>
 </Box>

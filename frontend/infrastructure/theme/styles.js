@@ -71,7 +71,7 @@ export const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 10,
-    paddingTop: 80,
+    paddingTop: 80, //à regler car ça ne correspond pas sur les différentes devices
     paddingRight:25,
     paddingLeft:25,
     alignItems: 'center',
@@ -123,8 +123,7 @@ export const styles = StyleSheet.create({
 
   resultItem: {
     paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+   
   },
   resultContainer: {
     flexDirection: "column",
