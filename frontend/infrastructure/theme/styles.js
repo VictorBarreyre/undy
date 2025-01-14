@@ -121,6 +121,15 @@ export const styles = StyleSheet.create({
     zIndex: 1, // Assure que l'overlay est au-dessus
   },
 
+  overlayCardResult: {
+    position: 'absolute',
+    left: -50,
+    width: '150%',
+    height: '100%',
+    zIndex: 1, // Assure que l'overlay est au-dessus
+  },
+
+
   resultItem: {
     paddingVertical: 15,
    

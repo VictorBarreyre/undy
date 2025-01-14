@@ -17,7 +17,8 @@ const FilterBar = ({ onFilterChange }) => {
   const [searchQuery, setSearchQuery] = useState(""); // État pour l'entrée de recherche
   const [filteredResults, setFilteredResults] = useState([]); // Résultats filtrés
 
-
+  const [isSingleLine, setIsSingleLine] = useState(true);
+  const [textHeight, setTextHeight] = useState(0);
 
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
   const labels = [...new Set(data.map((card) => card.label?.trim()).filter(Boolean))];
@@ -75,6 +76,22 @@ const FilterBar = ({ onFilterChange }) => {
     }
   }, [searchQuery, data]);
 
+  const handleTextLayout = (event) => {
+    const { height } = event.nativeEvent.layout;
+    setTextHeight(height);
+    setIsSingleLine(height <= 20); // Ajustez cette valeur en fonction de votre police et de votre taille de texte
+  };
+
+  useEffect(() => {
+    const checkContentLength = () => {
+      if (filteredResults.length > 0) {
+        const firstItemContent = filteredResults[0].content;
+        setIsSingleLine(firstItemContent.length <= 20); // Ajustez cette valeur en fonction de votre police et de votre taille de texte
+      }
+    };
+
+    checkContentLength();
+  }, [filteredResults]);
 
   return (
     <Box width="100%" paddingX={5} paddingY={2}>
@@ -307,22 +324,38 @@ const FilterBar = ({ onFilterChange }) => {
                             </HStack>
 
                             {/* Contenu du secret */}
-                            <Text style={{  ...styles.caption, fontSize: 16, flexShrink: 1 }}>
-                              <Text style={{ color: "#FF78B2", fontSize: 16 }}>Secret : </Text>
+                            <Text
+                              style={{ ...styles.caption, fontSize: 16, flexShrink: 1 }}
+                             
+                            >
+                              <Text  onLayout={handleTextLayout} style={{ color: "#FF78B2", fontSize: 16 }}>Secret : </Text>
                               {item.content}
                             </Text>
-
+                            <BlurView
+                              style={{
+                                position: 'absolute',
+                                top: isSingleLine ? 50 : 580, // Ajustez cette valeur en fonction de votre mise en page
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                              }}
+                              backgroundColor='rgba(255, 255, 255, 0.6)'
+                              blurType="light"
+                              blurAmount={4}
+                              reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+                            />
                             {/* Informations supplémentaires (label et prix) */}
                             <HStack justifyContent="space-between" alignItems="center" marginTop={5}>
-                              <Text style={{...styles.h5, fontSize: 16 }}>{item.label}</Text>
+                              <Text style={{ ...styles.h5, fontSize: 16 }}>{item.label}</Text>
                               <Button paddingY={2.5} paddingRight={6} color='dark' width='auto'>
                                 <HStack alignItems="center" justifyContent="center" space={3}>
-                                  <Text style={{ ...styles.ctalittle, color: "white"}}>
-                                  Déverouiller pour {item.price} €
+                                  <Text style={{ ...styles.ctalittle, color: "white" }}>
+                                    Déverouiller pour {item.price} €
                                   </Text>
                                 </HStack>
                               </Button>
-                             
+
                             </HStack>
                           </Box>
                         </Pressable>

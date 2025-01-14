@@ -12,7 +12,7 @@ const Home = () => {
 
     return (
       <Background>
-        <Box paddingTop={2} width="100%">
+        <Box alignItems='center' alignContent='center' paddingTop={2} width="100%">
           <FilterBar onFilterChange={setSelectedFilters} />
         </Box>
         <VStack style={styles.containerHome} space={4}>
