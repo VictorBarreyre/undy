@@ -52,12 +52,12 @@ const SecretCard = ({ secret }) => {
                 <Text style={styles.h5} flexShrink={1} >
                     Posté par vous
                 </Text>
-                <Text>{getTimeAgo(secret.createdAt)}</Text>
+                <Text color='#94A3B8' style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
             </HStack>
 
             <HStack width='100%' flexWrap="wrap">
             <Text style={styles.caption} flexShrink={1} >
-                    <Text style={styles.caption} color="#FF78B2">Secret: </Text>
+                    <Text style={styles.caption} color="#FF78B2">Secret : </Text>
                     {secret.content}
                 </Text>
             </HStack>

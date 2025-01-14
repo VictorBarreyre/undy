@@ -123,7 +123,7 @@ const FilterBar = ({ onFilterChange }) => {
                           value={label}
                           aria-label={label}
                           style={{
-                            borderColor: selectedFilters.includes(label) ? '#FF78B2' : '#FF78B2',
+                            borderColor: selectedFilters.includes(label) ? '#94A3B8' : '#FF78B2',
                             borderWidth: 1,
                           }}
                           _checked={{
@@ -295,7 +295,9 @@ const FilterBar = ({ onFilterChange }) => {
                           <Text style={styles.h5}>{item.price} €</Text>
                         </HStack>
                       </View>
+                      <Divider opacity={30} bg="#94A3B8" />
                     </Pressable>
+                    
                   )}
                 />
               ) : (
@@ -304,6 +306,9 @@ const FilterBar = ({ onFilterChange }) => {
                 )
               )}
                 </Box>
+
+               
+
               </Box>
             </View>
           </BlurView>

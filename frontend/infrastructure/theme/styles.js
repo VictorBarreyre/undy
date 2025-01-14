@@ -129,6 +129,7 @@ export const styles = StyleSheet.create({
   resultContainer: {
     flexDirection: "column",
     marginBottom:"20",
+    paddingBottom:20,
   },
 
   content: {
