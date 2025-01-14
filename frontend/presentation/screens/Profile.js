@@ -30,45 +30,43 @@ const SecretCard = ({ secret }) => {
     };
 
     return (
-        <Box
-            width='100%'
-            borderRadius="md"
-            p={4}
-            mb={4}
-            backgroundColor="white"
-            style={styles.boxShadow}
-            overflow='unset'
-        >
-
-
-            <HStack width='100%' justifyContent="space-between" space={2}>
-                <Image
-                    src={userData.profilePicture}
-                    alt={`${userData?.name || 'User'}'s profile picture`}
-                    width={35}
-                    height={35}
-                    borderRadius="full"
-                />
-                <VStack width='100%' space={2}>              
-                    <HStack space={2} justifyContent="space-between">
-                    <Text style={styles.h5} flexShrink={1} >
-                        Posté par vous
-                    </Text>
-                        <Text>{getTimeAgo(secret.createdAt)}</Text>
-                    </HStack>
-
-                    <HStack width='100%' >
-                        <Text style={styles.caption} color="#FF78B2">Secret: </Text>
-                        <Text style={styles.caption} flexShrink={1} >
-                            {secret.content}
-                        </Text>
-                    </HStack>
-                    <Text style={styles.caption}>Prix : {secret.price} €</Text>
-                    <Text style={styles.caption} >{secret.label}</Text>
-                </VStack>
-
+<Box
+    width='100%'
+    borderRadius="md"
+    p={4}
+    mb={4}
+    backgroundColor="white"
+    style={styles.boxShadow}
+    overflow='hidden' // Ajout de overflow hidden
+>
+    <HStack width='100%' justifyContent="space-between" space={2} flexWrap="wrap">
+        <Image
+            src={userData.profilePicture}
+            alt={`${userData?.name || 'User'}'s profile picture`}
+            width={35}
+            height={35}
+            borderRadius="full"
+        />
+        <VStack width='100%' space={2} flexGrow={1} flexShrink={1}>
+            <HStack space={2} justifyContent="space-between" flexWrap="wrap">
+                <Text style={styles.h5} flexShrink={1} >
+                    Posté par vous
+                </Text>
+                <Text>{getTimeAgo(secret.createdAt)}</Text>
             </HStack>
-        </Box>
+
+            <HStack width='100%' flexWrap="wrap">
+            <Text style={styles.caption} flexShrink={1} >
+                    <Text style={styles.caption} color="#FF78B2">Secret: </Text>
+                    {secret.content}
+                </Text>
+            </HStack>
+            <Text style={styles.caption}>Prix : {secret.price} €</Text>
+            <Text style={styles.caption} >{secret.label}</Text>
+        </VStack>
+    </HStack>
+</Box>
+
     );
 };
 
