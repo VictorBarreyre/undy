@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Platform, VStack, Box, Text, Button, Pressable, Image, Input, HStack, Tabs } from 'native-base';
+import { Platform, VStack, Box, Text, Button, Pressable, Image, Input, HStack, FlatList } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
@@ -7,6 +7,72 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
+
+
+
+
+const SecretCard = ({ secret }) => {
+
+    const [isExpanded, setIsExpanded] = useState(false);
+    const { userData, userToken } = useContext(AuthContext);
+
+
+    const getTimeAgo = (createdAt) => {
+        const diffTime = Date.now() - new Date(createdAt);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) return "Aujourd'hui";
+        if (diffDays === 1) return "Hier";
+        if (diffDays < 7) return `Il y a ${diffDays} jours`;
+        if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} semaine${Math.floor(diffDays / 7) > 1 ? 's' : ''}`;
+        if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
+        return `Il y a ${Math.floor(diffDays / 365)} an${Math.floor(diffDays / 365) > 1 ? 's' : ''}`;
+    };
+
+    return (
+        <Box
+            width='100%'
+            borderRadius="md"
+            p={4}
+            mb={4}
+            backgroundColor="white"
+            style={styles.boxShadow}
+            overflow='unset'
+        >
+
+
+            <HStack width='100%' justifyContent="space-between" space={2}>
+                <Image
+                    src={userData.profilePicture}
+                    alt={`${userData?.name || 'User'}'s profile picture`}
+                    width={35}
+                    height={35}
+                    borderRadius="full"
+                />
+                <VStack width='100%' space={2}>              
+                    <HStack space={2} justifyContent="space-between">
+                    <Text style={styles.h5} flexShrink={1} >
+                        Posté par vous
+                    </Text>
+                        <Text>{getTimeAgo(secret.createdAt)}</Text>
+                    </HStack>
+
+                    <HStack width='100%' >
+                        <Text style={styles.caption} color="#FF78B2">Secret: </Text>
+                        <Text style={styles.caption} flexShrink={1} >
+                            {secret.content}
+                        </Text>
+                    </HStack>
+                    <Text style={styles.caption}>Prix : {secret.price} €</Text>
+                    <Text style={styles.caption} >{secret.label}</Text>
+                </VStack>
+
+            </HStack>
+        </Box>
+    );
+};
+
+
 
 export default function Profile({ navigation }) {
     const { userData, userToken } = useContext(AuthContext);
@@ -19,10 +85,28 @@ export default function Profile({ navigation }) {
     const [error, setError] = useState(null);
 
     const tabs = [
-        { title: 'Vos secrets', content: 'Contenu 1' },
-        { title: 'Ceux des autres', content: 'Contenu 2' },
+        {
+            title: 'Vos secrets',
+            content: isLoading ? (
+                <Text>Chargement...</Text>
+            ) : (
+                <Box flex={1} width="100%">
+                    <FlatList
+                        width='100%'
+                        overflow='unset'
+                        data={userSecrets}
+                        renderItem={({ item }) => <SecretCard secret={item} />}
+                        keyExtractor={item => item._id}
+                        ListEmptyComponent={<Text>Aucun secret disponible.</Text>}
+                    />
+                </Box>
+            )
+        },
+        {
+            title: 'Ceux des autres',
+            content: <Text>Contenu pour les secrets des autres.</Text>
+        }
     ];
-
 
     const truncateText = (text) => {
         const maxLength = 100; // Ajustez selon vos besoins
@@ -39,16 +123,16 @@ export default function Profile({ navigation }) {
             try {
                 setIsLoading(true);
                 setError(null);
-                
+
                 if (!userToken) {
                     throw new Error('Token non disponible');
                 }
-        
+
                 // Charger les secrets et leur nombre en une seule requête
                 const { secrets, count } = await fetchUserSecretsWithCount(userToken);
                 setUserSecrets(secrets);
                 setSecretCount(count);
-                
+
             } catch (error) {
                 console.error('Erreur chargement données:', error);
                 setError(error.message);
@@ -56,10 +140,10 @@ export default function Profile({ navigation }) {
                 setIsLoading(false);
             }
         };
-    
+
         loadUserData();
     }, [userToken]);
-    
+
 
 
 
@@ -145,7 +229,7 @@ export default function Profile({ navigation }) {
                                     {content}
                                     <Text
                                         style={styles.caption}
-                                        color="blue.500"
+                                        color="#FF78B2"
                                         onPress={() => setIsExpanded(false)}
                                     >
                                         {" "}Voir moins
@@ -155,12 +239,12 @@ export default function Profile({ navigation }) {
                         </Text>
                     </VStack>
 
-                    <HStack  
-                    borderBottomColor="#94A3B8"  
-                    borderBottomWidth={2}  
-                    justifyContent="space-around">
+                    <HStack
+                        borderBottomColor="#94A3B8"
+                        borderBottomWidth={2}
+                        justifyContent="space-around">
                         {tabs.map((tab, index) => (
-                            <Pressable 
+                            <Pressable
                                 alignContent='center'
                                 alignItems='center'
                                 width='50%'
@@ -176,14 +260,12 @@ export default function Profile({ navigation }) {
                         ))}
                     </HStack>
 
-                    <Box mt={4}>
+                    <Box mt={2}>
                         <Text>{tabs[activeTab].content}</Text>
                     </Box>
 
 
                 </VStack>
-
-
 
             </Box>
         </Background>
@@ -204,10 +286,12 @@ const customStyles = StyleSheet.create({
 
 
     shadowBox: {
+        backgroundColor: 'white',
+        borderRadius: 10,
         shadowColor: 'violet',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
         shadowRadius: 5,
-        elevation: 5
+        elevation: 5,
     },
 });

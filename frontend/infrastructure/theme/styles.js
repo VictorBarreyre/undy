@@ -87,8 +87,8 @@ export const styles = StyleSheet.create({
   },
 
   boxShadow: {
-    shadowColor: 'purple', // Couleur de l'ombre
-    shadowOffset: { width: 0, height: 4 }, // Décalage de l'ombre
+    shadowColor: 'violet', // Couleur de l'ombre
+    shadowOffset: { width: 0, height: 3 }, // Décalage de l'ombre
     shadowOpacity: 0.2, // Opacité de l'ombre
     shadowRadius: 6, // Rayon de diffusion
     elevation: 10, // Ombre Android
