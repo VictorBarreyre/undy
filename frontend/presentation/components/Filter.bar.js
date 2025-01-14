@@ -73,20 +73,26 @@ const FilterBar = ({ onFilterChange }) => {
           item.user?.name.toLowerCase().includes(query) // Rechercher dans les noms des utilisateurs
       );
       setFilteredResults(results);
+
+
+    console.log("Requête de recherche:", searchQuery);
+    console.log("Résultats de la recherche:", results);
+    console.log("Données brutes:", data);
     }
+
   }, [searchQuery, data]);
 
   const handleTextLayout = (event) => {
     const { height } = event.nativeEvent.layout;
     setTextHeight(height);
-    setIsSingleLine(height <= 20); // Ajustez cette valeur en fonction de votre police et de votre taille de texte
+    setIsSingleLine(height <= 14); // Ajustez cette valeur en fonction de votre police et de votre taille de texte
   };
 
   useEffect(() => {
     const checkContentLength = () => {
       if (filteredResults.length > 0) {
         const firstItemContent = filteredResults[0].content;
-        setIsSingleLine(firstItemContent.length <= 20); // Ajustez cette valeur en fonction de votre police et de votre taille de texte
+        setIsSingleLine(firstItemContent.length <= 14); // Ajustez cette valeur en fonction de votre police et de votre taille de texte
       }
     };
 
@@ -326,9 +332,9 @@ const FilterBar = ({ onFilterChange }) => {
                             {/* Contenu du secret */}
                             <Text
                               style={{ ...styles.caption, fontSize: 16, flexShrink: 1 }}
-                             
+
                             >
-                              <Text  onLayout={handleTextLayout} style={{ color: "#FF78B2", fontSize: 16 }}>Secret : </Text>
+                              <Text onLayout={handleTextLayout} style={{ ...styles.caption, color: "#FF78B2", fontSize: 16 }}>Secret : </Text>
                               {item.content}
                             </Text>
                             <BlurView
