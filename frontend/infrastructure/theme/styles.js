@@ -21,22 +21,40 @@ export const styles = StyleSheet.create({
     // Assure que le contenu est au-dessus du background
   },
 
+  containerFilter:{
+    flex: 1,
+    zIndex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width:'auto',
+    margingRight:200
+  },
+
   containerAddSecret: {
     flex: 1,
     zIndex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    width:'100%'
   },
 
   scrollContainer: {
     flexDirection: 'row',
     marginVertical: 10,
-    paddingLeft: 18
+    paddingLeft: 18,
+    paddingRight:200,
+        width:'100%'
   },
   
   activeButton: {
     backgroundColor: '#FF78B2', // Arrière-plan vert
+    borderWidth: 2, borderColor: '#FF78B2'
   },
+
+  inactiveButton : {
+  borderWidth: 2,  borderColor: 'rgba(148, 163, 184, 0.3)'
+  },
+
   activeText: {
     fontWeight: 'Bold',
     fontSize: 16,  // Font size for secondary variant
@@ -49,7 +67,7 @@ export const styles = StyleSheet.create({
     fontSize: 16,  // Font size for secondary variant
     lineHeight: 22,
     fontFamily: 'SF-Pro-Display-Bold',
-    color: 'gray', // Texte gris pour les autres boutons
+    color: '#94A3B8', // Texte gris pour les autres boutons
   },
 
   iconContainer: {

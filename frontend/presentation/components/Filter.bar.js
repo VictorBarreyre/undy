@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Button, Icon, HStack, Input, Checkbox, Divider } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { Modal, Pressable, Text, View, FlatList, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { BlurView } from '@react-native-community/blur';
@@ -88,7 +88,7 @@ const FilterBar = ({ onFilterChange }) => {
     <Box width="100%" paddingY={2}>
       <HStack space={1} alignItems="center" width="100%">
         {/* Bouton pour ouvrir le filtre */}
-        <View style={styles.container}>
+        <View style={styles.containerFilter}>
           {/* Section pour le bouton de recherche et les boutons de filtrage */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollContainer}>
             {/* Bouton de recherche */}
@@ -114,7 +114,7 @@ const FilterBar = ({ onFilterChange }) => {
               marginRight={3}
               variant='secondary'
               style={[
-                activeButton === 'Tous' && styles.activeButton,
+                activeButton === 'Tous' ? styles.activeButton : styles.inactiveButton
               ]}
               onPress={() => handleButtonClick('Tous')}
             >
@@ -124,7 +124,7 @@ const FilterBar = ({ onFilterChange }) => {
               marginRight={3}
               variant='secondary'
               style={[
-                activeButton === 'Contacts' && styles.activeButton,
+                activeButton === 'Contacts'? styles.activeButton : styles.inactiveButton
               ]}
               onPress={() => handleButtonClick('Contacts')}
             >
@@ -134,21 +134,34 @@ const FilterBar = ({ onFilterChange }) => {
               marginRight={3}
               variant='secondary'
               style={[
-                activeButton === 'Suivis' && styles.activeButton,
+                activeButton === 'Suivis'? styles.activeButton : styles.inactiveButton
               ]}
               onPress={() => handleButtonClick('Suivis')}
             >
               <Text style={activeButton === 'Suivis' ? styles.activeText : styles.inactiveText}>Suivis</Text>
             </Button>
-
             <Button
-              variant='secondary'
+              marginRight={8}
+              variant="secondary"
               style={[
-                activeButton === 'Catégories' && styles.activeButton,
+                activeButton === 'Catégories'? styles.activeButton : styles.inactiveButton,
+                { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' } // Assure l'alignement horizontal
               ]}
               onPress={() => setOverlayVisible(true)} // Ouvre la modale
-              >
-              <Text style={activeButton === 'Catégories' ? styles.activeText : styles.inactiveText}>Catégories</Text>
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text
+                  style={activeButton === 'Catégories' ? styles.activeText : styles.inactiveText}
+                >
+                  Catégories
+                </Text>
+                <FontAwesomeIcon
+                  icon={faChevronDown} // Icône du chevron
+                  size={16} // Taille de l'icône
+                  color={activeButton === 'Catégories' ? styles.activeText.color : styles.inactiveText.color} // Couleur cohérente
+                  style={{ marginLeft: 8 }} // Espacement entre texte et icône
+                />
+              </View>
             </Button>
 
           </ScrollView>
@@ -293,8 +306,8 @@ const FilterBar = ({ onFilterChange }) => {
           </BlurView>
         </Modal>
 
-       {/* Première modale : Préférences */}
-       <Modal
+        {/* Première modale : Préférences */}
+        <Modal
           animationType="fade"
           transparent={true}
           visible={isOverlayVisible}
@@ -310,7 +323,7 @@ const FilterBar = ({ onFilterChange }) => {
             blurAmount={8}
             reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)" // Fallback pour Android
           >
-             <SafeAreaView style={styles.overlayModal}> 
+            <SafeAreaView style={styles.overlayModal}>
               <Box style={styles.overlayContent}>
                 <HStack paddingY={2} justifyContent="space-between" alignItems="center" width="100%">
                   <Text style={styles.h3}>Préférences</Text>
@@ -352,7 +365,7 @@ const FilterBar = ({ onFilterChange }) => {
                   ))}
                 </Box>
               </Box>
-              </SafeAreaView>
+            </SafeAreaView>
           </BlurView>
         </Modal>
 
