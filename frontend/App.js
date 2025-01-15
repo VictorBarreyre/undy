@@ -12,6 +12,8 @@ import * as Font from "expo-font";
 import { lightTheme } from "./infrastructure/theme/theme";
 import { CardDataProvider } from "./infrastructure/context/CardDataContexte";
 import TypewriterLoader from "./presentation/components/TypewriterLoader";
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 const Stack = createStackNavigator();
 
@@ -39,9 +41,11 @@ const App = () => {
     <AuthProvider>
       <CardDataProvider>
         <NativeBaseProvider theme={lightTheme}>
+        <SafeAreaProvider>
           <NavigationContainer>
             <StackNavigator />
           </NavigationContainer>
+          </SafeAreaProvider>
         </NativeBaseProvider>
       </CardDataProvider>
     </AuthProvider>

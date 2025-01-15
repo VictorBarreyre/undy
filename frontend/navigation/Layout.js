@@ -1,15 +1,10 @@
 import React from 'react';
-import {  Image, SafeAreaView } from 'react-native';
+import {  Image } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faUser, faHome } from '@fortawesome/free-solid-svg-icons';
-import Home from '../presentation/screens/Home';
-import Profile from '../presentation/screens/Profile';
 import { Box } from 'native-base';
 import { styles } from '../infrastructure/theme/styles';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import AddSecret from '../presentation/screens/AddSecret';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TabNavigator from './TabNavigator';
 
 const Tab = createBottomTabNavigator();
@@ -39,7 +34,6 @@ function DrawerNavigator() {
 
     return (
         <Background>
-            <SafeAreaProvider >
             <Box style={{ paddingTop: insets.top || (Platform.OS === 'android' ? StatusBar.currentHeight : 0) }} flex={1}>
                 <Drawer.Navigator
                     initialRouteName="Tabs"
@@ -57,7 +51,7 @@ function DrawerNavigator() {
                     />
                 </Drawer.Navigator>
             </Box>
-            </SafeAreaProvider>
+
         </Background>
     );
 }

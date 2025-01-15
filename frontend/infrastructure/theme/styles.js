@@ -1,6 +1,6 @@
 // styles.js
 import { StyleSheet } from 'react-native';
-import { Platform, Dimensions } from 'react-native';
+import { Platform, Dimensions, StatusBar } from 'react-native';
 
 const { width } = Dimensions.get('window'); // Largeur de l'écran
 
@@ -104,26 +104,20 @@ export const styles = StyleSheet.create({
   },
 
   overlayModal: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
+    flex: 1,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)', // White with reduced opacity
-    backdropFilter: 'blur(50px)',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    justifyContent: 'flex-start',
     alignItems: 'center',
   },
   overlayContent: {
     width: '100%',
-    height: '100%',
-    borderRadius: 10,
-    paddingTop: 80, //à regler car ça ne correspond pas sur les différentes devices
-    paddingRight:25,
-    paddingLeft:25,
-    alignItems: 'center',
-
+    paddingTop: Platform.OS === 'ios' ? 25 : StatusBar.currentHeight + 10,
+    paddingHorizontal: 25,
+    flex: 1,
   },
+
   closeButton: {
     zIndex: 10,
   },

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Button, Icon, HStack, Input, Checkbox, Divider, VStack } from 'native-base';
+import { Box, Button, Icon, HStack, Input } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faSearch, faSlidersH, faTimes } from '@fortawesome/free-solid-svg-icons';
-import { Modal, Pressable, Text, View, FlatList, ScrollView } from 'react-native';
+import { Modal, Pressable, Text, View, FlatList, ScrollView,StyleSheet, SafeAreaView } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { BlurView } from '@react-native-community/blur';
 import { styles } from '../../infrastructure/theme/styles';
@@ -151,9 +151,6 @@ const FilterBar = ({ onFilterChange }) => {
           </ScrollView>
         </View>
 
-
-
-
         {/* Modale : Recherche */}
         <Modal
           animationType="fade"
@@ -171,8 +168,8 @@ const FilterBar = ({ onFilterChange }) => {
             blurAmount={8}
             reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)" // Fallback pour Android
           >
-            <View style={styles.overlayModal}>
-              <Box style={styles.overlayContent}>
+         <SafeAreaView style={styles.overlayModal}>
+              <View style={styles.overlayContent}>
                 <HStack space={4} justifyContent="space-between" alignItems="center" width="100%" paddingRight={1} paddingBottom={4}>
                   <Pressable
                     style={styles.closeButton}
@@ -288,14 +285,16 @@ const FilterBar = ({ onFilterChange }) => {
                     )
                   )}
                 </Box>
-              </Box>
-            </View>
+              </View>
+              </SafeAreaView>
           </BlurView>
         </Modal>
       </HStack>
     </Box>
   );
 };
+
+
 
 
 
