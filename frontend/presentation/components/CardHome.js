@@ -6,11 +6,16 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { faPaperPlane } from '@fortawesome/free-solid-svg-icons'; // Importer l'icône "share"
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { View, Platform, Alert, Share, Linking } from 'react-native';
+import { DATABASE_URL } from '@env';
 
 export default function CardHome({ cardData }) {
   const { data } = useCardData(); // Accéder aux données via le contexte
   const [isSingleLine, setIsSingleLine] = useState(true);
   const [textHeight, setTextHeight] = useState(0);
+
+  const profilePictureUrl = cardData.user?.profilePicture
+    ? `${DATABASE_URL}${cardData.user.profilePicture}`
+    : `${DATABASE_URL}/uploads/default.png`;
 
 
 
@@ -70,7 +75,7 @@ export default function CardHome({ cardData }) {
   useEffect(() => {
     const checkContentLength = () => {
       // Exemple simple : considérer une chaîne supérieure à 50 caractères comme plus d'une ligne
-      if (cardData?.content?.length > 20) {
+      if (cardData?.content?.length > 10) {
         setIsSingleLine(false);
       } else {
         setIsSingleLine(true);
@@ -80,7 +85,7 @@ export default function CardHome({ cardData }) {
     checkContentLength();
   }, [cardData]);
 
-  console.log(cardData)
+  console.log(cardData.user)
 
 
   return (
@@ -110,9 +115,9 @@ export default function CardHome({ cardData }) {
           </Box>
           {/* Image alignée à droite */}
           <Image
-            source={{
-              uri: cardData.user?.profilePicture || 'https://example.com/uploads/default-profile.png', // Image par défaut
-          }}
+           source={{
+            uri: profilePictureUrl
+        }}
             alt={data[0]?.title || 'Carte'}
             width={35} // Ajustez la taille de l'image ici
             height={35} // Ajustez la taille de l'image ici
