@@ -345,20 +345,22 @@ const FilterBar = ({ onFilterChange }) => {
                       >
                         <Text style={styles.h5}>{label}</Text>
                         <Checkbox
-                          value={label}
-                          aria-label={label}
-                          style={{
-                            borderColor: selectedFilters.includes(label) ? '#94A3B8' : '#FF78B2',
-                            borderWidth: 1,
-                          }}
-                          _checked={{
-                            bg: '#FF78B2',
-                            borderColor: '#FF78B2',
-                            _icon: { color: 'white' },
-                          }}
-                          isChecked={selectedFilters.includes(label)}
-                          onChange={() => handleCheckboxChange(label)}
-                        />
+  value={label}
+  aria-label={label}
+  style={{
+    borderColor: selectedFilters.includes(label)
+      ? '#FF78B2' // Bordure pour les cases cochées
+      : 'rgba(148, 163, 184, 0.5)', // Bordure semi-transparente quand non cochée
+    borderWidth: 1,
+  }}
+  _checked={{
+    bg: '#FF78B2',
+    borderColor: '#FF78B2',
+    _icon: { color: 'white' },
+  }}
+  isChecked={selectedFilters.includes(label)}
+  onChange={() => handleCheckboxChange(label)}
+/>
                       </HStack>
                       <Divider opacity={30} bg="#94A3B8" />
                     </Box>
