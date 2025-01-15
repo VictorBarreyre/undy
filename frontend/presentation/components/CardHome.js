@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import { styles } from '../../infrastructure/theme/styles';
 import { Box, Text, HStack, VStack, Image } from 'native-base';
 import { BlurView } from '@react-native-community/blur';
@@ -74,18 +74,20 @@ export default function CardHome({ cardData }) {
 
   useEffect(() => {
     const checkContentLength = () => {
+      console.log('Longueur de cardData.content:', cardData?.content?.length); // Afficher la longueur ici
+  
       // Exemple simple : considérer une chaîne supérieure à 50 caractères comme plus d'une ligne
-      if (cardData?.content?.length > 10) {
+      if (cardData?.content?.length > 24) {
         setIsSingleLine(false);
       } else {
         setIsSingleLine(true);
       }
     };
-    
+  
     checkContentLength();
-  }, [cardData]);
-
-  console.log(cardData.user)
+  }, [cardData?.content?.length]);
+  
+  
 
 
   return (
@@ -115,9 +117,9 @@ export default function CardHome({ cardData }) {
           </Box>
           {/* Image alignée à droite */}
           <Image
-           source={{
-            uri: profilePictureUrl
-        }}
+            source={{
+              uri: profilePictureUrl
+            }}
             alt={data[0]?.title || 'Carte'}
             width={35} // Ajustez la taille de l'image ici
             height={35} // Ajustez la taille de l'image ici
@@ -134,7 +136,7 @@ export default function CardHome({ cardData }) {
           alignItems="center" // Centre horizontalement les enfants
         >
           {/* Texte */}
-          <Text  onLayout={handleTextLayout} ellipsizeMode="tail" top="5" left="2" paddingBottom="5" width="95%" style={styles.h2}>
+          <Text onLayout={handleTextLayout} ellipsizeMode="tail" top="5" left="2" paddingBottom="5" width="95%" style={styles.h2}>
             {`"${cardData.content || 'Aucune description disponible.'}"`}
           </Text>
 
@@ -153,7 +155,7 @@ export default function CardHome({ cardData }) {
         {/* Section des statistiques */}
         <View style={[styles.statsContainer]}>
 
-          <Text  ml={4} style={[styles.caption, styles.ctalittle]} >
+          <Text ml={4} style={[styles.caption, styles.ctalittle]} >
             {cardData.label || 'Label indisponible'}
           </Text>
 
