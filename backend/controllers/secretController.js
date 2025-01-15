@@ -1,4 +1,5 @@
 const Secret = require('../models/Secret');
+const User = require('../models/User'); // Assurez-vous que le chemin est correct
 const mongoose = require('mongoose');
 
 
