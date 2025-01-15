@@ -1,75 +1,11 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Platform, VStack, Box, Text, Button, Pressable, Image, Input, HStack, FlatList } from 'native-base';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { TouchableOpacity, StyleSheet } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
-
-
-
-
-const SecretCard = ({ secret }) => {
-
-    const [isExpanded, setIsExpanded] = useState(false);
-    const { userData, userToken } = useContext(AuthContext);
-
-
-    const getTimeAgo = (createdAt) => {
-        const diffTime = Date.now() - new Date(createdAt);
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 0) return "Aujourd'hui";
-        if (diffDays === 1) return "Hier";
-        if (diffDays < 7) return `Il y a ${diffDays} jours`;
-        if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} semaine${Math.floor(diffDays / 7) > 1 ? 's' : ''}`;
-        if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
-        return `Il y a ${Math.floor(diffDays / 365)} an${Math.floor(diffDays / 365) > 1 ? 's' : ''}`;
-    };
-
-    return (
-<Box
-    width='100%'
-    borderRadius="md"
-    p={4}
-    mb={4}
-    backgroundColor="white"
-    style={styles.boxShadow}
-    overflow='hidden' // Ajout de overflow hidden
->
-    <HStack width='100%' justifyContent="space-between" space={2} flexWrap="wrap">
-        <Image
-            src={userData.profilePicture}
-            alt={`${userData?.name || 'User'}'s profile picture`}
-            width={35}
-            height={35}
-            borderRadius="full"
-        />
-        <VStack width='100%' space={2} flexGrow={1} flexShrink={1}>
-            <HStack space={2} justifyContent="space-between" flexWrap="wrap">
-                <Text style={styles.h5} flexShrink={1} >
-                    Posté par vous
-                </Text>
-                <Text color='#94A3B8' style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
-            </HStack>
-
-            
-            <Text style={styles.caption} flexShrink={1} >
-                    <Text style={styles.caption} color="#FF78B2">Secret : </Text>
-                    {secret.content}
-                </Text>
-       
-            <Text style={styles.h5}>Prix : {secret.price} €</Text>
-            <Text style={styles.h5} >{secret.label}</Text>
-        </VStack>
-    </HStack>
-</Box>
-
-    );
-};
-
+import SecretCard from '../components/SecretCard';
 
 
 export default function Profile({ navigation }) {
@@ -92,7 +28,7 @@ export default function Profile({ navigation }) {
                     <FlatList
                         width='100%'
                         overflow='unset'
-                        data={userSecrets}
+                        data={userSecrets.slice().reverse()}
                         renderItem={({ item }) => <SecretCard secret={item} />}
                         keyExtractor={item => item._id}
                         ListEmptyComponent={<Text>Aucun secret disponible.</Text>}
@@ -107,7 +43,7 @@ export default function Profile({ navigation }) {
     ];
 
     const truncateText = (text) => {
-        const maxLength = 100; // Ajustez selon vos besoins
+        const maxLength = 90; // Ajustez selon vos besoins
         return text.length > maxLength
             ? text.slice(0, maxLength) + '... '
             : text;
@@ -238,8 +174,7 @@ export default function Profile({ navigation }) {
                     </VStack>
 
                     <HStack
-                        borderBottomColor="#94A3B8"
-                        borderBottomWidth={2}
+
                         justifyContent="space-around">
                         {tabs.map((tab, index) => (
                             <Pressable
@@ -248,9 +183,10 @@ export default function Profile({ navigation }) {
                                 width='50%'
                                 key={index}
                                 onPress={() => setActiveTab(index)}
-                                borderBottomWidth={activeTab === index ? 2 : 0}
-                                borderBottomColor="#FF78B2"
+                                borderBottomWidth={activeTab === index ? 3 : 3}
+                                borderBottomColor={activeTab === index ? "#FF78B2" : "#94A3B8"}
                                 paddingBottom={2}
+                                opacity={activeTab === index ? 100 : 40}
                                 zIndex={activeTab === index ? 1 : 0}
                             >
                                 <Text style={styles.h5}>{tab.title}</Text>
@@ -270,26 +206,4 @@ export default function Profile({ navigation }) {
     );
 };
 
-const customStyles = StyleSheet.create({
 
-    container: {
-        display: 'flex',
-        flex: 1,
-        height: 'auto',
-        width: '100%',
-        justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
-        alignItems: 'start',
-        alignContent: 'start'
-    },
-
-
-    shadowBox: {
-        backgroundColor: 'white',
-        borderRadius: 10,
-        shadowColor: 'violet',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-        elevation: 5,
-    },
-});
