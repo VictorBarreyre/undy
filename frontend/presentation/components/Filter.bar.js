@@ -124,7 +124,7 @@ const FilterBar = ({ onFilterChange }) => {
               marginRight={3}
               variant='secondary'
               style={[
-                activeButton === 'Contacts'? styles.activeButton : styles.inactiveButton
+                activeButton === 'Contacts' ? styles.activeButton : styles.inactiveButton
               ]}
               onPress={() => handleButtonClick('Contacts')}
             >
@@ -134,7 +134,7 @@ const FilterBar = ({ onFilterChange }) => {
               marginRight={3}
               variant='secondary'
               style={[
-                activeButton === 'Suivis'? styles.activeButton : styles.inactiveButton
+                activeButton === 'Suivis' ? styles.activeButton : styles.inactiveButton
               ]}
               onPress={() => handleButtonClick('Suivis')}
             >
@@ -144,7 +144,7 @@ const FilterBar = ({ onFilterChange }) => {
               marginRight={8}
               variant="secondary"
               style={[
-                activeButton === 'Catégories'? styles.activeButton : styles.inactiveButton,
+                activeButton === 'Catégories' ? styles.activeButton : styles.inactiveButton,
                 { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' } // Assure l'alignement horizontal
               ]}
               onPress={() => setOverlayVisible(true)} // Ouvre la modale
@@ -169,7 +169,7 @@ const FilterBar = ({ onFilterChange }) => {
 
         {/* Modale : Recherche */}
         <Modal
-          animationType="fade"
+          animationType="swipe"
           transparent={true}
           visible={isSearchModalVisible}
           onRequestClose={closeSearchModal}
@@ -197,9 +197,10 @@ const FilterBar = ({ onFilterChange }) => {
                   <HStack
                     alignItems="center"
                     paddingX={4}
-                    paddingY={1}
+                    paddingY={2}
                     borderRadius="full"
                     backgroundColor="white"
+                    height='auto'
                     width="90%" // Limite la largeur à 90% de l'écran
                     maxWidth="100%" // Empêche tout dépassement
                   >
@@ -308,7 +309,7 @@ const FilterBar = ({ onFilterChange }) => {
 
         {/* Première modale : Préférences */}
         <Modal
-          animationType="fade"
+         animationType="swipe"
           transparent={true}
           visible={isOverlayVisible}
           onRequestClose={() => setOverlayVisible(false)}
@@ -345,22 +346,22 @@ const FilterBar = ({ onFilterChange }) => {
                       >
                         <Text style={styles.h5}>{label}</Text>
                         <Checkbox
-  value={label}
-  aria-label={label}
-  style={{
-    borderColor: selectedFilters.includes(label)
-      ? '#FF78B2' // Bordure pour les cases cochées
-      : 'rgba(148, 163, 184, 0.5)', // Bordure semi-transparente quand non cochée
-    borderWidth: 1,
-  }}
-  _checked={{
-    bg: '#FF78B2',
-    borderColor: '#FF78B2',
-    _icon: { color: 'white' },
-  }}
-  isChecked={selectedFilters.includes(label)}
-  onChange={() => handleCheckboxChange(label)}
-/>
+                          value={label}
+                          aria-label={label}
+                          style={{
+                            borderColor: selectedFilters.includes(label)
+                              ? '#FF78B2' // Bordure pour les cases cochées
+                              : 'rgba(148, 163, 184, 0.5)', // Bordure semi-transparente quand non cochée
+                            borderWidth: 1,
+                          }}
+                          _checked={{
+                            bg: '#FF78B2',
+                            borderColor: '#FF78B2',
+                            _icon: { color: 'white' },
+                          }}
+                          isChecked={selectedFilters.includes(label)}
+                          onChange={() => handleCheckboxChange(label)}
+                        />
                       </HStack>
                       <Divider opacity={30} bg="#94A3B8" />
                     </Box>

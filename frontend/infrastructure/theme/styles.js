@@ -139,7 +139,7 @@ export const styles = StyleSheet.create({
   },
   overlayContent: {
     width: '100%',
-    paddingTop: Platform.OS === 'ios' ? 25 : StatusBar.currentHeight + 10,
+    paddingTop: Platform.OS === 'ios' ? 22 : StatusBar.currentHeight + 10,
     paddingHorizontal: 25,
     flex: 1,
   },
