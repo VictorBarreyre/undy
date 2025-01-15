@@ -76,9 +76,11 @@ export default function CardHome({ cardData }) {
         setIsSingleLine(true);
       }
     };
-
+    
     checkContentLength();
   }, [cardData]);
+
+  console.log(cardData)
 
 
   return (
@@ -108,7 +110,7 @@ export default function CardHome({ cardData }) {
           </Box>
           {/* Image alignée à droite */}
           <Image
-            source={data[0]?.image} // Image du contexte
+             source={{ uri: cardData.user.profilePicture }} // Image du contexte
             alt={data[0]?.title || 'Carte'}
             width={35} // Ajustez la taille de l'image ici
             height={35} // Ajustez la taille de l'image ici

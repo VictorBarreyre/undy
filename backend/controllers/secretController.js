@@ -17,7 +17,19 @@ exports.createSecret = async (req, res) => {
             user: req.user.id, // ID de l'utilisateur connecté
         });
 
-        res.status(201).json(secret);
+        // Récupérer l'utilisateur associé
+        const user = await User.findById(req.user.id).select('profilePicture');
+
+        // Inclure la photo de profil de l'utilisateur dans la réponse
+        const secretWithUserPhoto = {
+            ...secret.toObject(),
+            user: {
+                _id: user._id,
+                profilePicture: user.profilePicture,
+            },
+        };
+
+        res.status(201).json(secretWithUserPhoto);
     } catch (error) {
         res.status(500).json({ message: 'Erreur serveur.' });
     }

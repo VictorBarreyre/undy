@@ -17,9 +17,6 @@ const FilterBar = ({ onFilterChange }) => {
   const [searchQuery, setSearchQuery] = useState(""); // État pour l'entrée de recherche
   const [filteredResults, setFilteredResults] = useState([]); // Résultats filtrés
 
-  const [isSingleLine, setIsSingleLine] = useState(true);
-  const [textHeight, setTextHeight] = useState(0);
-
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
   const labels = [...new Set(data.map((card) => card.label?.trim()).filter(Boolean))];
 
@@ -32,7 +29,7 @@ const FilterBar = ({ onFilterChange }) => {
     onFilterChange(updatedFilters); // Remonte les filtres au parent
   };
 
-  console.log(isSearchModalVisible, isInputFocused)
+  console.log(isSearchModalVisible, isInputFocused);
 
   const closeSearchModal = () => {
     setSearchModalVisible(false);
@@ -47,7 +44,6 @@ const FilterBar = ({ onFilterChange }) => {
     }
   };
 
-
   const getTimeAgo = (createdAt) => {
     const diffTime = Date.now() - new Date(createdAt);
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -59,7 +55,6 @@ const FilterBar = ({ onFilterChange }) => {
     if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
     return `Il y a ${Math.floor(diffDays / 365)} an${Math.floor(diffDays / 365) > 1 ? 's' : ''}`;
   };
-
 
   // Filtrer les données en fonction de l'entrée utilisateur
   useEffect(() => {
@@ -74,30 +69,13 @@ const FilterBar = ({ onFilterChange }) => {
       );
       setFilteredResults(results);
 
-
-    console.log("Requête de recherche:", searchQuery);
-    console.log("Résultats de la recherche:", results);
-    console.log("Données brutes:", data);
+      console.log("Requête de recherche:", searchQuery);
+      console.log("Résultats de la recherche:", results);
+      console.log("Données brutes:", data);
     }
-
   }, [searchQuery, data]);
 
-  const handleTextLayout = (event) => {
-    const { height } = event.nativeEvent.layout;
-    setTextHeight(height);
-    setIsSingleLine(height <= 14); // Ajustez cette valeur en fonction de votre police et de votre taille de texte
-  };
 
-  useEffect(() => {
-    const checkContentLength = () => {
-      if (filteredResults.length > 0) {
-        const firstItemContent = filteredResults[0].content;
-        setIsSingleLine(firstItemContent.length <= 14); // Ajustez cette valeur en fonction de votre police et de votre taille de texte
-      }
-    };
-
-    checkContentLength();
-  }, [filteredResults]);
 
   return (
     <Box width="100%" paddingX={5} paddingY={2}>
@@ -124,7 +102,6 @@ const FilterBar = ({ onFilterChange }) => {
           visible={isOverlayVisible}
           onRequestClose={() => setOverlayVisible(false)}
         >
-
           <BlurView
             style={[
               styles.blurBackground,
@@ -297,9 +274,7 @@ const FilterBar = ({ onFilterChange }) => {
                       onChangeText={setSearchQuery}
                     />
                   </HStack>
-
                 </HStack>
-
 
                 <Box width="100%">
                   {filteredResults.length > 0 ? (
@@ -323,34 +298,34 @@ const FilterBar = ({ onFilterChange }) => {
                             backgroundColor="white"
                           >
                             <HStack space={2} justifyContent="space-between" flexWrap="wrap" marginBottom={5}>
-                              <Text style={{ ...styles.h5, flexShrink: 1 }}>
-                                Posté par vous
+                              <Text style={{ ...styles.h5, color: "#FF78B2", flexShrink: 1 }}>
+                                Posté par {item.user.name}
                               </Text>
                               <Text style={{ ...styles.caption, color: '#94A3B8', fontSize: 14 }}>{getTimeAgo(item.createdAt)}</Text>
                             </HStack>
 
                             {/* Contenu du secret */}
-                            <Text
-                              style={{ ...styles.caption, fontSize: 16, flexShrink: 1 }}
+                            <Box position="relative" overflow="hidden">
+                              <Text
+                                style={{ ...styles.caption, flexShrink: 1 }}
+                              >
+                                {item.content}
+                              </Text>
+                              <BlurView
+                                style={{
+                                  position: 'absolute',
+                                  top: item.isSingleLine ? 0 : item.textHeight || 50, // Ajustez cette valeur en fonction de votre mise en page
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                                }}
+                                blurType="light"
+                                blurAmount={4}
+                                reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+                              />
+                            </Box>
 
-                            >
-                              <Text onLayout={handleTextLayout} style={{ ...styles.caption, color: "#FF78B2", fontSize: 16 }}>Secret : </Text>
-                              {item.content}
-                            </Text>
-                            <BlurView
-                              style={{
-                                position: 'absolute',
-                                top: isSingleLine ? 50 : 580, // Ajustez cette valeur en fonction de votre mise en page
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                              }}
-                              backgroundColor='rgba(255, 255, 255, 0.6)'
-                              blurType="light"
-                              blurAmount={4}
-                              reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
-                            />
                             {/* Informations supplémentaires (label et prix) */}
                             <HStack justifyContent="space-between" alignItems="center" marginTop={5}>
                               <Text style={{ ...styles.h5, fontSize: 16 }}>{item.label}</Text>
@@ -361,7 +336,6 @@ const FilterBar = ({ onFilterChange }) => {
                                   </Text>
                                 </HStack>
                               </Button>
-
                             </HStack>
                           </Box>
                         </Pressable>
@@ -373,10 +347,6 @@ const FilterBar = ({ onFilterChange }) => {
                     )
                   )}
                 </Box>
-
-
-
-
               </Box>
             </View>
           </BlurView>
