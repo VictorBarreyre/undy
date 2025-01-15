@@ -110,7 +110,9 @@ export default function CardHome({ cardData }) {
           </Box>
           {/* Image alignée à droite */}
           <Image
-             source={{ uri: cardData.user.profilePicture }} // Image du contexte
+            source={{
+              uri: cardData.user?.profilePicture || 'https://example.com/uploads/default-profile.png', // Image par défaut
+          }}
             alt={data[0]?.title || 'Carte'}
             width={35} // Ajustez la taille de l'image ici
             height={35} // Ajustez la taille de l'image ici

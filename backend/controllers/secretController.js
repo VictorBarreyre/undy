@@ -52,16 +52,16 @@ exports.getAllSecrets = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query; // Paramètres de pagination
         const secrets = await Secret.find()
-            .populate('user', 'name')
+            .populate('user', 'name profilePicture') // Inclure `name` et `profilePicture`
             .limit(limit * 1)
             .skip((page - 1) * limit)
             .exec();
         res.status(200).json(secrets);
     } catch (error) {
+        console.error('Erreur lors de la récupération des secrets:', error);
         res.status(500).json({ message: 'Erreur serveur.' });
     }
 };
-
 
 exports.purchaseSecret = async (req, res) => {
     try {
