@@ -65,7 +65,7 @@ const AddSecret = () => {
                 {/* Fermer le clavier en cliquant en dehors */}
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <Box flex={1} padding={5} paddingTop={1}>
-                      <VStack style={styles.container} space={6}> 
+                      <VStack style={styles.containerAddSecret} space={6}> 
                             <Text style={styles.h3}>
                                 Ajouter un Secret
                             </Text>

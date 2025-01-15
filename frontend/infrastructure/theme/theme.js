@@ -85,22 +85,20 @@ const lightTheme = extendTheme({
                 },
               },
               secondary: {
-                paddingTop: 1,
-                paddingBottom: 1,
-                paddingLeft: 4,
-                paddingRight: 4,
-                backgroundColor: 'transparent',
-                borderColor: '#F97794', // Border color for secondary button
-                borderWidth: 2,
+                paddingTop: 3,
+                paddingBottom: 3,
+                paddingLeft: 6,
+                paddingRight: 6,
+                backgroundColor: 'white',
                 _pressed: {
                   backgroundColor: 'rgba(249, 119, 148, 0.2)', // Lighter background when pressed
                 },
                 _text: {
                   fontWeight: 'Bold',
-                  fontSize: 14,  // Font size for secondary variant
+                  fontSize: 16,  // Font size for secondary variant
                   lineHeight: 22,
                   fontFamily: 'SF-Pro-Display-Bold',
-                  color: 'black',
+                  color: '#FF78B2',
               },
               },
             },

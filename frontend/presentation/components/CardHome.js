@@ -74,9 +74,7 @@ export default function CardHome({ cardData }) {
 
   useEffect(() => {
     const checkContentLength = () => {
-      console.log('Longueur de cardData.content:', cardData?.content?.length); // Afficher la longueur ici
-  
-      // Exemple simple : considérer une chaîne supérieure à 50 caractères comme plus d'une ligne
+        // Exemple simple : considérer une chaîne supérieure à 50 caractères comme plus d'une ligne
       if (cardData?.content?.length > 24) {
         setIsSingleLine(false);
       } else {

@@ -17,8 +17,55 @@ export const styles = StyleSheet.create({
     zIndex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+
     // Assure que le contenu est au-dessus du background
   },
+
+  containerAddSecret: {
+    flex: 1,
+    zIndex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  scrollContainer: {
+    flexDirection: 'row',
+    marginVertical: 10,
+    paddingLeft: 18
+  },
+  
+  searchButton: {
+    marginLeft:10,
+    marginRight: 10,
+    borderRadius: 50,
+    backgroundColor: 'transparent',
+    alignContent:'center',
+    alignItems:'center',
+    justifyContent:'center'
+  },
+  activeButton: {
+    backgroundColor: '#FF78B2', // Arrière-plan vert
+  },
+  activeText: {
+    fontWeight: 'Bold',
+    fontSize: 16,  // Font size for secondary variant
+    lineHeight: 22,
+    fontFamily: 'SF-Pro-Display-Bold',
+    color: 'white', // Texte blanc pour le bouton actif
+  },
+  inactiveText: {
+    fontWeight: 'Bold',
+    fontSize: 16,  // Font size for secondary variant
+    lineHeight: 22,
+    fontFamily: 'SF-Pro-Display-Bold',
+    color: 'gray', // Texte gris pour les autres boutons
+  },
+
+  iconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   containerLoader: {
     flex: 1,
     justifyContent: "center",

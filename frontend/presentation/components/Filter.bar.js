@@ -1,21 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Button, Icon, HStack, Input, Checkbox, Divider } from 'native-base';
+import { Box, Button, Icon, HStack, Input, Checkbox, Divider, VStack } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faSearch, faSlidersH, faTimes } from '@fortawesome/free-solid-svg-icons';
-import { Modal, Pressable, Text, View, FlatList } from 'react-native';
+import { Modal, Pressable, Text, View, FlatList, ScrollView } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { BlurView } from '@react-native-community/blur';
 import { styles } from '../../infrastructure/theme/styles';
 
 const FilterBar = ({ onFilterChange }) => {
   const { data } = useCardData();
-  const [isOverlayVisible, setOverlayVisible] = useState(false);
+  const [activeButton, setActiveButton] = useState('Tous'); // L'état pour suivre le bouton actif
   const [isSearchModalVisible, setSearchModalVisible] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [isInputFocused, setInputFocused] = useState(false); // Contrôle manuel du focus
   const inputRef = useRef(null); // Référence pour l'élément Input
   const [searchQuery, setSearchQuery] = useState(""); // État pour l'entrée de recherche
   const [filteredResults, setFilteredResults] = useState([]); // Résultats filtrés
+
+  // Fonction pour gérer le clic sur un bouton
+  const handleButtonClick = (buttonName) => {
+    setActiveButton(buttonName); // Mettre à jour l'état avec le nom du bouton cliqué
+  };
+
 
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
   const labels = [...new Set(data.map((card) => card.label?.trim()).filter(Boolean))];
@@ -78,142 +84,77 @@ const FilterBar = ({ onFilterChange }) => {
 
 
   return (
-    <Box width="100%" paddingX={5} paddingY={2}>
+    <Box width="100%"  paddingY={2}>
       <HStack space={1} alignItems="center" width="100%">
         {/* Bouton pour ouvrir le filtre */}
-        <Pressable
-          onPress={() => setOverlayVisible(true)} // Ouvre la modale
-          style={{
-            padding: 10, // Facultatif : pour augmenter la zone cliquable
-            borderRadius: 50, // Reproduit l'apparence arrondie du bouton
-            backgroundColor: 'transparent', // Maintient un fond transparent
-          }}
-        >
-          <Icon
-            as={<FontAwesomeIcon icon={faSlidersH} />}
-            size={18}
-            color="black"
-          />
-        </Pressable>
-        {/* Première modale : Préférences */}
-        <Modal
-          animationType="fade"
-          transparent={true}
-          visible={isOverlayVisible}
-          onRequestClose={() => setOverlayVisible(false)}
-        >
-          <BlurView
-            style={[
-              styles.blurBackground,
-              { backgroundColor: 'rgba(0, 0, 0, 0.1)' } // Fond noir transparent
-            ]}
-            blurType="light"
-            blurAmount={8}
-            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)" // Fallback pour Android
-          >
-            <View style={styles.overlayModal}>
-              <Box style={styles.overlayContent}>
-                <HStack paddingY={2} justifyContent="space-between" alignItems="center" width="100%">
-                  <Text style={styles.h3}>Préférences</Text>
-                  <Pressable
-                    style={styles.closeButton}
-                    onPress={() => setOverlayVisible(false)}
-                  >
-                    <FontAwesomeIcon icon={faTimes} size={24} color="black" />
-                  </Pressable>
-                </HStack>
-                <Box marginTop={6} width="100%">
-                  {labels.map((label, index) => (
-                    <Box key={`${label}-${index}`}>
-                      <HStack
-                        width="100%"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        paddingY={5}
-                      >
-                        <Text style={styles.h5}>{label}</Text>
-                        <Checkbox
-                          value={label}
-                          aria-label={label}
-                          style={{
-                            borderColor: selectedFilters.includes(label) ? '#94A3B8' : '#FF78B2',
-                            borderWidth: 1,
-                          }}
-                          _checked={{
-                            bg: '#FF78B2',
-                            borderColor: '#FF78B2',
-                            _icon: { color: 'white' },
-                          }}
-                          isChecked={selectedFilters.includes(label)}
-                          onChange={() => handleCheckboxChange(label)}
-                        />
-                      </HStack>
-                      <Divider opacity={30} bg="#94A3B8" />
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-            </View>
-          </BlurView>
-        </Modal>
-
-        {/* Barre de recherche */}
-        <Box
-          flex={1} // Prend tout l'espace disponible
-          borderRadius="full"
-          overflow="hidden"
-          shadow={2}
-          backgroundColor="white"
-          maxWidth="100%"
-          style={{
-            shadowColor: '#000',
-            shadowOffset: { width: -4, height: -4 }, // Décalage de l'ombre intérieure
-            shadowOpacity: 0.1,
-            shadowRadius: 6,
-            elevation: 2, // Ombre Android
-          }}
-        >
-          <HStack
-            alignItems="center"
-            paddingX={4}
-            paddingY={2}
-          >
-            {/* Icône */}
-            <Icon
-              as={<FontAwesomeIcon icon={faSearch} />}
-              size="5"
-              color="#94A3B8"
-            />
-            {/* Faux champ de saisie */}
+        <View style={styles.container}>
+          {/* Section pour le bouton de recherche et les boutons de filtrage */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollContainer}>
+            {/* Bouton de recherche */}
             <Pressable
-              flex={1}
               onPress={() => {
                 if (!isSearchModalVisible) {
                   openSearchModal(); // Ouvrir la modale
                 }
               }}
-              style={{
-                paddingVertical: 10,
-                paddingHorizontal: 12,
-                borderRadius: 4,
-                backgroundColor: 'transparent', // Transparent ou couleur d'arrière-plan
-              }}
+              style={styles.searchButton}
             >
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: '#94A3B8',
-                }}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                Rechercher un secret ou un utilisateur
-              </Text>
+              <View style={styles.iconContainer}>
+                <Icon
+                  as={<FontAwesomeIcon icon={faSearch} />}
+                  size={24}
+                  color="black"
+                />
+              </View>
             </Pressable>
-          </HStack>
-        </Box>
 
-        {/* Deuxième modale : Recherche */}
+            {/* Boutons de filtrage */}
+            <Button
+              marginRight={3}
+              variant='secondary'
+              style={[
+                activeButton === 'Tous' && styles.activeButton,
+              ]}
+              onPress={() => handleButtonClick('Tous')}
+            >
+              <Text style={activeButton === 'Tous' ? styles.activeText : styles.inactiveText}>Tous</Text>
+            </Button>
+            <Button
+              marginRight={3}
+              variant='secondary'
+              style={[
+                activeButton === 'Contacts' && styles.activeButton,
+              ]}
+              onPress={() => handleButtonClick('Contacts')}
+            >
+              <Text style={activeButton === 'Contacts' ? styles.activeText : styles.inactiveText}>Contacts</Text>
+            </Button>
+            <Button
+              marginRight={3}
+              variant='secondary'
+              style={[
+                activeButton === 'Abonnés' && styles.activeButton,
+              ]}
+              onPress={() => handleButtonClick('Abonnés')}
+            >
+              <Text style={activeButton === 'Abonnés' ? styles.activeText : styles.inactiveText}>Abonnés</Text>
+            </Button>
+            <Button
+              variant='secondary'
+              style={[
+                activeButton === 'Random' && styles.activeButton,
+              ]}
+              onPress={() => handleButtonClick('Random')}
+            >
+              <Text style={activeButton === 'Random' ? styles.activeText : styles.inactiveText}>Random</Text>
+            </Button>
+          </ScrollView>
+        </View>
+
+
+
+
+        {/* Modale : Recherche */}
         <Modal
           animationType="fade"
           transparent={true}
@@ -355,5 +296,7 @@ const FilterBar = ({ onFilterChange }) => {
     </Box>
   );
 };
+
+
 
 export default FilterBar;
