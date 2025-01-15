@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Platform, VStack, Box, Text, Button, Pressable, Image, Input, HStack, FlatList } from 'native-base';
+import { VStack, Box, Text, Pressable, Image, HStack, FlatList } from 'native-base';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
@@ -77,7 +77,6 @@ export default function Profile({ navigation }) {
 
         loadUserData();
     }, [userToken]);
-
 
 
 

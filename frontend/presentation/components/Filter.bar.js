@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Button, Icon, HStack, Input } from 'native-base';
+import { Box, Button, Icon, HStack, Input, Checkbox, Divider } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faSearch, faSlidersH, faTimes } from '@fortawesome/free-solid-svg-icons';
-import { Modal, Pressable, Text, View, FlatList, ScrollView,StyleSheet, SafeAreaView } from 'react-native';
+import { faSearch, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { Modal, Pressable, Text, View, FlatList, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { BlurView } from '@react-native-community/blur';
 import { styles } from '../../infrastructure/theme/styles';
@@ -16,11 +16,7 @@ const FilterBar = ({ onFilterChange }) => {
   const inputRef = useRef(null); // Référence pour l'élément Input
   const [searchQuery, setSearchQuery] = useState(""); // État pour l'entrée de recherche
   const [filteredResults, setFilteredResults] = useState([]); // Résultats filtrés
-
-  // Fonction pour gérer le clic sur un bouton
-  const handleButtonClick = (buttonName) => {
-    setActiveButton(buttonName); // Mettre à jour l'état avec le nom du bouton cliqué
-  };
+  const [isOverlayVisible, setOverlayVisible] = useState(false);
 
 
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
@@ -35,7 +31,13 @@ const FilterBar = ({ onFilterChange }) => {
     onFilterChange(updatedFilters); // Remonte les filtres au parent
   };
 
-  console.log(isSearchModalVisible, isInputFocused);
+  const handleButtonClick = (buttonName) => {
+    setActiveButton(buttonName);
+
+    if (buttonName === 'Catégories') {
+      setCategoriesModalVisible(true); // Affiche l'overlay pour les catégories
+    }
+  };
 
   const closeSearchModal = () => {
     setSearchModalVisible(false);
@@ -82,9 +84,8 @@ const FilterBar = ({ onFilterChange }) => {
   }, [searchQuery, data]);
 
 
-
   return (
-    <Box width="100%"  paddingY={2}>
+    <Box width="100%" paddingY={2}>
       <HStack space={1} alignItems="center" width="100%">
         {/* Bouton pour ouvrir le filtre */}
         <View style={styles.container}>
@@ -94,7 +95,7 @@ const FilterBar = ({ onFilterChange }) => {
             <Pressable
               onPress={() => {
                 if (!isSearchModalVisible) {
-                  openSearchModal(); // Ouvrir la modale
+                  openSearchModal();
                 }
               }}
               style={styles.searchButton}
@@ -102,12 +103,12 @@ const FilterBar = ({ onFilterChange }) => {
               <View style={styles.iconContainer}>
                 <Icon
                   as={<FontAwesomeIcon icon={faSearch} />}
-                  size={24}
+                  size={24} // Taille logique de l'icône
                   color="black"
+                  style={styles.icon} // Style dédié
                 />
               </View>
             </Pressable>
-
             {/* Boutons de filtrage */}
             <Button
               marginRight={3}
@@ -133,21 +134,23 @@ const FilterBar = ({ onFilterChange }) => {
               marginRight={3}
               variant='secondary'
               style={[
-                activeButton === 'Abonnés' && styles.activeButton,
+                activeButton === 'Suivis' && styles.activeButton,
               ]}
-              onPress={() => handleButtonClick('Abonnés')}
+              onPress={() => handleButtonClick('Suivis')}
             >
-              <Text style={activeButton === 'Abonnés' ? styles.activeText : styles.inactiveText}>Abonnés</Text>
+              <Text style={activeButton === 'Suivis' ? styles.activeText : styles.inactiveText}>Suivis</Text>
             </Button>
+
             <Button
               variant='secondary'
               style={[
-                activeButton === 'Random' && styles.activeButton,
+                activeButton === 'Catégories' && styles.activeButton,
               ]}
-              onPress={() => handleButtonClick('Random')}
-            >
-              <Text style={activeButton === 'Random' ? styles.activeText : styles.inactiveText}>Random</Text>
+              onPress={() => setOverlayVisible(true)} // Ouvre la modale
+              >
+              <Text style={activeButton === 'Catégories' ? styles.activeText : styles.inactiveText}>Catégories</Text>
             </Button>
+
           </ScrollView>
         </View>
 
@@ -168,7 +171,7 @@ const FilterBar = ({ onFilterChange }) => {
             blurAmount={8}
             reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)" // Fallback pour Android
           >
-         <SafeAreaView style={styles.overlayModal}>
+            <SafeAreaView style={styles.overlayModal}>
               <View style={styles.overlayContent}>
                 <HStack space={4} justifyContent="space-between" alignItems="center" width="100%" paddingRight={1} paddingBottom={4}>
                   <Pressable
@@ -256,7 +259,7 @@ const FilterBar = ({ onFilterChange }) => {
                                   left: 0,
                                   right: 0,
                                   bottom: 0,
-                                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
                                 }}
                                 blurType="light"
                                 blurAmount={4}
@@ -286,9 +289,73 @@ const FilterBar = ({ onFilterChange }) => {
                   )}
                 </Box>
               </View>
+            </SafeAreaView>
+          </BlurView>
+        </Modal>
+
+       {/* Première modale : Préférences */}
+       <Modal
+          animationType="fade"
+          transparent={true}
+          visible={isOverlayVisible}
+          onRequestClose={() => setOverlayVisible(false)}
+        >
+
+          <BlurView
+            style={[
+              styles.blurBackground,
+              { backgroundColor: 'rgba(0, 0, 0, 0.1)' } // Fond noir transparent
+            ]}
+            blurType="light"
+            blurAmount={8}
+            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)" // Fallback pour Android
+          >
+             <SafeAreaView style={styles.overlayModal}> 
+              <Box style={styles.overlayContent}>
+                <HStack paddingY={2} justifyContent="space-between" alignItems="center" width="100%">
+                  <Text style={styles.h3}>Préférences</Text>
+                  <Pressable
+                    style={styles.closeButton}
+                    onPress={() => setOverlayVisible(false)}
+                  >
+                    <FontAwesomeIcon icon={faTimes} size={24} color="black" />
+                  </Pressable>
+                </HStack>
+                <Box marginTop={6} width="100%">
+                  {labels.map((label, index) => (
+                    <Box key={`${label}-${index}`}>
+                      <HStack
+                        width="100%"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        paddingY={5}
+                      >
+                        <Text style={styles.h5}>{label}</Text>
+                        <Checkbox
+                          value={label}
+                          aria-label={label}
+                          style={{
+                            borderColor: selectedFilters.includes(label) ? '#94A3B8' : '#FF78B2',
+                            borderWidth: 1,
+                          }}
+                          _checked={{
+                            bg: '#FF78B2',
+                            borderColor: '#FF78B2',
+                            _icon: { color: 'white' },
+                          }}
+                          isChecked={selectedFilters.includes(label)}
+                          onChange={() => handleCheckboxChange(label)}
+                        />
+                      </HStack>
+                      <Divider opacity={30} bg="#94A3B8" />
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
               </SafeAreaView>
           </BlurView>
         </Modal>
+
       </HStack>
     </Box>
   );

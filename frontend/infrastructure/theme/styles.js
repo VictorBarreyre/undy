@@ -34,15 +34,6 @@ export const styles = StyleSheet.create({
     paddingLeft: 18
   },
   
-  searchButton: {
-    marginLeft:10,
-    marginRight: 10,
-    borderRadius: 50,
-    backgroundColor: 'transparent',
-    alignContent:'center',
-    alignItems:'center',
-    justifyContent:'center'
-  },
   activeButton: {
     backgroundColor: '#FF78B2', // Arrière-plan vert
   },
@@ -64,6 +55,23 @@ export const styles = StyleSheet.create({
   iconContainer: {
     justifyContent: 'center',
     alignItems: 'center',
+    transform: [{ scale: 1.5 }],
+  },
+
+  icon: {
+  
+    transform: [{ scale: 1.3 }],
+  },
+  
+  searchButton: {
+    marginLeft:20,
+    marginRight: 20,
+    borderRadius: 50,
+    backgroundColor: 'transparent',
+    alignContent:'center',
+    alignItems:'center',
+    justifyContent:'center',
+    
   },
 
   containerLoader: {
@@ -205,7 +213,6 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
     marginRight: 4, // Espacement entre les statistiques
   },
