@@ -10,30 +10,41 @@ exports.createSecret = async (req, res) => {
     }
 
     try {
+        // Création du secret
         const secret = await Secret.create({
             label,
             content,
             price,
-            user: req.user.id, // ID de l'utilisateur connecté
+            user: req.user.id,
         });
 
-        // Récupérer l'utilisateur associé
-        const user = await User.findById(req.user.id).select('profilePicture');
+        console.log('Secret créé :', secret);
 
-        // Inclure la photo de profil de l'utilisateur dans la réponse
+        // Récupérer l'utilisateur
+        const user = await User.findById(req.user.id).select('profilePicture');
+        if (!user) {
+            console.log("Utilisateur introuvable :", req.user.id);
+            return res.status(404).json({ message: "Utilisateur introuvable." });
+        }
+
+        console.log("Utilisateur trouvé :", user);
+
+        // Photo de profil avec valeur par défaut
         const secretWithUserPhoto = {
             ...secret.toObject(),
             user: {
                 _id: user._id,
-                profilePicture: user.profilePicture,
+                profilePicture: user.profilePicture || '/uploads/default-profile.png',
             },
         };
 
         res.status(201).json(secretWithUserPhoto);
     } catch (error) {
-        res.status(500).json({ message: 'Erreur serveur.' });
+        console.error('Erreur lors de la création du secret :', error);
+        res.status(500).json({ message: 'Erreur serveur.', details: error.message });
     }
 };
+
 
 
 exports.getAllSecrets = async (req, res) => {
