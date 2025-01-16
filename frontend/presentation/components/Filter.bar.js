@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Button, Icon, HStack, Input, Checkbox, Divider, Image, VStack } from 'native-base';
+import { Box, Button, Icon, HStack, Input, Checkbox, Divider, Image, VStack, Radio } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faSearch, faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { Modal, Pressable, Text, View, FlatList, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
@@ -19,6 +19,25 @@ const FilterBar = ({ onFilterChange }) => {
   const [searchQuery, setSearchQuery] = useState(""); // État pour l'entrée de recherche
   const [filteredResults, setFilteredResults] = useState([]); // Résultats filtrés
   const [isOverlayVisible, setOverlayVisible] = useState(false);
+  const [searchType, setSearchType] = useState('secrets'); // 'secrets' ou 'users'
+
+  const [activeTab, setActiveTab] = useState(0);
+
+
+  const tabs = [
+    {
+      title: 'Secrets',
+      content:
+        <Box flex={1} width="100%">
+
+        </Box>
+
+    },
+    {
+      title: 'Utilisateurs',
+      content: <Text>Contenu pour les secrets des autres.</Text>
+    }
+  ];
 
   const profilePictureUrl = data.user?.profilePicture
     ? `${DATABASE_URL}${data.user.profilePicture}`
@@ -96,6 +115,8 @@ const FilterBar = ({ onFilterChange }) => {
       console.log("Données brutes:", data);
     }
   }, [searchQuery, data]);
+
+
 
 
   return (
@@ -245,10 +266,34 @@ const FilterBar = ({ onFilterChange }) => {
                   </HStack>
                 </HStack>
 
+            {/* Tabs Première modale : Secrets ou Users */}
+                <HStack
+                  marginTop={4}
+                  justifyContent="space-around">
+                  {tabs.map((tab, index) => (
+                    <Pressable
+                      alignContent='center'
+                      alignItems='center'
+                      width='50%'
+                      key={index}
+                      onPress={() => setActiveTab(index)}
+                      borderBottomWidth={activeTab === index ? 3 : 1}
+                      borderBottomColor={activeTab === index ? "#FF78B2" : "#94A3B8"}
+                      paddingBottom={2}
+                      opacity={activeTab === index ? 100 : 40}
+                      zIndex={activeTab === index ? 1 : 0}
+                    >
+                      <Text style={styles.h5}>{tab.title}</Text>
+                    </Pressable>
+                  ))}
+                </HStack>
+
+
+       {/* Résultats de la recherche */}
                 <Box width="100%">
                   {filteredResults.length > 0 ? (
                     <FlatList
-                      marginTop={14}
+                      marginTop={20}
                       data={filteredResults}
                       keyExtractor={(item) => item._id}
                       renderItem={({ item }) => (
@@ -278,18 +323,16 @@ const FilterBar = ({ onFilterChange }) => {
                                 <Text style={{ ...styles.caption, color: '#94A3B8', fontSize: 14 }}>{getTimeAgo(item.createdAt)}</Text>
                               </HStack>
 
-
-                            
                               <HStack justifyContent='space-between' flex={1}>
-                              <HStack space={1} alignItems="center">
-                                <Text style={{ color: "#FF78B2", fontWeight: 'bold' }}>Secret :</Text>
-                                <Text style={{ ...styles.caption, flexShrink: 1 }}>
-                                  {truncateText(item.content, 20)}
-                                </Text>
+                                <HStack space={1} alignItems="center">
+                                  <Text style={{ color: "#FF78B2", fontWeight: 'bold' }}>Secret :</Text>
+                                  <Text style={{ ...styles.caption, flexShrink: 1 }}>
+                                    {truncateText(item.content, 20)}
+                                  </Text>
+                                </HStack>
+                                <Text style={{ ...styles.caption, color: '#94A3B8', fontSize: 14 }}>{item.label}</Text>
                               </HStack>
-                              <Text style={{ ...styles.caption, color: '#94A3B8', fontSize: 14 }}>{item.label}</Text>
-                              </HStack>
-                         
+
                             </VStack>
                           </HStack>
                           <Divider opacity={0.5} color='#FF78B2' my="4" />
@@ -306,6 +349,12 @@ const FilterBar = ({ onFilterChange }) => {
             </SafeAreaView>
           </BlurView>
         </Modal>
+
+
+
+
+
+
 
         {/* Première modale : Préférences */}
         <Modal

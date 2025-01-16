@@ -173,7 +173,6 @@ export default function Profile({ navigation }) {
                     </VStack>
 
                     <HStack
-
                         justifyContent="space-around">
                         {tabs.map((tab, index) => (
                             <Pressable
@@ -182,7 +181,7 @@ export default function Profile({ navigation }) {
                                 width='50%'
                                 key={index}
                                 onPress={() => setActiveTab(index)}
-                                borderBottomWidth={activeTab === index ? 3 : 3}
+                                borderBottomWidth={activeTab === index ? 3 : 1}
                                 borderBottomColor={activeTab === index ? "#FF78B2" : "#94A3B8"}
                                 paddingBottom={2}
                                 opacity={activeTab === index ? 100 : 40}
