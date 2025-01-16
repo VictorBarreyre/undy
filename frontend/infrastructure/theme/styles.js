@@ -41,7 +41,7 @@ export const styles = StyleSheet.create({
   scrollContainer: {
     flexDirection: 'row',
     marginVertical: 10,
-    paddingLeft: 18,
+    paddingLeft: 6,
     paddingRight: 200,
     width: '100%'
   },
@@ -49,7 +49,7 @@ export const styles = StyleSheet.create({
   activeButton: {
     backgroundColor: '#FF78B2',
     fontWeight: 'Bold',
-    fontSize: 14,  // Font size for secondary variant
+    fontSize: 12,  // Font size for secondary variant
     lineHeight: 22,
     fontFamily: 'SF-Pro-Display-Bold',
     color: '#FF78B2',
@@ -58,7 +58,7 @@ export const styles = StyleSheet.create({
   inactiveButton: {
     backgroundColor: 'white',
     fontWeight: 'Bold',
-    fontSize: 14,  // Font size for secondary variant
+    fontSize: 12,  // Font size for secondary variant
     lineHeight: 22,
     fontFamily: 'SF-Pro-Display-Bold',
     color: '#FF78B2',
@@ -66,14 +66,14 @@ export const styles = StyleSheet.create({
 
   activeText: {
     fontWeight: 'Bold',
-    fontSize: 16,  // Font size for secondary variant
+    fontSize: 14,  // Font size for secondary variant
     lineHeight: 22,
     fontFamily: 'SF-Pro-Display-Bold',
     color: 'white', // Texte blanc pour le bouton actif
   },
   inactiveText: {
     fontWeight: 'Bold',
-    fontSize: 16,  // Font size for secondary variant
+    fontSize: 14,  // Font size for secondary variant
     lineHeight: 22,
     fontFamily: 'SF-Pro-Display-Bold',
     color: '#94A3B8', // Texte gris pour les autres boutons
@@ -110,7 +110,7 @@ export const styles = StyleSheet.create({
   containerHome: {
     backgroundColor: 'transparent',
     flex: 1,
-    marginTop: 20,
+    marginTop: 1,
     paddingBottom: 45,
     paddingLeft: 20,
     paddingRight: 20,
@@ -264,8 +264,8 @@ export const styles = StyleSheet.create({
   h3: {
     fontSize: 24,
     lineHeight: 30,
-    fontWeight: '600',
-    fontFamily: 'SF-Pro-Display-Semibold',
+    fontWeight: '700',
+    fontFamily: 'SF-Pro-Display-Bold',
   },
   h4: {
     fontSize: 20,

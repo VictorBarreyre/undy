@@ -85,8 +85,8 @@ const lightTheme = extendTheme({
                 },
               },
               secondary: {
-                paddingTop: 3,
-                paddingBottom: 3,
+                paddingTop: 2,
+                paddingBottom: 2,
                 paddingLeft: 8,
                 paddingRight: 8,
                 backgroundColor: 'white',

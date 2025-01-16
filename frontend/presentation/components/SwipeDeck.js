@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   cardStyle: {
     width: SCREEN_WIDTH * 0.9,
     position: 'absolute',
-    height: SCREEN_HEIGHT * 0.5, // modifie la taille des cartes pour espace ac cta
+    height: SCREEN_HEIGHT * 0.45, // modifie la taille des cartes pour espace ac cta
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'white',
