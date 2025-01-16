@@ -24,10 +24,13 @@ export const styles = StyleSheet.create({
   containerFilter: {
     flex: 1,
     zIndex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 'auto',
-    margingRight: 200
+
+  },
+
+  scrollContainer: {
+    flexDirection: 'row',
+    marginVertical: 10,
+    paddingLeft: 6,
   },
 
   containerAddSecret: {
@@ -38,13 +41,6 @@ export const styles = StyleSheet.create({
     width: '100%'
   },
 
-  scrollContainer: {
-    flexDirection: 'row',
-    marginVertical: 10,
-    paddingLeft: 6,
-    paddingRight: 200,
-    width: '100%'
-  },
 
   activeButton: {
     backgroundColor: '#FF78B2',

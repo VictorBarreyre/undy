@@ -86,7 +86,7 @@ const FilterBar = ({ onFilterChange }) => {
 
   return (
     <Box width="100%" paddingY={2}>
-      <HStack space={1} alignItems="center" width="100%">
+      <HStack width='110%' space={1}>
         {/* Bouton pour ouvrir le filtre */}
         <View style={styles.containerFilter}>
           {/* Section pour le bouton de recherche et les boutons de filtrage */}
@@ -141,7 +141,7 @@ const FilterBar = ({ onFilterChange }) => {
               <Text style={activeButton === 'Suivis' ? styles.activeText : styles.inactiveText}>Suivis</Text>
             </Button>
             <Button
-              marginRight={8}
+              marginRight={16}
               variant="secondary"
               style={[
                 activeButton === 'Catégories' ? styles.activeButton : styles.inactiveButton,
