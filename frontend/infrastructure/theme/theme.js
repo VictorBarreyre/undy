@@ -87,15 +87,15 @@ const lightTheme = extendTheme({
               secondary: {
                 paddingTop: 3,
                 paddingBottom: 3,
-                paddingLeft: 6,
-                paddingRight: 6,
+                paddingLeft: 8,
+                paddingRight: 8,
                 backgroundColor: 'white',
                 _pressed: {
                   backgroundColor: 'rgba(249, 119, 148, 0.2)', // Lighter background when pressed
                 },
                 _text: {
                   fontWeight: 'Bold',
-                  fontSize: 16,  // Font size for secondary variant
+                  fontSize: 14,  // Font size for secondary variant
                   lineHeight: 22,
                   fontFamily: 'SF-Pro-Display-Bold',
                   color: '#FF78B2',

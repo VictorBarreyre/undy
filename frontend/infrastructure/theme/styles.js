@@ -21,13 +21,13 @@ export const styles = StyleSheet.create({
     // Assure que le contenu est au-dessus du background
   },
 
-  containerFilter:{
+  containerFilter: {
     flex: 1,
     zIndex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    width:'auto',
-    margingRight:200
+    width: 'auto',
+    margingRight: 200
   },
 
   containerAddSecret: {
@@ -35,24 +35,33 @@ export const styles = StyleSheet.create({
     zIndex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    width:'100%'
+    width: '100%'
   },
 
   scrollContainer: {
     flexDirection: 'row',
     marginVertical: 10,
     paddingLeft: 18,
-    paddingRight:200,
-        width:'100%'
-  },
-  
-  activeButton: {
-    backgroundColor: '#FF78B2', // Arrière-plan vert
-    borderWidth: 2, borderColor: '#FF78B2'
+    paddingRight: 200,
+    width: '100%'
   },
 
-  inactiveButton : {
-  borderWidth: 2,  borderColor: 'rgba(148, 163, 184, 0.3)'
+  activeButton: {
+    backgroundColor: '#FF78B2',
+    fontWeight: 'Bold',
+    fontSize: 14,  // Font size for secondary variant
+    lineHeight: 22,
+    fontFamily: 'SF-Pro-Display-Bold',
+    color: '#FF78B2',
+  },
+
+  inactiveButton: {
+    backgroundColor: 'white',
+    fontWeight: 'Bold',
+    fontSize: 14,  // Font size for secondary variant
+    lineHeight: 22,
+    fontFamily: 'SF-Pro-Display-Bold',
+    color: '#FF78B2',
   },
 
   activeText: {
@@ -77,19 +86,19 @@ export const styles = StyleSheet.create({
   },
 
   icon: {
-  
+
     transform: [{ scale: 1.3 }],
   },
-  
+
   searchButton: {
-    marginLeft:20,
+    marginLeft: 20,
     marginRight: 20,
     borderRadius: 50,
     backgroundColor: 'transparent',
-    alignContent:'center',
-    alignItems:'center',
-    justifyContent:'center',
-    
+    alignContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+
   },
 
   containerLoader: {
@@ -123,7 +132,7 @@ export const styles = StyleSheet.create({
     marginVertical: 10,
   },
 
-   blurBackground: {
+  blurBackground: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -150,7 +159,7 @@ export const styles = StyleSheet.create({
 
   checkbox: {
     marginBottom: 10,
-    width:'100%'
+    width: '100%'
   },
 
   boxShadow: {
@@ -199,12 +208,12 @@ export const styles = StyleSheet.create({
 
   resultItem: {
     paddingVertical: 15,
-   
+
   },
   resultContainer: {
     flexDirection: "column",
-    marginBottom:"20",
-    paddingBottom:20,
+    marginBottom: "20",
+    paddingBottom: 20,
   },
 
   content: {
