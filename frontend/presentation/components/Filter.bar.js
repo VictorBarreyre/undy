@@ -19,25 +19,7 @@ const FilterBar = ({ onFilterChange }) => {
   const [searchQuery, setSearchQuery] = useState(""); // État pour l'entrée de recherche
   const [filteredResults, setFilteredResults] = useState([]); // Résultats filtrés
   const [isOverlayVisible, setOverlayVisible] = useState(false);
-  const [searchType, setSearchType] = useState('secrets'); // 'secrets' ou 'users'
 
-  const [activeTab, setActiveTab] = useState(0);
-
-
-  const tabs = [
-    {
-      title: 'Secrets',
-      content:
-        <Box flex={1} width="100%">
-
-        </Box>
-
-    },
-    {
-      title: 'Utilisateurs',
-      content: <Text>Contenu pour les secrets des autres.</Text>
-    }
-  ];
 
   const profilePictureUrl = data.user?.profilePicture
     ? `${DATABASE_URL}${data.user.profilePicture}`
@@ -266,27 +248,6 @@ const FilterBar = ({ onFilterChange }) => {
                   </HStack>
                 </HStack>
 
-            {/* Tabs Première modale : Secrets ou Users */}
-                <HStack
-                  marginTop={4}
-                  justifyContent="space-around">
-                  {tabs.map((tab, index) => (
-                    <Pressable
-                      alignContent='center'
-                      alignItems='center'
-                      width='50%'
-                      key={index}
-                      onPress={() => setActiveTab(index)}
-                      borderBottomWidth={activeTab === index ? 3 : 1}
-                      borderBottomColor={activeTab === index ? "#FF78B2" : "#94A3B8"}
-                      paddingBottom={2}
-                      opacity={activeTab === index ? 100 : 40}
-                      zIndex={activeTab === index ? 1 : 0}
-                    >
-                      <Text style={styles.h5}>{tab.title}</Text>
-                    </Pressable>
-                  ))}
-                </HStack>
 
 
        {/* Résultats de la recherche */}
@@ -341,7 +302,7 @@ const FilterBar = ({ onFilterChange }) => {
                     />
                   ) : (
                     searchQuery.trim() !== "" && (
-                      <Text style={{ fontSize: 18 }}>Aucun résultat trouvé</Text>
+                      <Text style={{...styles.h4, marginTop:'20px'}}>Aucun résultat</Text>
                     )
                   )}
                 </Box>
