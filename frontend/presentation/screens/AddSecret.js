@@ -64,8 +64,8 @@ const AddSecret = () => {
             >
                 {/* Fermer le clavier en cliquant en dehors */}
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <Box flex={1} padding={5} paddingTop={1}>
-                      <VStack style={styles.containerAddSecret} space={6}> 
+                    <Box flex={1} paddingX={5} >
+                      <VStack style={styles.containerAddSecret} space={4}> 
                             <Text style={styles.h3}>
                                 Ajouter un Secret
                             </Text>
@@ -73,7 +73,7 @@ const AddSecret = () => {
                                 display="flex"
                                 width="100%"
                                 marginX="auto"
-                                height="75%"
+                                height="77%"
                                 borderRadius="lg"
                                 backgroundColor="white"
                                 marginTop={2}
@@ -182,11 +182,10 @@ const AddSecret = () => {
                                             />
                                         </Box>
                                     </HStack>
-
-
                                 </VStack>
                             </Box>
                             <Pressable
+                                marginTop={7}
                                 onPress={handlePress}
                                 disabled={!secretPostAvailable} // Désactive le bouton si l'état est faux
                                 style={({ pressed }) => [

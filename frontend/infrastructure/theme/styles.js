@@ -24,7 +24,6 @@ export const styles = StyleSheet.create({
   containerFilter: {
     flex: 1,
     zIndex: 1,
-
   },
 
   scrollContainer: {
@@ -36,7 +35,7 @@ export const styles = StyleSheet.create({
   containerAddSecret: {
     flex: 1,
     zIndex: 1,
-    justifyContent: 'center',
+    justifyContent: 'start',
     alignItems: 'center',
     width: '100%'
   },
@@ -203,7 +202,7 @@ export const styles = StyleSheet.create({
 
 
   resultItem: {
-    paddingVertical: 15,
+    paddingVertical: 1,
 
   },
   resultContainer: {

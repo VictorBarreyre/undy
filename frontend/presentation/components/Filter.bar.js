@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Button, Icon, HStack, Input, Checkbox, Divider } from 'native-base';
+import { Box, Button, Icon, HStack, Input, Checkbox, Divider, Image, VStack } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faSearch, faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { Modal, Pressable, Text, View, FlatList, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { BlurView } from '@react-native-community/blur';
 import { styles } from '../../infrastructure/theme/styles';
+import { DATABASE_URL } from '@env';
+import { Background } from '../../navigation/Background';
 
 const FilterBar = ({ onFilterChange }) => {
   const { data } = useCardData();
@@ -17,6 +19,11 @@ const FilterBar = ({ onFilterChange }) => {
   const [searchQuery, setSearchQuery] = useState(""); // État pour l'entrée de recherche
   const [filteredResults, setFilteredResults] = useState([]); // Résultats filtrés
   const [isOverlayVisible, setOverlayVisible] = useState(false);
+
+  const profilePictureUrl = data.user?.profilePicture
+    ? `${DATABASE_URL}${data.user.profilePicture}`
+    : `${DATABASE_URL}/uploads/default.png`;
+
 
 
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
@@ -62,6 +69,13 @@ const FilterBar = ({ onFilterChange }) => {
     if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} semaine${Math.floor(diffDays / 7) > 1 ? 's' : ''}`;
     if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
     return `Il y a ${Math.floor(diffDays / 365)} an${Math.floor(diffDays / 365) > 1 ? 's' : ''}`;
+  };
+
+  const truncateText = (text, maxLength) => {
+    if (text.length <= maxLength) {
+      return text;
+    }
+    return text.substring(0, maxLength) + '...';
   };
 
   // Filtrer les données en fonction de l'entrée utilisateur
@@ -178,7 +192,7 @@ const FilterBar = ({ onFilterChange }) => {
           <BlurView
             style={[
               styles.blurBackground,
-              { backgroundColor: 'rgba(0, 0, 0, 0.1)' } // Fond noir transparent
+              { backgroundColor: 'rgba(0, 0, 0, 0.2)' } // Fond noir transparent
             ]}
             blurType="light"
             blurAmount={8}
@@ -234,6 +248,7 @@ const FilterBar = ({ onFilterChange }) => {
                 <Box width="100%">
                   {filteredResults.length > 0 ? (
                     <FlatList
+                      marginTop={14}
                       data={filteredResults}
                       keyExtractor={(item) => item._id}
                       renderItem={({ item }) => (
@@ -244,55 +259,40 @@ const FilterBar = ({ onFilterChange }) => {
                             // Gérer la redirection ou l'action ici
                           }}
                         >
-                          <Box
-                            width='100%'
-                            borderRadius="md"
-                            paddingX={4}
-                            paddingY={6}
-                            mb={3}
-                            backgroundColor="white"
-                          >
-                            <HStack space={2} justifyContent="space-between" flexWrap="wrap" marginBottom={5}>
-                              <Text style={{ ...styles.h5, color: "#FF78B2", flexShrink: 1 }}>
-                                Posté par {item.user.name}
-                              </Text>
-                              <Text style={{ ...styles.caption, color: '#94A3B8', fontSize: 14 }}>{getTimeAgo(item.createdAt)}</Text>
-                            </HStack>
+                          <HStack alignContent='center' alignItems='center' space={4} width='100%'>
+                            <Image
+                              source={{
+                                uri: profilePictureUrl
+                              }}
+                              alt={data[0]?.title || 'Carte'}
+                              width={45} // Ajustez la taille de l'image ici
+                              height={45} // Ajustez la taille de l'image ici
+                              borderRadius="full" // Rendre l'image ronde
+                            />
 
-                            {/* Contenu du secret */}
-                            <Box position="relative" overflow="hidden">
-                              <Text
-                                style={{ ...styles.caption, flexShrink: 1 }}
-                              >
-                                {item.content}
-                              </Text>
-                              <BlurView
-                                style={{
-                                  position: 'absolute',
-                                  top: item.isSingleLine ? 0 : item.textHeight || 50, // Ajustez cette valeur en fonction de votre mise en page
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 0,
-                                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                }}
-                                blurType="light"
-                                blurAmount={4}
-                                reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
-                              />
-                            </Box>
+                            <VStack flex={1}>
+                              <HStack space={2} justifyContent="space-between" flexWrap="wrap" marginBottom={2}>
+                                <Text style={{ ...styles.h4, color: "#FF78B2", flexShrink: 1 }}>
+                                  {item.user.name}
+                                </Text>
+                                <Text style={{ ...styles.caption, color: '#94A3B8', fontSize: 14 }}>{getTimeAgo(item.createdAt)}</Text>
+                              </HStack>
 
-                            {/* Informations supplémentaires (label et prix) */}
-                            <HStack justifyContent="space-between" alignItems="center" marginTop={5}>
-                              <Text style={{ ...styles.h5, fontSize: 16 }}>{item.label}</Text>
-                              <Button paddingY={2.5} paddingRight={6} color='dark' width='auto'>
-                                <HStack alignItems="center" justifyContent="center" space={3}>
-                                  <Text style={{ ...styles.ctalittle, color: "white" }}>
-                                    Déverouiller pour {item.price} €
-                                  </Text>
-                                </HStack>
-                              </Button>
-                            </HStack>
-                          </Box>
+
+                            
+                              <HStack justifyContent='space-between' flex={1}>
+                              <HStack space={1} alignItems="center">
+                                <Text style={{ color: "#FF78B2", fontWeight: 'bold' }}>Secret :</Text>
+                                <Text style={{ ...styles.caption, flexShrink: 1 }}>
+                                  {truncateText(item.content, 20)}
+                                </Text>
+                              </HStack>
+                              <Text style={{ ...styles.caption, color: '#94A3B8', fontSize: 14 }}>{item.label}</Text>
+                              </HStack>
+                         
+                            </VStack>
+                          </HStack>
+                          <Divider opacity={0.5} color='#FF78B2' my="4" />
                         </Pressable>
                       )}
                     />
@@ -309,7 +309,7 @@ const FilterBar = ({ onFilterChange }) => {
 
         {/* Première modale : Préférences */}
         <Modal
-         animationType="swipe"
+          animationType="swipe"
           transparent={true}
           visible={isOverlayVisible}
           onRequestClose={() => setOverlayVisible(false)}
@@ -318,7 +318,7 @@ const FilterBar = ({ onFilterChange }) => {
           <BlurView
             style={[
               styles.blurBackground,
-              { backgroundColor: 'rgba(0, 0, 0, 0.1)' } // Fond noir transparent
+              { backgroundColor: 'rgba(0, 0, 0, 0.2)' } // Fond noir transparent
             ]}
             blurType="light"
             blurAmount={8}
