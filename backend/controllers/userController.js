@@ -1,4 +1,3 @@
-// controllers/userController.js
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -50,10 +49,6 @@ exports.registerUser = async (req, res) => {
     }
 };
 
-
-
-
-
 exports.loginUser = async (req, res) => {
     let { email, password } = req.body;
 
@@ -96,7 +91,6 @@ exports.loginUser = async (req, res) => {
     }
 };
 
-
 exports.getUserProfile = async (req, res) => {
     try {
         const user = req.user; // L'utilisateur authentifié est attaché à la requête par le middleware "protect"
@@ -114,7 +108,6 @@ exports.getUserProfile = async (req, res) => {
         res.status(500).json({ message: 'Erreur lors de la récupération du profil utilisateur' });
     }
 };
-
 
 exports.updateUserProfile = async (req, res) => {
     try {
@@ -167,4 +160,3 @@ exports.uploadProfilePicture = async (req, res) => {
         res.status(500).json({ message: 'Erreur lors de la mise à jour de la photo de profil.' });
     }
 };
-

@@ -96,7 +96,7 @@ export default function Profile({ navigation }) {
                         </Text>
 
                         {/* Icône Settings */}
-                        <Pressable onPress={() => console.log('Paramètres')}>
+                        <Pressable onPress={() => navigation.navigate('ProfilSettings')}>
                             <FontAwesome5 name="cog" size={26} color="black" solid={false} />
                         </Pressable>
                     </HStack>

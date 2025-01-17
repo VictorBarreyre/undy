@@ -1,9 +1,11 @@
 import React, { useState, useContext } from 'react';
-import { Platform, VStack, Box, Text, Button, Pressable, Modal, Input, HStack, Spinner } from 'native-base';
+import { Platform, VStack, Box, Text, Button, Pressable, Modal, Input, HStack, Spinner, Switch } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faUser, faEnvelope, faLock, faDollarSign, faBirthdayCake,faPhone, faBuildingColumns, faBell } from '@fortawesome/free-solid-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 
@@ -15,6 +17,13 @@ export default function Profile({ navigation }) {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [message, setMessage] = useState('');
     const [isSuccess, setIsSuccess] = useState(false);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(userData?.notifs || false);
+
+
+    const truncateText = (text, maxLength) => {
+        if (!text) return ''; // Gérer les cas où le texte est null ou undefined
+        return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+    };
 
     const openEditModal = (field, currentValue) => {
         setSelectedField(field);
@@ -36,6 +45,11 @@ export default function Profile({ navigation }) {
         setTempValue(currentDate.toISOString().split('T')[0]);
     };
 
+    const toggleNotifications = () => {
+        setNotificationsEnabled(!notificationsEnabled);
+        updateUserData({ ...userData, notifs: !notificationsEnabled });
+    };
+
     if (isLoadingUserData) {
         return (
             <Box flex={1} justifyContent="center" alignItems="center">
@@ -43,16 +57,92 @@ export default function Profile({ navigation }) {
             </Box>
         );
     }
-
-    console.log(userData)
+    const fieldMappings = {
+        name: { label: 'Nom', icon: faUser, truncateLength: 10 },
+        email: { label: 'Adresse e-mail', icon: faEnvelope, truncateLength: 10 },
+        password: { label: 'Mot de passe', icon: faLock, value: '*********' },
+        phoneNumber: {label: 'Numéro de téléphone', icon:faPhone, truncateLength: 10  },
+        birthdate: { label: 'Date de naissance', icon: faBirthdayCake, truncateLength: 10 },
+        income: { label: 'Vos revenus', icon: faDollarSign, truncateLength: 10 },
+        bank: { label: 'Compte bancaire', icon: faBuildingColumns, truncateLength: 10 },
+        notifs: { label: 'Mes notifications', icon: faBell, truncateLength: 10 },
+    };
 
     return (
         <Background>
-            <Box flex={1} padding={5} paddingTop={1}>
-                <VStack style={styles.container} space={6}>
-                    <Text fontSize="2xl" fontWeight="bold" color="black" textAlign="center">
-                        Mon Profil
-                    </Text>
+            <Box flex={1} justifyContent="flex-start" padding={5}>
+                <VStack space={6}>
+                    <HStack alignItems="center" justifyContent="space-between" width="100%">
+                        {/* Icône Back */}
+                        <Pressable onPress={() => navigation.navigate('ProfileMain')}>
+                            <FontAwesome name="chevron-left" size={18} color="black" />
+                        </Pressable>
+
+                        {/* Texte */}
+                        <Text style={styles.h3} width='auto' textAlign="center">
+                            Vos paramètres
+                        </Text>
+
+                        {/* Icône Settings */}
+                        <Pressable onPress={() => navigation.navigate('ProfilSettings')}>
+                            <FontAwesome5 name="cog" size={26} color="black" solid={false} />
+                        </Pressable>
+                    </HStack>
+                    <Box
+                        display="flex"
+                        width="100%"
+                        marginX="auto"
+                        height="auto"
+                        borderRadius="lg"
+                        backgroundColor="white"
+                        marginTop={2}
+                        padding={4}
+                        justifyContent="space-between"
+                        style={[styles.cardStyle, customStyles.shadowBox]}
+                    >
+                        <VStack backgroundColor="white">
+                            <Text style={styles.h5}>Général</Text>
+                        </VStack>
+
+
+                        <VStack justifyContent="space-between" space={2}>
+                            {Object.keys(fieldMappings).map((key) => {
+                                const field = fieldMappings[key];
+                                const value = key === 'password'
+                                    ? field.value
+                                    : userData?.[key] || 'Non renseigné'; // Priorité à une valeur spécifique (ex: password)
+
+                                return (
+                                    <Pressable key={key} onPress={key !== 'notifs' ? () => openEditModal(key, userData?.[key]) : undefined}>
+                                    <HStack
+                                        justifyContent="space-between"
+                                        py={5}
+                                        px={1}
+                                        borderBottomWidth={1}
+                                        borderColor="gray.200"
+                                        alignItems="center"
+                                        width="100%"
+                                    >
+                                        <HStack space={3} alignItems="center">
+                                            <FontAwesomeIcon icon={field.icon} style={{ fontSize: 18, color: 'black' }} />
+                                        </HStack>
+                                        <HStack flex={1} justifyContent="space-between" px={4}>
+                                            <Text style={[styles.h5]} isTruncated>{field.label}</Text>
+                                            <Text style={[styles.h5]} color="#94A3B8">
+                                                {key !== 'notifs' ? truncateText(value, field.truncateLength || 15) : (notificationsEnabled ? 'Activé' : 'Désactivé')}
+                                            </Text>
+                                        </HStack>
+                                        {key === 'notifs' ? (
+                                            <Switch isChecked={notificationsEnabled} onToggle={toggleNotifications} />
+                                        ) : (
+                                            <FontAwesome name="chevron-right" size={14} color="#94A3B8" />
+                                        )}
+                                    </HStack>
+                                </Pressable>
+                                );
+                            })}
+                        </VStack>
+                    </Box>
 
                     <Box
                         display="flex"
@@ -62,67 +152,18 @@ export default function Profile({ navigation }) {
                         borderRadius="lg"
                         backgroundColor="white"
                         marginTop={2}
-                        paddingTop={1}
-                        paddingBottom={4}
+                        py={4}
                         justifyContent="space-between"
                         style={[styles.cardStyle, customStyles.shadowBox]}
                     >
-
-
-                        <VStack backgroundColor="white" height={'100%'} justifyContent="space-between" padding={4} space={2}>
-                            <Pressable onPress={() => openEditModal('name', userData?.name)}>
-                                <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
-                                    <Box>
-                                        <Text fontSize="md" color="gray.500">Nom</Text>
-                                        <Text fontSize="lg" color="black">{userData?.name}</Text>
-                                    </Box>
-                                    <FontAwesome name="chevron-right" size={10} color="gray" />
-                                </HStack>
-                            </Pressable>
-
-                            <Pressable onPress={() => openEditModal('email', userData?.email)}>
-                                <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
-                                    <Box>
-                                        <Text fontSize="md" color="gray.500">Email</Text>
-                                        <Text fontSize="lg" color="black">{userData?.email}</Text>
-                                    </Box>
-                                    <FontAwesome name="chevron-right" size={10} color="gray" />
-                                </HStack>
-                            </Pressable>
-
-                            <Pressable onPress={() => openEditModal('birthdate', userData?.birthdate)}>
-                                <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
-                                    <Box>
-                                        <Text fontSize="md" color="gray.500">Date de naissance</Text>
-                                        <Text fontSize="lg" color="black">{userData?.birthdate || 'Non renseignée'}</Text>
-                                    </Box>
-                                    <FontAwesome name="chevron-right" size={10} color="gray" />
-                                </HStack>
-                            </Pressable>
-
-                            <Pressable onPress={() => openEditModal('phone', userData?.phone)}>
-                                <HStack justifyContent="space-between" py={3} px={4} borderBottomWidth={1} borderColor="gray.200" alignItems="center">
-                                    <Box>
-                                        <Text fontSize="md" color="gray.500">Numéro de téléphone</Text>
-                                        <Text fontSize="lg" color="black">{userData?.phone || 'Non renseigné'}</Text>
-                                    </Box>
-                                    <FontAwesome name="chevron-right" size={10} color="gray" />
-                                </HStack>
-                            </Pressable>
-
-                            {message ? (
-                                <Text color={isSuccess ? "green.500" : "red.500"} textAlign="center" mt={2}>
-                                    {message}
-                                </Text>
-                            ) : null}
-
-                            <Pressable onPress={logout}>
-                                <Text color="red.500" py={3} px={4} fontSize="md" textAlign="left" mt={5}>
-                                    Déconnexion
-                                </Text>
-                            </Pressable>
-                        </VStack>    
+                        {/* Déconnexion */}
+                        <Pressable onPress={logout}>
+                            <HStack justifyContent="start" px={4} >
+                                <Text style={styles.h5} color="red.500" fontSize="md">Déconnexion</Text>
+                            </HStack>
+                        </Pressable>
                     </Box>
+
                 </VStack>
 
 
@@ -187,7 +228,7 @@ const customStyles = StyleSheet.create({
         justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
         alignItems: 'start',
         alignContent: 'start'
-      },
+    },
 
 
     shadowBox: {

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect,useContext } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { DATABASE_URL } from '@env';
@@ -11,7 +11,6 @@ export const AuthProvider = ({ children }) => {
     const [userToken, setUserToken] = useState(null);
     const [userData, setUserData] = useState(null); // Stocke les données utilisateur
     const [isLoadingUserData, setIsLoadingUserData] = useState(false);
-
 
     useEffect(() => {
         const checkUserToken = async () => {
@@ -31,7 +30,6 @@ export const AuthProvider = ({ children }) => {
                 setIsLoadingUserData(false); // Assurez-vous que cet état est bien mis à jour
             }
         };
-    
         checkUserToken();
     }, []);
 
@@ -42,14 +40,13 @@ export const AuthProvider = ({ children }) => {
             const response = await axios.get(`${DATABASE_URL}/api/users/profile`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            setUserData({ ...response.data, token }); // Ajoutez le token à userData
+            setUserData(response.data); // Met à jour le state local avec les données de l'utilisateur
         } catch (error) {
             console.error('Error fetching user data:', error.response?.data || error.message);
         } finally {
             setIsLoadingUserData(false);
         }
     };
-    
 
     // Fonction pour mettre à jour les données utilisateur
     const updateUserData = async (updatedData) => {

@@ -7,6 +7,7 @@ import Home from '../presentation/screens/Home'; // Ajustez le chemin si nécess
 import Profile from '../presentation/screens/Profile'; // Ajustez le chemin si nécessaire
 import AddSecret from '../presentation/screens/AddSecret';
 import { AuthContext } from '../infrastructure/context/AuthContext'
+import ProfileStackNavigator from './ProfileStackNavigator';
 
 
 const Tab = createBottomTabNavigator();
@@ -67,7 +68,7 @@ const TabNavigator = () => {
 
             <Tab.Screen
                 name="Profile"
-                component={Profile}
+                component={ProfileStackNavigator}
                 options={{ headerShown: false }}
             />
         </Tab.Navigator>
