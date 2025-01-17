@@ -93,7 +93,7 @@ export default function Profile({ navigation }) {
                     <VStack space={6}>
                         <HStack alignItems="center" justifyContent="space-between" width="100%">
                             {/* Icône Back */}
-                            <Pressable onPress={() => navigation.navigate('ProfileMain')}>
+                            <Pressable width={26} onPress={() => navigation.navigate('ProfileMain')}>
                                 <FontAwesome name="chevron-left" size={18} color="black" />
                             </Pressable>
 
@@ -151,7 +151,7 @@ export default function Profile({ navigation }) {
                                                 </HStack>
                                                 <HStack flex={1} justifyContent="space-between" px={4}>
                                                     <Text style={[styles.h5]} isTruncated>{field.label}</Text>
-                                                    <Text style={[styles.h5]} color="#94A3B8">
+                                                    <Text style={[styles.caption]} color="#94A3B8">
                                                         {key === 'notifs'
                                                             ? (notificationsEnabled ? 'Activé' : 'Désactivé')
                                                             : key === 'contacts'
@@ -164,8 +164,8 @@ export default function Profile({ navigation }) {
                                                         isChecked={key === 'notifs' ? notificationsEnabled : contactsEnabled} // Utilise la bonne variable pour l'état
                                                         onToggle={key === 'notifs' ? toggleNotifications : toggleContacts} // Utilise la bonne fonction pour le toggle
                                                         style={{ transform: [{ scale: 0.7 }] }} // Ajustez la taille ici
-                                                        trackColor={{ false: "#E2E8F0", true: "#E2E8F0" }} // Couleur de la piste
-                                                        thumbColor={(key === 'notifs' ? notificationsEnabled : contactsEnabled) ? "#FFDB20" : "#FF78B2"} // Couleur du bouton
+                                                        trackColor={{ false: "#E2E8F0" , true: "#E2E8F0" }} // Couleur de la piste
+                                                        thumbColor={(key === 'notifs' ? notificationsEnabled : contactsEnabled) ? "#40D861" : "#FF78B2"} // Couleur du bouton
                                                     />
                                                 ) : (
                                                     <FontAwesome name="chevron-right" size={14} color="#94A3B8" />

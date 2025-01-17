@@ -35,6 +35,21 @@ const UserSchema = new mongoose.Schema({
         required: false, // Champ optionnel
         default: "/uploads/default.png",  // URL par défaut si aucune photo n'est fournie
     },
+    notifs: {
+        type: Boolean,
+        required: false, // Champ optionnel pour les notifications
+        default: true, // Par défaut, les notifications sont activées
+    },
+    contacts: {
+        type: Boolean,
+        required: false, // Champ optionnel pour les contacts
+        default: true, // Par défaut, les contacts sont activés
+    },
+    subscriptions: {
+        type: Number,
+        required: false, // Champ optionnel pour les abonnements
+        default: 0, // Par défaut, aucun abonnement
+    },
 }, { timestamps: true });
 
 // Avant de sauvegarder, hacher le mot de passe

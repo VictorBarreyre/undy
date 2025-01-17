@@ -10,7 +10,7 @@ const generateToken = (id) => {
 };
 
 exports.registerUser = async (req, res) => {
-    let { name, email, password, profilePicture } = req.body; // Inclure profilePicture
+    let { name, email, password, profilePicture, birthdate, phone, notifs, contacts, subscriptions } = req.body;
 
     console.log(req.body); // Vérifier les données reçues
 
@@ -28,12 +28,16 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Utilisateur déjà enregistré' });
         }
 
-        // Créer un nouvel utilisateur
         const user = await User.create({
             name,
             email,
             password,
-            profilePicture: profilePicture || undefined, // Utiliser la valeur par défaut si aucune photo n'est fournie
+            profilePicture: profilePicture || undefined,
+            birthdate,
+            phone,
+            notifs,
+            contacts,
+            subscriptions,
         });
 
         res.status(201).json({
@@ -99,9 +103,12 @@ exports.getUserProfile = async (req, res) => {
             _id: user._id,
             name: user.name,
             email: user.email,
-            profilePicture: user.profilePicture
-                ? `${baseUrl}${user.profilePicture}`
-                : null, // Ajoute l'URL de base si la photo existe
+            profilePicture: user.profilePicture ? `${baseUrl}${user.profilePicture}` : null,
+            birthdate: user.birthdate,
+            phone: user.phone,
+            notifs: user.notifs,
+            contacts: user.contacts,
+            subscriptions: user.subscriptions,
         });
     } catch (error) {
         console.error('Erreur lors de la récupération du profil utilisateur :', error);
@@ -118,17 +125,26 @@ exports.updateUserProfile = async (req, res) => {
         if (user) {
             user.name = req.body.name || user.name;
             user.email = req.body.email ? req.body.email.trim().toLowerCase() : user.email;
-            user.profilePicture = req.body.profilePicture || user.profilePicture; // Met à jour la photo de profil si fournie
+            user.profilePicture = req.body.profilePicture || user.profilePicture;
+            user.birthdate = req.body.birthdate || user.birthdate;
+            user.phone = req.body.phone || user.phone;
+            user.notifs = req.body.notifs !== undefined ? req.body.notifs : user.notifs;
+            user.contacts = req.body.contacts !== undefined ? req.body.contacts : user.contacts;
+            user.subscriptions = req.body.subscriptions !== undefined ? req.body.subscriptions : user.subscriptions;
 
-            // Sauvegarder les modifications dans la base de données
             const updatedUser = await user.save();
 
             res.json({
                 _id: updatedUser._id,
                 name: updatedUser.name,
                 email: updatedUser.email,
-                profilePicture: updatedUser.profilePicture, // Inclure la photo de profil dans la réponse
-                token: generateToken(updatedUser._id), // Renouveler le token si besoin
+                profilePicture: updatedUser.profilePicture,
+                birthdate: updatedUser.birthdate,
+                phone: updatedUser.phone,
+                notifs: updatedUser.notifs,
+                contacts: updatedUser.contacts,
+                subscriptions: updatedUser.subscriptions,
+                token: generateToken(updatedUser._id),
             });
         } else {
             res.status(404).json({ message: 'Utilisateur non trouvé' });

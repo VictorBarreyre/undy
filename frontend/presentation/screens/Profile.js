@@ -86,7 +86,7 @@ export default function Profile({ navigation }) {
                 <VStack space={6}>
                     <HStack alignItems="center" justifyContent="space-between" width="100%">
                         {/* Icône Back */}
-                        <Pressable onPress={() => console.log('Retour en arrière')}>
+                        <Pressable width={26} onPress={() => console.log('Retour en arrière')}>
                             <FontAwesome name="chevron-left" size={18} color="black" />
                         </Pressable>
 
@@ -101,43 +101,45 @@ export default function Profile({ navigation }) {
                         </Pressable>
                     </HStack>
 
-                    <HStack space={5} justifyContent='space-between' alignItems="center">
-                        <Image
-                            src={userData.profilePicture}
-                            alt={`${userData?.name || 'User'}'s profile picture`}
-                            width={75}
-                            height={75}
-                            borderRadius="full"
-                        />
+                    <HStack space={5} justifyContent="space-between" alignItems="center" width="100%">
+    {/* Profil */}
+    <Image
+        src={userData.profilePicture}
+        alt={`${userData?.name || 'User'}'s profile picture`}
+        width={75}
+        height={75}
+        borderRadius="full"
+    />
 
-                        <HStack space={5} paddingX='24px' justifyContent='space-between' alignItems="center" >
-                            <VStack justifyContent='space-between' alignItems="center">
-                                <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
-                                    {secretCount || 0}
-                                </Text>
-                                <Text style={styles.caption} textAlign="center">
-                                    Secrets
-                                </Text>
-                            </VStack>
-                            <VStack alignItems="center">
-                                <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
-                                    {0}
-                                </Text>
-                                <Text style={styles.caption} textAlign="center">
-                                    Abonnés
-                                </Text>
-                            </VStack>
-                            <VStack alignItems="center">
-                                <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
-                                    {0}
-                                </Text>
-                                <Text style={styles.caption} textAlign="center">
-                                    Abonnements
-                                </Text>
-                            </VStack>
-                        </HStack>
+    {/* Statistiques */}
+    <HStack flex={1} justifyContent="space-between" alignItems="center" flexWrap="wrap">
+        <VStack flex={1} alignItems="center" maxWidth="33%">
+            <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
+                {secretCount || 0}
+            </Text>
+            <Text style={styles.caption} textAlign="center">
+                Secrets
+            </Text>
+        </VStack>
+        <VStack flex={1} alignItems="center" maxWidth="33%">
+            <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
+                {0}
+            </Text>
+            <Text style={styles.caption} textAlign="center">
+                Abonnés
+            </Text>
+        </VStack>
+        <VStack flex={1} alignItems="center" maxWidth="33%">
+            <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
+                {0}
+            </Text>
+            <Text style={styles.caption} textAlign="center">
+                Abonnements
+            </Text>
+        </VStack>
+    </HStack>
+</HStack>
 
-                    </HStack>
 
 
                     <VStack space={2}>
