@@ -14,9 +14,6 @@ export default function CardHome({ cardData }) {
   const [textHeight, setTextHeight] = useState(0);
 
   const profilePictureUrl = cardData.user?.profilePicture
-    ? `${DATABASE_URL}${cardData.user.profilePicture}`
-    : `${DATABASE_URL}/uploads/default.png`;
-
 
 
   if (!data || data.length === 0) {

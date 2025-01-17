@@ -2,6 +2,8 @@ import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { DATABASE_URL } from '@env';
+import { correctProfilePictureUrl } from './utils'; // Importez la fonction utilitaire
+
 
 // Crée un contexte pour l'authentification
 export const AuthContext = createContext();
@@ -30,23 +32,31 @@ export const AuthProvider = ({ children }) => {
                 setIsLoadingUserData(false); // Assurez-vous que cet état est bien mis à jour
             }
         };
+
         checkUserToken();
     }, []);
 
-    // Fonction pour récupérer les données utilisateur depuis l'API
+
+
+     // Fonction pour récupérer les données utilisateur depuis l'API
     const fetchUserData = async (token) => {
         setIsLoadingUserData(true);
         try {
             const response = await axios.get(`${DATABASE_URL}/api/users/profile`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            setUserData(response.data); // Met à jour le state local avec les données de l'utilisateur
+            const correctedData = {
+                ...response.data,
+                profilePicture: correctProfilePictureUrl(response.data.profilePicture),
+            };
+            setUserData(correctedData); // Met à jour le state local avec les données de l'utilisateur
         } catch (error) {
             console.error('Error fetching user data:', error.response?.data || error.message);
         } finally {
             setIsLoadingUserData(false);
         }
     };
+
 
     // Fonction pour mettre à jour les données utilisateur
     const updateUserData = async (updatedData) => {
