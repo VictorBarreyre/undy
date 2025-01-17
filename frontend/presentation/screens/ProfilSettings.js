@@ -88,7 +88,6 @@ export default function Profile({ navigation }) {
     return (
         <Background>
             <ScrollView contentContainerStyle={customStyles.scrollViewContent}>
-
                 <Box flex={1} justifyContent="flex-start" padding={5}>
                     <VStack space={6}>
                         <HStack alignItems="center" justifyContent="space-between" width="100%">
@@ -248,7 +247,7 @@ export default function Profile({ navigation }) {
             </ScrollView>
 
             <Modal isOpen={modalVisible} onClose={() => setModalVisible(false)}>
-                <Modal.Content maxWidth="400px">
+                <Modal.Content width="90%" >
                     <Modal.CloseButton />
                     <Modal.Header>Modifier {selectedField === 'name' ? 'Nom' : selectedField === 'email' ? 'Email' : selectedField === 'birthdate' ? 'Date de naissance' : 'Numéro de téléphone'}</Modal.Header>
                     <Modal.Body>
