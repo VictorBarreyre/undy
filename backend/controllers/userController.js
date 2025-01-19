@@ -1,6 +1,9 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const path = require('path'); // Ajoutez cette ligne en haut du fichier
+
+
 
 // Générer un token JWT
 const generateToken = (id) => {
@@ -179,45 +182,67 @@ exports.uploadProfilePicture = async (req, res) => {
 
 
 
-// Nouvelle fonction pour télécharger les données de l'utilisateur
 exports.downloadUserData = async (req, res) => {
     try {
-        const user = req.user; // L'utilisateur authentifié est attaché à la requête par le middleware "protect"
-        const dataPath = path.join(__dirname, '..', 'data', `${user._id}.json`);
+        const userId = req.user.id;
+        // Récupérer les données de l'utilisateur depuis la base de données
+        const userData = await User.findById(userId)
+            .select('-password'); // Exclure le mot de passe des données
 
-        // Créer le fichier de données si il n'existe pas
-        if (!fs.existsSync(dataPath)) {
-            fs.writeFileSync(dataPath, JSON.stringify({}, null, 2));
+        if (!userData) {
+            return res.status(404).json({ message: "Utilisateur non trouvé" });
         }
 
-        // Lire les données de l'utilisateur
-        const data = fs.readFileSync(dataPath, 'utf8');
-        res.json(JSON.parse(data));
+        // Convertir les données en format JSON
+        const dataStr = JSON.stringify(userData, null, 2);
+
+        // Configuration de la réponse
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', 'attachment; filename=user_data.json');
+
+        // Envoyer les données
+        res.send(dataStr);
+
     } catch (error) {
-        console.error("Erreur lors du téléchargement des données de l'utilisateur :", error);
-        res.status(500).json({ message: "Erreur lors du téléchargement des données de l'utilisateur" });
+        console.error('Erreur dans downloadUserData:', error);
+        res.status(500).json({ message: "Erreur lors du téléchargement des données" });
     }
 };
 
 
-// Nouvelle fonction pour effacer les données de l'utilisateur
 exports.clearUserData = async (req, res) => {
     try {
-        const user = req.user; // L'utilisateur authentifié est attaché à la requête par le middleware "protect"
-        const dataPath = path.join(__dirname, '..', 'data', `${user._id}.json`);
+        const userId = req.user.id;
+        
+        // Trouver l'utilisateur et réinitialiser les données non essentielles
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            {
+                $set: {
+                    // Réinitialiser les champs que vous voulez effacer
+                    phoneNumber: '',
+                    birthdate: null,
+                    income: null,
+                    bank: '',
+                    notifs: false,
+                    contacts: false,
+                    abonnements: [],
+                    // Ne pas réinitialiser email et password
+                }
+            },
+            { new: true }
+        );
 
-        // Effacer les données de l'utilisateur
-        if (fs.existsSync(dataPath)) {
-            fs.writeFileSync(dataPath, JSON.stringify({}, null, 2));
+        if (!updatedUser) {
+            return res.status(404).json({ message: "Utilisateur non trouvé" });
         }
 
-        res.json({ message: 'Données de l\'utilisateur effacées avec succès.' });
+        res.json({ message: "Données utilisateur effacées avec succès" });
     } catch (error) {
-        console.error('Erreur lors de l\'effacement des données de l\'utilisateur :', error);
-        res.status(500).json({ message: 'Erreur lors de l\'effacement des données de l\'utilisateur' });
+        console.error('Erreur dans clearUserData:', error);
+        res.status(500).json({ message: "Erreur lors de l'effacement des données" });
     }
 };
-
 
 // Nouvelle fonction pour supprimer le compte de l'utilisateur
 exports.deleteUserAccount = async (req, res) => {
