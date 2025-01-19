@@ -10,7 +10,7 @@ import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 
 export default function Profile({ navigation }) {
-    const { userData, isLoadingUserData, updateUserData, logout } = useContext(AuthContext);
+    const { userData, isLoadingUserData,  updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount } = useContext(AuthContext);
     const [selectedField, setSelectedField] = useState(null);
     const [tempValue, setTempValue] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
@@ -20,6 +20,9 @@ export default function Profile({ navigation }) {
     const [notificationsEnabled, setNotificationsEnabled] = useState(userData?.notifs || false);
     const [contactsEnabled, setContactsEnabled] = useState(userData?.contacts || false);
     const [inputValue, setInputValue] = useState('')
+
+    const [isLoading, setIsLoading] = useState(false);
+
 
 
 
@@ -59,7 +62,50 @@ export default function Profile({ navigation }) {
     };
 
 
+    const handleDownloadUserData = async () => {
+        setIsLoading(true);
+        try {
+            await downloadUserData();
+            setMessage('Données téléchargées avec succès.');
+            setIsSuccess(true);
+        } catch (error) {
+            console.error('Erreur:', error);
+            setMessage('Erreur lors du téléchargement des données.');
+            setIsSuccess(false);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
+    const handleClearUserData = async () => {
+        setIsLoading(true);
+        try {
+            await clearUserData();
+            setMessage('Données effacées avec succès.');
+            setIsSuccess(true);
+        } catch (error) {
+            console.error('Erreur:', error);
+            setMessage('Erreur lors de l\'effacement des données.');
+            setIsSuccess(false);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleDeleteUserAccount = async () => {
+        setIsLoading(true);
+        try {
+            await deleteUserAccount();
+            setMessage('Compte supprimé avec succès.');
+            setIsSuccess(true);
+        } catch (error) {
+            console.error('Erreur:', error);
+            setMessage('Erreur lors de la suppression du compte.');
+            setIsSuccess(false);
+        } finally {
+            setIsLoading(false);
+        }
+    };
     if (isLoadingUserData) {
         return (
             <Box flex={1} justifyContent="center" alignItems="center">
@@ -81,8 +127,8 @@ export default function Profile({ navigation }) {
     };
 
     const accountFieldMapping = {
-        dwlnd: { label: 'Télécharger les données' },
-        erase: { label: 'Effacer les données' },
+        download: { label: 'Télécharger les données' },
+        clear: { label: 'Effacer les données' },
         delete: { label: 'Supprimer mon compte' },
     };
 
@@ -203,7 +249,21 @@ export default function Profile({ navigation }) {
                                     const isLast = index === Object.keys(accountFieldMapping).length - 1;
 
                                     return (
-                                        <Pressable key={key} onPress={() => handleAction(field.action)}>
+                                        <Pressable key={key} onPress={async () => {
+                                            try {
+                                                if (key === 'download') {
+                                                    await handleDownloadUserData();
+                                                }
+                                                else if (key === 'clear') {
+                                                    await handleClearUserData();
+                                                }
+                                                else if (key === 'delete') {
+                                                    await handleDeleteUserAccount();
+                                                }
+                                            } catch (error) {
+                                                console.error('Error:', error);
+                                            }
+                                        }}>
                                             <HStack
                                                 justifyContent="space-between"
                                                 paddingTop={4}

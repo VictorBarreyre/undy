@@ -88,6 +88,53 @@ export const AuthProvider = ({ children }) => {
         await AsyncStorage.removeItem('token');
     };
 
+    // Nouvelle fonction pour télécharger les données de l'utilisateur
+    const downloadUserData = async () => {
+        try {
+            const response = await axios.get(`${DATABASE_URL}/api/users/download`, {
+                headers: { Authorization: `Bearer ${userToken}` },
+            });
+            // Traitez les données téléchargées ici
+            console.log('Données téléchargées:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Erreur lors du téléchargement des données de l\'utilisateur :', error);
+            throw error;
+        }
+    };
+
+
+        // Nouvelle fonction pour effacer les données de l'utilisateur
+        const clearUserData = async () => {
+            try {
+                const response = await axios.delete(`${DATABASE_URL}/api/users/clear`, {
+                    headers: { Authorization: `Bearer ${userToken}` },
+                });
+                // Traitez la réponse ici
+                console.log('Données effacées:', response.data);
+                return response.data;
+            } catch (error) {
+                console.error('Erreur lors de l\'effacement des données de l\'utilisateur :', error);
+                throw error;
+            }
+        };
+    
+            // Nouvelle fonction pour supprimer le compte de l'utilisateur
+    const deleteUserAccount = async () => {
+        try {
+            const response = await axios.delete(`${DATABASE_URL}/api/users/delete`, {
+                headers: { Authorization: `Bearer ${userToken}` },
+            });
+            // Traitez la réponse ici
+            console.log('Compte supprimé:', response.data);
+            logout(); // Déconnectez l'utilisateur après la suppression du compte
+            return response.data;
+        } catch (error) {
+            console.error('Erreur lors de la suppression du compte de l\'utilisateur :', error);
+            throw error;
+        }
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -95,9 +142,13 @@ export const AuthProvider = ({ children }) => {
                 userToken,
                 userData,
                 isLoadingUserData,
+                setIsLoadingUserData,
                 login,
                 logout,
-                updateUserData, // Fournit une fonction pour mettre à jour le profil
+                updateUserData,
+                downloadUserData,
+                clearUserData,
+                deleteUserAccount // Fournit une fonction pour mettre à jour le profil
             }}
         >
             {children}

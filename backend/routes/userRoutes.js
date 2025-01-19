@@ -22,12 +22,12 @@ router.get('/profile', protect, getUserProfile); // Utilisation du middleware "p
 router.put('/profile-picture', protect, upload.single('profilePicture'), uploadProfilePicture);
 
 // Nouvelle route pour télécharger les données de l'utilisateur
-router.get('/api/users/download', downloadUserData);
+router.get('/download', downloadUserData);
 
 // Nouvelle route pour effacer les données de l'utilisateur
-router.delete('/api/users/clear', clearUserData);
+router.delete('/clear', clearUserData);
 
 // Nouvelle route pour supprimer le compte de l'utilisateur
-router.delete('/api/users/delete', deleteUserAccount);
+router.delete('/delete', deleteUserAccount);
 
 module.exports = router;
