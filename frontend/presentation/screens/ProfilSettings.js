@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
-import { Platform, VStack, Box, Text, Button, Pressable, Modal, Input, HStack, Spinner, Switch } from 'native-base';
+import { VStack, Box, Text, Button, Pressable, Modal, Input, HStack, Spinner, Switch } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -19,6 +19,7 @@ export default function Profile({ navigation }) {
     const [isSuccess, setIsSuccess] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(userData?.notifs || false);
     const [contactsEnabled, setContactsEnabled] = useState(userData?.contacts || false);
+    const [inputValue, setInputValue] = useState('')
 
 
 
@@ -163,7 +164,7 @@ export default function Profile({ navigation }) {
                                                         isChecked={key === 'notifs' ? notificationsEnabled : contactsEnabled} // Utilise la bonne variable pour l'état
                                                         onToggle={key === 'notifs' ? toggleNotifications : toggleContacts} // Utilise la bonne fonction pour le toggle
                                                         style={{ transform: [{ scale: 0.7 }] }} // Ajustez la taille ici
-                                                        trackColor={{ false: "#E2E8F0" , true: "#E2E8F0" }} // Couleur de la piste
+                                                        trackColor={{ false: "#E2E8F0", true: "#E2E8F0" }} // Couleur de la piste
                                                         thumbColor={(key === 'notifs' ? notificationsEnabled : contactsEnabled) ? "#40D861" : "#FF78B2"} // Couleur du bouton
                                                     />
                                                 ) : (
@@ -213,7 +214,7 @@ export default function Profile({ navigation }) {
                                                 alignItems="center"
                                                 width="100%"
                                             >
-                                               <Text style={[styles.h5, { textDecorationLine: 'underline' }]} >{field.label}</Text>
+                                                <Text style={[styles.h5, { textDecorationLine: 'underline' }]} >{field.label}</Text>
                                             </HStack>
                                         </Pressable>
                                     );
@@ -249,8 +250,11 @@ export default function Profile({ navigation }) {
             <Modal isOpen={modalVisible} onClose={() => setModalVisible(false)}>
                 <Modal.Content width="90%" >
                     <Modal.CloseButton />
-                    <Modal.Header>Modifier {selectedField === 'name' ? 'Nom' : selectedField === 'email' ? 'Email' : selectedField === 'birthdate' ? 'Date de naissance' : 'Numéro de téléphone'}</Modal.Header>
-                    <Modal.Body>
+                    <Modal.Header>
+                        <Text style={styles.h5} numberOfLines={1} ellipsizeMode="tail">
+                            Modifier votre {fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}
+                        </Text>
+                    </Modal.Header>                    <Modal.Body>
                         {selectedField === 'birthdate' ? (
                             Platform.OS === 'web' ? (
                                 <Input
@@ -278,10 +282,11 @@ export default function Profile({ navigation }) {
                             )
                         ) : (
                             <Input
-                                placeholder={`Nouveau ${selectedField}`}
-                                value={tempValue}
-                                onChangeText={(text) => setTempValue(text)}
-                            />
+                            placeholder={`Modifier votre ${fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}`}
+                            value={inputValue}
+                            onChangeText={(text) => setInputValue(text)}
+                            style={{ marginVertical: 10, fontSize: 16 }}
+                          />
                         )}
                     </Modal.Body>
                     <Modal.Footer>

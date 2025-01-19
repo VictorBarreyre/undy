@@ -9,11 +9,12 @@ import { styles } from '../../infrastructure/theme/styles';
 import { DATABASE_URL } from '@env';
 import { Background } from '../../navigation/Background';
 
-const FilterBar = ({ onFilterChange }) => {
+const FilterBar = ({ onFilterChange, onTypeChange }) => {
   const { data } = useCardData();
   const [activeButton, setActiveButton] = useState('Tous'); // L'état pour suivre le bouton actif
   const [isSearchModalVisible, setSearchModalVisible] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState([]);
+  const [selectedType, setSelectedType] = useState('Tous'); // Par défaut, "Tous"
   const [isInputFocused, setInputFocused] = useState(false); // Contrôle manuel du focus
   const inputRef = useRef(null); // Référence pour l'élément Input
   const [searchQuery, setSearchQuery] = useState(""); // État pour l'entrée de recherche
@@ -46,6 +47,12 @@ const FilterBar = ({ onFilterChange }) => {
       setCategoriesModalVisible(true); // Affiche l'overlay pour les catégories
     }
   };
+
+  const handleButtonClickType = (buttonName) => {
+    setActiveButton(buttonName);
+    onTypeChange(buttonName);// Remonte au parent (ajuste la fonction existante)
+};
+
 
   const closeSearchModal = () => {
     setSearchModalVisible(false);
@@ -133,7 +140,7 @@ const FilterBar = ({ onFilterChange }) => {
               style={[
                 activeButton === 'Tous' ? styles.activeButton : styles.inactiveButton
               ]}
-              onPress={() => handleButtonClick('Tous')}
+              onPress={() => handleButtonClickType('Tous')}
             >
               <Text style={activeButton === 'Tous' ? styles.activeText : styles.inactiveText}>Tous</Text>
             </Button>
@@ -143,7 +150,7 @@ const FilterBar = ({ onFilterChange }) => {
               style={[
                 activeButton === 'Contacts' ? styles.activeButton : styles.inactiveButton
               ]}
-              onPress={() => handleButtonClick('Contacts')}
+              onPress={() => handleButtonClickType('Contacts')}
             >
               <Text style={activeButton === 'Contacts' ? styles.activeText : styles.inactiveText}>Contacts</Text>
             </Button>
@@ -153,7 +160,7 @@ const FilterBar = ({ onFilterChange }) => {
               style={[
                 activeButton === 'Suivis' ? styles.activeButton : styles.inactiveButton
               ]}
-              onPress={() => handleButtonClick('Suivis')}
+              onPress={() => handleButtonClickType('Suivis')}
             >
               <Text style={activeButton === 'Suivis' ? styles.activeText : styles.inactiveText}>Suivis</Text>
             </Button>

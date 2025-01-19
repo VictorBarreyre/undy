@@ -176,3 +176,66 @@ exports.uploadProfilePicture = async (req, res) => {
         res.status(500).json({ message: 'Erreur lors de la mise à jour de la photo de profil.' });
     }
 };
+
+
+
+// Nouvelle fonction pour télécharger les données de l'utilisateur
+exports.downloadUserData = async (req, res) => {
+    try {
+        const user = req.user; // L'utilisateur authentifié est attaché à la requête par le middleware "protect"
+        const dataPath = path.join(__dirname, '..', 'data', `${user._id}.json`);
+
+        // Créer le fichier de données si il n'existe pas
+        if (!fs.existsSync(dataPath)) {
+            fs.writeFileSync(dataPath, JSON.stringify({}, null, 2));
+        }
+
+        // Lire les données de l'utilisateur
+        const data = fs.readFileSync(dataPath, 'utf8');
+        res.json(JSON.parse(data));
+    } catch (error) {
+        console.error("Erreur lors du téléchargement des données de l'utilisateur :", error);
+        res.status(500).json({ message: "Erreur lors du téléchargement des données de l'utilisateur" });
+    }
+};
+
+
+// Nouvelle fonction pour effacer les données de l'utilisateur
+exports.clearUserData = async (req, res) => {
+    try {
+        const user = req.user; // L'utilisateur authentifié est attaché à la requête par le middleware "protect"
+        const dataPath = path.join(__dirname, '..', 'data', `${user._id}.json`);
+
+        // Effacer les données de l'utilisateur
+        if (fs.existsSync(dataPath)) {
+            fs.writeFileSync(dataPath, JSON.stringify({}, null, 2));
+        }
+
+        res.json({ message: 'Données de l\'utilisateur effacées avec succès.' });
+    } catch (error) {
+        console.error('Erreur lors de l\'effacement des données de l\'utilisateur :', error);
+        res.status(500).json({ message: 'Erreur lors de l\'effacement des données de l\'utilisateur' });
+    }
+};
+
+
+// Nouvelle fonction pour supprimer le compte de l'utilisateur
+exports.deleteUserAccount = async (req, res) => {
+    try {
+        const user = req.user; // L'utilisateur authentifié est attaché à la requête par le middleware "protect"
+
+        // Supprimer le compte de l'utilisateur
+        await User.findByIdAndDelete(user._id);
+
+        // Supprimer les données de l'utilisateur
+        const dataPath = path.join(__dirname, '..', 'data', `${user._id}.json`);
+        if (fs.existsSync(dataPath)) {
+            fs.unlinkSync(dataPath);
+        }
+
+        res.json({ message: 'Compte de l\'utilisateur supprimé avec succès.' });
+    } catch (error) {
+        console.error('Erreur lors de la suppression du compte de l\'utilisateur :', error);
+        res.status(500).json({ message: 'Erreur lors de la suppression du compte de l\'utilisateur' });
+    }
+};
