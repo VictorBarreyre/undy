@@ -1,13 +1,17 @@
 import React, { useState, useContext } from 'react';
 import { VStack, Box, Text, Button, Pressable, Modal, Input, HStack, Spinner, Switch } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
+import { TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, Share } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUser, faEnvelope, faLock, faDollarSign, faBirthdayCake, faPhone, faBuildingColumns, faBell, faPerson, faUserGroup } from '@fortawesome/free-solid-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
+import Clipboard from '@react-native-clipboard/clipboard';
+
+
+
 
 export default function Profile({ navigation }) {
     const { userData, isLoadingUserData,  updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount } = useContext(AuthContext);
@@ -61,51 +65,95 @@ export default function Profile({ navigation }) {
         updateUserData({ ...userData, contacts: !contactsEnabled });
     };
 
-
     const handleDownloadUserData = async () => {
-        setIsLoading(true);
         try {
-            await downloadUserData();
-            setMessage('Données téléchargées avec succès.');
+            const response = await downloadUserData();
+            console.log('Données reçues:', response);
+            
+            // Utiliser la méthode setString de @react-native-clipboard/clipboard
+            Clipboard.setString(JSON.stringify(response, null, 2));
+            
+            Alert.alert(
+                "Succès",
+                "Les données ont été copiées dans votre presse-papier",
+                [{ text: "OK" }]
+            );
+            
+            setMessage('Données téléchargées avec succès');
             setIsSuccess(true);
         } catch (error) {
             console.error('Erreur:', error);
-            setMessage('Erreur lors du téléchargement des données.');
+            Alert.alert(
+                "Erreur",
+                "Une erreur est survenue lors du téléchargement des données",
+                [{ text: "OK" }]
+            );
             setIsSuccess(false);
-        } finally {
-            setIsLoading(false);
         }
     };
 
     const handleClearUserData = async () => {
-        setIsLoading(true);
-        try {
-            await clearUserData();
-            setMessage('Données effacées avec succès.');
-            setIsSuccess(true);
-        } catch (error) {
-            console.error('Erreur:', error);
-            setMessage('Erreur lors de l\'effacement des données.');
-            setIsSuccess(false);
-        } finally {
-            setIsLoading(false);
-        }
+        Alert.alert(
+            "Confirmation",
+            "Êtes-vous sûr de vouloir effacer vos données ?",
+            [
+                {
+                    text: "Annuler",
+                    style: "cancel"
+                },
+                {
+                    text: "Effacer",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await clearUserData();
+                            Alert.alert("Succès", "Vos données ont été effacées");
+                            setMessage('Données effacées avec succès');
+                            setIsSuccess(true);
+                        } catch (error) {
+                            console.error('Erreur:', error);
+                            Alert.alert("Erreur", "Une erreur est survenue");
+                            setIsSuccess(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+    
+    const handleDeleteUserAccount = async () => {
+        Alert.alert(
+            "Confirmation",
+            "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.",
+            [
+                {
+                    text: "Annuler",
+                    style: "cancel"
+                },
+                {
+                    text: "Supprimer",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await deleteUserAccount();
+                            Alert.alert("Succès", "Votre compte a été supprimé");
+                            setMessage('Compte supprimé avec succès');
+                            setIsSuccess(true);
+                            // Navigation vers l'écran de connexion ou autre
+                            navigation.navigate('Login');
+                        } catch (error) {
+                            console.error('Erreur:', error);
+                            Alert.alert("Erreur", "Une erreur est survenue");
+                            setIsSuccess(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
-    const handleDeleteUserAccount = async () => {
-        setIsLoading(true);
-        try {
-            await deleteUserAccount();
-            setMessage('Compte supprimé avec succès.');
-            setIsSuccess(true);
-        } catch (error) {
-            console.error('Erreur:', error);
-            setMessage('Erreur lors de la suppression du compte.');
-            setIsSuccess(false);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+
+
     if (isLoadingUserData) {
         return (
             <Box flex={1} justifyContent="center" alignItems="center">
