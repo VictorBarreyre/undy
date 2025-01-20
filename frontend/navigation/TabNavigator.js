@@ -4,10 +4,11 @@ import { Image } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUser, faHome, faPlus } from '@fortawesome/free-solid-svg-icons';
 import Home from '../presentation/screens/Home'; // Ajustez le chemin si nécessaire
-import Profile from '../presentation/screens/Profile'; // Ajustez le chemin si nécessaire
 import AddSecret from '../presentation/screens/AddSecret';
 import { AuthContext } from '../infrastructure/context/AuthContext'
-import ProfileStackNavigator from './ProfileStackNavigator';
+import ProfileStackNavigator from './StackNavigator/ProfileStackNavigator';
+import ProfilTiers from '../presentation/screens/ProfilTiers';
+import HomeStackNavigator from './StackNavigator/HomeStackNavigator';
 
 
 const Tab = createBottomTabNavigator();
@@ -57,7 +58,7 @@ const TabNavigator = () => {
         >
             <Tab.Screen
                 name="Home"
-                component={Home}
+                component={HomeStackNavigator}
                 options={{ headerShown: false }}
             />
             <Tab.Screen

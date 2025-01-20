@@ -7,7 +7,8 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { BlurView } from '@react-native-community/blur';
 import { styles } from '../../infrastructure/theme/styles';
 import { DATABASE_URL } from '@env';
-import { Background } from '../../navigation/Background';
+import { useNavigation } from "@react-navigation/native";
+
 
 const FilterBar = ({ onFilterChange, onTypeChange }) => {
   const { data } = useCardData();
@@ -26,6 +27,8 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
     ? `${DATABASE_URL}${data.user.profilePicture}`
     : `${DATABASE_URL}/uploads/default.png`;
 
+
+    const navigation = useNavigation();
 
 
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
@@ -51,7 +54,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   const handleButtonClickType = (buttonName) => {
     setActiveButton(buttonName);
     onTypeChange(buttonName);// Remonte au parent (ajuste la fonction existante)
-};
+  };
 
 
   const closeSearchModal = () => {
@@ -66,6 +69,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
       setInputFocused(true); // Marque l'Input comme actif
     }
   };
+
 
   const getTimeAgo = (createdAt) => {
     const diffTime = Date.now() - new Date(createdAt);
@@ -106,6 +110,17 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   }, [searchQuery, data]);
 
 
+  const handlePress = (item) => {
+    if (route.name !== "ProfilTiers") {
+      navigation.navigate("ProfilTiers", {
+        userId: item._id,
+        userName: item.name,
+        profilePicture: item.profilePictureUrl,
+      });
+    } else {
+      console.log("Vous êtes déjà sur la page ProfilTiers.");
+    }
+  };
 
 
   return (
@@ -257,7 +272,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
 
 
 
-       {/* Résultats de la recherche */}
+                {/* Résultats de la recherche */}
                 <Box width="100%">
                   {filteredResults.length > 0 ? (
                     <FlatList
@@ -273,16 +288,29 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
                           }}
                         >
                           <HStack alignContent='center' alignItems='center' space={4} width='100%'>
-                            <Image
-                              source={{
-                                uri: profilePictureUrl
+                            <Pressable
+                              style={styles.resultItem}
+                              onPress={() => {
+                                setSearchModalVisible(false);
+                                console.log("Résultat sélectionné :", item);
+                                // Naviguer vers ProfilTiers avec les données de l'utilisateur
+                                navigation.navigate("ProfilTiers", {
+                                  userId: item._id,
+                                  userName: item.name,
+                                  profilePicture: item.profilePictureUrl,
+                                });
                               }}
-                              alt={data[0]?.title || 'Carte'}
-                              width={45} // Ajustez la taille de l'image ici
-                              height={45} // Ajustez la taille de l'image ici
-                              borderRadius="full" // Rendre l'image ronde
-                            />
-
+                            >
+                              <Image
+                                source={{
+                                  uri: profilePictureUrl
+                                }}
+                                alt={data[0]?.title || 'Carte'}
+                                width={45} // Ajustez la taille de l'image ici
+                                height={45} // Ajustez la taille de l'image ici
+                                borderRadius="full" // Rendre l'image ronde
+                              />
+                            </Pressable>
                             <VStack flex={1}>
                               <HStack space={2} justifyContent="space-between" flexWrap="wrap" marginBottom={2}>
                                 <Text style={{ ...styles.h4, color: "#FF78B2", flexShrink: 1 }}>
@@ -309,7 +337,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
                     />
                   ) : (
                     searchQuery.trim() !== "" && (
-                      <Text style={{...styles.h4, marginTop:'20px'}}>Aucun résultat</Text>
+                      <Text style={{ ...styles.h4, marginTop: '20px' }}>Aucun résultat</Text>
                     )
                   )}
                 </Box>
