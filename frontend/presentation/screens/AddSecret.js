@@ -1,9 +1,9 @@
-import React, { useState, useContext,useEffect } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Background } from '../../navigation/Background'; // Assurez-vous que ce chemin est correct
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { Box, Text, HStack, VStack, Image, Select, Input, CheckIcon } from 'native-base';
-import { Alert, Pressable, Dimensions, StyleSheet, View, KeyboardAvoidingView, Keyboard, Platform, TouchableWithoutFeedback } from 'react-native';
+import { Alert, Pressable, Dimensions, StyleSheet, View, KeyboardAvoidingView, Keyboard, Platform, TouchableWithoutFeedback, FlatList } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
 import { FontAwesome } from '@expo/vector-icons'; // Assurez-vous que FontAwesome est disponible
 
@@ -34,7 +34,7 @@ const AddSecret = () => {
                 selectedLabel,
                 price,
                 authToken: userData.token, // Ajoutez le token de l'utilisateur
-                
+
             });
 
             // Réinitialiser les champs
@@ -48,12 +48,12 @@ const AddSecret = () => {
     };
 
 
-     // Surveille les changements dans les champs et met à jour l'état de `secretPostAvailable`
-     useEffect(() => {
+    // Surveille les changements dans les champs et met à jour l'état de `secretPostAvailable`
+    useEffect(() => {
         setSecretPostAvailable(
             secretText.trim().length > 0 && selectedLabel.trim().length > 0 && price.trim().length > 0
         );
-        console.log(secretText,selectedLabel, price)
+        console.log(secretText, selectedLabel, price)
     }, [secretText, selectedLabel, price]);
 
     return (
@@ -64,151 +64,159 @@ const AddSecret = () => {
             >
                 {/* Fermer le clavier en cliquant en dehors */}
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <Box flex={1} paddingX={5} >
-                      <VStack style={styles.containerAddSecret} space={4}> 
-                            <Text style={styles.h3}>
-                                Ajouter un Secret
-                            </Text>
+                    <FlatList
+                        contentContainerStyle={{ flexGrow: 1, paddingBottom: 118 }}
+                        keyboardShouldPersistTaps="handled"
+                        data={[]} // Pas de données à afficher, juste pour utiliser FlatList
+                        renderItem={null} // Pas de rendu d'éléments
+                        ListHeaderComponent={
                             <Box
-                                display="flex"
-                                width="100%"
-                                marginX="auto"
-                                height="77%"
-                                borderRadius="lg"
-                                backgroundColor="white"
-                                marginTop={2}
-                                paddingTop={1}
-                                paddingBottom={4}
-                                justifyContent="space-between"
-                                style={[styles.cardStyle, customStyles.shadowBox]}
-                            >
-                                {/* Contenu texte */}
-                                <VStack backgroundColor="white" height={'100%'} justifyContent="space-between" padding={4} space={2}>
-                                    <HStack alignItems="center" justifyContent="space-between" width="97%">
-                                        {/* Texte aligné à gauche */}
-                                        <Box flex={1} mr={4} ml={2} >
-                                            <Text left={2} style={styles.h5}>
-                                                Posté par {userData.name || 'Aucune description disponible.'}
-                                            </Text>
-                                        </Box>
-                                        <Image
-                                            src={userData.profilePicture}
-                                            alt={`${userData?.name || 'User'}'s profile picture`}
-                                            width={45} // Ajustez la taille de l'image ici
-                                            height={45} // Ajustez la taille de l'image ici
-                                            borderRadius="full" // Rendre l'image ronde
-                                        />
+                            flex={1}
+                            paddingX={5}
+                            style={{
+                              minHeight: Dimensions.get('window').height * 0.635, // Remplit la hauteur de l'écran
+                            }}
+                          >
+                                <VStack style={styles.containerAddSecret} space={4}>
+                                    <Text style={styles.h3}>
+                                        Ajouter un Secret
+                                    </Text>
+                                    <Box
+                                        display="flex"
+                                        width="100%"
+                                        marginX="auto"
+                                        minHeight="70%"
+                                        borderRadius="lg"
+                                        backgroundColor="white"
+                                        marginTop={2}
+                                        paddingTop={1}
+                                        paddingBottom={4}
+                                        justifyContent="space-between"
+                                        style={customStyles.shadowBox}
+                                    >
+                                        <VStack backgroundColor="white" height={'100%'} justifyContent="space-between" padding={4} space={2}>
+                                            <HStack alignItems="center" justifyContent="space-between" width="97%">
+                                                <Box flex={1} mr={4} ml={2}>
+                                                    <Text left={2} style={styles.h5}>
+                                                        Posté par {userData.name || 'Aucune description disponible.'}
+                                                    </Text>
+                                                </Box>
+                                                <Image
+                                                    src={userData.profilePicture}
+                                                    alt={`${userData?.name || 'User'}'s profile picture`}
+                                                    width={45}
+                                                    height={45}
+                                                    borderRadius="full"
+                                                />
+                                            </HStack>
 
-                                    </HStack>
+                                            <Box ml={2} width="95%">
+                                                <Input
+                                                    value={secretText}
+                                                    onChangeText={(text) => setSecretText(text)}
+                                                    placeholder="Tapez ici votre secret..."
+                                                    backgroundColor="transparent"
+                                                    borderRadius="md"
+                                                    fontSize="md"
+                                                    p={2}
+                                                    multiline
+                                                    _input={{
+                                                        fontSize: 20,
+                                                        lineHeight: 22,
+                                                        fontWeight: '600',
+                                                        fontFamily: 'SF-Pro-Display-Semibold',
+                                                        placeholderTextColor: '#94A3B8'
+                                                    }}
+                                                />
+                                            </Box>
 
-                                    <Box ml={2} width="95%" >
-                                        <Input
-                                            value={secretText}
-                                            onChangeText={(text) => setSecretText(text)}
-                                            placeholder="Tapez ici votre secret..."
-                                            backgroundColor="transparent"
-                                            borderRadius="md"
-                                            fontSize="md"
-                                            p={2}
-                                            multiline
-                                            _input={{
-                                                fontSize: 20,
-                                                lineHeight: 22,
-                                                fontWeight: '600',
-                                                fontFamily: 'SF-Pro-Display-Semibold',
-                                                placeholderTextColor: '#94A3B8'
-                                            }}
-                                        />
+                                            <HStack mt={6} alignItems="center" justifyContent="space-between" alignContent='center' width="100%">
+                                                <Box ml={2} mt={6} width="55%" flexShrink={1}>
+                                                    <Text left={2} style={styles.ctalittle}>
+                                                        Catégorie
+                                                    </Text>
+                                                    <Select
+                                                        width="10%"
+                                                        padding={2}
+                                                        selectedValue={selectedLabel}
+                                                        accessibilityLabel="Choisissez la catégorie"
+                                                        placeholder="Choisissez la catégorie"
+                                                        _placeholder={{
+                                                            color: "#94A3B8",
+                                                        }}
+                                                        _customDropdownIconProps={{
+                                                            display: 'none'
+                                                        }}
+                                                        _selectedItem={{
+                                                            endIcon: (
+                                                                <Box style={{ padding: 2 }}>
+                                                                    <FontAwesome name="check" size={16} color="#94A3B8" />
+                                                                </Box>
+                                                            )
+                                                        }}
+                                                        mt={1}
+                                                        onValueChange={(value) => setSelectedLabel(value)}
+                                                    >
+                                                        {labels.map((label, index) => (
+                                                            <Select.Item key={index} label={label} value={label} />
+                                                        ))}
+                                                    </Select>
+                                                </Box>
 
+                                                <Box justifyContent="center" alignContent='center' alignItems='center' mt={6} width="55%" flexShrink={1}>
+                                                    <Text style={styles.ctalittle}>
+                                                        Son prix
+                                                    </Text>
+                                                    <Input
+                                                        value={price}
+                                                        padding={2}
+                                                        ml={1}
+                                                        onChangeText={(text) => setPrice(text)}
+                                                        placeholder="Prix (€)"
+                                                        backgroundColor="transparent"
+                                                        borderRadius="md"
+                                                        keyboardType="numeric"
+                                                        textAlign="center"
+                                                        _input={{
+                                                            fontSize: 14,
+                                                            lineHeight: 18,
+                                                            fontWeight: '500',
+                                                            fontFamily: 'SF-Pro-Display-Medium',
+                                                            placeholderTextColor: '#94A3B8',
+                                                            width: '55%'
+                                                        }}
+                                                    />
+                                                </Box>
+                                            </HStack>
+                                        </VStack>
                                     </Box>
-
-                                    <HStack mt={6} alignItems="center" justifyContent="space-between" alignContent='center' width="100%">
-                                        {/* Section des categ et prix */}
-                                        <Box ml={2} mt={6} width="55%">
-                                            <Text left={2} style={styles.ctalittle} >
-                                                Catégorie
+                                    <Pressable
+                                        marginTop={7}
+                                        onPress={handlePress}
+                                        disabled={!secretPostAvailable} // Désactive le bouton si l'état est faux
+                                        style={({ pressed }) => [
+                                            {
+                                                backgroundColor: secretPostAvailable
+                                                    ? pressed
+                                                        ? 'gray.800'
+                                                        : 'black'
+                                                    : 'gray',
+                                                transform: pressed && secretPostAvailable ? [{ scale: 0.96 }] : [{ scale: 1 }],
+                                                borderRadius: 20,
+                                            },
+                                            { width: '100%', alignSelf: 'center', padding: 18, borderRadius: 30 },
+                                        ]}
+                                    >
+                                        <HStack alignItems="center" justifyContent="center" space={2}>
+                                            <Text fontSize="md" color="white" fontWeight="bold">
+                                                {!secretPostAvailable ? "Il manque des infos sur votre secret" : "Poster le secret"}
                                             </Text>
-                                            <Select
-                                                width="10%"
-                                                padding={2}
-                                                selectedValue={selectedLabel}
-                                                accessibilityLabel="Choisissez la catégorie"
-                                                placeholder="Choisissez la catégorie"
-                                                _placeholder={{
-                                                    color: "#94A3B8",
-                                                }}
-                                                _customDropdownIconProps={{
-                                                    display:'none'
-                                                }}
-                                                _selectedItem={{
-                                                    endIcon: (
-                                                        <Box style={{ padding: 2 }}>
-                                                            <FontAwesome name="check" size={16} color="#94A3B8" />
-                                                        </Box>
-                                                    )
-                                                }}
-                                                mt={1}
-                                                onValueChange={(value) => setSelectedLabel(value)}
-                                            >
-                                                {labels.map((label, index) => (
-                                                    <Select.Item key={index} label={label} value={label} />
-                                                ))}
-                                            </Select>
-                                        </Box>
-
-                                        {/* Champ pour définir le prix */}
-                                        <Box justifyContent="center" alignContent='center' alignItems='center' mt={6} width="55%">
-                                            <Text style={styles.ctalittle} >
-                                                Son prix
-                                            </Text>
-                                            <Input
-                                                value={price}
-                                                padding={2}
-                                                ml={1}
-                                                onChangeText={(text) => setPrice(text)}
-                                                placeholder="Prix (€)"
-                                                backgroundColor="transparent"
-                                                borderRadius="md"
-                                                keyboardType="numeric" // Affiche un clavier numérique
-                                                textAlign="center"
-                                                _input={{
-                                                    fontSize: 14,
-                                                    lineHeight: 18,
-                                                    fontWeight: '500',
-                                                    fontFamily: 'SF-Pro-Display-Medium',
-                                                    placeholderTextColor: '#94A3B8',
-                                                    width: '100%' // Ajustez cette valeur selon vos besoins
-                                                }}
-                                            />
-                                        </Box>
-                                    </HStack>
+                                        </HStack>
+                                    </Pressable>
                                 </VStack>
                             </Box>
-                            <Pressable
-                                marginTop={7}
-                                onPress={handlePress}
-                                disabled={!secretPostAvailable} // Désactive le bouton si l'état est faux
-                                style={({ pressed }) => [
-                                    {
-                                        backgroundColor: secretPostAvailable
-                                            ? pressed
-                                                ? 'gray.800'
-                                                : 'black'
-                                            : 'gray',
-                                        transform: pressed && secretPostAvailable ? [{ scale: 0.96 }] : [{ scale: 1 }],
-                                        borderRadius: 20,
-                                    },
-                                    { width: '100%', alignSelf: 'center',  padding: 18, borderRadius: 30 },
-                                ]}
-                            >
-                                <HStack alignItems="center" justifyContent="center" space={2}>    
-                                    <Text fontSize="md" color="white" fontWeight="bold">
-                                    { !secretPostAvailable ? "Il manque des infos sur votre secret" : "Poster le secret" }
-                                    </Text>
-                                </HStack>
-                            </Pressable>
-                        </VStack>
-                    </Box>
+                        }
+                    />
                 </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
 
@@ -225,7 +233,7 @@ const customStyles = StyleSheet.create({
         width: '100%',
         justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
         alignItems: 'center',
-      },
+    },
 
     shadowBox: {
         shadowColor: 'violet',
