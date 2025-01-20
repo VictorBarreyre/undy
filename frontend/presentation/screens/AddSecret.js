@@ -65,7 +65,7 @@ const AddSecret = () => {
                 {/* Fermer le clavier en cliquant en dehors */}
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <FlatList
-                        contentContainerStyle={{ flexGrow: 1, paddingBottom: 118 }}
+                        contentContainerStyle={{ flexGrow: 1, paddingBottom: 118, marginBottom:200 }}
                         keyboardShouldPersistTaps="handled"
                         data={[]} // Pas de données à afficher, juste pour utiliser FlatList
                         renderItem={null} // Pas de rendu d'éléments
@@ -73,6 +73,7 @@ const AddSecret = () => {
                             <Box
                             flex={1}
                             paddingX={5}
+                            marginBottom={10}
                             style={{
                               minHeight: Dimensions.get('window').height * 0.635, // Remplit la hauteur de l'écran
                             }}
