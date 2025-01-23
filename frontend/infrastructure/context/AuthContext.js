@@ -33,6 +33,8 @@ export const AuthProvider = ({ children }) => {
             }
         };
 
+        console.log(userData)
+
         checkUserToken();
     }, []);
 

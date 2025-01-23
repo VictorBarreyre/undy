@@ -3,16 +3,12 @@ import { NativeBaseProvider } from "native-base";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { AuthProvider, AuthContext } from "./infrastructure/context/AuthContext";
-import { useCardData } from "./infrastructure/context/CardDataContexte"
-import Register from "./presentation/screens/Register";
-import Inscription from "./presentation/screens/Inscription";
-import Connexion from "./presentation/screens/Connexion";
-import DrawerNavigator from "./navigation/Layout";
 import * as Font from "expo-font";
 import { lightTheme } from "./infrastructure/theme/theme";
 import { CardDataProvider } from "./infrastructure/context/CardDataContexte";
 import TypewriterLoader from "./presentation/components/TypewriterLoader";
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import StackNavigator from './navigation/StackNavigator/StackNavigator'
 
 
 const Stack = createStackNavigator();
@@ -52,30 +48,5 @@ const App = () => {
   );
 };
 
-const StackNavigator = () => {
-
-  const { isLoggedIn, isLoadingUserData } = useContext(AuthContext);
-  const { isLoadingData } = useCardData();
-
-
-  // Affichez le loader tant que l'utilisateur ou les données des cartes chargent
-  if (isLoadingUserData || isLoadingData) {
-    return <TypewriterLoader />;
-  }
-
-  return (
-    <Stack.Navigator>
-      {isLoggedIn ? (
-        <Stack.Screen name="App" component={DrawerNavigator} options={{ headerShown: false }} />
-      ) : (
-        <>
-          <Stack.Screen name="Register" component={Register} options={{ headerShown: false }} />
-          <Stack.Screen name="Inscription" component={Inscription} options={{ headerShown: false }} />
-          <Stack.Screen name="Connexion" component={Connexion} options={{ headerShown: false }} />
-        </>
-      )}
-    </Stack.Navigator>
-  );
-};
 
 export default App;

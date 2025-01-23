@@ -8,7 +8,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUser, faEnvelope, faLock, faDollarSign, faBirthdayCake, faPhone, faBuildingColumns, faBell, faPerson, faUserGroup } from '@fortawesome/free-solid-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
-import Clipboard from '@react-native-clipboard/clipboard';
 
 
 
