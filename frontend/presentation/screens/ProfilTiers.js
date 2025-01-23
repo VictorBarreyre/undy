@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import  { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
+import TypewriterLoader from '../components/TypewriterLoader';
 
 
 const ProfilTiers = ({navigation}) => {
@@ -24,12 +25,14 @@ const ProfilTiers = ({navigation}) => {
               setUserData(data);
           } catch (error) {
               console.error('Erreur lors du chargement des données de l\'utilisateur :', error);
+              navigation.goBack();
           }
       };
-      console.log(userId)
-      console.log(userData)
-      loadUserData();
-  }, []);
+
+      if (!userData) {
+          loadUserData();
+      }
+  }, [fetchUserDataById, userId, userToken, navigation, userData]);
 
   const truncateText = (text) => {
     const maxLength = 90; // Ajustez selon vos besoins
@@ -40,6 +43,9 @@ const ProfilTiers = ({navigation}) => {
 
 const content = "Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l'imprimerie depuis les années 1500, quand un imprimeur anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n'a pas fait que survivre cinq siècles, mais s'est aussi adapté à la bureautique informatique, sans que son contenu n'en soit modifié"
 
+if (!userData) {
+  return <TypewriterLoader />;
+}
   
   return (
     <Background>
@@ -106,7 +112,7 @@ const content = "Le Lorem Ipsum est simplement du faux texte employé dans la co
 
 
                     <VStack space={2}>
-                        <Text style={styles.h4}>Le nom ici </Text>
+                        <Text style={styles.h4}>{userData.name}</Text>
                         <Text color='#94A3B8'>
                             {!isExpanded ? (
                                 <>
