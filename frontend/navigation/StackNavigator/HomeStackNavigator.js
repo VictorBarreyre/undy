@@ -17,7 +17,7 @@ const HomeStackNavigator = () => {
             <Stack.Screen
                 name="ProfilTiers"
                 component={ProfilTiers}
-                options={{ headerShown: true, title: "Profil Utilisateur" }}
+                options={{ headerShown: false }}
             />
         </Stack.Navigator>
     );
