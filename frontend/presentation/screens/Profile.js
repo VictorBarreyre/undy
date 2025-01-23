@@ -102,43 +102,43 @@ export default function Profile({ navigation }) {
                     </HStack>
 
                     <HStack space={5} justifyContent="space-between" alignItems="center" width="100%">
-    {/* Profil */}
-    <Image
-        src={userData.profilePicture}
-        alt={`${userData?.name || 'User'}'s profile picture`}
-        width={75}
-        height={75}
-        borderRadius="full"
-    />
+                        {/* Profil */}
+                        <Image
+                            src={userData.profilePicture}
+                            alt={`${userData?.name || 'User'}'s profile picture`}
+                            width={75}
+                            height={75}
+                            borderRadius="full"
+                        />
 
-    {/* Statistiques */}
-    <HStack flex={1} justifyContent="space-between" alignItems="center" flexWrap="wrap">
-        <VStack flex={1} alignItems="center" maxWidth="33%">
-            <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
-                {secretCount || 0}
-            </Text>
-            <Text style={styles.caption} textAlign="center">
-                Secrets
-            </Text>
-        </VStack>
-        <VStack flex={1} alignItems="center" maxWidth="33%">
-            <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
-                {0}
-            </Text>
-            <Text style={styles.caption} textAlign="center">
-                Abonnés
-            </Text>
-        </VStack>
-        <VStack flex={1} alignItems="center" maxWidth="33%">
-            <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center">
-                {0}
-            </Text>
-            <Text style={styles.caption} textAlign="center">
-                Abonnements
-            </Text>
-        </VStack>
-    </HStack>
+                        {/* Statistiques */}
+                        <HStack flex={1} justifyContent="space-between" alignItems="center" flexWrap="wrap">
+  <VStack flex={1} alignItems="center" maxWidth="33%">
+    <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center" flexShrink={1}>
+      {secretCount || 0}
+    </Text>
+    <Text style={styles.caption} textAlign="center">
+      Secrets
+    </Text>
+  </VStack>
+  <VStack flex={1} alignItems="center" maxWidth="33%">
+    <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center" flexShrink={1}>
+      0
+    </Text>
+    <Text style={styles.caption} textAlign="center">
+      Abonnés
+    </Text>
+  </VStack>
+  <VStack flex={1} alignItems="center" >
+    <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center" flexShrink={1}>
+      0
+    </Text>
+    <Text style={styles.caption} textAlign="center">
+      Abonnements
+    </Text>
+  </VStack>
 </HStack>
+                    </HStack>
 
 
 

@@ -59,6 +59,25 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const fetchUserDataById = async (userId, token) => {
+        setIsLoadingUserData(true);
+        try {
+            const response = await axios.get(`${DATABASE_URL}/api/users/${userId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const correctedData = {
+                ...response.data,
+                profilePicture: correctProfilePictureUrl(response.data.profilePicture),
+            };
+            setUserData(correctedData);
+            return correctedData;
+        } catch (error) {
+            console.error('Error fetching user data:', error.response?.data || error.message);
+            throw error;
+        } finally {
+            setIsLoadingUserData(false);
+        }
+    };
 
     // Fonction pour mettre à jour les données utilisateur
     const updateUserData = async (updatedData) => {
@@ -145,6 +164,7 @@ export const AuthProvider = ({ children }) => {
                 userData,
                 isLoadingUserData,
                 setIsLoadingUserData,
+                fetchUserDataById,
                 login,
                 logout,
                 updateUserData,

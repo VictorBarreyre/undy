@@ -110,19 +110,6 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   }, [searchQuery, data]);
 
 
-  const handlePress = (item) => {
-    if (route.name !== "ProfilTiers") {
-      navigation.navigate("ProfilTiers", {
-        userId: item._id,
-        userName: item.name,
-        profilePicture: item.profilePictureUrl,
-      });
-    } else {
-      console.log("Vous êtes déjà sur la page ProfilTiers.");
-    }
-  };
-
-
   return (
     <Box width="100%" paddingY={2}>
       <HStack width='110%' space={1}>
@@ -295,8 +282,8 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
                                 console.log("Résultat sélectionné :", item);
                                 // Naviguer vers ProfilTiers avec les données de l'utilisateur
                                 navigation.navigate("ProfilTiers", {
-                                  userId: item._id,
-                                  userName: item.name,
+                                  userId: item.user._id,
+                                  userName: item.user.name,
                                   profilePicture: item.profilePictureUrl,
                                 });
                               }}

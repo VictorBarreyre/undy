@@ -1,6 +1,6 @@
 // routes/userRoutes.js
 const express = require('express');
-const { registerUser, loginUser,updateUserProfile, getUserProfile, uploadProfilePicture, downloadUserData, clearUserData, deleteUserAccount } = require('../controllers/userController');
+const { registerUser, loginUser,updateUserProfile, getUserProfile, uploadProfilePicture, downloadUserData, clearUserData, deleteUserAccount, getUserById } = require('../controllers/userController');
 const protect = require('../middleware/authMiddleware'); // Importation du middleware
 const upload = require('../middleware/uploadMiddleware'); 
 
@@ -29,5 +29,8 @@ router.delete('/clear', protect, clearUserData);
 
 // Nouvelle route pour supprimer le compte de l'utilisateur
 router.delete('/delete', protect, deleteUserAccount);
+
+// Nouvelle route pour récupérer les informations d'un utilisateur par ID
+router.get('/:id', protect, getUserById);
 
 module.exports = router;

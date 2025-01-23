@@ -119,6 +119,27 @@ exports.getUserProfile = async (req, res) => {
     }
 };
 
+exports.getUserById = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'Utilisateur non trouvé' });
+        }
+        const userData = {
+            id: user._id,
+            nom: user.nom,
+            email: user.email,
+            profilePicture: user.profilePicture,
+            // Autres propriétés utilisateur
+        };
+        res.status(200).json(userData);
+    } catch (error) {
+        console.error('Erreur lors de la récupération des données de l\'utilisateur :', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
+    }
+};
+
 exports.updateUserProfile = async (req, res) => {
     try {
         // Récupérer l'utilisateur connecté

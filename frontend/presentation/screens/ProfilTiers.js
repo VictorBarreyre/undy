@@ -9,7 +9,6 @@ const ProfilTiers = () => {
     return (
       <View>
         <Text>Nom: {userName || "Nom inconnu"}</Text>
-        <Text>ID: {userId || "Non spécifié"}</Text>
         {profilePicture && (
           <Image 
             source={{ uri: profilePicture }}
