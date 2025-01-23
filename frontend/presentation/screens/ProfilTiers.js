@@ -3,10 +3,13 @@ import { VStack, Box, Text, Pressable, Image, HStack } from 'native-base';
 import { useRoute } from '@react-navigation/native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import  { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
+import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 
-const ProfilTiers = () => {
+
+const ProfilTiers = ({navigation}) => {
     const route = useRoute();
     const { userId, userName, profilePicture } = route.params || {};
     const { userToken, fetchUserDataById } = useContext(AuthContext);
@@ -44,19 +47,21 @@ const content = "Le Lorem Ipsum est simplement du faux texte employé dans la co
                 <VStack space={6}>
                     <HStack alignItems="center" justifyContent="space-between" width="100%">
                         {/* Icône Back */}
-                        <Pressable width={26} onPress={() => console.log('Retour en arrière')}>
-                            <FontAwesome name="chevron-left" size={18} color="black" />
-                        </Pressable>
+                         <Pressable width={26} onPress={() => navigation.navigate('Home')}>
+                                                      <FontAwesome name="chevron-left" size={18} color="black" />
+                                                  </Pressable>
 
                         {/* Texte */}
                         <Text style={styles.h3} width='auto' textAlign="center">
                            Les secrets de 
                         </Text>
 
-                        {/* Icône Settings */}
-                        <Pressable onPress={() => navigation.navigate('ProfilSettings')}>
-                            <FontAwesome5 name="cog" size={26} color="black" solid={false} />
-                        </Pressable>
+                        <FontAwesomeIcon
+                                    icon={faEllipsis} // Icône des trois points
+                                    size={16}
+                                    color='black'
+                                    style={{ marginRight: 10 }}
+                                  />
                     </HStack>
 
                     <HStack space={5} justifyContent="space-between" alignItems="center" width="100%">

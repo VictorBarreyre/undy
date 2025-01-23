@@ -324,7 +324,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
                     />
                   ) : (
                     searchQuery.trim() !== "" && (
-                      <Text style={{ ...styles.h4, marginTop: '20px' }}>Aucun résultat</Text>
+                      <Text style={{ ...styles.h4, marginTop: '20%' }}>Aucun résultat</Text>
                     )
                   )}
                 </Box>

@@ -5,11 +5,17 @@ import Register from '../../presentation/screens/Register';
 import Inscription from '../../presentation/screens/Inscription';
 import Connexion from '../../presentation/screens/Connexion';
 import DrawerNavigator from '../Layout';
+import TypewriterLoader from '../../presentation/components/TypewriterLoader';
 
 const Stack = createStackNavigator();
 
 const StackNavigator = () => {
     const { isLoggedIn, userData } = useContext(AuthContext);
+
+    if (!userData) {
+        return <TypewriterLoader />;
+      }
+    
 
     return (
         <Stack.Navigator>
