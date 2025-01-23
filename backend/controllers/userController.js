@@ -128,7 +128,7 @@ exports.getUserById = async (req, res) => {
         }
         const userData = {
             id: user._id,
-            nom: user.nom,
+            name: user.name,
             email: user.email,
             profilePicture: user.profilePicture,
             // Autres propriétés utilisateur
