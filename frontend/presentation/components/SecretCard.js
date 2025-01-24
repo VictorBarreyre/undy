@@ -1,7 +1,8 @@
-import React, {  useContext } from 'react';
+import React, { useContext } from 'react';
 import { Box, HStack, Text, Image, VStack } from 'native-base';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { styles } from '../../infrastructure/theme/styles';
+import { StyleSheet, Platform } from 'react-native'
 
 const SecretCard = ({ secret }) => {
     const { userData } = useContext(AuthContext);
@@ -24,9 +25,16 @@ const SecretCard = ({ secret }) => {
             borderRadius="md"
             p={4}
             mb={4}
-            backgroundColor="white"
-            style={styles.shadowBox}
-            overflow='hidden'
+            backgroundColor="white"  // Assurez-vous d'avoir un backgroundColor
+            style={{
+                ...styles.shadowBox,
+                shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
+                shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
+                shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
+                shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
+                elevation: 5  // Pour Android
+            }}
+            overflow='visible'  // Essayez 'visible' au lieu de 'hidden'
         >
             <HStack width='100%' justifyContent="space-between" space={4} flexWrap="wrap">
                 <Image
