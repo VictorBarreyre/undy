@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { DATABASE_URL } from '@env';
 import { correctProfilePictureUrl } from './utils'; // Importez la fonction utilitaire
+import { useNavigation } from '@react-navigation/native';
 
 
 // Crée un contexte pour l'authentification
@@ -40,7 +41,7 @@ export const AuthProvider = ({ children }) => {
 
 
 
-     // Fonction pour récupérer les données utilisateur depuis l'API
+    // Fonction pour récupérer les données utilisateur depuis l'API
     const fetchUserData = async (token) => {
         setIsLoadingUserData(true);
         try {
@@ -102,11 +103,23 @@ export const AuthProvider = ({ children }) => {
         fetchUserData(token); // Charge les données utilisateur après la connexion
     };
 
+
     const logout = async () => {
-        setUserToken(null);
-        setIsLoggedIn(false);
-        setUserData(null); // Réinitialise les données utilisateur
-        await AsyncStorage.removeItem('token');
+        try {
+            // D'abord mettre à jour les états
+            setUserToken(null);
+            setIsLoggedIn(false);
+            setUserData(null);
+            
+            // Ensuite nettoyer le stockage
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('userData');
+            
+            return true; // Retourner une valeur au lieu d'une fonction
+        } catch (error) {
+            console.error('Erreur lors de la déconnexion:', error);
+            return false;
+        }
     };
 
     // Nouvelle fonction pour télécharger les données de l'utilisateur
@@ -125,22 +138,22 @@ export const AuthProvider = ({ children }) => {
     };
 
 
-        // Nouvelle fonction pour effacer les données de l'utilisateur
-        const clearUserData = async () => {
-            try {
-                const response = await axios.delete(`${DATABASE_URL}/api/users/clear`, {
-                    headers: { Authorization: `Bearer ${userToken}` },
-                });
-                // Traitez la réponse ici
-                console.log('Données effacées:', response.data);
-                return response.data;
-            } catch (error) {
-                console.error('Erreur lors de l\'effacement des données de l\'utilisateur :', error);
-                throw error;
-            }
-        };
-    
-            // Nouvelle fonction pour supprimer le compte de l'utilisateur
+    // Nouvelle fonction pour effacer les données de l'utilisateur
+    const clearUserData = async () => {
+        try {
+            const response = await axios.delete(`${DATABASE_URL}/api/users/clear`, {
+                headers: { Authorization: `Bearer ${userToken}` },
+            });
+            // Traitez la réponse ici
+            console.log('Données effacées:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Erreur lors de l\'effacement des données de l\'utilisateur :', error);
+            throw error;
+        }
+    };
+
+    // Nouvelle fonction pour supprimer le compte de l'utilisateur
     const deleteUserAccount = async () => {
         try {
             const response = await axios.delete(`${DATABASE_URL}/api/users/delete`, {

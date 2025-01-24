@@ -8,7 +8,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUser, faEnvelope, faLock, faDollarSign, faBirthdayCake, faPhone, faBuildingColumns, faBell, faPerson, faUserGroup } from '@fortawesome/free-solid-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
-
+import TypewriterLoader from '../components/TypewriterLoader';
+import { CommonActions } from '@react-navigation/native';
 
 
 
@@ -152,14 +153,34 @@ export default function Profile({ navigation }) {
     };
 
 
+    const handleLogout = async () => {
+        try {
+            navigation.navigate('Connexion'); // D'abord naviguer vers Connexion
+            setTimeout(() => { // Petit délai pour laisser la navigation se faire
+                logout(); // Ensuite déconnecter
+            }, 100);
+        } catch (error) {
+            console.error('Erreur lors de la déconnexion:', error);
+        }
+    };
 
-    if (isLoadingUserData) {
-        return (
-            <Box flex={1} justifyContent="center" alignItems="center">
-                <Spinner size="lg" />
-            </Box>
-        );
+    const handleLogoutno = async () => {
+        try {
+            await logout(); // D'abord la déconnexion
+            // Utiliser root navigation pour naviguer vers Connexion
+            navigation.getParent()?.reset({
+                index: 0,
+                routes: [{ name: 'Connexion' }],
+            });
+        } catch (error) {
+            console.error('Erreur lors de la déconnexion:', error);
+        }
+    };
+
+    if (!userData) {
+        return <TypewriterLoader />;
     }
+
     const fieldMappings = {
         name: { label: 'Nom', icon: faUser, truncateLength: 10 },
         email: { label: 'Adresse e-mail', icon: faEnvelope, truncateLength: 10 },
@@ -178,6 +199,7 @@ export default function Profile({ navigation }) {
         clear: { label: 'Effacer les données' },
         delete: { label: 'Supprimer mon compte' },
     };
+
 
     return (
         <Background>
@@ -343,7 +365,7 @@ export default function Profile({ navigation }) {
                             style={[styles.cardStyle, customStyles.shadowBox]}
                         >
                             {/* Déconnexion */}
-                            <Pressable onPress={logout}>
+                            <Pressable onPress={handleLogoutno}>
                                 <HStack justifyContent="start" px={4} >
                                     <Text style={styles.h5} color="#FF78B2" fontSize="md">Déconnexion</Text>
                                 </HStack>

@@ -6,6 +6,7 @@ import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 import SecretCard from '../components/SecretCard';
+import TypewriterLoader from '../components/TypewriterLoader';
 
 
 export default function Profile({ navigation }) {
@@ -17,6 +18,8 @@ export default function Profile({ navigation }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
     const [error, setError] = useState(null);
+    const defaultProfilePicture = require('../../assets/images/default.png'); // Add this at the top with other imports
+
 
     const tabs = [
         {
@@ -51,22 +54,20 @@ export default function Profile({ navigation }) {
 
     const content = "Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l'imprimerie depuis les années 1500, quand un imprimeur anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n'a pas fait que survivre cinq siècles, mais s'est aussi adapté à la bureautique informatique, sans que son contenu n'en soit modifié"
 
-
     useEffect(() => {
         const loadUserData = async () => {
             try {
                 setIsLoading(true);
                 setError(null);
-
+    
                 if (!userToken) {
-                    throw new Error('Token non disponible');
+                    return; // Sortir si pas de token
                 }
-
-                // Charger les secrets et leur nombre en une seule requête
+    
                 const { secrets, count } = await fetchUserSecretsWithCount(userToken);
                 setUserSecrets(secrets);
                 setSecretCount(count);
-
+    
             } catch (error) {
                 console.error('Erreur chargement données:', error);
                 setError(error.message);
@@ -74,11 +75,15 @@ export default function Profile({ navigation }) {
                 setIsLoading(false);
             }
         };
-
-        loadUserData();
+    
+        if (userToken) {  // Ajouter cette condition
+            loadUserData();
+        }
     }, [userToken]);
 
-
+    if (!userData) {
+        return TypewriterLoader; // Ou un spinner/loader si vous préférez
+    }
 
     return (
         <Background>
@@ -104,40 +109,39 @@ export default function Profile({ navigation }) {
                     <HStack space={5} justifyContent="space-between" alignItems="center" width="100%">
                         {/* Profil */}
                         <Image
-                            src={userData.profilePicture}
-                            alt={`${userData?.name || 'User'}'s profile picture`}
+                            src={userData?.profilePicture || defaultProfilePicture}
+                            alt={`${userData?.name || 'User'}'s profile`}
                             width={75}
                             height={75}
-                            borderRadius="full"
                         />
 
                         {/* Statistiques */}
                         <HStack flex={1} justifyContent="space-between" alignItems="center" flexWrap="wrap">
-  <VStack flex={1} alignItems="center" maxWidth="33%">
-    <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center" flexShrink={1}>
-      {secretCount || 0}
-    </Text>
-    <Text style={styles.caption} textAlign="center">
-      Secrets
-    </Text>
-  </VStack>
-  <VStack flex={1} alignItems="center" maxWidth="33%">
-    <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center" flexShrink={1}>
-      0
-    </Text>
-    <Text style={styles.caption} textAlign="center">
-      Abonnés
-    </Text>
-  </VStack>
-  <VStack flex={1} alignItems="center" >
-    <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center" flexShrink={1}>
-      0
-    </Text>
-    <Text style={styles.caption} textAlign="center">
-      Abonnements
-    </Text>
-  </VStack>
-</HStack>
+                            <VStack flex={1} alignItems="center" maxWidth="33%">
+                                <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center" flexShrink={1}>
+                                    {secretCount || 0}
+                                </Text>
+                                <Text style={styles.caption} textAlign="center">
+                                    Secrets
+                                </Text>
+                            </VStack>
+                            <VStack flex={1} alignItems="center" maxWidth="33%">
+                                <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center" flexShrink={1}>
+                                    0
+                                </Text>
+                                <Text style={styles.caption} textAlign="center">
+                                    Abonnés
+                                </Text>
+                            </VStack>
+                            <VStack flex={1} alignItems="center" >
+                                <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center" flexShrink={1}>
+                                    0
+                                </Text>
+                                <Text style={styles.caption} textAlign="center">
+                                    Abonnements
+                                </Text>
+                            </VStack>
+                        </HStack>
                     </HStack>
 
 
