@@ -55,7 +55,7 @@ const SecretCardBlurred = ({ secret }) => {
 
                     <Box position="relative" overflow="hidden">
                         <Text style={styles.caption} flexShrink={1}>
-                            <Text style={styles.caption} color="#FF78B2">Secret : </Text>
+                            <Text style={styles.caption} color="#FF78B2">Undy : </Text>
                             {secret.content}
                         </Text>
                         <BlurView

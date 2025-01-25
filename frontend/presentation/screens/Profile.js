@@ -106,43 +106,30 @@ export default function Profile({ navigation }) {
                         </Pressable>
                     </HStack>
 
-                    <HStack space={5} justifyContent="space-between" alignItems="center" width="100%">
-                        {/* Profil */}
-                        <Image
-                            src={userData?.profilePicture || defaultProfilePicture}
-                            alt={`${userData?.name || 'User'}'s profile`}
-                            width={75}
-                            height={75}
-                        />
-
-                        {/* Statistiques */}
-                        <HStack flex={1} justifyContent="space-between" alignItems="center" flexWrap="wrap">
-                            <VStack flex={1} alignItems="center" maxWidth="33%">
-                                <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center" flexShrink={1}>
-                                    {secretCount || 0}
-                                </Text>
-                                <Text style={styles.caption} textAlign="center">
-                                    Secrets
-                                </Text>
-                            </VStack>
-                            <VStack flex={1} alignItems="center" maxWidth="33%">
-                                <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center" flexShrink={1}>
-                                    0
-                                </Text>
-                                <Text style={styles.caption} textAlign="center">
-                                    Abonnés
-                                </Text>
-                            </VStack>
-                            <VStack flex={1} alignItems="center" >
-                                <Text style={styles.h4} fontWeight="bold" color="black" textAlign="center" flexShrink={1}>
-                                    0
-                                </Text>
-                                <Text style={styles.caption} textAlign="center">
-                                    Abonnements
-                                </Text>
-                            </VStack>
-                        </HStack>
-                    </HStack>
+                    <HStack space={4} alignItems="center" width="100%" px={2}>
+    <Image
+        src={userData?.profilePicture || defaultProfilePicture}
+        alt={`${userData?.name || 'User'}'s profile`}
+        width={75}
+        height={75}
+    />
+    <HStack flex={1} justifyContent="space-evenly" alignItems="center">
+        <VStack alignItems="center">
+            <Text style={styles.h4} fontWeight="bold" color="black">
+                {secretCount || 0}
+            </Text>
+            <Text style={styles.caption}>Secrets</Text>
+        </VStack>
+        <VStack alignItems="center">
+            <Text style={styles.h4} fontWeight="bold" color="black">0</Text>
+            <Text style={styles.caption}>Abonnés</Text>
+        </VStack>
+        <VStack alignItems="center">
+            <Text style={styles.h4} fontWeight="bold" color="black">0</Text>
+            <Text style={styles.caption}>Abonnements</Text>
+        </VStack>
+    </HStack>
+</HStack>
 
 
 

@@ -37,23 +37,15 @@ const SecretCard = ({ secret }) => {
             overflow='visible'  // Essayez 'visible' au lieu de 'hidden'
         >
             <HStack width='100%' justifyContent="space-between" space={4} flexWrap="wrap">
-                <Image
-                    src={userData.profilePicture}
-                    alt={`${userData?.name || 'User'}'s profile picture`}
-                    width={35}
-                    height={35}
-                    borderRadius="full"
-                />
+               
                 <VStack width='100%' space={2} flexGrow={1} flexShrink={1}>
                     <HStack space={2} justifyContent="space-between" flexWrap="wrap">
-                        <Text style={styles.h5} flexShrink={1}>
-                            Posté par vous
-                        </Text>
+            
                         <Text color='#94A3B8' style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
                     </HStack>
 
                     <Text style={styles.caption} flexShrink={1}>
-                        <Text style={styles.caption} color="#FF78B2">Secret : </Text>
+                        <Text style={styles.caption} color="#FF78B2">Undy : </Text>
                         {secret.content}
                     </Text>
 
