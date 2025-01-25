@@ -27,9 +27,7 @@ export default function Profile({ navigation }) {
 
     const [isLoading, setIsLoading] = useState(false);
 
-
-
-
+    
     const truncateText = (text, maxLength) => {
         if (!text) return ''; // Gérer les cas où le texte est null ou undefined
         return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;

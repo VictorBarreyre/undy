@@ -71,18 +71,18 @@ export default function CardHome({ cardData }) {
 
   useEffect(() => {
     const checkContentLength = () => {
-        // Exemple simple : considérer une chaîne supérieure à 50 caractères comme plus d'une ligne
+      // Exemple simple : considérer une chaîne supérieure à 50 caractères comme plus d'une ligne
       if (cardData?.content?.length > 24) {
         setIsSingleLine(false);
       } else {
         setIsSingleLine(true);
       }
     };
-  
+
     checkContentLength();
   }, [cardData?.content?.length]);
-  
-  
+
+
 
 
   return (
@@ -101,11 +101,11 @@ export default function CardHome({ cardData }) {
       style={styles.boxShadow}
     >
       {/* Contenu texte */}
-      <VStack height={'100%'} justifyContent="space-between" padding={4} space={2}>
+      <VStack height={'100%'} justifyContent="space-between" padding={3} space={2}>
 
         <HStack alignItems="center" justifyContent="space-between" width="95%">
           {/* Texte aligné à gauche */}
-          <Box flex={1} mr={4} ml={2} >
+          <Box flex={1} mr={2} ml={2} >
             <Text left={2} style={styles.caption}>
               Posté par {cardData.user?.name || 'Aucune description disponible.'}
             </Text>
@@ -131,7 +131,7 @@ export default function CardHome({ cardData }) {
           alignItems="center" // Centre horizontalement les enfants
         >
           {/* Texte */}
-          <Text onLayout={handleTextLayout} ellipsizeMode="tail" top="5"  paddingBottom="5" width="90%" style={styles.h2}>
+          <Text onLayout={handleTextLayout} ellipsizeMode="tail" top="5" paddingBottom="5" width="90%" style={styles.h2}>
             {`"${cardData.content || 'Aucune description disponible.'}"`}
           </Text>
 
@@ -148,25 +148,25 @@ export default function CardHome({ cardData }) {
         </Box>
 
         {/* Section des statistiques */}
-        <HStack 
- style={{
-   bottom: 0,
-   width: '95%',
-   flexDirection: 'row', 
-   justifyContent: 'space-between',
-   alignItems: 'center'
- }}
- mt="auto"
->
+        <HStack
+          style={{
+            bottom: 0,
+            width: '95%',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}
+          mt="auto"
+        >
           <Text ml={4} style={[styles.caption, styles.ctalittle]} >
             {cardData.label || 'Label indisponible'}
           </Text>
-              <FontAwesomeIcon
-                icon={faPaperPlane}
-                color="black"
-                size={20}
-                onPress={handleShare} // Appeler la fonction de partage
-              />
+          <FontAwesomeIcon
+            icon={faPaperPlane}
+            color="black"
+            size={20}
+            onPress={handleShare} // Appeler la fonction de partage
+          />
         </HStack>
 
       </VStack>

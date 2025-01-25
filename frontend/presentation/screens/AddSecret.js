@@ -21,7 +21,7 @@ const AddSecret = () => {
     const [price, setPrice] = useState(''); // État pour le prix
     const [secretPostAvailable, setSecretPostAvailable] = useState('false')
 
-    console.log(userData)
+
 
     const labels = [...new Set(data.map((item) => item.label))];
 
@@ -80,7 +80,7 @@ const AddSecret = () => {
                           >
                                 <VStack style={styles.containerAddSecret} space={4}>
                                     <Text style={styles.h3}>
-                                        Ajouter un Secret
+                                        Ajouter un Undy
                                     </Text>
                                     <Box
                                         display="flex"
@@ -115,7 +115,7 @@ const AddSecret = () => {
                                                 <Input
                                                     value={secretText}
                                                     onChangeText={(text) => setSecretText(text)}
-                                                    placeholder="Tapez ici votre secret..."
+                                                    placeholder="Tapez ici votre Undy..."
                                                     backgroundColor="transparent"
                                                     borderRadius="md"
                                                     fontSize="md"
@@ -210,7 +210,7 @@ const AddSecret = () => {
                                     >
                                         <HStack alignItems="center" justifyContent="center" space={2}>
                                             <Text fontSize="md" color="white" fontWeight="bold">
-                                                {!secretPostAvailable ? "Il manque des infos sur votre secret" : "Poster le secret"}
+                                                {!secretPostAvailable ? "Il manque des infos sur votre Undy" : "Poster le secret"}
                                             </Text>
                                         </HStack>
                                     </Pressable>

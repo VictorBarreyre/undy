@@ -152,10 +152,10 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
         ]}
       >
         <HStack alignItems="center" justifyContent="center" space={3}>
-          <FontAwesomeIcon icon={faUnlock} size={20} color="white" />
+          <FontAwesomeIcon icon={faUnlock} size={18} color="white" />
           <Text fontSize="md" color="white" fontWeight="bold">
             {currentItem
-              ? `Dévoiler le secret pour ${currentItem.price || '0.00'} €`
+              ? `Déverrouiller pour ${currentItem.price || '0.00'} €`
               : 'Chargement...'}
           </Text>
         </HStack>
