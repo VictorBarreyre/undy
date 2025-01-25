@@ -80,16 +80,15 @@ exports.purchaseSecret = async (req, res) => {
     }
 };
 
-
 exports.getUserSecretsWithCount = async (req, res) => {
     try {
         const secrets = await Secret
-            .find({ user: req.user._id })
+            .find({ user: req.user.id })
             .select('label content price createdAt')
             .lean();
         
         return res.status(200).json({
-            secrets: secrets,
+            secrets,
             count: secrets.length
         });
     } catch (error) {
@@ -97,6 +96,5 @@ exports.getUserSecretsWithCount = async (req, res) => {
         return res.status(500).json({ message: 'Erreur serveur.', secrets: [], count: 0 });
     }
 };
-
 
 

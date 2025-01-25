@@ -59,15 +59,15 @@ export default function Profile({ navigation }) {
             try {
                 setIsLoading(true);
                 setError(null);
-    
+
                 if (!userToken) {
                     return; // Sortir si pas de token
                 }
-    
+
                 const { secrets, count } = await fetchUserSecretsWithCount(userToken);
                 setUserSecrets(secrets);
                 setSecretCount(count);
-    
+
             } catch (error) {
                 console.error('Erreur chargement données:', error);
                 setError(error.message);
@@ -75,7 +75,7 @@ export default function Profile({ navigation }) {
                 setIsLoading(false);
             }
         };
-    
+
         if (userToken) {  // Ajouter cette condition
             loadUserData();
         }
@@ -107,29 +107,30 @@ export default function Profile({ navigation }) {
                     </HStack>
 
                     <HStack space={4} alignItems="center" width="100%" px={2}>
-    <Image
-        src={userData?.profilePicture || defaultProfilePicture}
-        alt={`${userData?.name || 'User'}'s profile`}
-        width={75}
-        height={75}
-    />
-    <HStack flex={1} justifyContent="space-evenly" alignItems="center">
-        <VStack alignItems="center">
-            <Text style={styles.h4} fontWeight="bold" color="black">
-                {secretCount || 0}
-            </Text>
-            <Text style={styles.caption}>Secrets</Text>
-        </VStack>
-        <VStack alignItems="center">
-            <Text style={styles.h4} fontWeight="bold" color="black">0</Text>
-            <Text style={styles.caption}>Abonnés</Text>
-        </VStack>
-        <VStack alignItems="center">
-            <Text style={styles.h4} fontWeight="bold" color="black">0</Text>
-            <Text style={styles.caption}>Abonnements</Text>
-        </VStack>
-    </HStack>
-</HStack>
+                        <Image
+                            src={userData?.profilePicture || defaultProfilePicture}
+                            alt={`${userData?.name || 'User'}'s profile`}
+                            width={75}
+                            height={75}
+                            borderRadius={50}
+                        />
+                        <HStack flex={1} justifyContent="space-evenly" alignItems="center">
+                            <VStack alignItems="center">
+                                <Text style={styles.h4} fontWeight="bold" color="black">
+                                    {secretCount || 0}
+                                </Text>
+                                <Text style={styles.caption}>Secrets</Text>
+                            </VStack>
+                            <VStack alignItems="center">
+                                <Text style={styles.h4} fontWeight="bold" color="black">0</Text>
+                                <Text style={styles.caption}>Abonnés</Text>
+                            </VStack>
+                            <VStack alignItems="center">
+                                <Text style={styles.h4} fontWeight="bold" color="black">0</Text>
+                                <Text style={styles.caption}>Abonnements</Text>
+                            </VStack>
+                        </HStack>
+                    </HStack>
 
 
 
