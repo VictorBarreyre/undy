@@ -99,11 +99,11 @@ const AddSecret = () => {
                                             <HStack alignItems="center" justifyContent="space-between" width="97%">
                                                 <Box flex={1} mr={4} ml={2}>
                                                     <Text left={2} style={styles.h5}>
-                                                        Posté par {userData.name || 'Aucune description disponible.'}
+                                                        Posté par {userData?.name || 'Aucune description disponible.'}
                                                     </Text>
                                                 </Box>
                                                 <Image
-                                                    src={userData.profilePicture}
+                                                    src={userData?.profilePicture}
                                                     alt={`${userData?.name || 'User'}'s profile picture`}
                                                     width={45}
                                                     height={45}

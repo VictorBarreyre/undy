@@ -155,16 +155,17 @@ export default function Profile({ navigation }) {
 
     const handleLogoutno = async () => {
         try {
-            await logout(); // D'abord la déconnexion
-            // Utiliser root navigation pour naviguer vers Connexion
-            navigation.getParent()?.reset({
-                index: 0,
-                routes: [{ name: 'Connexion' }],
-            });
+          await logout();
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{ name: 'Connexion' }],
+            })
+          );
         } catch (error) {
-            console.error('Erreur lors de la déconnexion:', error);
+          console.error(error);
         }
-    };
+      };
 
     if (!userData) {
         return <TypewriterLoader />;
