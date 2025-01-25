@@ -153,17 +153,6 @@ export default function Profile({ navigation }) {
     };
 
 
-    const handleLogout = async () => {
-        try {
-            navigation.navigate('Connexion'); // D'abord naviguer vers Connexion
-            setTimeout(() => { // Petit délai pour laisser la navigation se faire
-                logout(); // Ensuite déconnecter
-            }, 100);
-        } catch (error) {
-            console.error('Erreur lors de la déconnexion:', error);
-        }
-    };
-
     const handleLogoutno = async () => {
         try {
             await logout(); // D'abord la déconnexion

@@ -16,11 +16,7 @@ const StackNavigator = () => {
     const navigation = useNavigation();
 
 
-    if (!userData) {
-        return <TypewriterLoader />;
-      }
-    
-
+  
     return (
         <Stack.Navigator>
             {isLoggedIn  ? (

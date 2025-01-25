@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { DATABASE_URL } from '@env'
 import axios from 'axios';
+import { AuthContext } from './AuthContext';
 
 
 // Créer le contexte pour les données des cartes
@@ -16,9 +17,10 @@ export const CardDataProvider = ({ children }) => {
 
   const [data, setData] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(true); // État de chargement
+  const { userToken } = useContext(AuthContext);
 
 
-  const handlePostSecret = async ({  selectedLabel, secretText, price, authToken }) => {
+  const handlePostSecret = async ({ selectedLabel, secretText, price }) => {
     try {
       const response = await axios.post(
         `${DATABASE_URL}/api/secrets/createsecrets`,
@@ -29,15 +31,13 @@ export const CardDataProvider = ({ children }) => {
         },
         {
           headers: {
-            Authorization: `Bearer ${authToken}`,
+            Authorization: `Bearer ${userToken}`,
           },
         }
       );
-      console.log('Secret envoyé avec succès :', response.data);
-      return response.data; // Retournez la réponse du backend
+      return response.data;
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du secret :', error.message);
-      throw error; // Laissez le composant gérer l'erreur
+      throw error;
     }
   };
 
