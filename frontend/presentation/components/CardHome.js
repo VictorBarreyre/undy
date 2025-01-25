@@ -87,7 +87,6 @@ export default function CardHome({ cardData }) {
 
   return (
     <Box
-      display="flex" // Utilise le modèle Flexbox
       width="100%"
       marginX="auto"
       height='100%'
@@ -103,10 +102,11 @@ export default function CardHome({ cardData }) {
     >
       {/* Contenu texte */}
       <VStack height={'100%'} justifyContent="space-between" padding={4} space={2}>
+
         <HStack alignItems="center" justifyContent="space-between" width="95%">
           {/* Texte aligné à gauche */}
           <Box flex={1} mr={4} ml={2} >
-            <Text left={2} style={styles.h5}>
+            <Text left={2} style={styles.caption}>
               Posté par {cardData.user?.name || 'Aucune description disponible.'}
             </Text>
           </Box>
@@ -116,8 +116,8 @@ export default function CardHome({ cardData }) {
               uri: profilePictureUrl
             }}
             alt={data[0]?.title || 'Carte'}
-            width={35} // Ajustez la taille de l'image ici
-            height={35} // Ajustez la taille de l'image ici
+            width={50} // Ajustez la taille de l'image ici
+            height={50} // Ajustez la taille de l'image ici
             borderRadius="full" // Rendre l'image ronde
           />
         </HStack>
@@ -131,7 +131,7 @@ export default function CardHome({ cardData }) {
           alignItems="center" // Centre horizontalement les enfants
         >
           {/* Texte */}
-          <Text onLayout={handleTextLayout} ellipsizeMode="tail" top="5" left="2" paddingBottom="5" width="95%" style={styles.h2}>
+          <Text onLayout={handleTextLayout} ellipsizeMode="tail" top="5"  paddingBottom="5" width="90%" style={styles.h2}>
             {`"${cardData.content || 'Aucune description disponible.'}"`}
           </Text>
 
@@ -148,26 +148,26 @@ export default function CardHome({ cardData }) {
         </Box>
 
         {/* Section des statistiques */}
-        <View style={[styles.statsContainer]}>
-
+        <HStack 
+ style={{
+   bottom: 0,
+   width: '95%',
+   flexDirection: 'row', 
+   justifyContent: 'space-between',
+   alignItems: 'center'
+ }}
+ mt="auto"
+>
           <Text ml={4} style={[styles.caption, styles.ctalittle]} >
             {cardData.label || 'Label indisponible'}
           </Text>
-
-          {/* Conteneur des icônes des statistiques */}
-          <View style={[styles.row, styles.stats]}>
-            {/* Statistiques : partages */}
-            <View style={styles.iconContainer}>
               <FontAwesomeIcon
                 icon={faPaperPlane}
                 color="black"
                 size={20}
                 onPress={handleShare} // Appeler la fonction de partage
               />
-            </View>
-          </View>
-
-        </View>
+        </HStack>
 
       </VStack>
     </Box>

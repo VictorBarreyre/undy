@@ -221,19 +221,6 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  statsContainer: {
-    bottom: 0, // Aligné en bas du conteneur parent
-    width: '95%', // S'assure qu'il occupe toute la largeur
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 18,
-
-  },
-  stats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   iconContainer: {
     alignItems: 'center',
     marginRight: 4, // Espacement entre les statistiques

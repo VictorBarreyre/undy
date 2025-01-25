@@ -65,7 +65,7 @@ const ProfilTiers = ({ navigation }) => {
                     <VStack space={6}>
                         <HStack alignItems="center" justifyContent="space-between" width="100%">
                             {/* Icône Back */}
-                            <Pressable width={26} onPress={() => navigation.navigate('Home')}>
+                            <Pressable width={26} onPress={() => navigation.navigate('HomeTab')}>
                                 <FontAwesome name="chevron-left" size={18} color="black" />
                             </Pressable>
 
