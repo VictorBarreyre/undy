@@ -83,8 +83,6 @@ export default function CardHome({ cardData }) {
   }, [cardData?.content?.length]);
 
 
-
-
   return (
     <Box
       width="100%"
@@ -105,11 +103,14 @@ export default function CardHome({ cardData }) {
 
         <HStack alignItems="center" justifyContent="space-between" width="95%">
           {/* Texte aligné à gauche */}
-          <Box flex={1} mr={2} ml={2} >
+          <VStack flex={1} mr={2} ml={2} >
             <Text left={2} style={styles.caption}>
               Posté par {cardData.user?.name || 'Aucune description disponible.'}
             </Text>
-          </Box>
+            <Text color='#FF78B2' left={2} mt={1} style={styles.littleCaption}>
+              Expire dans 12h et 25 min
+            </Text>
+          </VStack>
           {/* Image alignée à droite */}
           <Image
             source={{

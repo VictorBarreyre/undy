@@ -20,26 +20,25 @@ export const CardDataProvider = ({ children }) => {
   const { userToken } = useContext(AuthContext);
 
 
-  const handlePostSecret = async ({ selectedLabel, secretText, price }) => {
-    try {
-      const response = await axios.post(
-        `${DATABASE_URL}/api/secrets/createsecrets`,
-        {
-          label: selectedLabel,
-          content: secretText,
-          price: parseFloat(price),
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  };
+const handlePostSecret = async ({ selectedLabel, secretText, price, expiresIn = 7 }) => {
+   try {
+       return await axios.post(
+           `${DATABASE_URL}/api/secrets/createsecrets`,
+           {
+               label: selectedLabel,
+               content: secretText,
+               price: parseFloat(price),
+               expiresIn
+           },
+           {
+               headers: { Authorization: `Bearer ${userToken}` }
+           }
+       );
+   } catch (error) {
+       throw error;
+   }
+};
+
 
   const fetchAllSecrets = async () => {
     setIsLoadingData(true); // Début du chargement

@@ -4,33 +4,26 @@ const mongoose = require('mongoose');
 
 
 exports.createSecret = async (req, res) => {
-    const { label, content, price } = req.body;
-
+    const { label, content, price, expiresIn = 7 } = req.body; // expiresIn en jours
+ 
     if (!label || !content || price == null) {
         return res.status(400).json({ message: 'Tous les champs sont requis.' });
     }
-
+ 
     try {
-        // Création du secret
+        const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
+        
         const secret = await Secret.create({
             label,
             content,
             price,
             user: req.user.id,
+            expiresAt
         });
-
-        console.log('Secret créé :', secret);
-
-        // Récupérer l'utilisateur
+ 
         const user = await User.findById(req.user.id).select('profilePicture');
-        if (!user) {
-            console.log("Utilisateur introuvable :", req.user.id);
-            return res.status(404).json({ message: "Utilisateur introuvable." });
-        }
-
-        console.log("Utilisateur trouvé :", user);
-
-        // Photo de profil avec valeur par défaut
+        if (!user) return res.status(404).json({ message: "Utilisateur introuvable." });
+ 
         const secretWithUserPhoto = {
             ...secret.toObject(),
             user: {
@@ -38,13 +31,12 @@ exports.createSecret = async (req, res) => {
                 profilePicture: user.profilePicture || '/uploads/default-profile.png',
             },
         };
-
+ 
         res.status(201).json(secretWithUserPhoto);
     } catch (error) {
-        console.error('Erreur lors de la création du secret :', error);
         res.status(500).json({ message: 'Erreur serveur.', details: error.message });
     }
-};
+ };
 
 
 
