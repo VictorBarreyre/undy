@@ -10,7 +10,7 @@ const HomeStackNavigator = () => {
     return (
         <Stack.Navigator>
             <Stack.Screen
-                name="Home"
+                name="MainFeed"
                 component={Home}
                 options={{ headerShown: false }}
             />

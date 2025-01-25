@@ -22,7 +22,7 @@ const TabNavigator = () => {
         <Tab.Navigator
         screenOptions={({ route }) => ({
             tabBarIcon: ({ color, size, focused }) => {
-                if (route.name === 'Home') {
+                if (route.name === 'HomeTab') {
                     return <FontAwesomeIcon icon={faHome} size={size} color={color} />;
                 } else if (route.name === 'Profile') {
                     if (userData && userData.profilePicture) {
@@ -57,7 +57,7 @@ const TabNavigator = () => {
             })}
         >
             <Tab.Screen
-                name="Home"
+                name="HomeTab"
                 component={HomeStackNavigator}
                 options={{ headerShown: false }}
             />
