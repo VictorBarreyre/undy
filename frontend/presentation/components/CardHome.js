@@ -12,6 +12,32 @@ export default function CardHome({ cardData }) {
   const { data } = useCardData(); // Accéder aux données via le contexte
   const [isSingleLine, setIsSingleLine] = useState(true);
   const [textHeight, setTextHeight] = useState(0);
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const expirationDate = new Date(cardData.expiresAt);
+      const now = new Date();
+      const difference = expirationDate - now;
+
+      if (difference <= 0) {
+        return 'Expiré';
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+
+      return `${days}j ${hours}h ${minutes}m`;
+    };
+
+    setTimeLeft(calculateTimeLeft());
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 60000); // Mise à jour chaque minute
+
+    return () => clearInterval(timer);
+  }, [cardData.expiresAt]);
 
   const profilePictureUrl = cardData.user?.profilePicture
 
@@ -78,6 +104,7 @@ export default function CardHome({ cardData }) {
         setIsSingleLine(true);
       }
     };
+    console.log(cardData)
 
     checkContentLength();
   }, [cardData?.content?.length]);
@@ -108,7 +135,7 @@ export default function CardHome({ cardData }) {
               Posté par {cardData.user?.name || 'Aucune description disponible.'}
             </Text>
             <Text color='#FF78B2' left={2} mt={1} style={styles.littleCaption}>
-              Expire dans 12h et 25 min
+              Expire dans {timeLeft}
             </Text>
           </VStack>
           {/* Image alignée à droite */}

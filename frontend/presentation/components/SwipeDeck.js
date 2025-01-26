@@ -5,7 +5,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUnlock } from '@fortawesome/free-solid-svg-icons';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import CardHome from './CardHome';
-import { styles } from '../../infrastructure/theme/styles';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height
@@ -139,8 +138,8 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   }
 
   return (
-    <VStack style={style.container}>
-      <Box style={style.cardContainer}>
+    <VStack style={styles.container}>
+      <Box style={styles.cardContainer}>
         {renderCards()}
       </Box>
       <Pressable
@@ -169,7 +168,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   );
 };
 
-const style = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     display: 'flex',
     flex: 1,
@@ -200,6 +199,22 @@ const style = StyleSheet.create({
     elevation: 5,
 
   },
+
+  h3: {
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '700',
+    fontFamily: 'SF-Pro-Display-Bold',
+  },
+
+  caption: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '500',
+    fontFamily: 'SF-Pro-Display-Medium',
+  },
+
+
 });
 
 export default SwipeDeck;
