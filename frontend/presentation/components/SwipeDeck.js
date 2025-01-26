@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUnlock } from '@fortawesome/free-solid-svg-icons';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import CardHome from './CardHome';
+import { styles } from '../../infrastructure/theme/styles';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height
@@ -39,7 +40,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     // Simuler un chargement
     setTimeout(() => setIsLoading(false), 1000);
   }, []);
-  
+
 
 
   const panResponder = useRef(
@@ -127,17 +128,21 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
   if (!filteredData.length) {
     return (
-      <Box style={styles.container}>
-        <Text>Aucune donnée disponible</Text>
-      </Box>
+      <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
+        <Text style={styles.h3} textAlign="center" mt={4}>
+          Il n'y a plus rien à afficher !     </Text>
+        <Text style={styles.caption} textAlign="center" color="gray.500" mt={2}>
+          N'hésitez pas à réinitialiser les filtres
+        </Text>
+      </VStack>
     );
   }
 
   return (
-    <VStack style={styles.container}> 
-    <Box style={styles.cardContainer}> 
-       {renderCards()}
-       </Box>
+    <VStack style={style.container}>
+      <Box style={style.cardContainer}>
+        {renderCards()}
+      </Box>
       <Pressable
         onPress={() => {
           console.log('Bouton cliqué !');
@@ -164,7 +169,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const style = StyleSheet.create({
   container: {
     display: 'flex',
     flex: 1,

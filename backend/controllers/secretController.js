@@ -39,19 +39,19 @@ exports.createSecret = async (req, res) => {
  };
 
 
-
-exports.getAllSecrets = async (req, res) => {
+ exports.getAllSecrets = async (req, res) => {
     try {
-        const { page = 1, limit = 10 } = req.query; // Paramètres de pagination
+        const { page = 1, limit = 10 } = req.query;
         const secrets = await Secret.find()
-            .populate('user', 'name profilePicture') // Inclure `name` et `profilePicture`
+            .populate('user', 'name profilePicture')
+            .select('label content price createdAt expiresAt user purchasedBy') // ajout de expiresAt
             .limit(limit * 1)
             .skip((page - 1) * limit)
             .exec();
         res.status(200).json(secrets);
     } catch (error) {
-        console.error('Erreur lors de la récupération des secrets:', error);
-        res.status(500).json({ message: 'Erreur serveur.' });
+        console.error('Erreur détaillée:', error);
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };
 
@@ -84,19 +84,16 @@ exports.purchaseSecret = async (req, res) => {
 exports.getUserSecretsWithCount = async (req, res) => {
     try {
         const secrets = await Secret
-            .find({ user: req.user._id })
-            .select('label content price createdAt')
+            .find({ user: req.user.id }) // changement de _id à id
+            .select('label content price createdAt expiresAt') // ajout de expiresAt
             .lean();
         
         return res.status(200).json({
-            secrets: secrets,
+            secrets,
             count: secrets.length
         });
     } catch (error) {
-        console.error('Erreur getUserSecretsWithCount:', error);
-        return res.status(500).json({ message: 'Erreur serveur.', secrets: [], count: 0 });
+        console.error('Erreur détaillée:', error);
+        return res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };
-
-
-
