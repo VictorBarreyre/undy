@@ -33,3 +33,5 @@ const SecretSchema = new mongoose.Schema({
    
    // Nettoyage automatique
    SecretSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+   module.exports = mongoose.model('Secret', SecretSchema);
