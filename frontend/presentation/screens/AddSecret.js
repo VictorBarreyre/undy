@@ -22,6 +22,8 @@ const AddSecret = () => {
     const [secretPostAvailable, setSecretPostAvailable] = useState('false')
     const [expiresIn, setExpiresIn] = useState(7);
 
+    const MIN_PRICE = 5;
+
 
 
     const labels = [...new Set(data.map((item) => item.label))];
@@ -52,9 +54,11 @@ const AddSecret = () => {
     // Surveille les changements dans les champs et met à jour l'état de `secretPostAvailable`
     useEffect(() => {
         setSecretPostAvailable(
-            secretText.trim().length > 0 && selectedLabel.trim().length > 0 && price.trim().length > 0
+            secretText.trim().length > 0 && 
+            selectedLabel.trim().length > 0 && 
+            price.trim().length > 0 && 
+            Number(price) >= MIN_PRICE
         );
-        console.log(secretText, selectedLabel, price)
     }, [secretText, selectedLabel, price]);
 
     return (
@@ -133,141 +137,146 @@ const AddSecret = () => {
                                             </Box>
 
                                             <HStack mt={6} alignItems="start" alignContent="center" justifyContent="space-between" width="95%" space={2}>
-    <VStack width="30%" alignItems="left">
-        <Text left={2} style={styles.ctalittle}>Catégorie</Text>
-        <Select
-            width="100%"
-            padding={2}
-            selectedValue={selectedLabel}
-            accessibilityLabel="Choisissez la catégorie"
-            placeholder="Choisissez la catégorie"
-            _placeholder={{
-                fontSize: 14,
-                lineHeight: 18,
-                fontWeight: '500',
-                fontFamily: 'SF-Pro-Display-Medium',
-                color: '#94A3B8'
-            }}
-            _customDropdownIconProps={{
-                display: 'none'
-            }}
-            _selectedItem={{
-                fontSize: 14,
-                lineHeight: 18,
-                fontWeight: '500',
-                fontFamily: 'SF-Pro-Display-Medium',
-                endIcon: (
-                    <Box style={{ padding: 2 }}>
-                        <FontAwesome name="check" size={16} color="#94A3B8" />
-                    </Box>
-                )
-            }}
-            mt={1}
-            onValueChange={(value) => setSelectedLabel(value)}
-        >
-            {labels.map((label, index) => (
-                <Select.Item 
-                    key={index} 
-                    label={label} 
-                    value={label}
-                    _text={{
-                        fontSize: 14,
-                        lineHeight: 18,
-                        fontWeight: '500',
-                        fontFamily: 'SF-Pro-Display-Medium'
-                    }}
-                />
-            ))}
-        </Select>
-    </VStack>
+                                                <VStack width="30%" alignItems="left">
+                                                    <Text left={2} style={styles.ctalittle}>Catégorie</Text>
+                                                    <Select
+                                                        width="100%"
+                                                        padding={2}
+                                                        selectedValue={selectedLabel}
+                                                        accessibilityLabel="Choisissez la catégorie"
+                                                        placeholder="Choisissez la catégorie"
+                                                        _placeholder={{
+                                                            fontSize: 14,
+                                                            lineHeight: 18,
+                                                            fontWeight: '500',
+                                                            fontFamily: 'SF-Pro-Display-Medium',
+                                                            color: '#94A3B8'
+                                                        }}
+                                                        _customDropdownIconProps={{
+                                                            display: 'none'
+                                                        }}
+                                                        _selectedItem={{
+                                                            fontSize: 14,
+                                                            lineHeight: 18,
+                                                            fontWeight: '500',
+                                                            fontFamily: 'SF-Pro-Display-Medium',
+                                                            endIcon: (
+                                                                <Box style={{ padding: 2 }}>
+                                                                    <FontAwesome name="check" size={16} color="#94A3B8" />
+                                                                </Box>
+                                                            )
+                                                        }}
+                                                        mt={1}
+                                                        onValueChange={(value) => setSelectedLabel(value)}
+                                                    >
+                                                        {labels.map((label, index) => (
+                                                            <Select.Item
+                                                                key={index}
+                                                                label={label}
+                                                                value={label}
+                                                                _text={{
+                                                                    fontSize: 14,
+                                                                    lineHeight: 18,
+                                                                    fontWeight: '500',
+                                                                    fontFamily: 'SF-Pro-Display-Medium'
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </Select>
+                                                </VStack>
 
-    <VStack width="33%" alignItems="center">
-        <Text style={styles.ctalittle}>Son prix</Text>
-        <Input
-            value={price}
-            width="100%"
-            padding={0}
-            onChangeText={(text) => setPrice(text)}
-            placeholder="Prix (€)"
-            backgroundColor="transparent"
-            borderRadius="md"
-            keyboardType="numeric"
-            textAlign="center"
-            _input={{
-                fontSize: 14,
-                lineHeight: 18,
-                fontWeight: '500',
-                fontFamily: 'SF-Pro-Display-Medium',
-                placeholderTextColor: '#94A3B8'
-            }}
-        />
-    </VStack>
+                                                <VStack width="33%" alignItems="center">
+                                                    <Text style={styles.ctalittle}>Son prix</Text>
+                                                    <Input
+                                                        value={price}
+                                                        width="100%"
+                                                        padding={0}
+                                                        onChangeText={(text) => {
+                                                            const numPrice = Number(text);
+                                                            if (text === '' || numPrice >= MIN_PRICE) {
+                                                                setPrice(text);
+                                                            }
+                                                        }}
+                                                        placeholder={`${MIN_PRICE}€ min`}
+                                                        backgroundColor="transparent"
+                                                        borderRadius="md"
+                                                        keyboardType="numeric"
+                                                        textAlign="center"
+                                                        _input={{
+                                                            fontSize: 14,
+                                                            lineHeight: 18,
+                                                            fontWeight: '500',
+                                                            fontFamily: 'SF-Pro-Display-Medium',
+                                                            placeholderTextColor: '#94A3B8'
+                                                        }}
+                                                    />
+                                                </VStack>
 
-    <VStack width="20%" alignItems="end">
-        <Text left={2} style={styles.ctalittle}>Durée</Text>
-        <Select
-            width="100%"
-            padding={2}
-            selectedValue={expiresIn}
-            accessibilityLabel="Choisir une durée"
-            placeholder="Choisir une durée"
-            _placeholder={{
-                fontSize: 14,
-                lineHeight: 18,
-                fontWeight: '500',
-                fontFamily: 'SF-Pro-Display-Medium',
-                color: '#94A3B8'
-            }}
-            _customDropdownIconProps={{
-                display: 'none'
-            }}
-            _selectedItem={{
-                fontSize: 14,
-                lineHeight: 18,
-                fontWeight: '500',
-                fontFamily: 'SF-Pro-Display-Medium',
-                endIcon: (
-                    <Box style={{ padding: 2 }}>
-                        <FontAwesome name="check" size={16} color="#94A3B8" />
-                    </Box>
-                )
-            }}
-            mt={1}
-            onValueChange={value => setExpiresIn(value)}
-        >
-            <Select.Item 
-                label="24 heures" 
-                value={1}
-                _text={{
-                    fontSize: 14,
-                    lineHeight: 18,
-                    fontWeight: '500',
-                    fontFamily: 'SF-Pro-Display-Medium'
-                }}
-            />
-            <Select.Item 
-                label="7 jours" 
-                value={7}
-                _text={{
-                    fontSize: 14,
-                    lineHeight: 18,
-                    fontWeight: '500',
-                    fontFamily: 'SF-Pro-Display-Medium'
-                }}
-            />
-            <Select.Item 
-                label="30 jours" 
-                value={30}
-                _text={{
-                    fontSize: 14,
-                    lineHeight: 18,
-                    fontWeight: '500',
-                    fontFamily: 'SF-Pro-Display-Medium'
-                }}
-            />
-        </Select>
-    </VStack>
-</HStack>
+                                                <VStack width="20%" alignItems="end">
+                                                    <Text left={2} style={styles.ctalittle}>Durée</Text>
+                                                    <Select
+                                                        width="100%"
+                                                        padding={2}
+                                                        selectedValue={expiresIn}
+                                                        accessibilityLabel="Choisir une durée"
+                                                        placeholder="Choisir une durée"
+                                                        _placeholder={{
+                                                            fontSize: 14,
+                                                            lineHeight: 18,
+                                                            fontWeight: '500',
+                                                            fontFamily: 'SF-Pro-Display-Medium',
+                                                            color: '#94A3B8'
+                                                        }}
+                                                        _customDropdownIconProps={{
+                                                            display: 'none'
+                                                        }}
+                                                        _selectedItem={{
+                                                            fontSize: 14,
+                                                            lineHeight: 18,
+                                                            fontWeight: '500',
+                                                            fontFamily: 'SF-Pro-Display-Medium',
+                                                            endIcon: (
+                                                                <Box style={{ padding: 2 }}>
+                                                                    <FontAwesome name="check" size={16} color="#94A3B8" />
+                                                                </Box>
+                                                            )
+                                                        }}
+                                                        mt={1}
+                                                        onValueChange={value => setExpiresIn(value)}
+                                                    >
+                                                        <Select.Item
+                                                            label="24 heures"
+                                                            value={1}
+                                                            _text={{
+                                                                fontSize: 14,
+                                                                lineHeight: 18,
+                                                                fontWeight: '500',
+                                                                fontFamily: 'SF-Pro-Display-Medium'
+                                                            }}
+                                                        />
+                                                        <Select.Item
+                                                            label="7 jours"
+                                                            value={7}
+                                                            _text={{
+                                                                fontSize: 14,
+                                                                lineHeight: 18,
+                                                                fontWeight: '500',
+                                                                fontFamily: 'SF-Pro-Display-Medium'
+                                                            }}
+                                                        />
+                                                        <Select.Item
+                                                            label="30 jours"
+                                                            value={30}
+                                                            _text={{
+                                                                fontSize: 14,
+                                                                lineHeight: 18,
+                                                                fontWeight: '500',
+                                                                fontFamily: 'SF-Pro-Display-Medium'
+                                                            }}
+                                                        />
+                                                    </Select>
+                                                </VStack>
+                                            </HStack>
                                         </VStack>
                                     </Box>
                                     <Pressable

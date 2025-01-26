@@ -1,4 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
+import { Dimensions } from 'react-native';
 import { VStack, Box, Text, Pressable, Image, HStack, FlatList } from 'native-base';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
@@ -7,6 +8,9 @@ import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 import SecretCard from '../components/SecretCard';
 import TypewriterLoader from '../components/TypewriterLoader';
+
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 
 export default function Profile({ navigation }) {
@@ -23,25 +27,43 @@ export default function Profile({ navigation }) {
 
     const tabs = [
         {
-            title: 'Vos secrets',
+            title: 'Vos undy',
             content: isLoading ? (
                 <Text>Chargement...</Text>
             ) : (
-                <Box flex={1} width="100%">
+                <Box flex={1} width="100%" height="100%">
                     <FlatList
+                        horizontal={true}  // Scroll horizontal
+                        showsHorizontalScrollIndicator={false}
+                        height='100%'
                         width='100%'
-                        overflow='unset'
+                        contentContainerStyle={{ paddingHorizontal: 10 }}
                         data={userSecrets.slice().reverse()}
-                        renderItem={({ item }) => <SecretCard secret={item} />}
+                        renderItem={({ item }) => (
+                            <Box marginLeft={2} marginRight={4} width={SCREEN_WIDTH * 0.8}>
+                                <SecretCard secret={item} />
+                            </Box>
+                        )}
                         keyExtractor={item => item._id}
-                        ListEmptyComponent={<Text>Aucun secret disponible.</Text>}
+                        ListEmptyComponent={
+                            <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
+                                <Text style={styles.h3} textAlign="center" mt={4}>
+                                    Vous n'avez pas encore posté d'Undy
+                                </Text>
+                            </VStack>
+                        }
                     />
                 </Box>
             )
         },
         {
             title: 'Ceux des autres',
-            content: <Text>Contenu pour les secrets des autres.</Text>
+            content:
+
+                <Text style={styles.h3} textAlign="center" mt={4}>
+                    Vous n'avez pas encore déverrouillé d'Undy
+                </Text>
+
         }
     ];
 
@@ -87,8 +109,8 @@ export default function Profile({ navigation }) {
 
     return (
         <Background>
-            <Box flex={1} justifyContent="flex-start" padding={5}>
-                <VStack space={6}>
+            <Box flex={1} justifyContent="flex-start" paddingTop={5}>
+                <VStack paddingLeft={5} paddingRight={5} space={6}>
                     <HStack alignItems="center" justifyContent="space-between" width="100%">
                         {/* Icône Back */}
                         <Pressable width={26} onPress={() => navigation.navigate('HomeTab')}>
@@ -132,8 +154,6 @@ export default function Profile({ navigation }) {
                         </HStack>
                     </HStack>
 
-
-
                     <VStack space={2}>
                         <Text style={styles.h4}>{userData.name} </Text>
                         <Text color='#94A3B8'>
@@ -165,8 +185,15 @@ export default function Profile({ navigation }) {
                             )}
                         </Text>
                     </VStack>
+                </VStack>
 
+
+
+
+                <VStack flex={0.8} space={4}>
                     <HStack
+                        mt={6}
+                        paddingLeft={5} paddingRight={5}
                         justifyContent="space-around">
                         {tabs.map((tab, index) => (
                             <Pressable
@@ -186,15 +213,14 @@ export default function Profile({ navigation }) {
                         ))}
                     </HStack>
 
-                    <Box mt={2}>
+                    <Box height='auto' mt={2}>
                         <Text>{tabs[activeTab].content}</Text>
                     </Box>
-
-
                 </VStack>
 
+
             </Box>
-        </Background>
+        </Background >
     );
 };
 

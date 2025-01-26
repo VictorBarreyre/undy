@@ -21,40 +21,33 @@ const SecretCard = ({ secret }) => {
 
     return (
         <Box
-            width='100%'
+            width='100%'  // Changé de 90% à 100%
+            height="100%" // Ajouté
             borderRadius="md"
             p={4}
-            mb={4}
-            backgroundColor="white"  // Assurez-vous d'avoir un backgroundColor
+            backgroundColor="white"
             style={{
                 ...styles.shadowBox,
                 shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
                 shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
                 shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
                 shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
-                elevation: 5  // Pour Android
+                elevation: 5
             }}
-            overflow='visible'  // Essayez 'visible' au lieu de 'hidden'
         >
-            <HStack width='100%' justifyContent="space-between" space={4} flexWrap="wrap">
-               
-                <VStack width='100%' space={2} flexGrow={1} flexShrink={1}>
-                    <HStack space={2} justifyContent="space-between" flexWrap="wrap">
-            
-                        <Text color='#94A3B8' style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
-                    </HStack>
+            <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
+                <HStack space={2} justifyContent="space-between" flexWrap="wrap">
+                    <Text color='#94A3B8' style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
+                </HStack>
+                <Text style={styles.h3}>
+                    "{secret.content}"
+                </Text>
+                <HStack justifyContent='space-between'>
+                    <Text style={styles.caption}>{secret.label}</Text>
+                    <Text style={styles.caption}>Prix : {secret.price} €</Text>
+                </HStack>
+            </VStack>
 
-                    <Text style={styles.caption} flexShrink={1}>
-                        <Text style={styles.caption} color="#FF78B2">Undy : </Text>
-                        {secret.content}
-                    </Text>
-
-                    <HStack justifyContent='space-between'>
-                        <Text style={styles.caption}>{secret.label}</Text>
-                        <Text style={styles.caption}>Prix : {secret.price} €</Text>
-                    </HStack>
-                </VStack>
-            </HStack>
         </Box>
     );
 };
