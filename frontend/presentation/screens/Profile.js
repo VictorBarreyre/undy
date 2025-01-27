@@ -33,6 +33,7 @@ export default function Profile({ navigation }) {
             ) : (
                 <Box flex={1} width="100%" height="100%">
                     <FlatList
+                        overflow='visible'
                         horizontal={true}  // Scroll horizontal
                         showsHorizontalScrollIndicator={false}
                         height='100%'
