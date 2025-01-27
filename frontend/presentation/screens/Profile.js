@@ -38,7 +38,7 @@ export default function Profile({ navigation }) {
                         showsHorizontalScrollIndicator={false}
                         height='100%'
                         width='100%'
-                        contentContainerStyle={{ paddingHorizontal: 10 }}
+                        contentContainerStyle={{ paddingHorizontal: 10, flexGrow: 1 }}
                         data={userSecrets.slice().reverse()}
                         renderItem={({ item }) => (
                             <Box marginLeft={2} marginRight={4} width={SCREEN_WIDTH * 0.8}>
@@ -111,7 +111,7 @@ export default function Profile({ navigation }) {
     return (
         <Background>
             <Box flex={1} justifyContent="flex-start" paddingTop={5}>
-                <VStack paddingLeft={5} paddingRight={5} space={6}>
+                <VStack paddingLeft={5} paddingRight={5} space={4}>
                     <HStack alignItems="center" justifyContent="space-between" width="100%">
                         {/* Icône Back */}
                         <Pressable width={26} onPress={() => navigation.navigate('HomeTab')}>

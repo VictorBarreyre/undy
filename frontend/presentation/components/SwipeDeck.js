@@ -150,7 +150,6 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
           {
             backgroundColor: pressed ? 'gray.800' : 'black',
             transform: pressed ? [{ scale: 0.96 }] : [{ scale: 1 }],
-            borderRadius: 20,
           },
           { width: '100%', alignSelf: 'center', padding: 18, borderRadius: 30 },
         ]}

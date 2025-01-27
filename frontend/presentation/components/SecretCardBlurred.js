@@ -3,7 +3,10 @@ import { Box, HStack, Text, Image, VStack } from 'native-base';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { styles } from '../../infrastructure/theme/styles';
 import { BlurView } from '@react-native-community/blur';
-import { StyleSheet, Platform } from 'react-native'
+import { StyleSheet, Platform } from 'react-native';
+import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { Pressable } from 'react-native';
 
 const SecretCardBlurred = ({ secret }) => {
     const { userData } = useContext(AuthContext);
@@ -69,18 +72,23 @@ const SecretCardBlurred = ({ secret }) => {
         >
 
             <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
-                <HStack space={2} justifyContent="space-between" flexWrap="wrap">
-                    <VStack>
-                        <Text color='#94A3B8' style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
-                        <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
-                            Expire dans {timeLeft}
-                        </Text>
-                    </VStack>
-                </HStack>
+                  <HStack space={2} justifyContent="space-between" flexWrap="wrap">
+                                  <VStack>
+                                      <Text color='#94A3B8' style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
+                                      <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
+                                          Expire dans {timeLeft}
+                                      </Text>
+                                  </VStack>
+                                  <FontAwesomeIcon
+                                      icon={faEllipsis} // Icône des trois points
+                                      size={16}
+                                      color='#94A3B8'
+                                      style={{ marginRight: 10 }}
+                                  />
+                              </HStack>
 
                 <Box position="relative" overflow="hidden">
-                    <Text style={styles.caption} flexShrink={1}>
-                        <Text style={styles.caption} color="#FF78B2">Undy : </Text>
+                    <Text style={styles.h3} flexShrink={1}>
                         {secret.content}
                     </Text>
                     <BlurView
@@ -115,9 +123,30 @@ const SecretCardBlurred = ({ secret }) => {
                     />
                 </Box>
 
-                <HStack justifyContent='space-between'>
+                <HStack alignItems="center" justifyContent='space-between'>
                     <Text style={styles.caption}>{secret.label}</Text>
-                    <Text style={styles.caption}>Prix : {secret.price} €</Text>
+                    <Pressable
+                        style={[
+                            {
+                                backgroundColor: '#000000',
+                                padding: 8,
+                                paddingLeft: 12,
+                                paddingRight: 12,
+                                borderRadius: 20,
+                            },
+                            ({ pressed }) => ({
+                                opacity: pressed ? 0.6 : 1, // Opacité plus prononcée
+                                transform: [{ scale: pressed ? 0.92 : 1 }], // Scale plus prononcé
+                                backgroundColor: pressed ? '#333' : '#000', // Changement de couleur au press
+                            })
+                        ]}
+                    >
+                        <HStack alignItems="center" space={2}>
+                            <Text style={styles.ctalittle} color="white">
+                                Déverrouiller
+                            </Text>
+                        </HStack>
+                    </Pressable>
                 </HStack>
             </VStack>
 

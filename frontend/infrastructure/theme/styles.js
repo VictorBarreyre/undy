@@ -278,7 +278,7 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     fontWeight: '700',
-    fontFamily: 'SF-Pro-Display-Medium',
+    fontFamily: 'SF-Pro-Display-Bold',
   },
 
   subtitle: {

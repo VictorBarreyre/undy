@@ -52,12 +52,12 @@ const ProfilTiers = ({ navigation }) => {
    return (
        <Background>
            <Box flex={1} justifyContent="flex-start" paddingTop={5}>
-               <VStack paddingLeft={5} paddingRight={5} space={6}>
+               <VStack paddingLeft={5} paddingRight={5} space={4}>
                    <HStack alignItems="center" justifyContent="space-between" width="100%">
                        <Pressable width={26} onPress={() => navigation.navigate('HomeTab')}>
                            <FontAwesome name="chevron-left" size={18} color="black" />
                        </Pressable>
-                       <Text style={styles.h3}>Les secrets de</Text>
+                       <Text style={styles.h3}>Les Undy de</Text>
                        <FontAwesomeIcon icon={faEllipsis} size={16} color='black' />
                    </HStack>
 
@@ -158,7 +158,8 @@ const ProfilTiers = ({ navigation }) => {
                            )}
                            keyExtractor={(item) => item._id}
                            ListEmptyComponent={
-                               <Text style={styles.h3} textAlign="center">
+
+                               <Text mt={8} width='80%' style={styles.h3} textAlign="center">
                                    {userData.name} n'a pas encore posté d'Undy
                                </Text>
                            }
