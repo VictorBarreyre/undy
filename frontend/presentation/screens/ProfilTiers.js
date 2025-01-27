@@ -126,43 +126,49 @@ const ProfilTiers = ({ navigation }) => {
 
 
                 <VStack flex={0.8} space={4}>
-                    <Pressable
-                        style={[
-                            {
-                                backgroundColor: '#000000',
-                                width: '100%',
-                                padding: 18,
-                                borderRadius: 30,
-                            },
-                            ({ pressed }) => ({
-                                opacity: pressed ? 0.8 : 1,
-                                transform: [{ scale: pressed ? 0.96 : 1 }],
-                            })
-                        ]}
-                    >
-                        <HStack alignItems="center" justifyContent="center" space={2}>
-                            <FontAwesomeIcon icon={faUnlock} size={16} color="white" />
-                            <Text color="white" fontWeight="bold">Tous ses secrets pour 9.99€/mois</Text>
-                        </HStack>
-                    </Pressable>
-                    <FlatList
-                        overflow='visible'
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        data={userSecrets.slice().reverse()}
-                        contentContainerStyle={{ height: '100%' }}
-                        renderItem={({ item }) => (
-                            <Box marginRight={4} width={SCREEN_WIDTH * 0.8} height="100%">
-                                <SecretCardBlurred secret={item} />
-                            </Box>
-                        )}
-                        keyExtractor={(item) => item._id}
-                        ListEmptyComponent={
-                            <Text style={styles.h3} textAlign="center">
-                                {userData.name} n'a pas encore posté d'Undy
-                            </Text>
-                        }
-                    />
+                    <HStack
+                        mt={6}
+                        justifyContent="space-around">
+                        <Pressable
+                            style={[
+                                {
+                                    backgroundColor: '#000000',
+                                    width: '100%',
+                                    padding: 18,
+                                    borderRadius: 30,
+                                },
+                                ({ pressed }) => ({
+                                    opacity: pressed ? 0.8 : 1,
+                                    transform: [{ scale: pressed ? 0.96 : 1 }],
+                                })
+                            ]}
+                        >
+                            <HStack alignItems="center" justifyContent="center" space={2}>
+                                <FontAwesomeIcon icon={faUnlock} size={16} color="white" />
+                                <Text color="white" fontWeight="bold">Tous ses secrets pour 9.99€/mois</Text>
+                            </HStack>
+                        </Pressable>
+                    </HStack>
+           
+                        <FlatList
+                            overflow='visible'
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            data={userSecrets.slice().reverse()}
+                            contentContainerStyle={{ height: '100%' }}
+                            renderItem={({ item }) => (
+                                <Box marginRight={4} width={SCREEN_WIDTH * 0.8} height="100%">
+                                    <SecretCardBlurred secret={item} />
+                                </Box>
+                            )}
+                            keyExtractor={(item) => item._id}
+                            ListEmptyComponent={
+                                <Text style={styles.h3} textAlign="center">
+                                    {userData.name} n'a pas encore posté d'Undy
+                                </Text>
+                            }
+                        />
+                
                 </VStack>
             </Box>
         </Background>
