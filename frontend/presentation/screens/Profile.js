@@ -104,9 +104,9 @@ export default function Profile({ navigation }) {
         }
     }, [userToken]);
 
-    if (!userData) {
-        return TypewriterLoader; // Ou un spinner/loader si vous préférez
-    }
+    if (isLoading) {
+        return <TypewriterLoader />;
+      }
 
     return (
         <Background>

@@ -37,7 +37,7 @@ const Home = () => {
       <VStack style={styles.containerHome} space={4}>
         <VStack paddingLeft={1} space={0}>
           <HStack alignItems='center' justifyContent='space-between'>
-            <Text paddingBottom={1} style={styles.h3}>Les derniers Undy </Text>
+            <Text paddingBottom={1} style={styles.h3}>Les derniers Undy 🔥  </Text>
             <FontAwesomeIcon
               icon={faEllipsis} // Icône des trois points
               size={16}

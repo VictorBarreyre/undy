@@ -144,7 +144,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
               ]}
               onPress={() => handleButtonClickType('Tous')}
             >
-              <Text style={activeButton === 'Tous' ? styles.activeText : styles.inactiveText}>Tous  🌐 </Text>
+              <Text style={activeButton === 'Tous' ? styles.activeText : styles.inactiveText}>Tous</Text>
             </Button>
             <Button
               marginRight={3}
@@ -154,7 +154,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
               ]}
               onPress={() => handleButtonClickType('Contacts')}
             >
-              <Text style={activeButton === 'Contacts' ? styles.activeText : styles.inactiveText}>Contacts  📞 </Text>
+              <Text style={activeButton === 'Contacts' ? styles.activeText : styles.inactiveText}>Contacts</Text>
             </Button>
             <Button
               marginRight={3}
@@ -164,7 +164,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
               ]}
               onPress={() => handleButtonClickType('Suivis')}
             >
-              <Text style={activeButton === 'Suivis' ? styles.activeText : styles.inactiveText}>Suivis  ❤️</Text>
+              <Text style={activeButton === 'Suivis' ? styles.activeText : styles.inactiveText}>Suivis</Text>
             </Button>
             <Button
               marginRight={16}

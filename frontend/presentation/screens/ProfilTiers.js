@@ -23,24 +23,28 @@ const ProfilTiers = ({ navigation }) => {
    const [userSecrets, setUserSecrets] = useState([]);
    const [userData, setUserData] = useState(null);
    const [isExpanded, setIsExpanded] = useState(false);
+   const [isLoading, setIsLoading] = useState(true);
 
    useEffect(() => {
-       const loadUserData = async () => {
-           try {
-               const data = await fetchUserDataById(userId, userToken);
-               setUserData(data);
-               const { secrets, count } = await fetchUserSecretsWithCount(userToken);
-               setSecretCount(count);
-               setUserSecrets(secrets);
-           } catch (error) {
-               console.error('Erreur chargement données:', error);
-               navigation.goBack();
-           }
-       };
-       if (!userData) loadUserData();
-   }, [fetchUserDataById, userId, userToken, navigation, userData]);
+    const loadUserData = async () => {
+      try {
+        const data = await fetchUserDataById(userId, userToken);
+        setUserData(data);
+        const { secrets, count } = await fetchUserSecretsWithCount(userToken);
+        setSecretCount(count);
+        setUserSecrets(secrets);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Erreur chargement données:', error);
+        navigation.goBack();
+      }
+    };
+    if (!userData) loadUserData();
+  }, [fetchUserDataById, userId, userToken, navigation, userData]);
 
-   if (!userData) return <TypewriterLoader />;
+  if (isLoading) {
+    return <TypewriterLoader />;
+  }
 
    const truncateText = (text) => {
        const maxLength = 90;
@@ -158,7 +162,6 @@ const ProfilTiers = ({ navigation }) => {
                            )}
                            keyExtractor={(item) => item._id}
                            ListEmptyComponent={
-
                                <Text mt={8} width='80%' style={styles.h3} textAlign="center">
                                    {userData.name} n'a pas encore posté d'Undy
                                </Text>
