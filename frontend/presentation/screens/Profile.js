@@ -188,9 +188,6 @@ export default function Profile({ navigation }) {
                     </VStack>
                 </VStack>
 
-
-
-
                 <VStack flex={0.8} space={4}>
                     <HStack
                         mt={6}
