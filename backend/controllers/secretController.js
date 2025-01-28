@@ -56,6 +56,9 @@ exports.createSecret = async (req, res) => {
 };
 
 exports.purchaseSecret = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const secret = await Secret.findById(req.params.id);
 
@@ -65,20 +68,112 @@ exports.purchaseSecret = async (req, res) => {
 
         // Vérifier si l'utilisateur a déjà acheté le secret
         if (secret.purchasedBy.includes(req.user.id)) {
-            return res.status(400).json({ message: 'Vous avez déjà acheté ce secret.' });
+            // Si déjà acheté, on récupère juste la conversation existante
+            const conversation = await Conversation.findOne({ secret: secret._id });
+            return res.status(200).json({ 
+                message: 'Secret déjà acheté.',
+                conversationId: conversation._id 
+            });
         }
 
         // Ajouter la logique de paiement ici (ex : Stripe)
+        // ...
 
         // Ajouter l'utilisateur à la liste des acheteurs
         secret.purchasedBy.push(req.user.id);
-        await secret.save();
+        await secret.save({ session });
 
-        res.status(200).json({ message: 'Secret acheté avec succès.' });
+        // Vérifier si une conversation existe déjà pour ce secret
+        let conversation = await Conversation.findOne({ secret: secret._id });
+
+        if (!conversation) {
+            // Créer une nouvelle conversation si elle n'existe pas
+            conversation = await Conversation.create([{
+                secret: secret._id,
+                participants: [secret.user, req.user.id], // Créateur + acheteur
+                expiresAt: secret.expiresAt
+            }], { session });
+            conversation = conversation[0]; // car create retourne un tableau
+        } else {
+            // Ajouter le nouvel acheteur aux participants
+            conversation.participants.push(req.user.id);
+            await conversation.save({ session });
+        }
+
+        await session.commitTransaction();
+
+        res.status(200).json({
+            message: 'Secret acheté avec succès.',
+            conversationId: conversation._id
+        });
     } catch (error) {
-        res.status(500).json({ message: 'Erreur serveur.' });
+        await session.abortTransaction();
+        console.error('Erreur lors de l\'achat:', error);
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+    } finally {
+        session.endSession();
     }
 };
+
+
+exports.getSecretConversation = async (req, res) => {
+    try {
+        const conversation = await Conversation.findOne({ 
+            secret: req.params.secretId,
+            participants: req.user.id 
+        })
+        .populate('participants', 'name profilePicture')
+        .populate('secret', 'label content');
+
+        if (!conversation) {
+            return res.status(404).json({ message: 'Conversation introuvable.' });
+        }
+
+        res.status(200).json(conversation);
+    } catch (error) {
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+    }
+};
+
+exports.addMessageToConversation = async (req, res) => {
+    try {
+        const { content } = req.body;
+        const conversation = await Conversation.findOne({
+            _id: req.params.conversationId,
+            participants: req.user.id
+        });
+
+        if (!conversation) {
+            return res.status(404).json({ message: 'Conversation introuvable.' });
+        }
+
+        conversation.messages.push({
+            sender: req.user.id,
+            content
+        });
+
+        await conversation.save();
+        res.status(201).json(conversation.messages[conversation.messages.length - 1]);
+    } catch (error) {
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+    }
+};
+
+exports.getUserConversations = async (req, res) => {
+    try {
+        const conversations = await Conversation.find({
+            participants: req.user.id
+        })
+        .populate('participants', 'name profilePicture')
+        .populate('secret', 'label')
+        .sort({ updatedAt: -1 });
+
+        res.status(200).json(conversations);
+    } catch (error) {
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+    }
+};
+
 
 
 exports.getUserSecretsWithCount = async (req, res) => {

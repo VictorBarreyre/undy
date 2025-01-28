@@ -12,7 +12,7 @@ const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 300;
 
 const SwipeDeck = ({ selectedFilters = [] }) => {
-  const { data } = useCardData();
+  const { data, purchaseAndAccessConversation } = useCardData();
   const position = useRef(new Animated.ValueXY()).current;
   const [index, setIndex] = useState(0);
   const [filteredData, setFilteredData] = useState(data);
@@ -143,8 +143,23 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
         {renderCards()}
       </Box>
       <Pressable
-        onPress={() => {
-          console.log('Bouton cliqué !');
+        onPress={async () => {
+          try {
+            const { conversationId, conversation } = await purchaseAndAccessConversation(
+              currentItem.id,
+              currentItem.price
+            );
+            
+            // Rediriger vers le chat avec les données de la conversation
+            navigation.navigate('Chat', { 
+              conversationId,
+              secretData: currentItem,
+              conversation
+            });
+          } catch (error) {
+            console.error('Erreur lors de l\'achat:', error);
+            // Gérer l'erreur (afficher un message à l'utilisateur, etc.)
+          }
         }}
         style={({ pressed }) => [
           {

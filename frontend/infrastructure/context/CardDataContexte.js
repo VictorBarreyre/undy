@@ -80,9 +80,48 @@ const handlePostSecret = async ({ selectedLabel, secretText, price, expiresIn = 
     }
 };
 
+const purchaseAndAccessConversation = async (secretId, price) => {
+  try {
+    // 1. Effectuer l'achat du secret, qui gère aussi la création/accès à la conversation
+    const purchaseResponse = await axios.post(
+      `${DATABASE_URL}/api/secrets/${secretId}/purchase`,
+      { price },
+      { headers: { Authorization: `Bearer ${userToken}` } }
+    );
+
+    // La réponse contient déjà l'ID de la conversation
+    const { conversationId } = purchaseResponse.data;
+
+    // 2. Vérifier/récupérer les détails de la conversation
+    const conversationResponse = await axios.get(
+      `${DATABASE_URL}/api/secrets/conversations/secret/${secretId}`,
+      { headers: { Authorization: `Bearer ${userToken}` } }
+    );
+
+    return {
+      conversationId,
+      conversation: conversationResponse.data
+    };
+  } catch (error) {
+    if (error.response?.status === 400 && error.response?.data?.message?.includes('déjà acheté')) {
+      // Si le secret est déjà acheté, récupérer simplement la conversation
+      const conversationResponse = await axios.get(
+        `${DATABASE_URL}/api/secrets/conversations/secret/${secretId}`,
+        { headers: { Authorization: `Bearer ${userToken}` } }
+      );
+      
+      return {
+        conversationId: conversationResponse.data._id,
+        conversation: conversationResponse.data
+      };
+    }
+    throw error;
+  }
+};
+
 
   return (
-    <CardDataContext.Provider value={{ data, setData, handlePostSecret, fetchAllSecrets,fetchUserSecretsWithCount, isLoadingData }}>
+    <CardDataContext.Provider value={{ data, setData, handlePostSecret, fetchAllSecrets,fetchUserSecretsWithCount,purchaseAndAccessConversation, isLoadingData }}>
       {children}
     </CardDataContext.Provider>
   );
