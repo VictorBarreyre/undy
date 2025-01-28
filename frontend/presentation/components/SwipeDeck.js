@@ -145,20 +145,26 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       <Pressable
         onPress={async () => {
           try {
+            // Vérification que currentItem existe et a un _id
+            if (!currentItem || !currentItem._id) {
+              console.error('Invalid currentItem:', currentItem);
+              // Afficher une erreur à l'utilisateur
+              return;
+            }
+
             const { conversationId, conversation } = await purchaseAndAccessConversation(
-              currentItem.id,
+              currentItem._id, // Utiliser _id au lieu de id
               currentItem.price
             );
-            
-            // Rediriger vers le chat avec les données de la conversation
-            navigation.navigate('Chat', { 
+
+            navigation.navigate('Chat', {
               conversationId,
               secretData: currentItem,
               conversation
             });
           } catch (error) {
             console.error('Erreur lors de l\'achat:', error);
-            // Gérer l'erreur (afficher un message à l'utilisateur, etc.)
+            // Gérer l'erreur (afficher un message à l'utilisateur)
           }
         }}
         style={({ pressed }) => [
