@@ -66,11 +66,11 @@ const ConversationsList = ({ navigation }) => {
   }
 
   const renderConversation = ({ item }) => {
-    console.log('Données de la conversation:', {
-      secretId: item.secret?._id,
-      authorName: item.secret?.user?.name,
-      authorPicture: item.secret?.user?.profilePicture,
-      label: item.secret?.label
+    console.log('Données complètes de la conversation:', {
+      conversationId: item._id,
+      secret: item.secret,
+      secretAuthor: item.secret?.user,
+      participants: item.participants
     });
   
     return (
