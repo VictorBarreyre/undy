@@ -65,36 +65,39 @@ const ConversationsList = ({ navigation }) => {
     );
   }
 
-  const renderConversation = ({ item }) => (
-    <Pressable
-      onPress={() => navigation.navigate('Chat', {
-        conversationId: item._id,
-        secretData: item.secret,
-        conversation: item
-      })}
-    >
-      <HStack alignItems='center' space={3} p={4} borderBottomWidth={1} borderColor="gray.200">
-        <Image
-          source={{
-            uri: item.participants[0]?.profilePicture || 'https://via.placeholder.com/40'
-          }}
-          alt="Profile"
-          width={45}
-          height={45}
-          rounded="full"
-        />
-        <VStack flex={1}>
-          <Text fontWeight="bold">{item.secret?.label || 'Sans titre'}</Text>
-          <Text numberOfLines={1} color="gray.500">
-            {item.messages[item.messages.length - 1]?.content || 'Pas de messages'}
+  const renderConversation = ({ item }) => {
+    // Log pour debug
+    console.log('Auteur du secret:', item.secret?.user);
+  
+    return (
+      <Pressable
+        onPress={() => navigation.navigate('Chat', {
+          conversationId: item._id,
+          secretData: item.secret,
+          conversation: item
+        })}
+      >
+        <HStack alignItems='center' space={3} p={4} borderBottomWidth={1} borderColor="gray.200">
+          <Image
+            source={{
+              uri: item.secret?.user?.profilePicture || 'https://via.placeholder.com/40'
+            }}
+            alt="Profile"
+            width={45}
+            height={45}
+            rounded="full"
+          />
+          <VStack flex={1}>
+            <Text fontWeight="bold">{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
+            <Text fontSize="xs" color="gray.500">{item.secret?.label || 'Sans titre'}</Text>
+          </VStack>
+          <Text color="gray.400">
+            {new Date(item.updatedAt).toLocaleDateString()}
           </Text>
-        </VStack>
-        <Text color="gray.400">
-          {new Date(item.updatedAt).toLocaleDateString()}
-        </Text>
-      </HStack>
-    </Pressable>
-  );
+        </HStack>
+      </Pressable>
+    );
+  };
 
   return (
     <Background>

@@ -117,20 +117,22 @@ exports.purchaseSecret = async (req, res) => {
 };
 
 
-exports.getSecretConversation = async (req, res) => {
+exports.getUserConversations = async (req, res) => {
     try {
-        const conversation = await Conversation.findOne({ 
-            secret: req.params.secretId,
-            participants: req.user.id 
+        const conversations = await Conversation.find({
+            participants: req.user.id
         })
         .populate('participants', 'name profilePicture')
-        .populate('secret', 'label content');
+        .populate({
+            path: 'secret',
+            populate: {
+                path: 'user',
+                select: 'name profilePicture'
+            }
+        })
+        .sort({ updatedAt: -1 });
 
-        if (!conversation) {
-            return res.status(404).json({ message: 'Conversation introuvable.' });
-        }
-
-        res.status(200).json(conversation);
+        res.status(200).json(conversations);
     } catch (error) {
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
