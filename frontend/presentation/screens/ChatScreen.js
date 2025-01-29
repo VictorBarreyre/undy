@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Box, Input, IconButton, FlatList, HStack } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { Background } from '../../navigation/Background';
 
 const ChatScreen = ({ route }) => {
  const [message, setMessage] = useState('');
@@ -34,6 +35,7 @@ const ChatScreen = ({ route }) => {
      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
      style={{ flex: 1 }}
    >
+    <Background>
      <Box flex={1}>
        <FlatList
          data={messages}
@@ -55,6 +57,7 @@ const ChatScreen = ({ route }) => {
          />
        </HStack>
      </Box>
+     </Background>
    </KeyboardAvoidingView>
  );
 };

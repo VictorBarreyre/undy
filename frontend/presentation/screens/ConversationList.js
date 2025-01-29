@@ -19,6 +19,16 @@ const ConversationsList = ({ navigation }) => {
           `${DATABASE_URL}/api/secrets/conversations`,
           { headers: { Authorization: `Bearer ${userToken}` } }
         );
+        console.log('Toutes les conversations:', response.data);
+        response.data.forEach((conversation, index) => {
+          console.log(`Conversation ${index + 1}:`, {
+            conversationId: conversation._id,
+            secret: conversation.secret,
+            participants: conversation.participants,
+            messages: conversation.messages,
+            updatedAt: conversation.updatedAt
+          });
+        });
         setConversations(response.data);
       } catch (error) {
         console.error('Erreur chargement conversations:', error);
@@ -56,20 +66,21 @@ const ConversationsList = ({ navigation }) => {
   }
 
   const renderConversation = ({ item }) => (
-    <Pressable 
-      onPress={() => navigation.navigate('Chat', { 
+    <Pressable
+      onPress={() => navigation.navigate('Chat', {
         conversationId: item._id,
         secretData: item.secret,
         conversation: item
       })}
     >
-      <HStack space={3} p={4} borderBottomWidth={1} borderColor="gray.200">
+      <HStack alignItems='center' space={3} p={4} borderBottomWidth={1} borderColor="gray.200">
         <Image
-          source={{ 
+          source={{
             uri: item.participants[0]?.profilePicture || 'https://via.placeholder.com/40'
           }}
           alt="Profile"
-          size="sm"
+          width={45}
+          height={45}
           rounded="full"
         />
         <VStack flex={1}>
@@ -86,14 +97,14 @@ const ConversationsList = ({ navigation }) => {
   );
 
   return (
-    <Background> 
-    <Box flex={1}>
-      <FlatList
-        data={conversations}
-        renderItem={renderConversation}
-        keyExtractor={item => item._id}
-      />
-    </Box>
+    <Background>
+      <Box flex={1}>
+        <FlatList
+          data={conversations}
+          renderItem={renderConversation}
+          keyExtractor={item => item._id}
+        />
+      </Box>
     </Background>
   );
 };
