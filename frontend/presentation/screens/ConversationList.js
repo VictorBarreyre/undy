@@ -6,6 +6,7 @@ import { Background } from '../../navigation/Background';
 import axios from 'axios';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { DATABASE_URL } from '@env';
+import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 
 const ConversationsList = ({ navigation }) => {
   const [conversations, setConversations] = useState([]);
@@ -72,7 +73,7 @@ const ConversationsList = ({ navigation }) => {
       secretAuthor: item.secret?.user,
       participants: item.participants
     });
-  
+
     return (
       <Pressable
         onPress={() => navigation.navigate('Chat', {
@@ -81,7 +82,7 @@ const ConversationsList = ({ navigation }) => {
           conversation: item
         })}
       >
-        <HStack alignItems='center' space={3} p={4} borderBottomWidth={1} borderColor="gray.200">
+        <HStack alignItems='center' space={3} py={4} borderBottomWidth={1} borderColor="gray.200">
           <Image
             source={{
               uri: item.secret?.user?.profilePicture || 'https://via.placeholder.com/40'
@@ -105,12 +106,23 @@ const ConversationsList = ({ navigation }) => {
 
   return (
     <Background>
-      <Box flex={1}>
-        <FlatList
-          data={conversations}
-          renderItem={renderConversation}
-          keyExtractor={item => item._id}
-        />
+      <Box flex={1} justifyContent="flex-start" paddingTop={5}>
+        <VStack paddingLeft={5} paddingRight={5} space={4}>
+          <HStack alignItems="center" justifyContent="center" width="100%">
+        
+            {/* Texte */}
+            <Text style={styles.h3} width='auto' textAlign="center">
+              Conversations
+            </Text>
+
+      
+          </HStack>
+          <FlatList
+            data={conversations}
+            renderItem={renderConversation}
+            keyExtractor={item => item._id}
+          />
+        </VStack>
       </Box>
     </Background>
   );
