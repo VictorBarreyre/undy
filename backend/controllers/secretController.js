@@ -116,27 +116,34 @@ exports.purchaseSecret = async (req, res) => {
     }
 };
 
-
-exports.getUserConversations = async (req, res) => {
+exports.getSecretConversation = async (req, res) => {
     try {
-        const conversations = await Conversation.find({
-            participants: req.user.id
+        const conversation = await Conversation.findOne({ 
+            secret: req.params.secretId,
+            participants: req.user.id 
         })
         .populate('participants', 'name profilePicture')
         .populate({
             path: 'secret',
             populate: {
-                path: 'user',
+                path: 'user',  // On ajoute le populate de l'utilisateur du secret
                 select: 'name profilePicture'
-            }
-        })
-        .sort({ updatedAt: -1 });
+            },
+            select: 'label content user' // On ajoute user dans le select
+        });
 
-        res.status(200).json(conversations);
+        if (!conversation) {
+            return res.status(404).json({ message: 'Conversation introuvable.' });
+        }
+
+        res.status(200).json(conversation);
     } catch (error) {
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };
+
+
+
 
 exports.addMessageToConversation = async (req, res) => {
     try {
