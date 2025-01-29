@@ -7,7 +7,7 @@ import { Background } from '../../navigation/Background';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 
-const Home = () => {
+const Home = ({navigation}) => {
 
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [activeType, setActiveType] = useState('Tous'); // Gère le type de contenu sélectionné

@@ -5,6 +5,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUnlock } from '@fortawesome/free-solid-svg-icons';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import CardHome from './CardHome';
+import { useNavigation } from '@react-navigation/native';
+
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height
@@ -19,7 +21,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   const [currentItem, setCurrentItem] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-
+  const navigation = useNavigation();
 
   useEffect(() => {
     const filtered = selectedFilters.length > 0
@@ -145,26 +147,27 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       <Pressable
         onPress={async () => {
           try {
-            // Vérification que currentItem existe et a un _id
             if (!currentItem || !currentItem._id) {
               console.error('Invalid currentItem:', currentItem);
-              // Afficher une erreur à l'utilisateur
               return;
             }
-
+      
             const { conversationId, conversation } = await purchaseAndAccessConversation(
-              currentItem._id, // Utiliser _id au lieu de id
+              currentItem._id,
               currentItem.price
             );
-
-            navigation.navigate('Chat', {
-              conversationId,
-              secretData: currentItem,
-              conversation
+            
+            // Navigation vers le Tab des conversations puis vers le Chat
+            navigation.navigate('ChatTab', {
+              screen: 'Chat',
+              params: { 
+                conversationId,
+                secretData: currentItem,
+                conversation
+              }
             });
           } catch (error) {
             console.error('Erreur lors de l\'achat:', error);
-            // Gérer l'erreur (afficher un message à l'utilisateur)
           }
         }}
         style={({ pressed }) => [
