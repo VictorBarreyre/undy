@@ -66,8 +66,12 @@ const ConversationsList = ({ navigation }) => {
   }
 
   const renderConversation = ({ item }) => {
-    // Log pour debug
-    console.log('Auteur du secret:', item.secret?.user);
+    console.log('Données de la conversation:', {
+      secretId: item.secret?._id,
+      authorName: item.secret?.user?.name,
+      authorPicture: item.secret?.user?.profilePicture,
+      label: item.secret?.label
+    });
   
     return (
       <Pressable
