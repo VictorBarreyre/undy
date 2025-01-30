@@ -118,18 +118,20 @@ exports.purchaseSecret = async (req, res) => {
 
 exports.getSecretConversation = async (req, res) => {
     try {
+        // On recherche directement par l'ID de la conversation
         const conversation = await Conversation.findOne({ 
-            secret: req.params.secretId,
+            _id: req.params.secretId,  // ici on utilise l'ID de la conversation
             participants: req.user.id 
         })
         .populate('participants', 'name profilePicture')
+        .populate('messages.sender', 'name profilePicture') // Important pour avoir les infos des expéditeurs
         .populate({
             path: 'secret',
             populate: {
-                path: 'user',  // On ajoute le populate de l'utilisateur du secret
+                path: 'user',
                 select: 'name profilePicture'
             },
-            select: 'label content user' // On ajoute user dans le select
+            select: 'label content user'
         });
 
         if (!conversation) {
@@ -138,10 +140,10 @@ exports.getSecretConversation = async (req, res) => {
 
         res.status(200).json(conversation);
     } catch (error) {
+        console.error('Erreur détaillée:', error);
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };
-
 
 
 

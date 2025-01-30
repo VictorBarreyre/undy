@@ -150,10 +150,43 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
+  const getConversationMessages = async (conversationId) => {
+    if (!conversationId) {
+      throw new Error('ID de conversation requis');
+    }
+  
+    try {
+      const response = await axios.get(
+        // Modifié pour correspondre à la route du backend
+        `${DATABASE_URL}/api/secrets/conversations/secret/${conversationId}`,
+        {
+          headers: { Authorization: `Bearer ${userToken}` }
+        }
+      );
+  
+      // Ajout de log pour debug
+      console.log('Response data:', response.data);
+      
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des messages:', error);
+      throw error;
+    }
+  };
 
 
   return (
-    <CardDataContext.Provider value={{ data, setData, handlePostSecret, fetchAllSecrets, fetchUserSecretsWithCount, purchaseAndAccessConversation,handleAddMessage, isLoadingData }}>
+    <CardDataContext.Provider value={{
+      data,
+      setData,
+      handlePostSecret,
+      fetchAllSecrets,
+      fetchUserSecretsWithCount,
+      purchaseAndAccessConversation,
+      handleAddMessage,
+      getConversationMessages,
+      isLoadingData
+    }}>
       {children}
     </CardDataContext.Provider>
   );
