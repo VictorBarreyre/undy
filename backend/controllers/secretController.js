@@ -150,38 +150,36 @@ exports.getSecretConversation = async (req, res) => {
 exports.getConversation = async (req, res) => {
     try {
         const conversation = await Conversation.findOne({ 
-            _id: req.params.conversationId,
+            _id: req.params.conversationId, // Use _id instead of conversationId
             participants: req.user.id 
         })
-        .populate('participants', 'name profilePicture')
-        .populate('messages.sender', 'name profilePicture')
+        .populate({
+            path: 'messages.sender',
+            select: 'name profilePicture'
+        })
         .populate({
             path: 'secret',
             populate: {
                 path: 'user',
                 select: 'name profilePicture'
-            },
-            select: 'label content user'
+            }
         });
 
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
 
-        // Log pour debug
-        console.log("Conversation trouvée:", {
-            id: conversation._id,
-            messagesCount: conversation.messages?.length,
-            participants: conversation.participants
-        });
+        console.log("Conversation messages:", conversation.messages);
 
-        res.status(200).json(conversation);
+        res.status(200).json({
+            messages: conversation.messages,
+            conversationId: conversation._id
+        });
     } catch (error) {
         console.error('Erreur détaillée:', error);
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };
-
 
 
 exports.addMessageToConversation = async (req, res) => {

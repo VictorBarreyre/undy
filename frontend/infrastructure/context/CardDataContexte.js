@@ -152,18 +152,24 @@ export const CardDataProvider = ({ children }) => {
 
   const getConversationMessages = async (conversationId) => {
     try {
-      const response = await axios.get(
-        `${DATABASE_URL}/api/secrets/conversations/${conversationId}`, // Route correcte
-        {
-          headers: { Authorization: `Bearer ${userToken}` }
-        }
-      );
-      return response.data;
+        const response = await axios.get(
+            `${DATABASE_URL}/api/secrets/conversations/${conversationId}`, 
+            {
+                headers: { Authorization: `Bearer ${userToken}` }
+            }
+        );
+        
+        console.log("Conversation messages response:", response.data);
+        
+        return {
+            messages: response.data.messages || [],
+            conversationId: response.data.conversationId
+        };
     } catch (error) {
-      console.error('Erreur lors de la récupération des messages:', error);
-      throw error;
+        console.error('Erreur lors de la récupération des messages:', error);
+        throw error;
     }
-  };
+};
 
   return (
     <CardDataContext.Provider value={{

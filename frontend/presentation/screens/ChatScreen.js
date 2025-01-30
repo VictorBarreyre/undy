@@ -24,41 +24,30 @@ const ChatScreen = ({ route }) => {
 
   useEffect(() => {
     const loadMessages = async () => {
-      try {
-        console.log("Début du chargement des messages pour la conversation:", conversationId);
-        const conversationData = await getConversationMessages(conversationId);
-        console.log("Données de conversation reçues:", conversationData);
-        
-        if (conversationData.messages) {
-          const formattedMessages = conversationData.messages.map(msg => {
-            console.log("Message traité:", msg);
-            console.log("ID utilisateur courant:", user?._id);
-            console.log("ID expéditeur message:", typeof msg.sender === 'object' ? msg.sender._id : msg.sender);
+        try {
+            const conversationData = await getConversationMessages(conversationId);
+            console.log("Conversation data:", conversationData);
             
-            // Modification ici pour gérer à la fois l'ObjectId et la string
-            const senderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
-            const isUserMessage = senderId === user?._id;
-            
-            return {
-              id: msg._id,
-              text: msg.content,
-              sender: isUserMessage ? 'user' : 'other',
-              timestamp: msg.createdAt
-            };
-          });
-          
-          console.log("Messages formatés:", formattedMessages);
-          setMessages(formattedMessages);
+            if (conversationData.messages) {
+                const formattedMessages = conversationData.messages.map(msg => ({
+                    id: msg._id,
+                    text: msg.content,
+                    sender: msg.sender?._id === user?._id ? 'user' : 'other',
+                    timestamp: msg.createdAt
+                }));
+                
+                console.log("Formatted messages:", formattedMessages);
+                setMessages(formattedMessages);
+            }
+        } catch (error) {
+            console.error('Erreur lors du chargement des messages:', error);
         }
-      } catch (error) {
-        console.error('Erreur lors du chargement des messages:', error);
-      }
     };
   
     if (user) {
-      loadMessages();
+        loadMessages();
     }
-  }, [conversationId, user]);
+}, [conversationId, user]);
 
   const sendMessage = async () => {
     if (!message.trim()) return;
