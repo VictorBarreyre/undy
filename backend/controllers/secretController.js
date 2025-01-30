@@ -149,37 +149,37 @@ exports.getSecretConversation = async (req, res) => {
 
 exports.getConversation = async (req, res) => {
     try {
-        const conversation = await Conversation.findOne({ 
-            _id: req.params.conversationId, // Use _id instead of conversationId
-            participants: req.user.id 
-        })
-        .populate({
-            path: 'messages.sender',
-            select: 'name profilePicture'
-        })
-        .populate({
-            path: 'secret',
-            populate: {
-                path: 'user',
-                select: 'name profilePicture'
-            }
-        });
-
-        if (!conversation) {
-            return res.status(404).json({ message: 'Conversation introuvable.' });
+      const conversation = await Conversation.findOne({
+        _id: req.params.conversationId,
+        participants: req.user.id
+      })
+      .populate({
+        path: 'messages.sender',
+        select: 'name profilePicture'
+      })
+      .populate({
+        path: 'secret',
+        populate: {
+          path: 'user',
+          select: 'name profilePicture'
         }
-
-        console.log("Conversation messages:", conversation.messages);
-
-        res.status(200).json({
-            messages: conversation.messages,
-            conversationId: conversation._id
-        });
+      });
+  
+      if (!conversation) {
+        return res.status(404).json({ message: 'Conversation introuvable.' });
+      }
+  
+      console.log("Conversation messages:", conversation.messages); // Log des messages de la conversation
+  
+      res.status(200).json({
+        messages: conversation.messages,
+        conversationId: conversation._id
+      });
     } catch (error) {
-        console.error('Erreur détaillée:', error);
-        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+      console.error('Erreur lors de la récupération des messages de la conversation:', error); // Log d'erreur
+      res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
-};
+  };
 
 
 exports.addMessageToConversation = async (req, res) => {

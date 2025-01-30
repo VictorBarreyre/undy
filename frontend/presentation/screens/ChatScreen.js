@@ -1,4 +1,3 @@
-// ChatScreen.js
 import React, { useState, useEffect, useContext } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
 import { Box, Input, Text, FlatList, HStack } from 'native-base';
@@ -6,48 +5,45 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
 import { TouchableOpacity } from 'react-native';
-import { styles } from '../../infrastructure/theme/styles'
+import { styles } from '../../infrastructure/theme/styles';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
-import { AuthContext } from '../../infrastructure/context/AuthContext'; // Ajout de l'import
-
-
+import { AuthContext } from '../../infrastructure/context/AuthContext';
 
 const ChatScreen = ({ route }) => {
-  const { conversationId } = route.params; // Récupérez le conversationId des params
+  const { conversationId } = route.params;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const { handleAddMessage, getConversationMessages } = useCardData();
-  const { user } = useContext(AuthContext); 
+  const { user } = useContext(AuthContext);
 
-
-  console.log("ConversationId reçu:", conversationId); // Pour debug
+  console.log("ConversationId reçu:", conversationId);
 
   useEffect(() => {
     const loadMessages = async () => {
-        try {
-            const conversationData = await getConversationMessages(conversationId);
-            console.log("Conversation data:", conversationData);
-            
-            if (conversationData.messages) {
-                const formattedMessages = conversationData.messages.map(msg => ({
-                    id: msg._id,
-                    text: msg.content,
-                    sender: msg.sender?._id === user?._id ? 'user' : 'other',
-                    timestamp: msg.createdAt
-                }));
-                
-                console.log("Formatted messages:", formattedMessages);
-                setMessages(formattedMessages);
-            }
-        } catch (error) {
-            console.error('Erreur lors du chargement des messages:', error);
+      try {
+        const conversationData = await getConversationMessages(conversationId);
+        console.log("Conversation data:", conversationData);
+
+        if (conversationData.messages) {
+          const formattedMessages = conversationData.messages.map(msg => ({
+            id: msg._id,
+            text: msg.content,
+            sender: msg.sender?._id === user?._id ? 'user' : 'other',
+            timestamp: msg.createdAt
+          }));
+
+          console.log("Formatted messages:", formattedMessages);
+          setMessages(formattedMessages);
         }
+      } catch (error) {
+        console.error('Erreur lors du chargement des messages:', error);
+      }
     };
-  
+
     if (user) {
-        loadMessages();
+      loadMessages();
     }
-}, [conversationId, user]);
+  }, [conversationId, user]);
 
   const sendMessage = async () => {
     if (!message.trim()) return;
@@ -58,12 +54,11 @@ const ChatScreen = ({ route }) => {
       }
       const newMessage = await handleAddMessage(conversationId, message);
       setMessage('');
-      // Mettre à jour les messages localement
-      setMessages(prev => [...prev, { 
-        id: Date.now(), // ID temporaire
+      setMessages(prev => [...prev, {
+        id: Date.now(),
         text: message,
         sender: 'user',
-        ...newMessage 
+        ...newMessage
       }]);
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
@@ -72,9 +67,9 @@ const ChatScreen = ({ route }) => {
 
   const renderMessage = ({ item }) => (
     <Box
-      bg={item.sender === 'user' ? '#FF78B2' : '#FFFFFF'} // Couleurs iMessage
+      bg={item.sender === 'user' ? '#FF78B2' : '#FFFFFF'}
       p={3}
-      borderRadius={20}  // Coins plus arrondis
+      borderRadius={20}
       maxW="80%"
       alignSelf={item.sender === 'user' ? 'flex-end' : 'flex-start'}
       m={2}
@@ -96,27 +91,24 @@ const ChatScreen = ({ route }) => {
     <Background>
       <SafeAreaView style={{ flex: 1 }}>
         <Box style={{ flex: 1 }}>
-          <Box style={{ flex: 1, marginBottom: 60 }}> {/* Espace pour l'input */}
+          <Box style={{ flex: 1, marginBottom: 60 }}>
             <FlatList
               data={messages}
               renderItem={renderMessage}
               keyExtractor={item => item.id.toString()}
               contentContainerStyle={{
                 flexGrow: 1,
-           
               }}
             />
           </Box>
-
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'position' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 0} // Changé de 90 à 0
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 0}
             style={{
               position: 'absolute',
               left: 0,
               right: 0,
               bottom: 0,
-    
             }}
           >
             <HStack
@@ -125,7 +117,6 @@ const ChatScreen = ({ route }) => {
               style={{
                 paddingHorizontal: 15,
                 paddingVertical: 10,
-          
               }}
             >
               <Input
