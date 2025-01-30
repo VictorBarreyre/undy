@@ -1,5 +1,5 @@
 // ChatScreen.js
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
 import { Box, Input, Text, FlatList, HStack } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -8,6 +8,8 @@ import { Background } from '../../navigation/Background';
 import { TouchableOpacity } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles'
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
+import { AuthContext } from '../../infrastructure/context/AuthContext'; // Ajout de l'import
+
 
 
 const ChatScreen = ({ route }) => {
@@ -15,28 +17,48 @@ const ChatScreen = ({ route }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const { handleAddMessage, getConversationMessages } = useCardData();
+  const { user } = useContext(AuthContext); 
+
 
   console.log("ConversationId reçu:", conversationId); // Pour debug
 
   useEffect(() => {
     const loadMessages = async () => {
       try {
+        console.log("Début du chargement des messages pour la conversation:", conversationId);
         const conversationData = await getConversationMessages(conversationId);
-        if (conversationData?.messages) {
-          setMessages(conversationData.messages.map(msg => ({
-            id: msg._id,
-            text: msg.content,
-            sender: msg.sender === user.id ? 'user' : 'other', // Assurez-vous d'avoir accès à user.id
-            timestamp: msg.createdAt
-          })));
+        console.log("Données de conversation reçues:", conversationData);
+        
+        if (conversationData.messages) {
+          const formattedMessages = conversationData.messages.map(msg => {
+            console.log("Message traité:", msg);
+            console.log("ID utilisateur courant:", user?._id);
+            console.log("ID expéditeur message:", typeof msg.sender === 'object' ? msg.sender._id : msg.sender);
+            
+            // Modification ici pour gérer à la fois l'ObjectId et la string
+            const senderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
+            const isUserMessage = senderId === user?._id;
+            
+            return {
+              id: msg._id,
+              text: msg.content,
+              sender: isUserMessage ? 'user' : 'other',
+              timestamp: msg.createdAt
+            };
+          });
+          
+          console.log("Messages formatés:", formattedMessages);
+          setMessages(formattedMessages);
         }
       } catch (error) {
         console.error('Erreur lors du chargement des messages:', error);
       }
     };
   
-    loadMessages();
-  }, [conversationId]);
+    if (user) {
+      loadMessages();
+    }
+  }, [conversationId, user]);
 
   const sendMessage = async () => {
     if (!message.trim()) return;

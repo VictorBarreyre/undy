@@ -6,7 +6,7 @@ import { Background } from '../../navigation/Background';
 import axios from 'axios';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { DATABASE_URL } from '@env';
-import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
+import TypewriterLoader from '../components/TypewriterLoader';
 
 const ConversationsList = ({ navigation }) => {
   const [conversations, setConversations] = useState([]);
@@ -42,13 +42,7 @@ const ConversationsList = ({ navigation }) => {
   }, []);
 
   if (isLoading) {
-    return (
-      <Background>
-        <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
-          <Text>Chargement...</Text>
-        </VStack>
-      </Background>
-    );
+    return <TypewriterLoader />;
   }
 
   if (conversations.length === 0) {

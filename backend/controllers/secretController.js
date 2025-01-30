@@ -125,6 +125,7 @@ exports.getSecretConversation = async (req, res) => {
         })
         .populate('participants', 'name profilePicture')
         .populate('messages.sender', 'name profilePicture') // Important pour avoir les infos des expéditeurs
+        .select('participants messages secret expiresAt') // Ajout explicite de messages
         .populate({
             path: 'secret',
             populate: {
