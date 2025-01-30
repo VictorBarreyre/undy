@@ -120,7 +120,7 @@ exports.getSecretConversation = async (req, res) => {
     try {
         // On recherche directement par l'ID de la conversation
         const conversation = await Conversation.findOne({ 
-            _id: req.params.secretId,  // ici on utilise l'ID de la conversation
+            _id: req.params.conversationId,  // ici on utilise l'ID de la conversation
             participants: req.user.id 
         })
         .populate('participants', 'name profilePicture')
