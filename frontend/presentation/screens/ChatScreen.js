@@ -53,7 +53,7 @@ const ChatScreen = ({ route }) => {
               keyExtractor={item => item.id.toString()}
               contentContainerStyle={{
                 flexGrow: 1,
-                justifyContent: 'flex-end'
+           
               }}
             />
           </Box>
