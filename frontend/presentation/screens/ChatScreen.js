@@ -7,16 +7,35 @@ import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
 import { TouchableOpacity } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles'
+import { useCardData } from '../../infrastructure/context/CardDataContexte';
 
 
 const ChatScreen = ({ route }) => {
+  const { conversationId } = route.params; // Récupérez le conversationId des params
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([]); // À remplacer par vos données
+  const [messages, setMessages] = useState([]);
+  const { handleAddMessage } = useCardData();
 
-  const sendMessage = () => {
-    if (message.trim()) {
-      setMessages(prev => [...prev, { id: Date.now(), text: message, sender: 'user' }]);
+  console.log("ConversationId reçu:", conversationId); // Pour debug
+
+  const sendMessage = async () => {
+    if (!message.trim()) return;
+
+    try {
+      if (!conversationId) {
+        throw new Error('ID de conversation manquant');
+      }
+      const newMessage = await handleAddMessage(conversationId, message);
       setMessage('');
+      // Mettre à jour les messages localement
+      setMessages(prev => [...prev, { 
+        id: Date.now(), // ID temporaire
+        text: message,
+        sender: 'user',
+        ...newMessage 
+      }]);
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi:', error);
     }
   };
 
@@ -83,7 +102,6 @@ const ChatScreen = ({ route }) => {
                 value={message}
                 onChangeText={setMessage}
                 placeholder="Message..."
-                variant="rounded"
                 borderRadius="full"
                 backgroundColor="white"
                 height="40px"

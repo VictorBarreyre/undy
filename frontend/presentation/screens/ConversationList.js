@@ -82,7 +82,13 @@ const ConversationsList = ({ navigation }) => {
           conversation: item
         })}
       >
-        <HStack alignItems='center' space={3} py={4} borderBottomWidth={1} borderColor="gray.200">
+        <HStack
+          alignItems='center'
+          space={3}
+          py={4}
+          borderBottomWidth={1}
+          borderColor="#94A3B820"  // Le "33" à la fin donne une opacité de 20%
+        >
           <Image
             source={{
               uri: item.secret?.user?.profilePicture || 'https://via.placeholder.com/40'
@@ -92,13 +98,16 @@ const ConversationsList = ({ navigation }) => {
             height={45}
             rounded="full"
           />
-          <VStack flex={1}>
-            <Text fontWeight="bold">{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
-            <Text fontSize="xs" color="gray.500">{item.secret?.label || 'Sans titre'}</Text>
-          </VStack>
-          <Text color="gray.400">
+          <VStack space={2} flex={1}>
+            <HStack justifyContent='space-between' alignItems='center'> 
+            <Text style={styles.h5} >{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
+            <Text style={styles.littleCaption} color="#94A3B8">
             {new Date(item.updatedAt).toLocaleDateString()}
           </Text>
+            </HStack>
+            <Text style={styles.littleCaption} numberOfLines={1} color="#94A3B8">{item.secret?.content || 'Sans titre'}</Text>
+          </VStack>
+  
         </HStack>
       </Pressable>
     );
@@ -109,13 +118,13 @@ const ConversationsList = ({ navigation }) => {
       <Box flex={1} justifyContent="flex-start" paddingTop={5}>
         <VStack paddingLeft={5} paddingRight={5} space={4}>
           <HStack alignItems="center" justifyContent="center" width="100%">
-        
+
             {/* Texte */}
             <Text style={styles.h3} width='auto' textAlign="center">
               Conversations
             </Text>
 
-      
+
           </HStack>
           <FlatList
             data={conversations}
