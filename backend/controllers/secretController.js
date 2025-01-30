@@ -116,16 +116,14 @@ exports.purchaseSecret = async (req, res) => {
     }
 };
 
-exports.getSecretConversation = async (req, res) => {
+exports.getConversation = async (req, res) => {
     try {
-        // On recherche directement par l'ID de la conversation
         const conversation = await Conversation.findOne({ 
-            _id: req.params.conversationId,  // ici on utilise l'ID de la conversation
+            _id: req.params.conversationId,
             participants: req.user.id 
         })
         .populate('participants', 'name profilePicture')
-        .populate('messages.sender', 'name profilePicture') // Important pour avoir les infos des expéditeurs
-        .select('participants messages secret expiresAt') // Ajout explicite de messages
+        .populate('messages.sender', 'name profilePicture')
         .populate({
             path: 'secret',
             populate: {
@@ -138,6 +136,13 @@ exports.getSecretConversation = async (req, res) => {
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
+
+        // Log pour debug
+        console.log("Conversation trouvée:", {
+            id: conversation._id,
+            messagesCount: conversation.messages?.length,
+            participants: conversation.participants
+        });
 
         res.status(200).json(conversation);
     } catch (error) {
