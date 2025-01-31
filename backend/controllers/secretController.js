@@ -116,6 +116,36 @@ exports.purchaseSecret = async (req, res) => {
     }
 };
 
+exports.getSecretConversation = async (req, res) => {
+    try {
+        const conversation = await Conversation.findOne({ 
+            _id: req.params.secretId,
+            participants: req.user.id 
+        })
+        .populate('participants', 'name profilePicture')
+        .populate('messages.sender', 'name profilePicture')
+        .select('participants messages secret expiresAt')
+        .populate({
+            path: 'secret',
+            populate: {
+                path: 'user',
+                select: 'name profilePicture'
+            },
+            select: 'label content user'
+        });
+
+        console.log("Conversation trouvée:", JSON.stringify(conversation, null, 2)); // Debug
+
+        if (!conversation) {
+            return res.status(404).json({ message: 'Conversation introuvable.' });
+        }
+
+        res.status(200).json(conversation);
+    } catch (error) {
+        console.error('Erreur détaillée:', error);
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+    }
+};
 
 exports.getConversation = async (req, res) => {
     try {
