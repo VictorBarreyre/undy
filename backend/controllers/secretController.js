@@ -56,11 +56,17 @@ exports.createSecret = async (req, res) => {
     }
 };
 
+
 exports.purchaseSecret = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
+        // Vérifier si l'ID est valide
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'ID de secret invalide' });
+        }
+
         const secret = await Secret.findById(req.params.id);
 
         if (!secret) {
@@ -69,36 +75,57 @@ exports.purchaseSecret = async (req, res) => {
 
         // Vérifier si l'utilisateur a déjà acheté le secret
         if (secret.purchasedBy.includes(req.user.id)) {
-            // Si déjà acheté, on récupère juste la conversation existante
-            const conversation = await Conversation.findOne({ secret: secret._id });
-            return res.status(200).json({ 
-                message: 'Secret déjà acheté.',
-                conversationId: conversation._id 
+            // Chercher une conversation existante
+            let conversation = await Conversation.findOne({ 
+                secret: secret._id,
+                participants: { $elemMatch: { $eq: req.user.id } }
+            });
+            
+            // Si pas de conversation ou si l'utilisateur n'est pas dans les participants
+            if (!conversation) {
+                // Créer une nouvelle conversation
+                conversation = await Conversation.create([{
+                    secret: secret._id,
+                    participants: [secret.user, req.user.id],
+                    expiresAt: secret.expiresAt,
+                    messages: [] // Initialiser un tableau de messages vide
+                }], { session });
+                conversation = conversation[0]; // car create retourne un tableau
+            }
+
+            await session.commitTransaction();
+            return res.status(200).json({
+                message: 'Conversation récupérée/créée avec succès.',
+                conversationId: conversation._id
             });
         }
 
-        // Ajouter la logique de paiement ici (ex : Stripe)
+        // Si l'utilisateur n'a pas encore acheté le secret
+        // Ajouter ici la logique de paiement si nécessaire
         // ...
 
         // Ajouter l'utilisateur à la liste des acheteurs
         secret.purchasedBy.push(req.user.id);
         await secret.save({ session });
 
-        // Vérifier si une conversation existe déjà pour ce secret
+        // Créer ou récupérer la conversation
         let conversation = await Conversation.findOne({ secret: secret._id });
 
         if (!conversation) {
-            // Créer une nouvelle conversation si elle n'existe pas
+            // Créer une nouvelle conversation
             conversation = await Conversation.create([{
                 secret: secret._id,
-                participants: [secret.user, req.user.id], // Créateur + acheteur
-                expiresAt: secret.expiresAt
+                participants: [secret.user, req.user.id],
+                expiresAt: secret.expiresAt,
+                messages: []
             }], { session });
-            conversation = conversation[0]; // car create retourne un tableau
+            conversation = conversation[0];
         } else {
-            // Ajouter le nouvel acheteur aux participants
-            conversation.participants.push(req.user.id);
-            await conversation.save({ session });
+            // Ajouter le nouvel acheteur aux participants s'il n'y est pas déjà
+            if (!conversation.participants.includes(req.user.id)) {
+                conversation.participants.push(req.user.id);
+                await conversation.save({ session });
+            }
         }
 
         await session.commitTransaction();
@@ -107,10 +134,19 @@ exports.purchaseSecret = async (req, res) => {
             message: 'Secret acheté avec succès.',
             conversationId: conversation._id
         });
+
     } catch (error) {
         await session.abortTransaction();
-        console.error('Erreur lors de l\'achat:', error);
-        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+        console.error('Erreur détaillée lors de l\'achat:', {
+            error: error.message,
+            stack: error.stack,
+            secretId: req.params.id,
+            userId: req.user?.id
+        });
+        res.status(500).json({ 
+            message: 'Erreur serveur.', 
+            error: error.message 
+        });
     } finally {
         session.endSession();
     }
@@ -266,7 +302,13 @@ exports.deleteConversation = async (req, res) => {
             participantId => participantId.toString() !== req.user.id.toString()
         );
 
-        // Sauvegarder la conversation mise à jour
+        // Si plus de participants, supprimer la conversation
+        if (conversation.participants.length === 0) {
+            await Conversation.findByIdAndDelete(req.params.conversationId);
+            return res.status(200).json({ message: 'Conversation supprimée car plus de participants.' });
+        }
+
+        // Sinon, sauvegarder la conversation mise à jour
         await conversation.save();
 
         res.status(200).json({ message: 'Conversation quittée avec succès.' });

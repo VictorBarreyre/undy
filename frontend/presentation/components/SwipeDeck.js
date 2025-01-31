@@ -42,6 +42,11 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     setTimeout(() => setIsLoading(false), 1000);
   }, []);
 
+  useEffect(() => {
+    if (currentItem) {
+      console.log("Current Secret ID:", currentItem._id);
+    }
+  }, [currentItem]);
 
 
   const panResponder = useRef(
