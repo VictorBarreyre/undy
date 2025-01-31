@@ -16,7 +16,7 @@ const ChatScreen = ({ route }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const { handleAddMessage, getConversationMessages } = useCardData();
-  const { user } = useContext(AuthContext);
+  const { userData } = useContext(AuthContext);
   const navigation = useNavigation();
 
 
@@ -24,11 +24,11 @@ const ChatScreen = ({ route }) => {
   console.log("ConversationId:", conversationId);
   console.log("Secret Data:", JSON.stringify(secretData, null, 2));
   console.log("Conversation complète:", JSON.stringify(conversation, null, 2));
-  console.log("Utilisateur actuel:", JSON.stringify(user, null, 2));
+  console.log("Utilisateur actuel:", JSON.stringify(userData, null, 2));
 
   useEffect(() => {
     console.log("--- FORMATAGE DES MESSAGES ---");
-    console.log("User:", user);
+    console.log("User:", userData);
     console.log("Messages de la conversation:", conversation?.messages);
     
     if (conversation?.messages) {
@@ -42,7 +42,7 @@ const ChatScreen = ({ route }) => {
         return {
           id: msg._id,
           text: msg.content,
-          sender: msg.sender === user?._id ? 'user' : 'other',
+          sender: msg.sender === userData?._id ? 'user' : 'other',
           timestamp: msg.createdAt
         };
       });
