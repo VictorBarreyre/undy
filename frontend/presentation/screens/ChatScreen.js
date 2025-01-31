@@ -1,20 +1,24 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
-import { Box, Input, Text, FlatList, HStack } from 'native-base';
+import { Box, Input, Text, FlatList, HStack, Image, VStack } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane, faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
 import { TouchableOpacity } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
+import { useNavigation } from '@react-navigation/native';
+
 
 const ChatScreen = ({ route }) => {
-  const { conversationId } = route.params;
+  const { conversationId, secretData } = route.params;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const { handleAddMessage, getConversationMessages } = useCardData();
   const { user } = useContext(AuthContext);
+  const navigation = useNavigation();
+
 
   console.log("ConversationId reçu:", conversationId);
 
@@ -92,6 +96,34 @@ const ChatScreen = ({ route }) => {
     <Background>
       <SafeAreaView style={{ flex: 1 }}>
         <Box style={{ flex: 1 }}>
+          <HStack
+            alignItems="center"
+            space={3}
+            p={4}
+          >
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <FontAwesomeIcon icon={faChevronLeft} size={20} color="#000" />
+            </TouchableOpacity>
+
+            <HStack flex={1} alignItems="center" space={5}>
+              <Image
+                source={{
+                  uri: secretData?.user?.profilePicture || 'https://via.placeholder.com/40'
+                }}
+                alt="Profile"
+                size={12}
+                rounded="full"
+              />
+              <VStack>
+                <Text style={styles.h5}>
+                  {secretData?.user?.name || 'Utilisateur'}
+                </Text>
+                <Text style={styles.littleCaption} color="gray.500">
+                  Secret : {secretData?.content?.substring(0,25)}...
+                </Text>
+              </VStack>
+            </HStack>
+          </HStack>
           <Box style={{ flex: 1, marginBottom: 60 }}>
             <FlatList
               data={messages}
