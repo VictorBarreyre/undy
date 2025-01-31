@@ -261,11 +261,17 @@ exports.deleteConversation = async (req, res) => {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
 
-        await Conversation.findByIdAndDelete(req.params.conversationId);
-        
-        res.status(200).json({ message: 'Conversation supprimée avec succès.' });
+        // Retirer l'utilisateur des participants
+        conversation.participants = conversation.participants.filter(
+            participantId => participantId.toString() !== req.user.id.toString()
+        );
+
+        // Sauvegarder la conversation mise à jour
+        await conversation.save();
+
+        res.status(200).json({ message: 'Conversation quittée avec succès.' });
     } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
+        console.error('Erreur lors de la sortie de la conversation:', error);
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };

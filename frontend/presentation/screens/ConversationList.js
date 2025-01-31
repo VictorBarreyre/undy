@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Dimensions } from 'react-native';
+import { Dimensions, View } from 'react-native';
 import { FlatList, Pressable } from 'react-native';
 import { Box, HStack, Text, Image, VStack } from 'native-base';
 import { styles } from '../../infrastructure/theme/styles';
@@ -19,6 +19,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const ConversationsList = ({ navigation }) => {
   const [conversations, setConversations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [openSwipeId, setOpenSwipeId] = useState(null); // Déplacez le state ici
   const { userToken } = useContext(AuthContext);
 
 
@@ -53,8 +54,6 @@ const ConversationsList = ({ navigation }) => {
   };
 
 
-
-
   useFocusEffect(
     React.useCallback(() => {
       fetchConversations();
@@ -80,47 +79,56 @@ const ConversationsList = ({ navigation }) => {
     );
   }
 
-  const renderRightActions = (progress, dragX, conversationId) => {
-    const trans = dragX.interpolate({
-      inputRange: [-SCREEN_WIDTH, 0],
-      outputRange: [0, SCREEN_WIDTH],
-    });
-
+  const renderRightActions = (conversationId) => {
     return (
-      <Animated.View
+      <View
         style={{
-          flex: 1,
-          transform: [{ translateX: trans }],
-          backgroundColor: 'red',
-          justifyContent: 'center'
+          width: 100,
+          backgroundColor: '#FF0000',
+          justifyContent: 'center',
+          alignItems: 'center',
+         
         }}
       >
-        <RectButton
+        <Pressable
+          onPress={() => deleteConversation(conversationId)}
           style={{
+            justifyContent: 'center',
             alignItems: 'center',
             flex: 1,
-            justifyContent: 'center',
-            paddingHorizontal: 30,
-            backgroundColor: '#FF0000'
+            width: '100%',
           }}
-          onPress={() => deleteConversation(conversationId)}
         >
-          <Text style={{ color: 'white', fontWeight: '600' }}>Supprimer</Text>
-        </RectButton>
-      </Animated.View>
+          <Text color='white' style={styles.h5}>Supprimer</Text>
+        </Pressable>
+      </View>
     );
   };
 
   const renderConversation = ({ item }) => {
 
+    let row = [];
+    let prevOpenedRow;
+
+    const closeRow = (index) => {
+      if (prevOpenedRow && prevOpenedRow !== row[index]) {
+        prevOpenedRow.close();
+      }
+      prevOpenedRow = row[index];
+    };
 
     return (
 
       <GestureHandlerRootView>
         <Swipeable
-          renderRightActions={(progress, dragX) =>
-            renderRightActions(progress, dragX, item._id)
-          }
+            ref={(ref) => (row[item._id] = ref)}
+            renderRightActions={() => renderRightActions(item._id)}
+            onSwipeableOpen={() => {
+              closeRow(item._id);
+              setOpenSwipeId(item._id); // Utilisez le state global
+            }}
+            onSwipeableWillClose={() => setOpenSwipeId(null)}
+            overshootRight={false}
         >
           <Pressable
             onPress={() => navigation.navigate('Chat', {
@@ -134,7 +142,8 @@ const ConversationsList = ({ navigation }) => {
               space={3}
               py={4}
               borderBottomWidth={1}
-              borderColor="#94A3B820"  // Le "33" à la fin donne une opacité de 20%
+              borderColor="#94A3B820" 
+       
             >
               <Image
                 source={{
