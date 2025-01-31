@@ -119,7 +119,7 @@ exports.purchaseSecret = async (req, res) => {
 exports.getSecretConversation = async (req, res) => {
     try {
         const conversation = await Conversation.findOne({ 
-            _id: req.params.secretId,
+            secret: req.params.secretId,  
             participants: req.user.id 
         })
         .populate('participants', 'name profilePicture')
