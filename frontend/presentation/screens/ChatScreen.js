@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 
 
 const ChatScreen = ({ route }) => {
-  const { conversationId, secretData } = route.params;
+  const { conversationId, secretData, conversation } = route.params;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const { handleAddMessage, getConversationMessages } = useCardData();
@@ -20,55 +20,61 @@ const ChatScreen = ({ route }) => {
   const navigation = useNavigation();
 
 
-  console.log("ConversationId reçu:", conversationId);
+  console.log("--- PARAMÈTRES DE ROUTE ---");
+  console.log("ConversationId:", conversationId);
+  console.log("Secret Data:", JSON.stringify(secretData, null, 2));
+  console.log("Conversation complète:", JSON.stringify(conversation, null, 2));
+  console.log("Utilisateur actuel:", JSON.stringify(user, null, 2));
 
   useEffect(() => {
-    const loadMessages = async () => {
-      try {
-        console.log("Chargement des messages pour la conversation:", conversationId);
-        const conversationData = await getConversationMessages(conversationId);
-        console.log("Conversation data:", conversationData);
-
-        if (conversationData.messages) {
-          const formattedMessages = conversationData.messages.map(msg => ({
-            id: msg._id,
-            text: msg.content,
-            sender: msg.sender?._id === user?._id ? 'user' : 'other',
-            timestamp: msg.createdAt
-          }));
-
-          console.log("Formatted messages:", formattedMessages);
-          setMessages(formattedMessages);
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des messages:', error);
-      }
-    };
-
-    if (user) {
-      loadMessages();
+    console.log("--- FORMATAGE DES MESSAGES ---");
+    console.log("User:", user);
+    console.log("Messages de la conversation:", conversation?.messages);
+    
+    if (conversation?.messages) {
+      const formattedMessages = conversation.messages.map(msg => {
+        console.log("Traitement message:", {
+          messageId: msg._id,
+          senderId: msg.sender,
+          content: msg.content
+        });
+        
+        return {
+          id: msg._id,
+          text: msg.content,
+          sender: msg.sender === user?._id ? 'user' : 'other',
+          timestamp: msg.createdAt
+        };
+      });
+      
+      console.log("Messages formatés:", formattedMessages);
+      setMessages(formattedMessages);
     }
-  }, [conversationId, user]);
-
+  }, [conversation]);
+  
+  // Pour les nouveaux messages, garder 'user' tel quel
   const sendMessage = async () => {
     if (!message.trim()) return;
-
+  
     try {
       if (!conversationId) {
         throw new Error('ID de conversation manquant');
       }
       const newMessage = await handleAddMessage(conversationId, message);
       setMessage('');
+      
+      // Ajout du nouveau message avec le bon ID d'expéditeur
       setMessages(prev => [...prev, {
         id: Date.now(),
         text: message,
-        sender: 'user',
-        ...newMessage
+        sender: 'user', // Force le message à être de l'utilisateur actuel
+        timestamp: new Date().toISOString()
       }]);
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
     }
   };
+
 
   const renderMessage = ({ item }) => (
     <Box
