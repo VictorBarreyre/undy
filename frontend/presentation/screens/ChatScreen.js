@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable } from 'react-native';
-import { Box, Input, Text, FlatList, HStack, Image, VStack } from 'native-base';
+import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faPaperPlane, faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
@@ -9,14 +9,15 @@ import { styles } from '../../infrastructure/theme/styles';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import { BlurView } from '@react-native-community/blur';
 
 const formatMessageTime = (timestamp) => {
   const messageDate = new Date(timestamp);
   const now = new Date();
-  
+
   // Différence en heures
   const hoursDiff = (now - messageDate) / (1000 * 60 * 60);
-  
+
   // Si moins de 24h
   if (hoursDiff < 24) {
     // Aujourd'hui
@@ -33,22 +34,22 @@ const formatMessageTime = (timestamp) => {
       return 'Hier';
     }
   }
-  
+
   // Si moins de 6 heures
   if (hoursDiff < 6) {
     return 'Il y a quelques heures';
   }
-  
+
   // Si moins de 12 heures
   if (hoursDiff < 12) {
     return 'Ce matin';
   }
-  
+
   // Si moins de 24 heures
   if (hoursDiff < 24) {
     return "Aujourd'hui";
   }
-  
+
   // Au-delà de 24h, afficher la date complète
   return messageDate.toLocaleDateString('fr-FR', {
     day: 'numeric',
@@ -57,7 +58,6 @@ const formatMessageTime = (timestamp) => {
     minute: '2-digit'
   });
 };
-
 
 const ChatScreen = ({ route }) => {
   const { conversationId, secretData, conversation } = route.params;
@@ -68,38 +68,70 @@ const ChatScreen = ({ route }) => {
   const navigation = useNavigation();
   const [showTimestamp, setShowTimestamp] = useState(false);
   const [isTimestampVisible, setIsTimestampVisible] = useState(false);
+  const [timeLeft, setTimeLeft] = useState('');
+  const [isModalVisible, setModalVisible] = useState(false);
 
-  console.log("--- PARAMÈTRES DE ROUTE ---");
-  console.log("ConversationId:", conversationId);
-  console.log("Secret Data:", JSON.stringify(secretData, null, 2));
-  console.log("Conversation complète:", JSON.stringify(conversation, null, 2));
-  console.log("Utilisateur actuel:", JSON.stringify(userData, null, 2));
 
   useEffect(() => {
-    console.log("--- FORMATAGE DES MESSAGES ---");
-    console.log("User:", userData);
-    console.log("Messages de la conversation:", conversation?.messages);
 
     if (conversation?.messages) {
-      const formattedMessages = conversation.messages.map(msg => {
-        console.log("Traitement message:", {
-          messageId: msg._id,
-          senderId: msg.sender,
-          content: msg.content
-        });
+      const formattedMessages = [];
+      let lastMessageDate = null;
 
-        return {
+      conversation.messages.forEach((msg, index) => {
+        const currentMessageDate = new Date(msg.createdAt);
+
+        // Ajouter un séparateur si la date change
+        if (!lastMessageDate ||
+          currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
+          formattedMessages.push({
+            id: `separator-${index}`,
+            type: 'separator',
+            timestamp: msg.createdAt,
+            shouldShowDateSeparator: true
+          });
+        }
+
+        // Ajouter le message
+        formattedMessages.push({
           id: msg._id,
           text: msg.content,
           sender: msg.sender === userData?._id ? 'user' : 'other',
           timestamp: msg.createdAt
-        };
+        });
+
+        lastMessageDate = currentMessageDate;
       });
 
       console.log("Messages formatés:", formattedMessages);
       setMessages(formattedMessages);
     }
   }, [conversation]);
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const expirationDate = new Date(conversation.expiresAt);
+      const now = new Date();
+      const difference = expirationDate - now;
+
+      if (difference <= 0) {
+        return 'Expiré';
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+
+      return `${days}j ${hours}h ${minutes}m`;
+    };
+
+    setTimeLeft(calculateTimeLeft());
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 60000); // Mise à jour chaque minute
+
+    return () => clearInterval(timer);
+  }, [conversation.expiresAt]);
 
   // Pour les nouveaux messages, garder 'user' tel quel
   const sendMessage = async () => {
@@ -129,14 +161,14 @@ const ChatScreen = ({ route }) => {
       return (
         <Text
           textAlign="center"
-           color="#94A3B8"
+          color="gray.500"
           my={2}
         >
           {formatMessageTime(item.timestamp)}
         </Text>
       );
     }
-  
+
     return (
       <VStack>
         <HStack
@@ -158,13 +190,13 @@ const ChatScreen = ({ route }) => {
             {item.sender !== 'user' && (
               <Text
                 style={styles.littleCaption}
-                color="#94A3B8"
+                color="gray.500"
                 ml={2}
               >
                 {conversation.secret.user.name}
               </Text>
             )}
-  
+
             <Pressable
               onPress={() => setIsTimestampVisible(!isTimestampVisible)}
             >
@@ -183,12 +215,14 @@ const ChatScreen = ({ route }) => {
                 >
                   {item.text}
                 </Text>
-  
+
                 {isTimestampVisible && (
                   <Text
                     style={styles.littleCaption}
-                    color={item.sender === 'user' ? 'white' : '#94A3B8'}
+                    color={item.sender === 'user' ? 'white' : 'gray.500'}
                     textAlign={item.sender === 'user' ? 'right' : 'left'}
+                    mr={item.sender === 'user' ? 2 : 0}
+                    ml={item.sender === 'user' ? 0 : 2}
                   >
                     {formatMessageTime(item.timestamp)}
                   </Text>
@@ -196,7 +230,7 @@ const ChatScreen = ({ route }) => {
               </Box>
             </Pressable>
           </VStack>
-  
+
           {item.sender === 'user' && (
             <Image
               source={{
@@ -211,41 +245,6 @@ const ChatScreen = ({ route }) => {
       </VStack>
     );
   };
-  
-
-  useEffect(() => {
-    if (conversation?.messages) {
-      const formattedMessages = [];
-      let lastMessageDate = null;
-
-      conversation.messages.forEach((msg, index) => {
-        const currentMessageDate = new Date(msg.createdAt);
-        
-        // Ajouter un séparateur si la date change
-        if (!lastMessageDate || 
-            currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
-          formattedMessages.push({
-            id: `separator-${index}`,
-            type: 'separator',
-            timestamp: msg.createdAt,
-            shouldShowDateSeparator: true
-          });
-        }
-
-        // Ajouter le message
-        formattedMessages.push({
-          id: msg._id,
-          text: msg.content,
-          sender: msg.sender === userData?._id ? 'user' : 'other',
-          timestamp: msg.createdAt
-        });
-
-        lastMessageDate = currentMessageDate;
-      });
-
-      setMessages(formattedMessages);
-    }
-  }, [conversation]);
 
   return (
     <Background>
@@ -280,11 +279,13 @@ const ChatScreen = ({ route }) => {
                 </HStack>
 
                 <HStack justifyContent='space-between'>
-                  <Text style={styles.littleCaption} color="#FF78B2">
-                    {secretData?.content?.substring(0, 25)}...
-                  </Text>
+                  <Pressable onPress={() => setModalVisible(true)}>
+                    <Text style={styles.littleCaption} color="#FF78B2">
+                      {secretData?.content?.substring(0, 25)}...
+                    </Text>
+                  </Pressable>
                   <Text style={styles.littleCaption} color="#94A3B8">
-                    Expire le : {new Date(conversation?.expiresAt).toLocaleDateString()}
+                    Expire dans {timeLeft}
                   </Text>
                 </HStack>
               </VStack>
@@ -352,6 +353,41 @@ const ChatScreen = ({ route }) => {
           </KeyboardAvoidingView>
         </Box>
       </SafeAreaView>
+
+
+      <Modal isOpen={isModalVisible} onClose={() => setModalVisible(false)}>
+        <View width='100%' style={{ flex: 1 }}>
+          <BlurView
+            style={[
+              styles.blurBackground,
+              {
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                flex: 1, // Ajout de flex: 1
+                justifyContent: 'center', // Centrage vertical du contenu
+                alignItems: 'center', // Centrage horizontal du contenu
+              }
+            ]}
+            blurType="light"
+            blurAmount={8}
+            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+          >
+            <Modal.Content width="90%">
+              <Modal.CloseButton />
+              <Modal.Header>
+                <HStack alignItems="center">
+                  <Text style={styles.h5}>Posté par </Text>
+                  <Text style={styles.h5}>{secretData?.user.name}</Text>
+                </HStack>
+              </Modal.Header>              
+              <Modal.Body>
+                <Text style={styles.h4}>
+                  "{secretData?.content}"
+                </Text>
+              </Modal.Body>
+            </Modal.Content>
+          </BlurView>
+        </View>
+      </Modal>
     </Background>
   );
 };
