@@ -21,6 +21,7 @@ const ChatScreen = ({ route }) => {
   useEffect(() => {
     const loadMessages = async () => {
       try {
+        console.log("Chargement des messages pour la conversation:", conversationId);
         const conversationData = await getConversationMessages(conversationId);
         console.log("Conversation data:", conversationData);
 
