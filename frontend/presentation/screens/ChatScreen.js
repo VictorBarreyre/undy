@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faPaperPlane, faChevronLeft } from '@fortawesome/free-solid-svg-icons';
@@ -10,6 +10,54 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 
+const formatMessageTime = (timestamp) => {
+  const messageDate = new Date(timestamp);
+  const now = new Date();
+  
+  // Différence en heures
+  const hoursDiff = (now - messageDate) / (1000 * 60 * 60);
+  
+  // Si moins de 24h
+  if (hoursDiff < 24) {
+    // Aujourd'hui
+    if (messageDate.toDateString() === now.toDateString()) {
+      return messageDate.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+    // Hier
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (messageDate.toDateString() === yesterday.toDateString()) {
+      return 'Hier';
+    }
+  }
+  
+  // Si moins de 6 heures
+  if (hoursDiff < 6) {
+    return 'Il y a quelques heures';
+  }
+  
+  // Si moins de 12 heures
+  if (hoursDiff < 12) {
+    return 'Ce matin';
+  }
+  
+  // Si moins de 24 heures
+  if (hoursDiff < 24) {
+    return "Aujourd'hui";
+  }
+  
+  // Au-delà de 24h, afficher la date complète
+  return messageDate.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
 
 const ChatScreen = ({ route }) => {
   const { conversationId, secretData, conversation } = route.params;
@@ -18,7 +66,8 @@ const ChatScreen = ({ route }) => {
   const { handleAddMessage, getConversationMessages } = useCardData();
   const { userData } = useContext(AuthContext);
   const navigation = useNavigation();
-
+  const [showTimestamp, setShowTimestamp] = useState(false);
+  const [isTimestampVisible, setIsTimestampVisible] = useState(false);
 
   console.log("--- PARAMÈTRES DE ROUTE ---");
   console.log("ConversationId:", conversationId);
@@ -75,86 +124,129 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-  const renderMessage = ({ item }) => (
-    <HStack
-      space={1}
-      alignSelf={item.sender === 'user' ? 'flex-end' : 'flex-start'}
-      m={2}
-    >
-      {item.sender !== 'user' && (
-        <Image
-          source={{
-            uri: conversation.secret.user.profilePicture || 'https://via.placeholder.com/40'
-          }}
-          alt="Profile"
-          size={8}
-          rounded="full"
-        />
-      )}
-      <VStack maxW="80%">
-        {/* Ajout du nom avant le message */}
-        {item.sender !== 'user' && (
-          <Text 
-            style={styles.littleCaption} 
-            color="gray.500" 
-            ml={2}
-          >
-            {conversation.secret.user.name}
-          </Text>
-        )}
-        {item.sender === 'user' && (
-          <Text 
-            style={styles.littleCaption} 
-            color="gray.500" 
-            textAlign="right"
-            mr={2}
-          >
-            {userData?.name || 'Vous'}
-          </Text>
-        )}
-        
-        <Box
-          bg={item.sender === 'user' ? '#FF78B2' : '#FFFFFF'}
-          p={3}
-          borderRadius={20}
-          style={{
-            marginVertical: 4,
-            marginHorizontal: 8,
-          }}
+  const renderMessage = ({ item }) => {
+    if (item.type === 'separator') {
+      return (
+        <Text
+          textAlign="center"
+           color="#94A3B8"
+          my={2}
         >
-          <Text
-            color={item.sender === 'user' ? 'white' : 'black'}
-            style={styles.caption}
-          >
-            {item.text}
-          </Text>
-          <Text
-            style={styles.littleCaption}
-            color={item.sender === 'user' ? 'white' : 'gray.500'}
-            textAlign={item.sender === 'user' ? 'right' : 'left'}
-            mr={item.sender === 'user' ? 2 : 0}
-            ml={item.sender === 'user' ? 0 : 2}
-          >
-            {new Date(item.timestamp).toLocaleTimeString('fr-FR', {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </Text>
-        </Box>
+          {formatMessageTime(item.timestamp)}
+        </Text>
+      );
+    }
+  
+    return (
+      <VStack>
+        <HStack
+          space={1}
+          alignSelf={item.sender === 'user' ? 'flex-end' : 'flex-start'}
+          m={2}
+        >
+          {item.sender !== 'user' && (
+            <Image
+              source={{
+                uri: conversation.secret.user.profilePicture || 'https://via.placeholder.com/40'
+              }}
+              alt="Profile"
+              size={8}
+              rounded="full"
+            />
+          )}
+          <VStack maxW="80%">
+            {item.sender !== 'user' && (
+              <Text
+                style={styles.littleCaption}
+                color="#94A3B8"
+                ml={2}
+              >
+                {conversation.secret.user.name}
+              </Text>
+            )}
+  
+            <Pressable
+              onPress={() => setIsTimestampVisible(!isTimestampVisible)}
+            >
+              <Box
+                bg={item.sender === 'user' ? '#FF78B2' : '#FFFFFF'}
+                p={3}
+                borderRadius={20}
+                style={{
+                  marginVertical: 4,
+                  marginHorizontal: 8,
+                }}
+              >
+                <Text
+                  color={item.sender === 'user' ? 'white' : 'black'}
+                  style={styles.caption}
+                >
+                  {item.text}
+                </Text>
+  
+                {isTimestampVisible && (
+                  <Text
+                    style={styles.littleCaption}
+                    color={item.sender === 'user' ? 'white' : '#94A3B8'}
+                    textAlign={item.sender === 'user' ? 'right' : 'left'}
+                  >
+                    {formatMessageTime(item.timestamp)}
+                  </Text>
+                )}
+              </Box>
+            </Pressable>
+          </VStack>
+  
+          {item.sender === 'user' && (
+            <Image
+              source={{
+                uri: userData?.profilePicture || 'https://via.placeholder.com/40'
+              }}
+              alt="Profile"
+              size={8}
+              rounded="full"
+            />
+          )}
+        </HStack>
       </VStack>
-      
-      {item.sender === 'user' && (
-        <Image
-          source={{
-            uri: userData?.profilePicture || 'https://via.placeholder.com/40'
-          }}
-          alt="Profile"
-          size={8}
-          rounded="full"
-        />
-      )}
-    </HStack>
-  );
+    );
+  };
+  
+
+  useEffect(() => {
+    if (conversation?.messages) {
+      const formattedMessages = [];
+      let lastMessageDate = null;
+
+      conversation.messages.forEach((msg, index) => {
+        const currentMessageDate = new Date(msg.createdAt);
+        
+        // Ajouter un séparateur si la date change
+        if (!lastMessageDate || 
+            currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
+          formattedMessages.push({
+            id: `separator-${index}`,
+            type: 'separator',
+            timestamp: msg.createdAt,
+            shouldShowDateSeparator: true
+          });
+        }
+
+        // Ajouter le message
+        formattedMessages.push({
+          id: msg._id,
+          text: msg.content,
+          sender: msg.sender === userData?._id ? 'user' : 'other',
+          timestamp: msg.createdAt
+        });
+
+        lastMessageDate = currentMessageDate;
+      });
+
+      setMessages(formattedMessages);
+    }
+  }, [conversation]);
+
   return (
     <Background>
       <SafeAreaView style={{ flex: 1 }}>
