@@ -30,7 +30,7 @@ const ChatScreen = ({ route }) => {
     console.log("--- FORMATAGE DES MESSAGES ---");
     console.log("User:", userData);
     console.log("Messages de la conversation:", conversation?.messages);
-    
+
     if (conversation?.messages) {
       const formattedMessages = conversation.messages.map(msg => {
         console.log("Traitement message:", {
@@ -38,7 +38,7 @@ const ChatScreen = ({ route }) => {
           senderId: msg.sender,
           content: msg.content
         });
-        
+
         return {
           id: msg._id,
           text: msg.content,
@@ -46,23 +46,23 @@ const ChatScreen = ({ route }) => {
           timestamp: msg.createdAt
         };
       });
-      
+
       console.log("Messages formatés:", formattedMessages);
       setMessages(formattedMessages);
     }
   }, [conversation]);
-  
+
   // Pour les nouveaux messages, garder 'user' tel quel
   const sendMessage = async () => {
     if (!message.trim()) return;
-  
+
     try {
       if (!conversationId) {
         throw new Error('ID de conversation manquant');
       }
       const newMessage = await handleAddMessage(conversationId, message);
       setMessage('');
-      
+
       // Ajout du nouveau message avec le bon ID d'expéditeur
       setMessages(prev => [...prev, {
         id: Date.now(),
@@ -120,13 +120,24 @@ const ChatScreen = ({ route }) => {
                 size={12}
                 rounded="full"
               />
-              <VStack>
-                <Text style={styles.h5}>
-                  {secretData?.user?.name || 'Utilisateur'}
-                </Text>
-                <Text style={styles.littleCaption} color="gray.500">
-                  Secret : {secretData?.content?.substring(0,25)}...
-                </Text>
+              <VStack space={1} flex={1}>
+                <HStack justifyContent="space-between" alignItems="center">
+                  <Text style={styles.h5}>
+                    {secretData?.user?.name || 'Utilisateur'}
+                  </Text>
+                  <Text style={styles.littleCaption} color="#94A3B8">
+                    {conversation?.participants?.length || 0} participants
+                  </Text>
+                </HStack>
+
+                <HStack justifyContent='space-between'>
+                  <Text style={styles.littleCaption} color="#FF78B2">
+                    {secretData?.content?.substring(0, 25)}...
+                  </Text>
+                  <Text style={styles.littleCaption} color="#94A3B8">
+                    Expire le : {new Date(conversation?.expiresAt).toLocaleDateString()}
+                  </Text>
+                </HStack>
               </VStack>
             </HStack>
           </HStack>
@@ -137,6 +148,7 @@ const ChatScreen = ({ route }) => {
               keyExtractor={item => item.id.toString()}
               contentContainerStyle={{
                 flexGrow: 1,
+                marginTop:20
               }}
             />
           </Box>
