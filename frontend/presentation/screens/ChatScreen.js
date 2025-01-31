@@ -75,29 +75,86 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-
   const renderMessage = ({ item }) => (
-    <Box
-      bg={item.sender === 'user' ? '#FF78B2' : '#FFFFFF'}
-      p={3}
-      borderRadius={20}
-      maxW="80%"
+    <HStack
+      space={1}
       alignSelf={item.sender === 'user' ? 'flex-end' : 'flex-start'}
       m={2}
-      style={{
-        marginVertical: 4,
-        marginHorizontal: 8,
-      }}
     >
-      <Text
-        color={item.sender === 'user' ? 'white' : 'black'}
-        style={styles.caption}
-      >
-        {item.text}
-      </Text>
-    </Box>
+      {item.sender !== 'user' && (
+        <Image
+          source={{
+            uri: conversation.secret.user.profilePicture || 'https://via.placeholder.com/40'
+          }}
+          alt="Profile"
+          size={8}
+          rounded="full"
+        />
+      )}
+      <VStack maxW="80%">
+        {/* Ajout du nom avant le message */}
+        {item.sender !== 'user' && (
+          <Text 
+            style={styles.littleCaption} 
+            color="gray.500" 
+            ml={2}
+          >
+            {conversation.secret.user.name}
+          </Text>
+        )}
+        {item.sender === 'user' && (
+          <Text 
+            style={styles.littleCaption} 
+            color="gray.500" 
+            textAlign="right"
+            mr={2}
+          >
+            {userData?.name || 'Vous'}
+          </Text>
+        )}
+        
+        <Box
+          bg={item.sender === 'user' ? '#FF78B2' : '#FFFFFF'}
+          p={3}
+          borderRadius={20}
+          style={{
+            marginVertical: 4,
+            marginHorizontal: 8,
+          }}
+        >
+          <Text
+            color={item.sender === 'user' ? 'white' : 'black'}
+            style={styles.caption}
+          >
+            {item.text}
+          </Text>
+          <Text
+            style={styles.littleCaption}
+            color={item.sender === 'user' ? 'white' : 'gray.500'}
+            textAlign={item.sender === 'user' ? 'right' : 'left'}
+            mr={item.sender === 'user' ? 2 : 0}
+            ml={item.sender === 'user' ? 0 : 2}
+          >
+            {new Date(item.timestamp).toLocaleTimeString('fr-FR', {
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+          </Text>
+        </Box>
+      </VStack>
+      
+      {item.sender === 'user' && (
+        <Image
+          source={{
+            uri: userData?.profilePicture || 'https://via.placeholder.com/40'
+          }}
+          alt="Profile"
+          size={8}
+          rounded="full"
+        />
+      )}
+    </HStack>
   );
-
   return (
     <Background>
       <SafeAreaView style={{ flex: 1 }}>
@@ -148,7 +205,7 @@ const ChatScreen = ({ route }) => {
               keyExtractor={item => item.id.toString()}
               contentContainerStyle={{
                 flexGrow: 1,
-                marginTop:20
+                marginTop: 20
               }}
             />
           </Box>
