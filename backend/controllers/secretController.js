@@ -249,3 +249,23 @@ exports.getUserSecretsWithCount = async (req, res) => {
         return res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };
+
+exports.deleteConversation = async (req, res) => {
+    try {
+        const conversation = await Conversation.findOne({
+            _id: req.params.conversationId,
+            participants: req.user.id
+        });
+
+        if (!conversation) {
+            return res.status(404).json({ message: 'Conversation introuvable.' });
+        }
+
+        await Conversation.findByIdAndDelete(req.params.conversationId);
+        
+        res.status(200).json({ message: 'Conversation supprimée avec succès.' });
+    } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+    }
+};

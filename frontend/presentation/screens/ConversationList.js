@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { Dimensions } from 'react-native';
 import { FlatList, Pressable } from 'react-native';
 import { Box, HStack, Text, Image, VStack } from 'native-base';
 import { styles } from '../../infrastructure/theme/styles';
@@ -7,39 +8,58 @@ import axios from 'axios';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { DATABASE_URL } from '@env';
 import TypewriterLoader from '../components/TypewriterLoader';
+import { useFocusEffect } from '@react-navigation/native'; // Ajoutez cet import
+import { GestureHandlerRootView, Swipeable, RectButton } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
+
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
 
 const ConversationsList = ({ navigation }) => {
   const [conversations, setConversations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const { userToken } = useContext(AuthContext);
 
-  useEffect(() => {
-    const fetchConversations = async () => {
-      try {
-        const response = await axios.get(
-          `${DATABASE_URL}/api/secrets/conversations`,
-          { headers: { Authorization: `Bearer ${userToken}` } }
-        );
-        console.log('Toutes les conversations:', response.data);
-        response.data.forEach((conversation, index) => {
-          console.log(`Conversation ${index + 1}:`, {
-            conversationId: conversation._id,
-            secret: conversation.secret,
-            participants: conversation.participants,
-            messages: conversation.messages,
-            updatedAt: conversation.updatedAt
-          });
-        });
-        setConversations(response.data);
-      } catch (error) {
-        console.error('Erreur chargement conversations:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    fetchConversations();
-  }, []);
+  const fetchConversations = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(
+        `${DATABASE_URL}/api/secrets/conversations`,
+        { headers: { Authorization: `Bearer ${userToken}` } }
+      );
+      console.log('Toutes les conversations:', response.data);
+      setConversations(response.data);
+    } catch (error) {
+      console.error('Erreur chargement conversations:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteConversation = async (conversationId) => {
+    try {
+      await axios.delete(
+        `${DATABASE_URL}/api/secrets/conversations/${conversationId}`,
+        { headers: { Authorization: `Bearer ${userToken}` } }
+      );
+      // Mettre à jour la liste localement après suppression
+      setConversations(prev => prev.filter(conv => conv._id !== conversationId));
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      // Vous pourriez ajouter une notification d'erreur ici
+    }
+  };
+
+
+
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchConversations();
+    }, [userToken])
+  );
 
   if (isLoading) {
     return <TypewriterLoader />;
@@ -60,50 +80,85 @@ const ConversationsList = ({ navigation }) => {
     );
   }
 
-  const renderConversation = ({ item }) => {
-    console.log('Données complètes de la conversation:', {
-      conversationId: item._id,
-      secret: item.secret,
-      secretAuthor: item.secret?.user,
-      participants: item.participants
+  const renderRightActions = (progress, dragX, conversationId) => {
+    const trans = dragX.interpolate({
+      inputRange: [-SCREEN_WIDTH, 0],
+      outputRange: [0, SCREEN_WIDTH],
     });
 
     return (
-      <Pressable
-        onPress={() => navigation.navigate('Chat', {
-          conversationId: item._id,
-          secretData: item.secret,
-          conversation: item
-        })}
+      <Animated.View
+        style={{
+          flex: 1,
+          transform: [{ translateX: trans }],
+          backgroundColor: 'red',
+          justifyContent: 'center'
+        }}
       >
-        <HStack
-          alignItems='center'
-          space={3}
-          py={4}
-          borderBottomWidth={1}
-          borderColor="#94A3B820"  // Le "33" à la fin donne une opacité de 20%
+        <RectButton
+          style={{
+            alignItems: 'center',
+            flex: 1,
+            justifyContent: 'center',
+            paddingHorizontal: 30,
+            backgroundColor: '#FF0000'
+          }}
+          onPress={() => deleteConversation(conversationId)}
         >
-          <Image
-            source={{
-              uri: item.secret?.user?.profilePicture || 'https://via.placeholder.com/40'
-            }}
-            alt="Profile"
-            width={45}
-            height={45}
-            rounded="full"
-          />
-          <VStack space={2} flex={1}>
-            <HStack justifyContent='space-between' alignItems='center'> 
-            <Text style={styles.h5} >{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
-            <Text style={styles.littleCaption} color="#94A3B8">
-            {new Date(item.updatedAt).toLocaleDateString()}
-          </Text>
+          <Text style={{ color: 'white', fontWeight: '600' }}>Supprimer</Text>
+        </RectButton>
+      </Animated.View>
+    );
+  };
+
+  const renderConversation = ({ item }) => {
+
+
+    return (
+
+      <GestureHandlerRootView>
+        <Swipeable
+          renderRightActions={(progress, dragX) =>
+            renderRightActions(progress, dragX, item._id)
+          }
+        >
+          <Pressable
+            onPress={() => navigation.navigate('Chat', {
+              conversationId: item._id,
+              secretData: item.secret,
+              conversation: item
+            })}
+          >
+            <HStack
+              alignItems='center'
+              space={3}
+              py={4}
+              borderBottomWidth={1}
+              borderColor="#94A3B820"  // Le "33" à la fin donne une opacité de 20%
+            >
+              <Image
+                source={{
+                  uri: item.secret?.user?.profilePicture || 'https://via.placeholder.com/40'
+                }}
+                alt="Profile"
+                width={45}
+                height={45}
+                rounded="full"
+              />
+              <VStack space={2} flex={1}>
+                <HStack justifyContent='space-between' alignItems='center'>
+                  <Text style={styles.h5} >{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
+                  <Text style={styles.littleCaption} color="#94A3B8">
+                    {new Date(item.updatedAt).toLocaleDateString()}
+                  </Text>
+                </HStack>
+                <Text style={styles.littleCaption} numberOfLines={1} color="#94A3B8">{item.secret?.content || 'Sans titre'}</Text>
+              </VStack>
+
             </HStack>
-            <Text style={styles.littleCaption} numberOfLines={1} color="#94A3B8">{item.secret?.content || 'Sans titre'}</Text>
-          </VStack>
-  
-        </HStack>
-      </Pressable>
+          </Pressable>
+        </Swipeable>
+      </GestureHandlerRootView>
     );
   };
 

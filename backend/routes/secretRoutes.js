@@ -8,7 +8,8 @@ const {
     getSecretConversation,
     addMessageToConversation,
     getUserConversations,
-    getConversation
+    getConversation, 
+    deleteConversation
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -31,6 +32,8 @@ router.get('/conversations/secret/:secretId', protect, getSecretConversation); /
 router.post('/conversations/:conversationId/messages', protect, addMessageToConversation); // Ajouter un message à une conversation
 
 router.get('/conversations/:conversationId', protect, getConversation); // Nouvelle route
+
+router.delete('/conversations/:conversationId', protect, deleteConversation);
 
 
 module.exports = router;
