@@ -6,13 +6,16 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { faPaperPlane } from '@fortawesome/free-solid-svg-icons'; // Importer l'icône "share"
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { View, Platform, Alert, Share, Linking } from 'react-native';
-import { DATABASE_URL } from '@env';
+import BlurredTextComponent from './SelectiveBlurText'
+
 
 export default function CardHome({ cardData }) {
   const { data } = useCardData(); // Accéder aux données via le contexte
   const [isSingleLine, setIsSingleLine] = useState(true);
   const [textHeight, setTextHeight] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
+
+
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -158,21 +161,13 @@ export default function CardHome({ cardData }) {
           justifyContent="center" // Centre verticalement les enfants
           alignItems="center" // Centre horizontalement les enfants
         >
-          {/* Texte */}
-          <Text onLayout={handleTextLayout} ellipsizeMode="tail" top="5" paddingBottom="5" width="90%" style={styles.h2}>
-            {`"${cardData.content || 'Aucune description disponible.'}"`}
-          </Text>
-
-          {/* Overlay avec flou */}
-          <BlurView
-            style={[styles.overlayCard, { top: isSingleLine ? 0 : 58 }]} // Change la valeur de top dynamiquement
-            blurType="light"
-            blurAmount={4}
-            backgroundColor='rgba(255, 255, 255, 0.6)'
-            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+          <BlurredTextComponent
+            content={cardData.content || 'Aucune description disponible.'}
+            style={{ width: '90%', paddingBottom: 5, marginTop: 5, marginLeft: 4 }}
+            textStyle={styles.h2}
+            
           />
 
-          {/* Bouton centré */}
         </Box>
 
         {/* Section des statistiques */}

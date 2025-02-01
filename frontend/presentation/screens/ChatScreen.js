@@ -378,12 +378,17 @@ const ChatScreen = ({ route }) => {
                   <Text style={styles.h5}>Posté par </Text>
                   <Text style={styles.h5}>{secretData?.user.name}</Text>
                 </HStack>
-              </Modal.Header>              
+              </Modal.Header>   
+              <HStack justifyContent='space-between' space={20}>       
               <Modal.Body>
                 <Text style={styles.h4}>
                   "{secretData?.content}"
                 </Text>
+                <Text style={styles.h4}>
+                  Expire dans {timeLeft}
+                </Text>
               </Modal.Body>
+              </HStack>    
             </Modal.Content>
           </BlurView>
         </View>

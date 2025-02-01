@@ -192,11 +192,10 @@ const AddSecret = () => {
                                                         width="100%"
                                                         padding={0}
                                                         onChangeText={(text) => {
-                                                            const numPrice = Number(text);
-                                                            if (text === '' || numPrice >= MIN_PRICE) {
-                                                                setPrice(text);
-                                                            }
-                                                        }}
+                                                            // Autoriser uniquement les caractères numériques
+                                                            const numericText = text.replace(/[^0-9]/g, '');
+                                                            setPrice(numericText);
+                                                          }}
                                                         placeholder={`${MIN_PRICE}€ min`}
                                                         backgroundColor="transparent"
                                                         borderRadius="md"
@@ -298,7 +297,7 @@ const AddSecret = () => {
                                     >
                                         <HStack alignItems="center" justifyContent="center" space={2}>
                                             <Text fontSize="md" color="white" fontWeight="bold">
-                                                {!secretPostAvailable ? "Il manque des infos sur votre Undy" : "Poster le secret"}
+                                                {!secretPostAvailable ? "Il manque des infos" : "Poster le secret"}
                                             </Text>
                                         </HStack>
                                     </Pressable>
