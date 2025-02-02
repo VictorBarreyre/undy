@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { VStack, Box, Text, Button, Pressable, Modal, Input, HStack, Spinner, Switch } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, Share } from 'react-native';
+import { TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, View } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -10,11 +10,12 @@ import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 import TypewriterLoader from '../components/TypewriterLoader';
 import { CommonActions } from '@react-navigation/native';
+import { BlurView } from '@react-native-community/blur';
 
 
 
 export default function Profile({ navigation }) {
-    const { userData, isLoadingUserData,  updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount } = useContext(AuthContext);
+    const { userData, isLoadingUserData, updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount } = useContext(AuthContext);
     const [selectedField, setSelectedField] = useState(null);
     const [tempValue, setTempValue] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
@@ -27,7 +28,7 @@ export default function Profile({ navigation }) {
 
     const [isLoading, setIsLoading] = useState(false);
 
-    
+
     const truncateText = (text, maxLength) => {
         if (!text) return ''; // Gérer les cas où le texte est null ou undefined
         return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
@@ -67,16 +68,16 @@ export default function Profile({ navigation }) {
         try {
             const response = await downloadUserData();
             console.log('Données reçues:', response);
-            
+
             // Utiliser la méthode setString de @react-native-clipboard/clipboard
             Clipboard.setString(JSON.stringify(response, null, 2));
-            
+
             Alert.alert(
                 "Succès",
                 "Les données ont été copiées dans votre presse-papier",
                 [{ text: "OK" }]
             );
-            
+
             setMessage('Données téléchargées avec succès');
             setIsSuccess(true);
         } catch (error) {
@@ -118,7 +119,7 @@ export default function Profile({ navigation }) {
             ]
         );
     };
-    
+
     const handleDeleteUserAccount = async () => {
         Alert.alert(
             "Confirmation",
@@ -153,17 +154,17 @@ export default function Profile({ navigation }) {
 
     const handleLogoutno = async () => {
         try {
-          await logout();
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{ name: 'Connexion' }],
-            })
-          );
+            await logout();
+            navigation.dispatch(
+                CommonActions.reset({
+                    index: 0,
+                    routes: [{ name: 'Connexion' }],
+                })
+            );
         } catch (error) {
-          console.error(error);
+            console.error(error);
         }
-      };
+    };
 
     if (!userData) {
         return <TypewriterLoader />;
@@ -365,53 +366,120 @@ export default function Profile({ navigation }) {
             </ScrollView>
 
             <Modal isOpen={modalVisible} onClose={() => setModalVisible(false)}>
-                <Modal.Content width="90%" >
-                    <Modal.CloseButton />
-                    <Modal.Header>
-                        <Text style={styles.h5} numberOfLines={1} ellipsizeMode="tail">
-                            Modifier votre {fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}
-                        </Text>
-                    </Modal.Header>                    <Modal.Body>
-                        {selectedField === 'birthdate' ? (
-                            Platform.OS === 'web' ? (
-                                <Input
-                                    type="date"
-                                    value={tempValue}
-                                    onChange={(e) => setTempValue(e.target.value)}
-                                    backgroundColor="#E0E0E0"
-                                    padding={2}
-                                    borderRadius={5}
-                                />
-                            ) : (
-                                <>
-                                    <TouchableOpacity onPress={() => setShowDatePicker(true)} style={{ backgroundColor: "#E0E0E0", padding: 10, borderRadius: 5, alignItems: 'center' }}>
-                                        <Text>Sélectionner une date</Text>
-                                    </TouchableOpacity>
-                                    {showDatePicker && (
-                                        <DateTimePicker
-                                            value={tempValue ? new Date(tempValue) : new Date()}
-                                            mode="date"
-                                            display="calendar"
-                                            onChange={handleDateChange}
+                <View width='100%' style={{ flex: 1 }}>
+                    <BlurView
+                        style={[
+                            styles.blurBackground,
+                            {
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                flex: 1,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                            }
+                        ]}
+                        blurType="light"
+                        blurAmount={8}
+                        reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+                    >
+                        <Modal.Content
+                            width="90%"
+                            style={{
+                                ...styles.shadowBox,
+                                shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
+                                shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
+                                shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
+                                shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
+                                elevation: 5,
+                                backgroundColor: 'white',
+                                borderRadius: 8,
+                                padding: 16
+                            }}
+                        >
+                            <Modal.CloseButton
+                                _icon={{
+                                    color: "#94A3B8",
+                                    size: "sm"
+                                }}
+                            />
+
+                            <VStack justifyContent="space-between" width='100%' space={4}>
+                                {/* Header */}
+                                <Text style={styles.h5} numberOfLines={1} ellipsizeMode="tail">
+                                    Modifier votre {fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}
+                                </Text>
+
+                                {/* Input Section */}
+                                <Box width="100%">
+                                    {selectedField === 'birthdate' ? (
+                                        Platform.OS === 'web' ? (
+                                            <Input
+                                                type="date"
+                                                value={tempValue}
+                                                onChange={(e) => setTempValue(e.target.value)}
+                                                size="md"
+                                                backgroundColor="gray.100"
+                                                borderRadius="md"
+                                            />
+                                        ) : (
+                                            <>
+                                                <TouchableOpacity
+                                                    onPress={() => setShowDatePicker(true)}
+                                                    style={{
+                                                        backgroundColor: "#F3F4F6",
+                                                        padding: 12,
+                                                        borderRadius: 8,
+                                                        alignItems: 'center'
+                                                    }}
+                                                >
+                                                    <Text style={styles.caption}>Sélectionner une date</Text>
+                                                </TouchableOpacity>
+                                                {showDatePicker && (
+                                                    <DateTimePicker
+                                                        value={tempValue ? new Date(tempValue) : new Date()}
+                                                        mode="date"
+                                                        display="default"
+                                                        onChange={handleDateChange}
+                                                    />
+                                                )}
+                                            </>
+                                        )
+                                    ) : (
+                                        <Input
+                                            placeholder={`Modifier votre ${fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}`}
+                                            value={inputValue}
+                                            onChangeText={setInputValue}
+                                            marginTop={4}
+                                            marginBottom={4}
+                                            size="md"
+                                            backgroundColor="gray.100"
+                                            borderRadius="30"
+                                            _focus={{
+                                                backgroundColor: "gray.50",
+                                                borderColor: "gray.300"
+                                            }}
                                         />
                                     )}
-                                </>
-                            )
-                        ) : (
-                            <Input
-                            placeholder={`Modifier votre ${fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}`}
-                            value={inputValue}
-                            onChangeText={(text) => setInputValue(text)}
-                            style={{ marginVertical: 10, fontSize: 16 }}
-                          />
-                        )}
-                    </Modal.Body>
-                    <Modal.Footer>
-                        <Button backgroundColor='black' onPress={saveChanges}>Enregistrer</Button>
-                    </Modal.Footer>
-                </Modal.Content>
-            </Modal>
+                                </Box>
 
+                                {/* Footer avec bouton */}
+                                <Button
+                                    backgroundColor="black"
+                                    onPress={saveChanges}
+                                    borderRadius="full"
+                                    py={3}
+                                    _pressed={{
+                                        backgroundColor: "gray.800"
+                                    }}
+                                >
+                                    <Text color="white" style={styles.ctalittle}>
+                                        Enregistrer
+                                    </Text>
+                                </Button>
+                            </VStack>
+                        </Modal.Content>
+                    </BlurView>
+                </View>
+            </Modal>
         </Background>
     );
 };

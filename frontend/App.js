@@ -30,7 +30,8 @@ const App = () => {
   }, []);
 
   if (!fontsLoaded) {
-    return <TypewriterLoader />;
+    return
+     <TypewriterLoader />;
   }
 
   return (

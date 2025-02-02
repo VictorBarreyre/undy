@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Text, View, StyleSheet } from "react-native";
 import { styles } from "../../infrastructure/theme/styles";
+import { Background } from "../../navigation/Background";
 
 const TypewriterLoader = () => {
   const text = "Undy...";
@@ -22,19 +23,21 @@ const TypewriterLoader = () => {
 
   useEffect(() => {
     const cursorInterval = setInterval(() => {
-      setShowCursor((prev) => !prev); // Alterne le curseur visible/invisible
+      setShowCursor((prev) => !prev); 
     }, 500);
 
     return () => clearInterval(cursorInterval);
   }, []);
 
   return (
-    <View style={styles.containerLoader}>
-      <Text style={styles.h2}>
-        {displayedText}
-        {showCursor && "|"} {/* Ajout du curseur */}
-      </Text>
-    </View>
+    <Background>
+      <View style={styles.containerLoader}>
+        <Text style={styles.h2}>
+          {displayedText}
+          {showCursor && "|"} 
+        </Text>
+      </View>
+    </Background>
   );
 };
 

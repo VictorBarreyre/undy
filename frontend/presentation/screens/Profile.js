@@ -48,8 +48,8 @@ export default function Profile({ navigation }) {
                         keyExtractor={item => item._id}
                         ListEmptyComponent={
                             <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
-                                <Text style={styles.h3} textAlign="center" mt={4}>
-                                    Vous n'avez pas encore posté d'Undy
+                                <Text style={styles.h4} textAlign="center" mt={4}>
+                                    Wow mais c'est désert ici
                                 </Text>
                             </VStack>
                         }
@@ -61,8 +61,8 @@ export default function Profile({ navigation }) {
             title: <Text color='#94A3B8' style={styles.h5}>Ceux des autres</Text>,
             content:
 
-                <Text style={styles.h3} textAlign="center" mt={4}>
-                    Vous n'avez pas encore déverrouillé d'Undy
+                <Text style={styles.h4} textAlign="center" mt={20}>
+                    Wow mais c'est désert ici
                 </Text>
 
         }
@@ -106,7 +106,7 @@ export default function Profile({ navigation }) {
 
     if (isLoading) {
         return <TypewriterLoader />;
-      }
+    }
 
     return (
         <Background>
