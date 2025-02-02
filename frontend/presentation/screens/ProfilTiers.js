@@ -157,7 +157,7 @@ const ProfilTiers = ({ navigation }) => {
                            data={userSecrets.slice().reverse()}
                            renderItem={({ item }) => (
                                <Box marginLeft={2} marginRight={4} width={SCREEN_WIDTH * 0.8}>
-                                   <SecretCardBlurred secret={item} />
+                                   <SecretCardBlurred isExpanded={isExpanded} secret={item} />
                                </Box>
                            )}
                            keyExtractor={(item) => item._id}

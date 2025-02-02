@@ -362,33 +362,61 @@ const ChatScreen = ({ route }) => {
               styles.blurBackground,
               {
                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                flex: 1, // Ajout de flex: 1
-                justifyContent: 'center', // Centrage vertical du contenu
-                alignItems: 'center', // Centrage horizontal du contenu
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
               }
             ]}
             blurType="light"
             blurAmount={8}
             reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
           >
-            <Modal.Content width="90%">
-              <Modal.CloseButton />
-              <Modal.Header>
-                <HStack alignItems="center">
-                  <Text style={styles.h5}>Posté par </Text>
-                  <Text style={styles.h5}>{secretData?.user.name}</Text>
+            <Modal.Content
+              width="90%"
+              style={{
+                ...styles.shadowBox,
+                shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
+                shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
+                shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
+                shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
+                elevation: 5,
+                backgroundColor: 'white',
+                borderRadius: 8,
+                padding: 16
+              }}
+            >
+            <Modal.CloseButton 
+  _icon={{
+    color: "#94A3B8",  // La même couleur que votre icône ellipsis
+    size: "sm"
+  }}
+/>
+
+              <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
+                {/* Header */}
+                <HStack space={2} justifyContent="space-between" flexWrap="wrap">
+                  <VStack>
+                    <Text style={styles.caption}>
+                      Posté par {secretData?.user.name}
+                    </Text>
+                    <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
+                      Expire dans {timeLeft}
+                    </Text>
+                  </VStack>
+
                 </HStack>
-              </Modal.Header>   
-              <HStack justifyContent='space-between' space={20}>       
-              <Modal.Body>
-                <Text style={styles.h4}>
+
+                <Text paddingVertical={10} style={styles.h3}>
                   "{secretData?.content}"
                 </Text>
-                <Text style={styles.h4}>
-                  Expire dans {timeLeft}
-                </Text>
-              </Modal.Body>
-              </HStack>    
+
+                {/* Footer */}
+                <HStack justifyContent='space-between' mt={4}>
+                  <Text style={styles.caption}>{secretData?.label}</Text>
+                  <Text style={styles.caption}>Prix : {secretData?.price} €</Text>
+                </HStack>
+              </VStack>
+
             </Modal.Content>
           </BlurView>
         </View>

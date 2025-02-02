@@ -79,7 +79,17 @@ const SecretCard = ({ secret }) => {
                         style={{ marginRight: 10 }}
                     />
                 </HStack>
-                <Text style={styles.h3}>
+                <Text
+                    style={[
+                        styles.h4,
+                        {
+                            flexShrink: 1,
+                            flexWrap: 'wrap',
+                        }
+                    ]}
+                    numberOfLines={10}  // Limite à 3 lignes
+                    ellipsizeMode="tail" // Ajoute ... à la fin
+                >
                     "{secret.content}"
                 </Text>
                 <HStack justifyContent='space-between'>

@@ -21,8 +21,10 @@ const AddSecret = () => {
     const [price, setPrice] = useState(''); // État pour le prix
     const [secretPostAvailable, setSecretPostAvailable] = useState('false')
     const [expiresIn, setExpiresIn] = useState(7);
+    const [buttonMessage, setButtonMessage] = useState('Poster le secret');
 
     const MIN_PRICE = 5;
+    const MIN_WORDS = 2;
 
 
 
@@ -53,12 +55,22 @@ const AddSecret = () => {
 
     // Surveille les changements dans les champs et met à jour l'état de `secretPostAvailable`
     useEffect(() => {
-        setSecretPostAvailable(
-            secretText.trim().length > 0 && 
-            selectedLabel.trim().length > 0 && 
-            price.trim().length > 0 && 
-            Number(price) >= MIN_PRICE
-        );
+        const isTextValid = secretText.trim().length > MIN_WORDS;
+        const isLabelValid = selectedLabel.trim().length > 0;
+        const isPriceValid = Number(price) >= MIN_PRICE;
+
+        setSecretPostAvailable(isTextValid && isLabelValid && isPriceValid);
+
+        // Définir le message approprié
+        if (!isTextValid) {
+            setButtonMessage('Le post doit faire plus de 2 mots');
+        } else if (!isPriceValid) {
+            setButtonMessage('Le prix doit être supérieur à 5€');
+        } else if (!isLabelValid) {
+            setButtonMessage('Sélectionnez une catégorie');
+        } else {
+            setButtonMessage('Poster le secret');
+        }
     }, [secretText, selectedLabel, price]);
 
     return (
@@ -195,7 +207,7 @@ const AddSecret = () => {
                                                             // Autoriser uniquement les caractères numériques
                                                             const numericText = text.replace(/[^0-9]/g, '');
                                                             setPrice(numericText);
-                                                          }}
+                                                        }}
                                                         placeholder={`${MIN_PRICE}€ min`}
                                                         backgroundColor="transparent"
                                                         borderRadius="md"
@@ -258,7 +270,7 @@ const AddSecret = () => {
                                                             value={7}
                                                             _text={{
                                                                 fontSize: 14,
-                                                                lineHeight: 18,
+                                                                 lineHeight: 18,
                                                                 fontWeight: '500',
                                                                 fontFamily: 'SF-Pro-Display-Medium'
                                                             }}
@@ -281,14 +293,14 @@ const AddSecret = () => {
                                     <Pressable
                                         marginTop={7}
                                         onPress={handlePress}
-                                        disabled={!secretPostAvailable} // Désactive le bouton si l'état est faux
+                                        disabled={!secretPostAvailable}
                                         style={({ pressed }) => [
                                             {
                                                 backgroundColor: secretPostAvailable
                                                     ? pressed
-                                                        ? 'gray.800'
+                                                        ? '#94A3B8'
                                                         : 'black'
-                                                    : 'gray',
+                                                    : '#94A3B8',
                                                 transform: pressed && secretPostAvailable ? [{ scale: 0.96 }] : [{ scale: 1 }],
                                                 borderRadius: 20,
                                             },
@@ -297,7 +309,7 @@ const AddSecret = () => {
                                     >
                                         <HStack alignItems="center" justifyContent="center" space={2}>
                                             <Text fontSize="md" color="white" fontWeight="bold">
-                                                {!secretPostAvailable ? "Il manque des infos" : "Poster le secret"}
+                                                {buttonMessage}
                                             </Text>
                                         </HStack>
                                     </Pressable>

@@ -8,7 +8,7 @@ import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { Pressable } from 'react-native';
 
-const SecretCardBlurred = ({ secret }) => {
+const SecretCardBlurred = ({ secret, isExpanded }) => {
     const { userData } = useContext(AuthContext);
     const [timeLeft, setTimeLeft] = useState('');
 
@@ -55,7 +55,7 @@ const SecretCardBlurred = ({ secret }) => {
     return (
         <Box
             width='100%'
-            height='100%'
+            height={isExpanded ? 'auto' : '100%'}
             borderRadius="md"
             p={4}
             mb={4}
@@ -72,30 +72,41 @@ const SecretCardBlurred = ({ secret }) => {
         >
 
             <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
-                  <HStack space={2} justifyContent="space-between" flexWrap="wrap">
-                                  <VStack>
-                                      <Text color='#94A3B8' style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
-                                      <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
-                                          Expire dans {timeLeft}
-                                      </Text>
-                                  </VStack>
-                                  <FontAwesomeIcon
-                                      icon={faEllipsis} // Icône des trois points
-                                      size={16}
-                                      color='#94A3B8'
-                                      style={{ marginRight: 10 }}
-                                  />
-                              </HStack>
+                <HStack space={2} justifyContent="space-between" flexWrap="wrap">
+                    <VStack>
+                        <Text color='#94A3B8' style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
+                        <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
+                            Expire dans {timeLeft}
+                        </Text>
+                    </VStack>
+                    <FontAwesomeIcon
+                        icon={faEllipsis} // Icône des trois points
+                        size={16}
+                        color='#94A3B8'
+                        style={{ marginRight: 10 }}
+                    />
+                </HStack>
 
                 <Box position="relative" overflow="hidden">
-                    <Text style={styles.h3} flexShrink={1}>
-                        {secret.content}
+                    <Text
+                        style={[
+                            styles.h4,
+                            {
+                                flexShrink: 1,
+                                flexWrap: 'wrap',
+                            }
+                        ]}
+                        numberOfLines={8}  // Limite à 3 lignes
+                        ellipsizeMode="tail" // Ajoute ... à la fin
+                    >
+                        "{secret.content}"
                     </Text>
                     <BlurView
                         style={{
                             position: 'absolute',
+                            width:'150%',
                             top: 0,
-                            left: 0,
+                            left: -100,
                             right: 0,
                             bottom: 0,
                             backgroundColor: 'rgba(255, 255, 255, 0.8)',  // Ajout d'une légère opacité
@@ -107,7 +118,7 @@ const SecretCardBlurred = ({ secret }) => {
                     {/* Ajout d'un dégradé sur les bords */}
                     <Box
                         position="absolute"
-                        width='130%'
+                        width='10%'
                         top={0}
                         left={0}
                         right={0}
