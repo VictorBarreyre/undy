@@ -129,7 +129,7 @@ export default function CardHome({ cardData }) {
       style={styles.boxShadow}
     >
       {/* Contenu texte */}
-      <VStack height={'100%'} justifyContent="space-between" padding={3} space={2}>
+      <VStack height={'100%'} justifyContent="space-between" padding={3} space={2} flex={1} >
 
         <HStack alignItems="center" justifyContent="space-between" width="95%">
           {/* Texte aligné à gauche */}
@@ -147,14 +147,15 @@ export default function CardHome({ cardData }) {
               uri: profilePictureUrl
             }}
             alt={data[0]?.title || 'Carte'}
-            width={50} // Ajustez la taille de l'image ici
-            height={50} // Ajustez la taille de l'image ici
+            width={35} // Ajustez la taille de l'image ici
+            height={35} // Ajustez la taille de l'image ici
             borderRadius="full" // Rendre l'image ronde
           />
         </HStack>
 
         {/* Wrapper for the text with blur effect */}
         <Box
+          flex={1} // Ajout
           height="auto"
           position="relative"
           overflow="hidden"
@@ -166,7 +167,6 @@ export default function CardHome({ cardData }) {
             style={{ width: '90%', paddingBottom: 5, marginTop: 5, marginLeft: 4 }}
             textStyle={styles.h2}
             breakAtLine={8}
-
           />
 
         </Box>

@@ -120,7 +120,7 @@ const AddSecret = () => {
                                                 <Input
                                                     value={secretText}
                                                     onChangeText={(text) => setSecretText(text)}
-                                                    placeholder="Tapez ici votre Undy..."
+                                                    placeholder="Quoi de neuf ?"
                                                     backgroundColor="transparent"
                                                     borderRadius="md"
                                                     fontSize="md"
