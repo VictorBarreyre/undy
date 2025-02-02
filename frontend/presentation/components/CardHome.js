@@ -165,11 +165,11 @@ export default function CardHome({ cardData }) {
             content={cardData.content || 'Aucune description disponible.'}
             style={{ width: '90%', paddingBottom: 5, marginTop: 5, marginLeft: 4 }}
             textStyle={styles.h2}
-            
+            breakAtLine={8}
+
           />
 
         </Box>
-
         {/* Section des statistiques */}
         <HStack
           style={{
