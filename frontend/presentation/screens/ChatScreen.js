@@ -103,6 +103,7 @@ const ChatScreen = ({ route }) => {
         lastMessageDate = currentMessageDate;
       });
 
+      console.log('data du secret: ', secretData);
       console.log("Messages formatés:", formattedMessages);
       setMessages(formattedMessages);
     }
@@ -385,25 +386,19 @@ const ChatScreen = ({ route }) => {
                 padding: 16
               }}
             >
-            <Modal.CloseButton 
-  _icon={{
-    color: "#94A3B8",  // La même couleur que votre icône ellipsis
-    size: "sm"
-  }}
-/>
+              <Modal.CloseButton
+                _icon={{
+                  color: "#94A3B8",  // La même couleur que votre icône ellipsis
+                  size: "sm"
+                }}
+              />
 
               <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
                 {/* Header */}
                 <HStack space={2} justifyContent="space-between" flexWrap="wrap">
-                  <VStack>
-                    <Text style={styles.caption}>
+                    <Text style={styles.h5}>
                       Posté par {secretData?.user.name}
                     </Text>
-                    <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
-                      Expire dans {timeLeft}
-                    </Text>
-                  </VStack>
-
                 </HStack>
 
                 <Text paddingVertical={10} style={styles.h3}>
@@ -413,7 +408,9 @@ const ChatScreen = ({ route }) => {
                 {/* Footer */}
                 <HStack justifyContent='space-between' mt={4}>
                   <Text style={styles.caption}>{secretData?.label}</Text>
-                  <Text style={styles.caption}>Prix : {secretData?.price} €</Text>
+                  <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
+                      Expire dans {timeLeft}
+                    </Text>
                 </HStack>
               </VStack>
 

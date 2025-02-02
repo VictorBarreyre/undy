@@ -58,7 +58,7 @@ export default function Profile({ navigation }) {
             )
         },
         {
-            title: 'Ceux des autres',
+            title: <Text color='#94A3B8' style={styles.h5}>Ceux des autres</Text>,
             content:
 
                 <Text style={styles.h3} textAlign="center" mt={4}>
