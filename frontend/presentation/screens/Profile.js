@@ -16,7 +16,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 
 export default function Profile({ navigation }) {
-    const { userData, setUserData, userToken, handleProfileImageUpdate, isLoadingUserData } = useContext(AuthContext);
+    const { userData, setUserData, userToken, handleProfileImageUpdate, getImageSource } = useContext(AuthContext);
     const { fetchUserSecretsWithCount, fetchPurchasedSecrets } = useCardData();
     const [secretCount, setSecretCount] = useState(0);
     const [userSecrets, setUserSecrets] = useState([]);
@@ -27,7 +27,6 @@ export default function Profile({ navigation }) {
     const defaultProfilePicture = require('../../assets/images/default.png');
     const [purchasedSecrets, setPurchasedSecrets] = useState([]);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
-
 
 
     useEffect(() => {
@@ -60,6 +59,14 @@ export default function Profile({ navigation }) {
         }
     }, [userToken]);
 
+
+    useEffect(() => {
+        console.log('=== userData a changé ===', {
+            hasUserData: !!userData,
+            hasProfilePic: !!userData?.profilePicture,
+            profilePicUrl: userData?.profilePicture?.substring(0, 50) + '...'
+        });
+    }, [userData]);
 
     const tabs = [
         {
@@ -236,21 +243,16 @@ export default function Profile({ navigation }) {
                     <HStack space={4} alignItems="center" width="100%" px={2}>
                         <Pressable onPress={handleImageSelection}>
                             <Box position="relative">
-                                {isLoadingUserData ? (
-                                    <TypewriterLoader />
-                                ) : (
-                                    <Image
-                                        source={{
-                                            uri: userData?.profilePicture || undefined
-                                        }}
-                                        alt={`${userData?.name || 'User'}'s profile`}
-                                        width={75}
-                                        height={75}
-                                        borderRadius={50}
-                                        fallbackSource={defaultProfilePicture}
-                                        key={userData?.profilePicture}
-                                    />
-                                )}
+                            <Image
+    source={{
+        uri: userData?.profilePicture
+    }}
+    alt={`${userData?.name || 'User'}'s profile`}
+    width={75}
+    height={75}
+    borderRadius={50}
+    fallbackSource={defaultProfilePicture}
+/>
                                 {isUploadingImage && (
                                     <Box
                                         position="absolute"

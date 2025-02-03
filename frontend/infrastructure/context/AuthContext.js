@@ -12,65 +12,74 @@ export const AuthProvider = ({ children }) => {
     const [userData, setUserData] = useState(null);
     const [isLoadingUserData, setIsLoadingUserData] = useState(true);
 
+     // Fonction utilitaire pour nettoyer/formater l'image
+     const cleanProfilePicture = (profilePicture) => {
+        if (!profilePicture) return null;
+
+        // Si l'URL contient à la fois l'URL du serveur et data:image, extraire juste la partie base64
+        if (profilePicture.includes('herokuapp.com') && profilePicture.includes('data:image')) {
+            return profilePicture.split('herokuapp.com').pop();
+        }
+
+        // Si c'est déjà un base64 propre
+        if (profilePicture.startsWith('data:image')) {
+            return profilePicture;
+        }
+
+        return null;
+    };
+
+    // Nettoyer les données utilisateur avant de les stocker
+    const cleanUserData = (data) => {
+        if (!data) return null;
+        return {
+            ...data,
+            profilePicture: cleanProfilePicture(data.profilePicture)
+        };
+    };
+
     useEffect(() => {
         loadStoredData();
     }, []);
 
     const loadStoredData = async () => {
         try {
-            setIsLoadingUserData(true);
             const [token, storedUserData] = await Promise.all([
                 AsyncStorage.getItem('token'),
                 AsyncStorage.getItem('userData')
             ]);
-    
+
             if (token) {
                 setUserToken(token);
                 setIsLoggedIn(true);
                 
-                // Charger les données stockées d'abord pour éviter le flash
                 if (storedUserData) {
                     const parsedData = JSON.parse(storedUserData);
-                    setUserData(parsedData);
+                    setUserData(cleanUserData(parsedData));
                 }
                 
-                // Rafraîchir silencieusement depuis le serveur
-                try {
-                    const freshData = await fetchUserData(token);
-                    if (freshData?.profilePicture) {
-                        setUserData(prev => ({
-                            ...prev,
-                            ...freshData
-                        }));
-                    }
-                } catch (error) {
-                    console.warn('Erreur rafraîchissement silencieux:', error);
-                }
+                await fetchUserData(token);
             }
         } catch (error) {
-            console.error('Erreur chargement données:', error);
+            console.error('Erreur loadStoredData:', error);
         } finally {
             setIsLoadingUserData(false);
         }
     };
-
+    
     const fetchUserData = async (token) => {
         try {
             const response = await axios.get(`${DATABASE_URL}/api/users/profile`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             
-            const correctedData = {
-                ...response.data,
-                profilePicture: correctProfilePictureUrl(response.data.profilePicture),
-            };
+            const cleanedData = cleanUserData(response.data);
+            setUserData(cleanedData);
+            await AsyncStorage.setItem('userData', JSON.stringify(cleanedData));
             
-            setUserData(correctedData);
-            await AsyncStorage.setItem('userData', JSON.stringify(correctedData));
-            
-            return correctedData;
+            return cleanedData;
         } catch (error) {
-            console.error('Error fetching user data:', error.response?.data || error.message);
+            console.error('Erreur fetchUserData:', error);
             throw error;
         }
     };
@@ -81,13 +90,7 @@ export const AuthProvider = ({ children }) => {
             const response = await axios.get(`${DATABASE_URL}/api/users/${userId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            
-            const correctedData = {
-                ...response.data,
-                profilePicture: correctProfilePictureUrl(response.data.profilePicture),
-            };
-            
-            return correctedData;
+            return response.data;
         } catch (error) {
             console.error('Error fetching user data:', error);
             throw error;
@@ -107,7 +110,7 @@ export const AuthProvider = ({ children }) => {
             };
             
             formData.append('profilePicture', fileToUpload);
-    
+
             const response = await axios.put(
                 `${DATABASE_URL}/api/users/profile-picture`,
                 formData,
@@ -119,17 +122,13 @@ export const AuthProvider = ({ children }) => {
                     }
                 }
             );
-    
-            console.log('Réponse du serveur:', response.data);
-    
+
             if (response?.data?.profilePicture) {
-                // Mise à jour du contexte
-                const updatedUserData = {
+                const updatedUserData = cleanUserData({
                     ...userData,
                     profilePicture: response.data.profilePicture
-                };
+                });
                 
-                // Mise à jour de l'état et du stockage
                 setUserData(updatedUserData);
                 await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
                 
@@ -143,7 +142,7 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const updateUserData = async (updatedData) => {
+ const updateUserData = async (updatedData) => {
         try {
             const response = await axios.put(
                 `${DATABASE_URL}/api/users/profile`,
@@ -151,13 +150,8 @@ export const AuthProvider = ({ children }) => {
                 { headers: { Authorization: `Bearer ${userToken}` } }
             );
             
-            const updatedUserData = {
-                ...response.data,
-                profilePicture: correctProfilePictureUrl(response.data.profilePicture)
-            };
-            
-            setUserData(updatedUserData);
-            await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
+            setUserData(response.data);
+            await AsyncStorage.setItem('userData', JSON.stringify(response.data));
             
             return { success: true, message: 'Profil mis à jour avec succès.' };
         } catch (error) {
