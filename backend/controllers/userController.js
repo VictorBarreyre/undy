@@ -191,7 +191,6 @@ exports.uploadProfilePicture = async (req, res) => {
         }
 
         if (!req.file.mimetype.startsWith('image/')) {
-            fs.unlinkSync(path.join(UPLOAD_PATH, req.file.filename));
             return res.status(400).json({ 
                 message: 'Le fichier doit être une image (jpeg, png, etc).' 
             });
@@ -199,21 +198,17 @@ exports.uploadProfilePicture = async (req, res) => {
 
         const MAX_SIZE = 5 * 1024 * 1024;
         if (req.file.size > MAX_SIZE) {
-            fs.unlinkSync(path.join(UPLOAD_PATH, req.file.filename));
             return res.status(400).json({ 
                 message: 'L\'image ne doit pas dépasser 5MB.' 
             });
         }
 
-        if (user.profilePicture && user.profilePicture !== '/uploads/default.png') {
-            const oldPath = path.join(UPLOAD_PATH, path.basename(user.profilePicture));
-            if (fs.existsSync(oldPath)) {
-                fs.unlinkSync(oldPath);
-            }
-        }
+        // Convertir l'image en base64
+        const imageBuffer = req.file.buffer;
+        const base64Image = `data:${req.file.mimetype};base64,${imageBuffer.toString('base64')}`;
 
-        // S'assurer que le chemin est correct pour la base de données
-        user.profilePicture = `/uploads/${req.file.filename}`;
+        // Sauvegarder directement en base64
+        user.profilePicture = base64Image;
         await user.save();
 
         res.status(200).json({
@@ -222,13 +217,6 @@ exports.uploadProfilePicture = async (req, res) => {
         });
 
     } catch (error) {
-        if (req.file) {
-            const filePath = path.join(UPLOAD_PATH, req.file.filename);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-        }
-
         console.error('Erreur lors de la mise à jour de la photo de profil :', error);
         res.status(500).json({ 
             message: 'Erreur lors de la mise à jour de la photo de profil.',
