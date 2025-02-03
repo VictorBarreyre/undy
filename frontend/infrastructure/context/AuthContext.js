@@ -100,38 +100,42 @@ export const AuthProvider = ({ children }) => {
         try {
             const formData = new FormData();
             
-            // Plus de détails sur le fichier
-            const file = {
+            // Créer un objet blob à partir du fichier
+            const fileResponse = await fetch(imageFile.uri);
+            const blob = await fileResponse.blob();
+            
+            // Ajouter le fichier au FormData avec le bon type MIME
+            formData.append('profilePicture', {
                 uri: imageFile.uri,
                 type: imageFile.type || 'image/jpeg',
                 name: imageFile.fileName || 'profile.jpg',
-            };
-            
-            console.log('File to upload:', file);
-            formData.append('profilePicture', file);
+            });
     
-            const response = await axios.put(
+            const config = {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': `Bearer ${userToken}`,
+                },
+                transformRequest: (data) => data,
+            };
+    
+            const uploadResponse = await axios.put(
                 `${DATABASE_URL}/api/users/profile-picture`,
                 formData,
-                {
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'multipart/form-data',
-                        'Authorization': `Bearer ${userToken}`,
-                    },
-                    transformRequest: (data, headers) => {
-                        return formData; // Empêche axios de modifier formData
-                    },
-                }
+                config
             );
     
             return response.data;
         } catch (error) {
-            console.error('Upload error:', error.response?.data || error.message);
-            throw error;
+            console.error('Upload error:', error);
+            if (error.response) {
+                console.error('Server response:', error.response.data);
+            }
+            throw new Error('Impossible de changer la photo de profil');
         }
     };
-
+    
     const login = async (token) => {
         setUserToken(token);
         setIsLoggedIn(true);

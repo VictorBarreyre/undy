@@ -184,25 +184,21 @@ const UPLOAD_PATH = path.join(__dirname, '..', 'uploads');
 
 exports.uploadProfilePicture = async (req, res) => {
     try {
-        console.log('Début upload profile picture');
-        console.log('Fichier reçu:', req.file);
-        
-        const user = req.user;
-
         if (!req.file) {
-            console.log('Pas de fichier');
             return res.status(400).json({ message: 'Aucun fichier envoyé.' });
         }
 
-        if (!req.file.buffer) {
-            console.log('Pas de buffer');
-            return res.status(400).json({ message: 'Erreur lors de la lecture du fichier.' });
+        const user = req.user;
+        
+        // Vérifier la taille du fichier
+        if (req.file.size > 5 * 1024 * 1024) { // 5MB
+            return res.status(400).json({ message: 'Le fichier est trop volumineux.' });
         }
 
-        // Convertir l'image en base64
+        // Convertir en base64 avec le type MIME
         const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-        
-        // Sauvegarder dans la base de données
+
+        // Mettre à jour l'utilisateur
         user.profilePicture = base64Image;
         await user.save();
 
@@ -210,7 +206,6 @@ exports.uploadProfilePicture = async (req, res) => {
             message: 'Photo de profil mise à jour avec succès.',
             profilePicture: base64Image
         });
-
     } catch (error) {
         console.error('Erreur détaillée:', error);
         res.status(500).json({ 

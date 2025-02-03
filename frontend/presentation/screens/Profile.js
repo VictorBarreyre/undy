@@ -16,7 +16,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 
 export default function Profile({ navigation }) {
-    const { userData,setUserData, userToken, handleProfileImageUpdate } = useContext(AuthContext);
+    const { userData, setUserData, userToken, handleProfileImageUpdate } = useContext(AuthContext);
     const { fetchUserSecretsWithCount, fetchPurchasedSecrets } = useCardData();
     const [secretCount, setSecretCount] = useState(0);
     const [userSecrets, setUserSecrets] = useState([]);
@@ -59,6 +59,7 @@ export default function Profile({ navigation }) {
             loadUserData();
         }
     }, [userToken]);
+
 
     const tabs = [
         {
@@ -134,28 +135,29 @@ export default function Profile({ navigation }) {
 
     const handleImageSelection = async () => {
         try {
-          setIsUploadingImage(true);
-          
-          const result = await launchImageLibrary({
-            mediaType: 'photo',
-            maxWidth: 300,
-            maxHeight: 300,
-            quality: 1
-          });
-      
-          if (!result.didCancel && result.assets[0]) {
-            const updatedProfile = await handleProfileImageUpdate(result.assets[0]);
-            setUserData(prev => ({
-              ...prev,
-              profilePicture: updatedProfile.profilePicture
-            }));
-          }
+            setIsUploadingImage(true);
+    
+            const result = await launchImageLibrary({
+                mediaType: 'photo',
+                maxWidth: 300,
+                maxHeight: 300,
+                quality: 1
+            });
+    
+            if (!result.didCancel && result.assets[0]) {
+                const updatedProfile = await handleProfileImageUpdate(result.assets[0]);
+                console.log('Updated profile:', updatedProfile);
+                setUserData(prev => ({
+                    ...prev,
+                    profilePicture: updatedProfile.profilePicture
+                }));
+            }
         } catch (error) {
-          Alert.alert("Erreur", "Impossible de changer la photo de profil");
+            Alert.alert("Erreur", "Impossible de changer la photo de profil");
         } finally {
-          setIsUploadingImage(false);
+            setIsUploadingImage(false);
         }
-      };
+    };
 
     const content = "Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l'imprimerie depuis les années 1500, quand un imprimeur anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n'a pas fait que survivre cinq siècles, mais s'est aussi adapté à la bureautique informatique, sans que son contenu n'en soit modifié"
 
@@ -215,11 +217,14 @@ export default function Profile({ navigation }) {
                         <Pressable onPress={handleImageSelection}>
                             <Box position="relative">
                                 <Image
-                                    src={userData?.profilePicture || defaultProfilePicture}
+                                    source={{
+                                        uri: userData?.profilePicture
+                                    }}
                                     alt={`${userData?.name || 'User'}'s profile`}
                                     width={75}
                                     height={75}
                                     borderRadius={50}
+                                    fallbackSource={defaultProfilePicture} // Ajouter cette ligne
                                 />
                                 {isUploadingImage && (
                                     <Box

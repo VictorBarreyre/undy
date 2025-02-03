@@ -19,7 +19,25 @@ router.put('/profile', protect, updateUserProfile);
 router.get('/profile', protect, getUserProfile); // Utilisation du middleware "protect"
 
 // Route pour télécharger une photo de profil
-router.put('/profile-picture', protect, upload.single('profilePicture'), uploadProfilePicture);
+router.put('/profile-picture', protect, (req, res, next) => {
+    upload(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            // Erreur Multer
+            return res.status(400).json({
+                message: 'Erreur lors du téléchargement',
+                error: err.message
+            });
+        } else if (err) {
+            // Autre erreur
+            return res.status(500).json({
+                message: 'Erreur serveur',
+                error: err.message
+            });
+        }
+        // Continuer vers le controller si pas d'erreur
+        next();
+    });
+}, uploadProfilePicture);
 
 // Nouvelle route pour télécharger les données de l'utilisateur
 router.get('/download', protect, downloadUserData);
