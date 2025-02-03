@@ -15,15 +15,46 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function Profile({ navigation }) {
     const { userData, userToken } = useContext(AuthContext);
-    const { fetchUserSecretsWithCount } = useCardData();
+    const { fetchUserSecretsWithCount, fetchPurchasedSecrets } = useCardData();
     const [secretCount, setSecretCount] = useState(0);
     const [userSecrets, setUserSecrets] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isExpanded, setIsExpanded] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
     const [error, setError] = useState(null);
-    const defaultProfilePicture = require('../../assets/images/default.png'); // Add this at the top with other imports
+    const defaultProfilePicture = require('../../assets/images/default.png');
+    const [purchasedSecrets, setPurchasedSecrets] = useState([]);
 
+
+    useEffect(() => {
+        const loadUserData = async () => {
+          try {
+            setIsLoading(true);
+            setError(null);
+    
+            if (!userToken) {
+              return;
+            }
+    
+            const { secrets, count } = await fetchUserSecretsWithCount(userToken);
+            const purchasedSecretsData = await fetchPurchasedSecrets(); // Ajoutez cette ligne
+            
+            setUserSecrets(secrets);
+            setSecretCount(count);
+            setPurchasedSecrets(purchasedSecretsData); // Ajoutez cette ligne
+    
+          } catch (error) {
+            console.error('Erreur chargement données:', error);
+            setError(error.message);
+          } finally {
+            setIsLoading(false);
+          }
+        };
+    
+        if (userToken) {
+          loadUserData();
+        }
+      }, [userToken]);
 
     const tabs = [
         {
@@ -58,13 +89,35 @@ export default function Profile({ navigation }) {
             )
         },
         {
-            title: <Text color='#94A3B8' style={styles.h5}>Ceux des autres</Text>,
-            content:
-
-                <Text style={styles.h4} textAlign="center" mt={20}>
-                    Wow mais c'est désert ici
-                </Text>
-
+            title: 'Ceux des autres',
+            content: isLoading ? (
+                <Text>Chargement...</Text>
+            ) : (
+                <Box flex={1} width="100%" height="100%">
+                    <FlatList
+                        overflow='visible'
+                        horizontal={true}  // Scroll horizontal
+                        showsHorizontalScrollIndicator={false}
+                        height='100%'
+                        width='100%'
+                        contentContainerStyle={{ paddingHorizontal: 10, flexGrow: 1 }}
+                        data={purchasedSecrets}
+                        renderItem={({ item }) => (
+                            <Box marginLeft={2} marginRight={4} width={SCREEN_WIDTH * 0.8}>
+                                <SecretCard secret={item} isPurchased={true} />
+                            </Box>
+                        )}
+                        keyExtractor={item => item._id}
+                        ListEmptyComponent={
+                            <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
+                                <Text style={styles.h4} textAlign="center" mt={4}>
+                                    Wow mais c'est désert ici
+                                </Text>
+                            </VStack>
+                        }
+                    />
+                </Box>
+            )
         }
     ];
 
@@ -206,7 +259,7 @@ export default function Profile({ navigation }) {
                                 opacity={activeTab === index ? 100 : 40}
                                 zIndex={activeTab === index ? 1 : 0}
                             >
-                                <Text style={styles.h5}>{tab.title}</Text>
+                                <Text color={activeTab === index ? 'black' : "#94A3B8"} style={styles.h5}>{tab.title}</Text>
                             </Pressable>
                         ))}
                     </HStack>

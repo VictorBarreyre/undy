@@ -152,6 +152,25 @@ exports.purchaseSecret = async (req, res) => {
     }
 };
 
+exports.getPurchasedSecrets = async (req, res) => {
+    try {
+        const purchasedSecrets = await Secret.find({
+            purchasedBy: { $in: [req.user.id] }
+        })
+        .populate('user', 'name profilePicture') // Pour avoir les infos de l'auteur
+        .sort({ createdAt: -1 }); // Pour avoir les plus récents d'abord
+
+        res.status(200).json(purchasedSecrets);
+    } catch (error) {
+        console.error('Erreur lors de la récupération des secrets achetés:', error);
+        res.status(500).json({ 
+            message: 'Erreur lors de la récupération des secrets achetés',
+            error: error.message 
+        });
+    }
+};
+
+
 exports.getSecretConversation = async (req, res) => {
     try {
         const conversation = await Conversation.findOne({ 

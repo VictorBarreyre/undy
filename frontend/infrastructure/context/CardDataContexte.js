@@ -96,7 +96,7 @@ export const CardDataProvider = ({ children }) => {
         { price },
         { headers: { Authorization: `Bearer ${userToken}` } }
       );
-
+v 
       console.log('Purchase response:', purchaseResponse.data); // Debug log
 
       // Vérifier si nous avons bien un conversationId
@@ -125,6 +125,21 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
+
+  const fetchPurchasedSecrets = async () => {
+    try {
+      const response = await axios.get(
+        `${DATABASE_URL}/api/secrets/purchased`,
+        {
+          headers: { Authorization: `Bearer ${userToken}` }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des secrets achetés:', error);
+      return [];
+    }
+  };
 
 
   const handleAddMessage = async (conversationId, content) => {
@@ -180,6 +195,7 @@ export const CardDataProvider = ({ children }) => {
       fetchAllSecrets,
       fetchUserSecretsWithCount,
       purchaseAndAccessConversation,
+      fetchPurchasedSecrets,
       handleAddMessage,
       getConversationMessages,
       isLoadingData

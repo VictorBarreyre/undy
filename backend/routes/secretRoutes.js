@@ -4,6 +4,7 @@ const {
     createSecret, 
     getAllSecrets, 
     purchaseSecret, 
+    getPurchasedSecrets,
     getUserSecretsWithCount,
     getSecretConversation,
     addMessageToConversation,
@@ -22,6 +23,8 @@ router.get('/', getAllSecrets); // Récupérer tous les secrets
 router.post('/createsecrets', protect, createSecret); // Créer un secret
 
 router.post('/:id/purchase', protect, purchaseSecret); // Acheter un secret
+
+router.get('/purchased', protect, getPurchasedSecrets);
 
 router.get('/user-secrets-with-count', protect, getUserSecretsWithCount);
 
