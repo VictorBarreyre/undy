@@ -100,15 +100,19 @@ export const AuthProvider = ({ children }) => {
         try {
             const formData = new FormData();
             
-            // Créer un objet blob à partir du fichier
-            const fileResponse = await fetch(imageFile.uri);
-            const blob = await fileResponse.blob();
-            
-            // Ajouter le fichier au FormData avec le bon type MIME
-            formData.append('profilePicture', {
+            // Création du fichier pour le FormData
+            const fileToUpload = {
                 uri: imageFile.uri,
                 type: imageFile.type || 'image/jpeg',
                 name: imageFile.fileName || 'profile.jpg',
+            };
+            
+            formData.append('profilePicture', fileToUpload);
+            
+            console.log('Tentative d\'upload avec:', {
+                uri: fileToUpload.uri,
+                type: fileToUpload.type,
+                name: fileToUpload.name
             });
     
             const config = {
@@ -117,22 +121,27 @@ export const AuthProvider = ({ children }) => {
                     'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${userToken}`,
                 },
-                transformRequest: (data) => data,
+                transformRequest: (data) => data
             };
     
-            const uploadResponse = await axios.put(
+            const response = await axios.put(
                 `${DATABASE_URL}/api/users/profile-picture`,
                 formData,
                 config
             );
     
-            return response.data;
-        } catch (error) {
-            console.error('Upload error:', error);
-            if (error.response) {
-                console.error('Server response:', error.response.data);
+            if (response?.data?.profilePicture) {
+                setUserData(prev => ({
+                    ...prev,
+                    profilePicture: response.data.profilePicture
+                }));
+                return response.data;
+            } else {
+                throw new Error('Réponse invalide du serveur');
             }
-            throw new Error('Impossible de changer la photo de profil');
+        } catch (error) {
+            console.error('Erreur Upload:', error?.response?.data || error.message);
+            throw new Error('Impossible de mettre à jour la photo de profil');
         }
     };
     

@@ -141,19 +141,44 @@ export default function Profile({ navigation }) {
                 mediaType: 'photo',
                 maxWidth: 300,
                 maxHeight: 300,
-                quality: 1
+                quality: 1,
+                includeBase64: false,
             });
     
-            if (!result.didCancel && result.assets[0]) {
-                const updatedProfile = await handleProfileImageUpdate(result.assets[0]);
-                console.log('Updated profile:', updatedProfile);
-                setUserData(prev => ({
-                    ...prev,
-                    profilePicture: updatedProfile.profilePicture
-                }));
+            if (result.didCancel) {
+                console.log('Upload annulé par l\'utilisateur');
+                return;
             }
+    
+            if (result.errorCode) {
+                console.error('ImagePicker Error:', result.errorMessage);
+                throw new Error(result.errorMessage);
+            }
+    
+            if (!result.assets || !result.assets[0]) {
+                throw new Error('Aucune image sélectionnée');
+            }
+    
+            const imageAsset = result.assets[0];
+            console.log('Image sélectionnée:', {
+                uri: imageAsset.uri,
+                type: imageAsset.type,
+                fileName: imageAsset.fileName,
+                fileSize: imageAsset.fileSize
+            });
+    
+            const updatedProfile = await handleProfileImageUpdate(imageAsset);
+            
+            if (updatedProfile?.profilePicture) {
+                console.log('Mise à jour du profil réussie');
+            }
+    
         } catch (error) {
-            Alert.alert("Erreur", "Impossible de changer la photo de profil");
+            console.error('Erreur complète:', error);
+            Alert.alert(
+                "Erreur",
+                error.message || "Impossible de changer la photo de profil"
+            );
         } finally {
             setIsUploadingImage(false);
         }
