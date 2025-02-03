@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Dimensions } from 'react-native';
-import { VStack, Box, Text, Pressable, Image, HStack, FlatList } from 'native-base';
+import { Dimensions, Alert } from 'react-native';
+import { VStack, Box, Text, Pressable, Image, HStack, FlatList, Spinner } from 'native-base';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
@@ -8,13 +8,15 @@ import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 import SecretCard from '../components/SecretCard';
 import TypewriterLoader from '../components/TypewriterLoader';
+import { launchImageLibrary } from 'react-native-image-picker';
+import axios from 'axios';
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 
 export default function Profile({ navigation }) {
-    const { userData, userToken } = useContext(AuthContext);
+    const { userData,setUserData, userToken, handleProfileImageUpdate } = useContext(AuthContext);
     const { fetchUserSecretsWithCount, fetchPurchasedSecrets } = useCardData();
     const [secretCount, setSecretCount] = useState(0);
     const [userSecrets, setUserSecrets] = useState([]);
@@ -24,37 +26,39 @@ export default function Profile({ navigation }) {
     const [error, setError] = useState(null);
     const defaultProfilePicture = require('../../assets/images/default.png');
     const [purchasedSecrets, setPurchasedSecrets] = useState([]);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
+
 
 
     useEffect(() => {
         const loadUserData = async () => {
-          try {
-            setIsLoading(true);
-            setError(null);
-    
-            if (!userToken) {
-              return;
+            try {
+                setIsLoading(true);
+                setError(null);
+
+                if (!userToken) {
+                    return;
+                }
+
+                const { secrets, count } = await fetchUserSecretsWithCount(userToken);
+                const purchasedSecretsData = await fetchPurchasedSecrets(); // Ajoutez cette ligne
+
+                setUserSecrets(secrets);
+                setSecretCount(count);
+                setPurchasedSecrets(purchasedSecretsData); // Ajoutez cette ligne
+
+            } catch (error) {
+                console.error('Erreur chargement données:', error);
+                setError(error.message);
+            } finally {
+                setIsLoading(false);
             }
-    
-            const { secrets, count } = await fetchUserSecretsWithCount(userToken);
-            const purchasedSecretsData = await fetchPurchasedSecrets(); // Ajoutez cette ligne
-            
-            setUserSecrets(secrets);
-            setSecretCount(count);
-            setPurchasedSecrets(purchasedSecretsData); // Ajoutez cette ligne
-    
-          } catch (error) {
-            console.error('Erreur chargement données:', error);
-            setError(error.message);
-          } finally {
-            setIsLoading(false);
-          }
         };
-    
+
         if (userToken) {
-          loadUserData();
+            loadUserData();
         }
-      }, [userToken]);
+    }, [userToken]);
 
     const tabs = [
         {
@@ -128,6 +132,31 @@ export default function Profile({ navigation }) {
             : text;
     };
 
+    const handleImageSelection = async () => {
+        try {
+          setIsUploadingImage(true);
+          
+          const result = await launchImageLibrary({
+            mediaType: 'photo',
+            maxWidth: 300,
+            maxHeight: 300,
+            quality: 1
+          });
+      
+          if (!result.didCancel && result.assets[0]) {
+            const updatedProfile = await handleProfileImageUpdate(result.assets[0]);
+            setUserData(prev => ({
+              ...prev,
+              profilePicture: updatedProfile.profilePicture
+            }));
+          }
+        } catch (error) {
+          Alert.alert("Erreur", "Impossible de changer la photo de profil");
+        } finally {
+          setIsUploadingImage(false);
+        }
+      };
+
     const content = "Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l'imprimerie depuis les années 1500, quand un imprimeur anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n'a pas fait que survivre cinq siècles, mais s'est aussi adapté à la bureautique informatique, sans que son contenu n'en soit modifié"
 
     useEffect(() => {
@@ -183,13 +212,42 @@ export default function Profile({ navigation }) {
                     </HStack>
 
                     <HStack space={4} alignItems="center" width="100%" px={2}>
-                        <Image
-                            src={userData?.profilePicture || defaultProfilePicture}
-                            alt={`${userData?.name || 'User'}'s profile`}
-                            width={75}
-                            height={75}
-                            borderRadius={50}
-                        />
+                        <Pressable onPress={handleImageSelection}>
+                            <Box position="relative">
+                                <Image
+                                    src={userData?.profilePicture || defaultProfilePicture}
+                                    alt={`${userData?.name || 'User'}'s profile`}
+                                    width={75}
+                                    height={75}
+                                    borderRadius={50}
+                                />
+                                {isUploadingImage && (
+                                    <Box
+                                        position="absolute"
+                                        top={0}
+                                        left={0}
+                                        right={0}
+                                        bottom={0}
+                                        bg="rgba(0,0,0,0.5)"
+                                        borderRadius={50}
+                                        alignItems="center"
+                                        justifyContent="center"
+                                    >
+                                        <Spinner color="white" />
+                                    </Box>
+                                )}
+                                <Box
+                                    position="absolute"
+                                    bottom={0}
+                                    right={0}
+                                    bg="black"
+                                    borderRadius={50}
+                                    p={1}
+                                >
+                                    <FontAwesome5 name="camera" size={12} color="white" />
+                                </Box>
+                            </Box>
+                        </Pressable>
                         <HStack flex={1} justifyContent="space-evenly" alignItems="center">
                             <VStack alignItems="center">
                                 <Text style={styles.h4} fontWeight="bold" color="black">

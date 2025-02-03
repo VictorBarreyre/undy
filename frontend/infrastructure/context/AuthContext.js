@@ -96,6 +96,34 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const handleProfileImageUpdate = async (imageFile) => {
+        try {
+          const formData = new FormData();
+          formData.append('profilePicture', {
+            uri: imageFile.uri,
+            type: imageFile.type,
+            name: imageFile.fileName || 'profile-picture.jpg',
+          });
+      
+          const response = await axios.post(
+            `${DATABASE_URL}/api/users/profile-picture`,
+            formData,
+            {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+                Authorization: `Bearer ${userToken}`,
+              },
+            }
+          );
+      
+          return response.data;
+        } catch (error) {
+          console.error('Erreur lors de la mise à jour de l\'image:', error);
+          throw error;
+        }
+      };
+      
+
     const login = async (token) => {
         setUserToken(token);
         setIsLoggedIn(true);
@@ -181,6 +209,7 @@ export const AuthProvider = ({ children }) => {
                 login,
                 logout,
                 updateUserData,
+                handleProfileImageUpdate,
                 downloadUserData,
                 clearUserData,
                 deleteUserAccount // Fournit une fonction pour mettre à jour le profil
