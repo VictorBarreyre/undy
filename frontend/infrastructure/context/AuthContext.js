@@ -105,7 +105,7 @@ export const AuthProvider = ({ children }) => {
             name: imageFile.fileName || 'profile-picture.jpg',
           });
       
-          const response = await axios.post(
+          const response = await axios.put(
             `${DATABASE_URL}/api/users/profile-picture`,
             formData,
             {
