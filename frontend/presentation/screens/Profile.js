@@ -133,56 +133,51 @@ export default function Profile({ navigation }) {
             : text;
     };
 
-    const handleImageSelection = async () => {
-        try {
-            setIsUploadingImage(true);
-    
-            const result = await launchImageLibrary({
-                mediaType: 'photo',
-                maxWidth: 300,
-                maxHeight: 300,
-                quality: 1,
-                includeBase64: false,
-            });
-    
-            if (result.didCancel) {
-                console.log('Upload annulé par l\'utilisateur');
-                return;
-            }
-    
-            if (result.errorCode) {
-                console.error('ImagePicker Error:', result.errorMessage);
-                throw new Error(result.errorMessage);
-            }
-    
-            if (!result.assets || !result.assets[0]) {
-                throw new Error('Aucune image sélectionnée');
-            }
-    
-            const imageAsset = result.assets[0];
-            console.log('Image sélectionnée:', {
-                uri: imageAsset.uri,
-                type: imageAsset.type,
-                fileName: imageAsset.fileName,
-                fileSize: imageAsset.fileSize
-            });
-    
-            const updatedProfile = await handleProfileImageUpdate(imageAsset);
-            
-            if (updatedProfile?.profilePicture) {
-                console.log('Mise à jour du profil réussie');
-            }
-    
-        } catch (error) {
-            console.error('Erreur complète:', error);
-            Alert.alert(
-                "Erreur",
-                error.message || "Impossible de changer la photo de profil"
-            );
-        } finally {
-            setIsUploadingImage(false);
+ const handleImageSelection = async () => {
+    try {
+        setIsUploadingImage(true);
+
+        const result = await launchImageLibrary({
+            mediaType: 'photo',
+            maxWidth: 300,
+            maxHeight: 300,
+            quality: 1,
+            includeBase64: false,
+        });
+
+        if (result.didCancel) {
+            console.log('Upload annulé par l\'utilisateur');
+            return;
         }
-    };
+
+        if (!result.assets || !result.assets[0]) {
+            throw new Error('Aucune image sélectionnée');
+        }
+
+        const imageAsset = result.assets[0];
+        const updatedProfile = await handleProfileImageUpdate(imageAsset);
+        
+        if (updatedProfile?.profilePicture) {
+            // Utiliser directement l'URL sans prefetch
+            if (setUserData) {
+                setUserData(prev => ({
+                    ...prev,
+                    profilePicture: updatedProfile.profilePicture
+                }));
+            }
+        }
+
+    } catch (error) {
+        console.error('Erreur complète:', error);
+        Alert.alert(
+            "Erreur",
+            error.message || "Impossible de changer la photo de profil"
+        );
+    } finally {
+        setIsUploadingImage(false);
+    }
+};
+
 
     const content = "Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l'imprimerie depuis les années 1500, quand un imprimeur anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n'a pas fait que survivre cinq siècles, mais s'est aussi adapté à la bureautique informatique, sans que son contenu n'en soit modifié"
 
@@ -249,7 +244,8 @@ export default function Profile({ navigation }) {
                                     width={75}
                                     height={75}
                                     borderRadius={50}
-                                    fallbackSource={defaultProfilePicture} // Ajouter cette ligne
+                                    fallbackSource={defaultProfilePicture}
+                                    key={userData?.profilePicture} // Forcer le re-rendu
                                 />
                                 {isUploadingImage && (
                                     <Box
