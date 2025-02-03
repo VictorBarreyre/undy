@@ -180,46 +180,39 @@ exports.updateUserProfile = async (req, res) => {
     }
 };
 
+const UPLOAD_PATH = path.join(__dirname, '..', 'uploads');
+
 exports.uploadProfilePicture = async (req, res) => {
     try {
         const user = req.user;
 
-        // Vérification de la présence du fichier
         if (!req.file) {
             return res.status(400).json({ message: 'Aucun fichier envoyé.' });
         }
 
-        // Validation du type de fichier
         if (!req.file.mimetype.startsWith('image/')) {
-            // Supprimer le fichier invalide
-            fs.unlinkSync(req.file.path);
+            fs.unlinkSync(path.join(UPLOAD_PATH, req.file.filename));
             return res.status(400).json({ 
                 message: 'Le fichier doit être une image (jpeg, png, etc).' 
             });
         }
 
-        // Vérification de la taille du fichier (5MB max)
         const MAX_SIZE = 5 * 1024 * 1024;
         if (req.file.size > MAX_SIZE) {
-            // Supprimer le fichier trop volumineux
-            fs.unlinkSync(req.file.path);
+            fs.unlinkSync(path.join(UPLOAD_PATH, req.file.filename));
             return res.status(400).json({ 
                 message: 'L\'image ne doit pas dépasser 5MB.' 
             });
         }
 
-        // Nettoyage de l'ancienne image
-        if (user.profilePicture && 
-            user.profilePicture !== '/uploads/default.png') {
-            const oldPath = path.join(__dirname, '..', 'public', user.profilePicture);
-            fs.unlink(oldPath, (err) => {
-                if (err) {
-                    console.error('Erreur lors de la suppression de l\'ancienne image:', err);
-                }
-            });
+        if (user.profilePicture && user.profilePicture !== '/uploads/default.png') {
+            const oldPath = path.join(UPLOAD_PATH, path.basename(user.profilePicture));
+            if (fs.existsSync(oldPath)) {
+                fs.unlinkSync(oldPath);
+            }
         }
 
-        // Mise à jour de la photo de profil
+        // S'assurer que le chemin est correct pour la base de données
         user.profilePicture = `/uploads/${req.file.filename}`;
         await user.save();
 
@@ -229,9 +222,11 @@ exports.uploadProfilePicture = async (req, res) => {
         });
 
     } catch (error) {
-        // En cas d'erreur, nettoyer le fichier uploadé
         if (req.file) {
-            fs.unlinkSync(req.file.path);
+            const filePath = path.join(UPLOAD_PATH, req.file.filename);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
         }
 
         console.error('Erreur lors de la mise à jour de la photo de profil :', error);
@@ -241,8 +236,6 @@ exports.uploadProfilePicture = async (req, res) => {
         });
     }
 };
-
-
 
 exports.downloadUserData = async (req, res) => {
     try {
