@@ -31,8 +31,8 @@ const UserSchema = new mongoose.Schema({
         trim: true,
     },
     profilePicture: {
-        type: String, // Stocke l'URL de la photo de profil
-        required: false, // Champ optionnel
+        type: String,
+        maxLength: 5242880, // Environ 5MB en base64
     },
     notifs: {
         type: Boolean,

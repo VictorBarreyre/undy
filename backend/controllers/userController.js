@@ -184,46 +184,42 @@ const UPLOAD_PATH = path.join(__dirname, '..', 'uploads');
 
 exports.uploadProfilePicture = async (req, res) => {
     try {
+        console.log('Début upload profile picture');
+        console.log('Fichier reçu:', req.file);
+        
         const user = req.user;
 
         if (!req.file) {
+            console.log('Pas de fichier');
             return res.status(400).json({ message: 'Aucun fichier envoyé.' });
         }
 
-        if (!req.file.mimetype.startsWith('image/')) {
-            return res.status(400).json({ 
-                message: 'Le fichier doit être une image (jpeg, png, etc).' 
-            });
-        }
-
-        const MAX_SIZE = 5 * 1024 * 1024;
-        if (req.file.size > MAX_SIZE) {
-            return res.status(400).json({ 
-                message: 'L\'image ne doit pas dépasser 5MB.' 
-            });
+        if (!req.file.buffer) {
+            console.log('Pas de buffer');
+            return res.status(400).json({ message: 'Erreur lors de la lecture du fichier.' });
         }
 
         // Convertir l'image en base64
-        const imageBuffer = req.file.buffer;
-        const base64Image = `data:${req.file.mimetype};base64,${imageBuffer.toString('base64')}`;
-
-        // Sauvegarder directement en base64
+        const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+        
+        // Sauvegarder dans la base de données
         user.profilePicture = base64Image;
         await user.save();
 
         res.status(200).json({
             message: 'Photo de profil mise à jour avec succès.',
-            profilePicture: user.profilePicture,
+            profilePicture: base64Image
         });
 
     } catch (error) {
-        console.error('Erreur lors de la mise à jour de la photo de profil :', error);
+        console.error('Erreur détaillée:', error);
         res.status(500).json({ 
             message: 'Erreur lors de la mise à jour de la photo de profil.',
             error: error.message 
         });
     }
 };
+
 
 exports.downloadUserData = async (req, res) => {
     try {

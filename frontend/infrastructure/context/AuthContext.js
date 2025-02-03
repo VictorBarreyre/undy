@@ -98,31 +98,39 @@ export const AuthProvider = ({ children }) => {
 
     const handleProfileImageUpdate = async (imageFile) => {
         try {
-          const formData = new FormData();
-          formData.append('profilePicture', {
-            uri: imageFile.uri,
-            type: imageFile.type,
-            name: imageFile.fileName || 'profile-picture.jpg',
-          });
-      
-          const response = await axios.put(
-            `${DATABASE_URL}/api/users/profile-picture`,
-            formData,
-            {
-              headers: {
-                'Content-Type': 'multipart/form-data',
-                Authorization: `Bearer ${userToken}`,
-              },
-            }
-          );
-      
-          return response.data;
+            const formData = new FormData();
+            
+            // Plus de détails sur le fichier
+            const file = {
+                uri: imageFile.uri,
+                type: imageFile.type || 'image/jpeg',
+                name: imageFile.fileName || 'profile.jpg',
+            };
+            
+            console.log('File to upload:', file);
+            formData.append('profilePicture', file);
+    
+            const response = await axios.put(
+                `${DATABASE_URL}/api/users/profile-picture`,
+                formData,
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': `Bearer ${userToken}`,
+                    },
+                    transformRequest: (data, headers) => {
+                        return formData; // Empêche axios de modifier formData
+                    },
+                }
+            );
+    
+            return response.data;
         } catch (error) {
-          console.error('Erreur lors de la mise à jour de l\'image:', error);
-          throw error;
+            console.error('Upload error:', error.response?.data || error.message);
+            throw error;
         }
-      };
-      
+    };
 
     const login = async (token) => {
         setUserToken(token);
