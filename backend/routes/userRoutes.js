@@ -1,9 +1,16 @@
 // routes/userRoutes.js
 const express = require('express');
-const { registerUser, loginUser,updateUserProfile, getUserProfile, uploadProfilePicture, downloadUserData, clearUserData, deleteUserAccount, getUserById } = require('../controllers/userController');
+const { registerUser,
+    loginUser,
+    updateUserProfile,
+    getUserProfile,
+    uploadProfilePicture,
+    downloadUserData,
+    clearUserData,
+    deleteUserAccount,
+    getUserById } = require('../controllers/userController');
 const protect = require('../middleware/authMiddleware'); // Importation du middleware
-const upload = require('../middleware/uploadMiddleware'); 
-
+const upload = require('../middleware/uploadMiddleware');
 const router = express.Router();
 
 // Route pour l'inscription

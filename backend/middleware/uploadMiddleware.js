@@ -15,3 +15,6 @@ const upload = multer({
         cb(null, true);
     }
 }).single('profilePicture');
+
+
+module.exports = upload;
