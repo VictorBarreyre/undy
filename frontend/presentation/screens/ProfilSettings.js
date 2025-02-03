@@ -37,15 +37,29 @@ export default function Profile({ navigation }) {
     const openEditModal = (field, currentValue) => {
         setSelectedField(field);
         setTempValue(currentValue);
+        setInputValue(currentValue || ''); // Ajoutez cette ligne
         setModalVisible(true);
     };
 
     const saveChanges = async () => {
-        const updatedData = { ...userData, [selectedField]: tempValue };
+        console.log('Selected Field:', selectedField);
+        console.log('Input Value:', inputValue); // Ajoutez ce log pour déboguer
+    
+        // Utilisez la valeur correcte en fonction du type de champ
+        const valueToUpdate = selectedField === 'birthdate' ? tempValue : inputValue;
+    
+        const updatedData = { 
+            ...userData,
+            [selectedField]: valueToUpdate
+        };
+    
+        console.log('Données à mettre à jour avant envoi:', updatedData); // Pour déboguer
+    
         const result = await updateUserData(updatedData);
         setMessage(result.message);
         setIsSuccess(result.success);
         setModalVisible(false);
+        setInputValue('');
     };
 
     const handleDateChange = (event, selectedDate) => {
@@ -174,7 +188,7 @@ export default function Profile({ navigation }) {
         name: { label: 'Nom', icon: faUser, truncateLength: 10 },
         email: { label: 'Adresse e-mail', icon: faEnvelope, truncateLength: 10 },
         password: { label: 'Mot de passe', icon: faLock, value: '*********' },
-        phoneNumber: { label: 'Numéro de téléphone', icon: faPhone, truncateLength: 10 },
+        phone: { label: 'Numéro de téléphone', icon: faPhone, truncateLength: 10 },
         birthdate: { label: 'Date de naissance', icon: faBirthdayCake, truncateLength: 10 },
         income: { label: 'Vos revenus', icon: faDollarSign, truncateLength: 10 },
         bank: { label: 'Compte bancaire', icon: faBuildingColumns, truncateLength: 10 },
@@ -447,7 +461,9 @@ export default function Profile({ navigation }) {
                                         <Input
                                             placeholder={`Modifier votre ${fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}`}
                                             value={inputValue}
-                                            onChangeText={setInputValue}
+                                            onChangeText={(text) => {
+                                                setInputValue(text);
+                                            }}
                                             marginTop={4}
                                             marginBottom={4}
                                             size="md"
