@@ -2,6 +2,7 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const path = require('path'); // Ajoutez cette ligne en haut du fichier
+const fs = require('fs');
 
 
 
