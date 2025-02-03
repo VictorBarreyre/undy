@@ -180,9 +180,6 @@ exports.updateUserProfile = async (req, res) => {
     }
 };
 
-const path = require('path');
-const fs = require('fs');
-
 exports.uploadProfilePicture = async (req, res) => {
     try {
         const user = req.user;
