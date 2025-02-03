@@ -18,21 +18,34 @@ export const AuthProvider = ({ children }) => {
 
     const loadStoredData = async () => {
         try {
+            setIsLoadingUserData(true);
             const [token, storedUserData] = await Promise.all([
                 AsyncStorage.getItem('token'),
                 AsyncStorage.getItem('userData')
             ]);
-
+    
             if (token) {
                 setUserToken(token);
                 setIsLoggedIn(true);
                 
+                // Charger les données stockées d'abord pour éviter le flash
                 if (storedUserData) {
-                    setUserData(JSON.parse(storedUserData));
+                    const parsedData = JSON.parse(storedUserData);
+                    setUserData(parsedData);
                 }
                 
-                // Rafraîchir les données depuis le serveur
-                await fetchUserData(token);
+                // Rafraîchir silencieusement depuis le serveur
+                try {
+                    const freshData = await fetchUserData(token);
+                    if (freshData?.profilePicture) {
+                        setUserData(prev => ({
+                            ...prev,
+                            ...freshData
+                        }));
+                    }
+                } catch (error) {
+                    console.warn('Erreur rafraîchissement silencieux:', error);
+                }
             }
         } catch (error) {
             console.error('Erreur chargement données:', error);

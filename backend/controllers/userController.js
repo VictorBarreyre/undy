@@ -204,7 +204,12 @@ exports.uploadProfilePicture = async (req, res) => {
 
         res.status(200).json({
             message: 'Photo de profil mise à jour avec succès.',
-            profilePicture: base64Image
+            profilePicture: base64Image, // S'assurer que c'est l'URL complète
+            // Ajouter d'autres données utilisateur si nécessaire
+            user: {
+                ...user.toObject(),
+                profilePicture: base64Image
+            }
         });
     } catch (error) {
         console.error('Erreur détaillée:', error);

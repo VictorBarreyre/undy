@@ -16,7 +16,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 
 export default function Profile({ navigation }) {
-    const { userData, setUserData, userToken, handleProfileImageUpdate } = useContext(AuthContext);
+    const { userData, setUserData, userToken, handleProfileImageUpdate, isLoadingUserData } = useContext(AuthContext);
     const { fetchUserSecretsWithCount, fetchPurchasedSecrets } = useCardData();
     const [secretCount, setSecretCount] = useState(0);
     const [userSecrets, setUserSecrets] = useState([]);
@@ -133,50 +133,50 @@ export default function Profile({ navigation }) {
             : text;
     };
 
- const handleImageSelection = async () => {
-    try {
-        setIsUploadingImage(true);
+    const handleImageSelection = async () => {
+        try {
+            setIsUploadingImage(true);
 
-        const result = await launchImageLibrary({
-            mediaType: 'photo',
-            maxWidth: 300,
-            maxHeight: 300,
-            quality: 1,
-            includeBase64: false,
-        });
+            const result = await launchImageLibrary({
+                mediaType: 'photo',
+                maxWidth: 300,
+                maxHeight: 300,
+                quality: 1,
+                includeBase64: false,
+            });
 
-        if (result.didCancel) {
-            console.log('Upload annulé par l\'utilisateur');
-            return;
-        }
-
-        if (!result.assets || !result.assets[0]) {
-            throw new Error('Aucune image sélectionnée');
-        }
-
-        const imageAsset = result.assets[0];
-        const updatedProfile = await handleProfileImageUpdate(imageAsset);
-        
-        if (updatedProfile?.profilePicture) {
-            // Utiliser directement l'URL sans prefetch
-            if (setUserData) {
-                setUserData(prev => ({
-                    ...prev,
-                    profilePicture: updatedProfile.profilePicture
-                }));
+            if (result.didCancel) {
+                console.log('Upload annulé par l\'utilisateur');
+                return;
             }
-        }
 
-    } catch (error) {
-        console.error('Erreur complète:', error);
-        Alert.alert(
-            "Erreur",
-            error.message || "Impossible de changer la photo de profil"
-        );
-    } finally {
-        setIsUploadingImage(false);
-    }
-};
+            if (!result.assets || !result.assets[0]) {
+                throw new Error('Aucune image sélectionnée');
+            }
+
+            const imageAsset = result.assets[0];
+            const updatedProfile = await handleProfileImageUpdate(imageAsset);
+
+            if (updatedProfile?.profilePicture) {
+                // Utiliser directement l'URL sans prefetch
+                if (setUserData) {
+                    setUserData(prev => ({
+                        ...prev,
+                        profilePicture: updatedProfile.profilePicture
+                    }));
+                }
+            }
+
+        } catch (error) {
+            console.error('Erreur complète:', error);
+            Alert.alert(
+                "Erreur",
+                error.message || "Impossible de changer la photo de profil"
+            );
+        } finally {
+            setIsUploadingImage(false);
+        }
+    };
 
 
     const content = "Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l'imprimerie depuis les années 1500, quand un imprimeur anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n'a pas fait que survivre cinq siècles, mais s'est aussi adapté à la bureautique informatique, sans que son contenu n'en soit modifié"
@@ -236,17 +236,21 @@ export default function Profile({ navigation }) {
                     <HStack space={4} alignItems="center" width="100%" px={2}>
                         <Pressable onPress={handleImageSelection}>
                             <Box position="relative">
-                                <Image
-                                    source={{
-                                        uri: userData?.profilePicture
-                                    }}
-                                    alt={`${userData?.name || 'User'}'s profile`}
-                                    width={75}
-                                    height={75}
-                                    borderRadius={50}
-                                    fallbackSource={defaultProfilePicture}
-                                    key={userData?.profilePicture} // Forcer le re-rendu
-                                />
+                                {isLoadingUserData ? (
+                                    <TypewriterLoader />
+                                ) : (
+                                    <Image
+                                        source={{
+                                            uri: userData?.profilePicture || undefined
+                                        }}
+                                        alt={`${userData?.name || 'User'}'s profile`}
+                                        width={75}
+                                        height={75}
+                                        borderRadius={50}
+                                        fallbackSource={defaultProfilePicture}
+                                        key={userData?.profilePicture}
+                                    />
+                                )}
                                 {isUploadingImage && (
                                     <Box
                                         position="absolute"
