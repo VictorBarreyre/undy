@@ -103,34 +103,40 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   };
 
   const renderCards = () => {
-    const cardsToRender = [...Array(5)].map((_, i) => {
-      const cardIndex = (index + i) % filteredData.length; // Boucler avec mod (%)
-      const card = filteredData[cardIndex];
-      const isCurrentCard = i === 0;
+    // Vérification de sécurité pour filteredData
+    if (!filteredData || filteredData.length === 0) {
+        return null; // ou un composant de chargement
+    }
 
-      const cardStyle = isCurrentCard
-        ? [getCardStyle(), styles.cardStyle]
-        : [
-          styles.cardStyle,
-          {
-            top: 25 * i,
-            transform: [{ scale: 1 - 0.05 * i }],
-          },
-        ];
+    return [...Array(5)].map((_, i) => {
+        const cardIndex = (index + i) % filteredData.length;
+        const card = filteredData[cardIndex];
+        const isCurrentCard = i === 0;
 
-      return (
-        <Animated.View
-          key={`${card.id}-${cardIndex}-${i}`} // Assurez-vous que chaque clé est unique
-          style={cardStyle}
-          {...(isCurrentCard ? panResponder.panHandlers : {})}
-        >
-          <CardHome cardData={filteredData[cardIndex]} />
-        </Animated.View>
-      );
-    });
+        // Vérification de sécurité pour la carte
+        if (!card) return null;
 
-    return cardsToRender.reverse();
-  };
+        const cardStyle = isCurrentCard
+            ? [getCardStyle(), styles.cardStyle]
+            : [
+                styles.cardStyle,
+                {
+                    top: 25 * i,
+                    transform: [{ scale: 1 - 0.05 * i }],
+                },
+            ];
+
+        return (
+            <Animated.View
+                key={`${card.id || cardIndex}-${i}`}
+                style={cardStyle}
+                {...(isCurrentCard ? panResponder.panHandlers : {})}
+            >
+                <CardHome cardData={card} />
+            </Animated.View>
+        );
+    }).reverse();
+};
 
   if (!filteredData.length) {
     return (

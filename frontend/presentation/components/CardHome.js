@@ -18,29 +18,32 @@ export default function CardHome({ cardData }) {
 
 
   useEffect(() => {
+    // Vérification de sécurité
+    if (!cardData || !cardData.expiresAt) return;
+
     const calculateTimeLeft = () => {
-      const expirationDate = new Date(cardData.expiresAt);
-      const now = new Date();
-      const difference = expirationDate - now;
+        const expirationDate = new Date(cardData.expiresAt);
+        const now = new Date();
+        const difference = expirationDate - now;
 
-      if (difference <= 0) {
-        return 'Expiré';
-      }
+        if (difference <= 0) {
+            return 'Expiré';
+        }
 
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((difference / 1000 / 60) % 60);
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((difference / 1000 / 60) % 60);
 
-      return `${days}j ${hours}h ${minutes}m`;
+        return `${days}j ${hours}h ${minutes}m`;
     };
 
     setTimeLeft(calculateTimeLeft());
     const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 60000); // Mise à jour chaque minute
+        setTimeLeft(calculateTimeLeft());
+    }, 60000);
 
     return () => clearInterval(timer);
-  }, [cardData.expiresAt]);
+}, [cardData?.expiresAt]);
 
   const profilePictureUrl = cardData.user?.profilePicture
 
@@ -99,19 +102,19 @@ export default function CardHome({ cardData }) {
 
 
   useEffect(() => {
+    // Vérification de sécurité
+    if (!cardData || !cardData.content) return;
+
     const checkContentLength = () => {
-      // Exemple simple : considérer une chaîne supérieure à 50 caractères comme plus d'une ligne
-      if (cardData?.content?.length > 24) {
-        setIsSingleLine(false);
-      } else {
-        setIsSingleLine(true);
-      }
+        if (cardData.content.length > 24) {
+            setIsSingleLine(false);
+        } else {
+            setIsSingleLine(true);
+        }
     };
-    console.log(cardData)
 
     checkContentLength();
-  }, [cardData?.content?.length]);
-
+}, [cardData?.content]);
 
   return (
     <Box
