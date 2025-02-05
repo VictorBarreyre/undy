@@ -60,7 +60,7 @@ const formatMessageTime = (timestamp) => {
 };
 
 const ChatScreen = ({ route }) => {
-  const { conversationId, secretData, conversation } = route.params;
+  const { conversationId, secretData, conversation, showModalOnMount } = route.params;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const { handleAddMessage, getConversationMessages } = useCardData();
@@ -69,11 +69,16 @@ const ChatScreen = ({ route }) => {
   const [showTimestamp, setShowTimestamp] = useState(false);
   const [isTimestampVisible, setIsTimestampVisible] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
-  const [isModalVisible, setModalVisible] = useState(false);
+  const [isModalVisible, setModalVisible] = useState(showModalOnMount || false);
+
+  useEffect(() => {
+    if (showModalOnMount) {
+      setModalVisible(true);
+    }
+  }, [showModalOnMount]);
 
 
   useEffect(() => {
-
     if (conversation?.messages) {
       const formattedMessages = [];
       let lastMessageDate = null;
@@ -103,8 +108,6 @@ const ChatScreen = ({ route }) => {
         lastMessageDate = currentMessageDate;
       });
 
-      console.log('data du secret: ', secretData);
-      console.log("Messages formatés:", formattedMessages);
       setMessages(formattedMessages);
     }
   }, [conversation]);
@@ -282,7 +285,7 @@ const ChatScreen = ({ route }) => {
                 <HStack justifyContent='space-between'>
                   <Pressable onPress={() => setModalVisible(true)}>
                     <Text style={styles.littleCaption} color="#FF78B2">
-                      {secretData?.content?.substring(0, 25)}...
+                      {secretData?.content?.substring(0, 15)}...
                     </Text>
                   </Pressable>
                   <Text style={styles.littleCaption} color="#94A3B8">

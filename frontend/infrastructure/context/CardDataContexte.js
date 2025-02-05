@@ -96,7 +96,6 @@ export const CardDataProvider = ({ children }) => {
         { price },
         { headers: { Authorization: `Bearer ${userToken}` } }
       );
-v 
       console.log('Purchase response:', purchaseResponse.data); // Debug log
 
       // Vérifier si nous avons bien un conversationId

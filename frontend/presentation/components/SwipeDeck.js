@@ -38,16 +38,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       const actualIndex = currentIndex % filtered.length;
       setCurrentItem(filtered[actualIndex]);
     }
-    
-    const dataWithoutProfilePicture = filtered.map(item => ({
-      ...item,
-      user: item.user ? {
-        _id: item.user._id,
-        name: item.user.name
-      } : null
-    }));
 
-    console.log('Filtered data:', dataWithoutProfilePicture);
   }, [selectedFilters, data, currentIndex, isLoadingData]);
 
 
@@ -188,7 +179,8 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
               params: { 
                 conversationId,
                 secretData: currentItem,
-                conversation
+                conversation,
+                showModalOnMount: true // Nouveau paramètre
               }
             });
           } catch (error) {
