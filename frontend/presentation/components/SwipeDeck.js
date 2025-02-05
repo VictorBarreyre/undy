@@ -163,12 +163,12 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       </Box>
       <PaymentSheet
         secret={currentItem}
-        onPaymentSuccess={async (paymentIntentId) => {
+        onPaymentSuccess={async (paymentId) => {
           try {
             const { conversationId, conversation } = await purchaseAndAccessConversation(
               currentItem._id,
               currentItem.price,
-              paymentIntentId
+              paymentId
             );
 
             navigation.navigate('ChatTab', {

@@ -81,48 +81,47 @@ export const CardDataProvider = ({ children }) => {
   };
 
 
-  const purchaseAndAccessConversation = async (secretId, price) => {
-    // Vérification des paramètres
-    if (!secretId) {
-      throw new Error('Secret ID is required');
+  const purchaseAndAccessConversation = async (secretId, price, paymentId) => {
+    if (!secretId || !paymentId) {
+        throw new Error('Secret ID et Payment ID sont requis');
     }
 
     try {
-      console.log('Attempting to purchase secret:', { secretId, price }); // Debug log
+        console.log('Attempting to purchase secret:', { secretId, price, paymentId });
 
-      // 1. Effectuer l'achat du secret
-      const purchaseResponse = await axios.post(
-        `${DATABASE_URL}/api/secrets/${secretId}/purchase`,
-        { price },
-        { headers: { Authorization: `Bearer ${userToken}` } }
-      );
-      console.log('Purchase response:', purchaseResponse.data); // Debug log
+        const purchaseResponse = await axios.post(
+            `${DATABASE_URL}/api/secrets/${secretId}/purchase`,
+            { 
+                price,
+                paymentIntentId: paymentId  // Assurez-vous que le nom correspond à ce qu'attend le backend
+            },
+            { headers: { Authorization: `Bearer ${userToken}` } }
+        );
 
-      // Vérifier si nous avons bien un conversationId
-      if (!purchaseResponse.data.conversationId) {
-        throw new Error('No conversation ID received from purchase');
-      }
+        if (!purchaseResponse.data.conversationId) {
+            throw new Error('No conversation ID received from purchase');
+        }
 
-      // 2. Récupérer les détails de la conversation
-      const conversationResponse = await axios.get(
-        `${DATABASE_URL}/api/secrets/conversations/secret/${secretId}`,
-        { headers: { Authorization: `Bearer ${userToken}` } }
-      );
+        const conversationResponse = await axios.get(
+            `${DATABASE_URL}/api/secrets/conversations/secret/${secretId}`,
+            { headers: { Authorization: `Bearer ${userToken}` } }
+        );
 
-      return {
-        conversationId: purchaseResponse.data.conversationId,
-        conversation: conversationResponse.data
-      };
+        return {
+            conversationId: purchaseResponse.data.conversationId,
+            conversation: conversationResponse.data
+        };
     } catch (error) {
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        secretId,
-        price
-      });
-      throw error;
+        console.error('Error details:', {
+            message: error.message,
+            response: error.response?.data,
+            secretId,
+            price,
+            paymentId
+        });
+        throw error;
     }
-  };
+};
 
 
   const fetchPurchasedSecrets = async () => {

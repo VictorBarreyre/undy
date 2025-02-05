@@ -259,7 +259,7 @@ const ChatScreen = ({ route }) => {
             space={3}
             p={4}
           >
-            <TouchableOpacity onPress={() => navigation.goBack()}>
+            <TouchableOpacity onPress={() => navigation.navigate('Conversations')}>
               <FontAwesomeIcon icon={faChevronLeft} size={20} color="#000" />
             </TouchableOpacity>
 
