@@ -30,9 +30,10 @@
 			<key>CFBundleURLName</key>
 			<string>com.anonymous.frontend</string>
 			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>frontend</string> <!-- Utilisé pour deep linking -->
-			</array>
+		 <array>
+            <string>frontend</string>
+            <string>undy</string>
+        </array>
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>

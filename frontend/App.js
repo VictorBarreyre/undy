@@ -38,20 +38,21 @@ const App = () => {
 
   return (
     <StripeProvider
-    publishableKey={STRIPE_PUBLISHABLE_KEY}
-    merchantIdentifier="merchant.com.undy" // Pour Apple Pay
-  >
-    <AuthProvider>
-      <CardDataProvider>
-        <NativeBaseProvider theme={lightTheme}>
+      publishableKey={STRIPE_PUBLISHABLE_KEY}
+      merchantIdentifier="merchant.com.anonymous.frontend" // Ajout de cette ligne
+      urlScheme="frontend"
+    >
+      <AuthProvider>
+        <CardDataProvider>
+          <NativeBaseProvider theme={lightTheme}>
             <SafeAreaProvider>
               <NavigationContainer>
                 <StackNavigator />
               </NavigationContainer>
             </SafeAreaProvider>
-        </NativeBaseProvider>
-      </CardDataProvider>
-    </AuthProvider>
+          </NativeBaseProvider>
+        </CardDataProvider>
+      </AuthProvider>
     </StripeProvider>
   );
 };
