@@ -2,6 +2,8 @@ const Secret = require('../models/Secret');
 const User = require('../models/User'); // Assurez-vous que le chemin est correct
 const mongoose = require('mongoose');
 const Conversation = require ('../models/Conversation')
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const Payment = require('../models/Payment');
 
 
 exports.createSecret = async (req, res) => {
@@ -56,41 +58,80 @@ exports.createSecret = async (req, res) => {
     }
 };
 
+exports.createPaymentIntent = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const secret = await Secret.findById(req.params.id);
+        if (!secret) {
+            return res.status(404).json({ message: 'Secret introuvable.' });
+        }
+
+        // Créer l'intention de paiement Stripe
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: secret.price * 100, // Stripe utilise les centimes
+            currency: 'eur',
+            metadata: {
+                secretId: secret._id.toString(),
+                userId: req.user.id
+            }
+        });
+
+        // Créer un enregistrement de paiement
+        const payment = await Payment.create([{
+            secret: secret._id,
+            user: req.user.id,
+            amount: secret.price,
+            paymentIntentId: paymentIntent.id,
+            status: 'pending'
+        }], { session });
+
+        await session.commitTransaction();
+
+        res.json({
+            clientSecret: paymentIntent.client_secret,
+            paymentId: payment[0]._id
+        });
+
+    } catch (error) {
+        await session.abortTransaction();
+        res.status(500).json({ message: error.message });
+    } finally {
+        session.endSession();
+    }
+};
 
 exports.purchaseSecret = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        // Vérifier si l'ID est valide
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({ message: 'ID de secret invalide' });
+        const { paymentIntentId } = req.body;
+        if (!paymentIntentId) {
+            return res.status(400).json({ message: 'ID de paiement manquant' });
         }
 
         const secret = await Secret.findById(req.params.id);
-
         if (!secret) {
             return res.status(404).json({ message: 'Secret introuvable.' });
         }
 
         // Vérifier si l'utilisateur a déjà acheté le secret
         if (secret.purchasedBy.includes(req.user.id)) {
-            // Chercher une conversation existante
             let conversation = await Conversation.findOne({ 
                 secret: secret._id,
                 participants: { $elemMatch: { $eq: req.user.id } }
             });
             
-            // Si pas de conversation ou si l'utilisateur n'est pas dans les participants
             if (!conversation) {
-                // Créer une nouvelle conversation
                 conversation = await Conversation.create([{
                     secret: secret._id,
                     participants: [secret.user, req.user.id],
                     expiresAt: secret.expiresAt,
-                    messages: [] // Initialiser un tableau de messages vide
+                    messages: []
                 }], { session });
-                conversation = conversation[0]; // car create retourne un tableau
+                conversation = conversation[0];
             }
 
             await session.commitTransaction();
@@ -100,19 +141,33 @@ exports.purchaseSecret = async (req, res) => {
             });
         }
 
-        // Si l'utilisateur n'a pas encore acheté le secret
-        // Ajouter ici la logique de paiement si nécessaire
-        // ...
+        // Vérifier le paiement seulement si c'est un nouvel achat
+        const payment = await Payment.findOne({ 
+            paymentIntentId,
+            secret: secret._id,
+            user: req.user.id
+        });
+
+        if (!payment) {
+            await session.abortTransaction();
+            return res.status(400).json({ message: 'Paiement introuvable' });
+        }
+
+        if (payment.status !== 'succeeded') {
+            await session.abortTransaction();
+            return res.status(400).json({ message: 'Paiement non validé' });
+        }
 
         // Ajouter l'utilisateur à la liste des acheteurs
         secret.purchasedBy.push(req.user.id);
         await secret.save({ session });
 
         // Créer ou récupérer la conversation
-        let conversation = await Conversation.findOne({ secret: secret._id });
+        let conversation = await Conversation.findOne({ 
+            secret: secret._id
+        }).session(session);
 
         if (!conversation) {
-            // Créer une nouvelle conversation
             conversation = await Conversation.create([{
                 secret: secret._id,
                 participants: [secret.user, req.user.id],
@@ -120,19 +175,17 @@ exports.purchaseSecret = async (req, res) => {
                 messages: []
             }], { session });
             conversation = conversation[0];
-        } else {
-            // Ajouter le nouvel acheteur aux participants s'il n'y est pas déjà
-            if (!conversation.participants.includes(req.user.id)) {
-                conversation.participants.push(req.user.id);
-                await conversation.save({ session });
-            }
+        } else if (!conversation.participants.includes(req.user.id)) {
+            conversation.participants.push(req.user.id);
+            await conversation.save({ session });
         }
 
         await session.commitTransaction();
 
         res.status(200).json({
             message: 'Secret acheté avec succès.',
-            conversationId: conversation._id
+            conversationId: conversation._id,
+            conversation
         });
 
     } catch (error) {
@@ -147,6 +200,39 @@ exports.purchaseSecret = async (req, res) => {
             message: 'Erreur serveur.', 
             error: error.message 
         });
+    } finally {
+        session.endSession();
+    }
+};
+
+exports.confirmPayment = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { paymentIntentId } = req.body;
+        const payment = await Payment.findOne({ paymentIntentId });
+
+        if (!payment) {
+            return res.status(404).json({ message: 'Paiement introuvable.' });
+        }
+
+        // Vérifier le statut du paiement avec Stripe
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+        if (paymentIntent.status === 'succeeded') {
+            payment.status = 'succeeded';
+            await payment.save({ session });
+
+            await session.commitTransaction();
+            res.json({ success: true });
+        } else {
+            throw new Error('Paiement non réussi');
+        }
+
+    } catch (error) {
+        await session.abortTransaction();
+        res.status(500).json({ message: error.message });
     } finally {
         session.endSession();
     }

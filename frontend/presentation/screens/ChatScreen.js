@@ -404,7 +404,7 @@ const ChatScreen = ({ route }) => {
                     </Text>
                 </HStack>
 
-                <Text paddingVertical={10} style={styles.h3}>
+                <Text paddingVertical={100} style={styles.h3}>
                   "{secretData?.content}"
                 </Text>
 

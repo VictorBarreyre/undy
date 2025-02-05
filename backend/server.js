@@ -7,6 +7,9 @@ const userRoutes = require('./routes/userRoutes');
 const secretRoutes = require('./routes/secretRoutes');
 const path = require('path');
 const helmet = require('helmet');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+
 
 
 // Charger les variables d'environnement
