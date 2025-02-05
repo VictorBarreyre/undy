@@ -38,5 +38,9 @@ router.get('/conversations/:conversationId', protect, getConversation); // Nouve
 
 router.delete('/conversations/:conversationId', protect, deleteConversation);
 
+router.post('/:id/create-payment-intent', protect, createPaymentIntent);
+
+router.post('/:id/confirm-payment', protect, confirmPayment);
+
 
 module.exports = router;

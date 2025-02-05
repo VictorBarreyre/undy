@@ -6,6 +6,7 @@ import { faUnlock } from '@fortawesome/free-solid-svg-icons';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import CardHome from './CardHome';
 import { useNavigation } from '@react-navigation/native';
+import PaymentSheet from './PaymentSheet';
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -26,13 +27,13 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
   useEffect(() => {
     if (!data || isLoadingData) return;
-    
+
     const filtered = selectedFilters.length > 0
       ? data.filter((card) => selectedFilters.includes(card.label))
       : data;
 
     setFilteredData(filtered);
-    
+
     // Mise à jour du currentItem avec l'index courant
     if (filtered.length > 0) {
       const actualIndex = currentIndex % filtered.length;
@@ -111,37 +112,37 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
   const renderCards = () => {
     if (!filteredData || filteredData.length === 0) {
-        return null;
+      return null;
     }
 
     return [...Array(Math.min(5, filteredData.length))].map((_, i) => {
-        const cardIndex = (currentIndex + i) % filteredData.length;
-        const card = filteredData[cardIndex];
-        const isCurrentCard = i === 0;
+      const cardIndex = (currentIndex + i) % filteredData.length;
+      const card = filteredData[cardIndex];
+      const isCurrentCard = i === 0;
 
-        if (!card) return null;
+      if (!card) return null;
 
-        const cardStyle = isCurrentCard
-            ? [getCardStyle(), styles.cardStyle]
-            : [
-                styles.cardStyle,
-                {
-                    top: 25 * i,
-                    transform: [{ scale: 1 - 0.05 * i }],
-                },
-            ];
+      const cardStyle = isCurrentCard
+        ? [getCardStyle(), styles.cardStyle]
+        : [
+          styles.cardStyle,
+          {
+            top: 25 * i,
+            transform: [{ scale: 1 - 0.05 * i }],
+          },
+        ];
 
-        return (
-            <Animated.View
-                key={`${card._id}-${cardIndex}`}
-                style={cardStyle}
-                {...(isCurrentCard ? panResponder.panHandlers : {})}
-            >
-                <CardHome cardData={card} />
-            </Animated.View>
-        );
+      return (
+        <Animated.View
+          key={`${card._id}-${cardIndex}`}
+          style={cardStyle}
+          {...(isCurrentCard ? panResponder.panHandlers : {})}
+        >
+          <CardHome cardData={card} />
+        </Animated.View>
+      );
     }).reverse();
-};
+  };
 
   if (!filteredData.length) {
     return (
@@ -160,50 +161,34 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       <Box style={styles.cardContainer}>
         {renderCards()}
       </Box>
-      <Pressable
-        onPress={async () => {
+      <PaymentSheet
+        secret={currentItem}
+        onPaymentSuccess={async (paymentIntentId) => {
           try {
-            if (!currentItem || !currentItem._id) {
-              console.error('Invalid currentItem:', currentItem);
-              return;
-            }
-      
             const { conversationId, conversation } = await purchaseAndAccessConversation(
               currentItem._id,
-              currentItem.price
+              currentItem.price,
+              paymentIntentId
             );
-            
-            // Navigation vers le Tab des conversations puis vers le Chat
+
             navigation.navigate('ChatTab', {
               screen: 'Chat',
-              params: { 
+              params: {
                 conversationId,
                 secretData: currentItem,
                 conversation,
-                showModalOnMount: true // Nouveau paramètre
+                showModalOnMount: true
               }
             });
           } catch (error) {
             console.error('Erreur lors de l\'achat:', error);
           }
         }}
-        style={({ pressed }) => [
-          {
-            backgroundColor: pressed ? 'gray.800' : 'black',
-            transform: pressed ? [{ scale: 0.96 }] : [{ scale: 1 }],
-          },
-          { width: '100%', alignSelf: 'center', padding: 18, borderRadius: 30 },
-        ]}
-      >
-        <HStack alignItems="center" justifyContent="center" space={3}>
-          <FontAwesomeIcon icon={faUnlock} size={18} color="white" />
-          <Text fontSize="md" color="white" fontWeight="bold">
-            {currentItem
-              ? `Déverrouiller pour ${currentItem.price || '0.00'} €`
-              : 'Chargement...'}
-          </Text>
-        </HStack>
-      </Pressable>
+        onPaymentError={(error) => {
+          console.error('Erreur de paiement:', error);
+          // Gérer l'erreur (afficher une alerte, etc.)
+        }}
+      />
     </VStack>
   );
 };

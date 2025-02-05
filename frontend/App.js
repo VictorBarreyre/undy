@@ -8,7 +8,9 @@ import { lightTheme } from "./infrastructure/theme/theme";
 import { CardDataProvider } from "./infrastructure/context/CardDataContexte";
 import TypewriterLoader from "./presentation/components/TypewriterLoader";
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import StackNavigator from './navigation/StackNavigator/StackNavigator'
+import StackNavigator from './navigation/StackNavigator/StackNavigator';
+import { StripeProvider } from "@stripe/stripe-react-native";
+import { STRIPE_PUBLISHABLE_KEY } from '@env';
 
 
 const Stack = createStackNavigator();
@@ -31,21 +33,26 @@ const App = () => {
 
   if (!fontsLoaded) {
     return
-     <TypewriterLoader />;
+    <TypewriterLoader />;
   }
 
   return (
+    <StripeProvider
+    publishableKey={STRIPE_PUBLISHABLE_KEY}
+    merchantIdentifier="merchant.com.undy" // Pour Apple Pay
+  >
     <AuthProvider>
       <CardDataProvider>
         <NativeBaseProvider theme={lightTheme}>
-        <SafeAreaProvider>
-          <NavigationContainer>
-            <StackNavigator />
-          </NavigationContainer>
-          </SafeAreaProvider>
+            <SafeAreaProvider>
+              <NavigationContainer>
+                <StackNavigator />
+              </NavigationContainer>
+            </SafeAreaProvider>
         </NativeBaseProvider>
       </CardDataProvider>
     </AuthProvider>
+    </StripeProvider>
   );
 };
 
