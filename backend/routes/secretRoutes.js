@@ -10,7 +10,9 @@ const {
     addMessageToConversation,
     getUserConversations,
     getConversation, 
-    deleteConversation
+    deleteConversation,
+    createPaymentIntent,
+    confirmPayment
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
