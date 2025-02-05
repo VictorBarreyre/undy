@@ -14,9 +14,10 @@ const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 300;
 
 const SwipeDeck = ({ selectedFilters = [] }) => {
-  const { data, purchaseAndAccessConversation } = useCardData();
+  const { data, purchaseAndAccessConversation, isLoadingData } = useCardData();
   const position = useRef(new Animated.ValueXY()).current;
   const [index, setIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0); // Ajout d'un nouvel état pour suivre l'index actuel
   const [filteredData, setFilteredData] = useState(data);
   const [currentItem, setCurrentItem] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,18 +25,31 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   const navigation = useNavigation();
 
   useEffect(() => {
+    if (!data || isLoadingData) return;
+    
     const filtered = selectedFilters.length > 0
       ? data.filter((card) => selectedFilters.includes(card.label))
       : data;
 
     setFilteredData(filtered);
-
+    
+    // Mise à jour du currentItem avec l'index courant
     if (filtered.length > 0) {
-      setCurrentItem(filtered[index % filtered.length]);
-    } else {
-      setCurrentItem(null);
+      const actualIndex = currentIndex % filtered.length;
+      setCurrentItem(filtered[actualIndex]);
     }
-  }, [selectedFilters, data, index]);
+    
+    const dataWithoutProfilePicture = filtered.map(item => ({
+      ...item,
+      user: item.user ? {
+        _id: item.user._id,
+        name: item.user.name
+      } : null
+    }));
+
+    console.log('Filtered data:', dataWithoutProfilePicture);
+  }, [selectedFilters, data, currentIndex, isLoadingData]);
+
 
   useEffect(() => {
     // Simuler un chargement
@@ -76,10 +90,12 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     }).start(() => onSwipeComplete(direction));
   };
 
+
   const onSwipeComplete = () => {
-    setIndex((prevIndex) => (prevIndex + 1) % filteredData.length); // Boucle sur les cartes
+    setCurrentIndex(prevIndex => prevIndex + 1); // Incrémente simplement l'index
     position.setValue({ x: 0, y: 0 });
   };
+
 
   const resetPosition = () => {
     Animated.spring(position, {
@@ -103,17 +119,15 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   };
 
   const renderCards = () => {
-    // Vérification de sécurité pour filteredData
     if (!filteredData || filteredData.length === 0) {
-        return null; // ou un composant de chargement
+        return null;
     }
 
-    return [...Array(5)].map((_, i) => {
-        const cardIndex = (index + i) % filteredData.length;
+    return [...Array(Math.min(5, filteredData.length))].map((_, i) => {
+        const cardIndex = (currentIndex + i) % filteredData.length;
         const card = filteredData[cardIndex];
         const isCurrentCard = i === 0;
 
-        // Vérification de sécurité pour la carte
         if (!card) return null;
 
         const cardStyle = isCurrentCard
@@ -128,7 +142,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
         return (
             <Animated.View
-                key={`${card.id || cardIndex}-${i}`}
+                key={`${card._id}-${cardIndex}`}
                 style={cardStyle}
                 {...(isCurrentCard ? panResponder.panHandlers : {})}
             >

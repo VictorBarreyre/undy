@@ -60,13 +60,7 @@ export default function Profile({ navigation }) {
     }, [userToken]);
 
 
-    useEffect(() => {
-        console.log('=== userData a changé ===', {
-            hasUserData: !!userData,
-            hasProfilePic: !!userData?.profilePicture,
-            profilePicUrl: userData?.profilePicture?.substring(0, 50) + '...'
-        });
-    }, [userData]);
+
 
     const tabs = [
         {
@@ -243,16 +237,16 @@ export default function Profile({ navigation }) {
                     <HStack space={4} alignItems="center" width="100%" px={2}>
                         <Pressable onPress={handleImageSelection}>
                             <Box position="relative">
-                            <Image
-    source={{
-        uri: userData?.profilePicture
-    }}
-    alt={`${userData?.name || 'User'}'s profile`}
-    width={75}
-    height={75}
-    borderRadius={50}
-    fallbackSource={defaultProfilePicture}
-/>
+                                <Image
+                                    source={{
+                                        uri: userData?.profilePicture
+                                    }}
+                                    alt={`${userData?.name || 'User'}'s profile`}
+                                    width={75}
+                                    height={75}
+                                    borderRadius={50}
+                                    fallbackSource={defaultProfilePicture}
+                                />
                                 {isUploadingImage && (
                                     <Box
                                         position="absolute"
