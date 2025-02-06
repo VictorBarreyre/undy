@@ -6,7 +6,7 @@ import { Modal, Pressable, Text, View, FlatList, ScrollView, StyleSheet, SafeAre
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { BlurView } from '@react-native-community/blur';
 import { styles } from '../../infrastructure/theme/styles';
-import { DATABASE_URL } from '@env';
+import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from "@react-navigation/native";
 
 
@@ -25,7 +25,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
 
 
 
-    const navigation = useNavigation();
+  const navigation = useNavigation();
 
 
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
@@ -107,6 +107,9 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   }, [searchQuery, data]);
 
 
+  const buttonTypes = ['Tous', 'Contacts', 'Suivis', 'Catégories'];
+
+
   return (
     <Box width="100%" paddingY={2}>
       <HStack width='110%' space={1}>
@@ -126,68 +129,86 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
               <View style={styles.iconContainer}>
                 <Icon
                   as={<FontAwesomeIcon icon={faSearch} />}
-                  size={24} // Taille logique de l'icône
+                  size={24}
                   color="black"
-                  style={styles.icon} // Style dédié
+                  style={styles.icon}
                 />
               </View>
             </Pressable>
-            {/* Boutons de filtrage */}
-            <Button
-              marginRight={3}
-              variant='secondary'
-              style={[
-                activeButton === 'Tous' ? styles.activeButton : styles.inactiveButton
-              ]}
-              onPress={() => handleButtonClickType('Tous')}
-            >
-              <Text style={activeButton === 'Tous' ? styles.activeText : styles.inactiveText}>Tous</Text>
-            </Button>
-            <Button
-              marginRight={3}
-              variant='secondary'
-              style={[
-                activeButton === 'Contacts' ? styles.activeButton : styles.inactiveButton
-              ]}
-              onPress={() => handleButtonClickType('Contacts')}
-            >
-              <Text style={activeButton === 'Contacts' ? styles.activeText : styles.inactiveText}>Contacts</Text>
-            </Button>
-            <Button
-              marginRight={3}
-              variant='secondary'
-              style={[
-                activeButton === 'Suivis' ? styles.activeButton : styles.inactiveButton
-              ]}
-              onPress={() => handleButtonClickType('Suivis')}
-            >
-              <Text style={activeButton === 'Suivis' ? styles.activeText : styles.inactiveText}>Suivis</Text>
-            </Button>
-            <Button
-              marginRight={16}
-              variant="secondary"
-              style={[
-                activeButton === 'Catégories' ? styles.activeButton : styles.inactiveButton,
-                { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' } // Assure l'alignement horizontal
-              ]}
-              onPress={() => setOverlayVisible(true)} // Ouvre la modale
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text
-                  style={activeButton === 'Catégories' ? styles.activeText : styles.inactiveText}
-                >
-                  Catégories
-                </Text>
-                <FontAwesomeIcon
-                  icon={faChevronDown} // Icône du chevron
-                  size={16} // Taille de l'icône
-                  color={activeButton === 'Catégories' ? styles.activeText.color : styles.inactiveText.color} // Couleur cohérente
-                  style={{ marginLeft: 8 }} // Espacement entre texte et icône
-                />
-              </View>
-            </Button>
 
+            {buttonTypes.map((type, index) => {
+              if (type === 'Catégories') {
+                return (
+                  <Button
+                    key={type}
+                    marginRight={16}
+                    variant="secondary"
+                    style={[
+                      activeButton === type ? styles.activeButton : styles.inactiveButton,
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        paddingHorizontal: 26,
+                        paddingVertical: 8,
+                        borderRadius: 999,
+                      }
+                    ]}
+                    onPress={() => setOverlayVisible(true)}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={activeButton === type ? styles.activeText : styles.inactiveText}>
+                        {type}
+                      </Text>
+                      <FontAwesomeIcon
+                        icon={faChevronDown}
+                        size={16}
+                        color={activeButton === type ? styles.activeText.color : styles.inactiveText.color}
+                        style={{ marginLeft: 8 }}
+                      />
+                    </View>
+                  </Button>
+                );
+              }
+
+              return (
+                <Pressable
+                  key={type}
+                  marginRight={12}
+                  onPress={() => handleButtonClickType(type)}
+                >
+                  {activeButton === type ? (
+                    <LinearGradient
+                      colors={['#FF587E', '#CC4B8D']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0.8, y: 1 }}
+                      style={{
+                        paddingHorizontal: 26,
+                        paddingVertical: 8,
+                        borderRadius: 999,
+                      }}
+                    >
+                      <Text style={styles.activeText}>{type}</Text>
+                    </LinearGradient>
+                  ) : (
+                    <View
+                      style={[
+                        styles.inactiveButton,
+                        {
+                          paddingHorizontal: 26,
+                          paddingVertical: 8,
+                          borderRadius: 999,
+                        }
+                      ]}
+                    >
+                      <Text style={styles.inactiveText}>{type}</Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
           </ScrollView>
+
         </View>
 
         {/* Modale : Recherche */}
