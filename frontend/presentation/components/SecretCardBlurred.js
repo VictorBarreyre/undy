@@ -88,16 +88,14 @@ const SecretCardBlurred = ({ secret, isExpanded }) => {
                     />
                 </HStack>
 
-                <Box position="relative" overflow="hidden">
-                  
-
+                <Box justifyContent='center' flex={isExpanded ? 'unset' : 1}  overflow="hidden">
                     <BlurredTextComponent
                         content={secret.content || 'Aucune description disponible.'}
-                        style={{ width: '100%'}}
+                        style={{ width: '100%' }}
                         textStyle={styles.h4}
-                        breakAtLine={8}
+                        maxLines={4}
+                       
                     />
-
                 </Box>
 
                 <HStack alignItems="center" justifyContent='space-between'>

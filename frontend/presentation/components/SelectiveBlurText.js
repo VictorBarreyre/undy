@@ -46,14 +46,14 @@ const hashString = (str) => {
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <View style={{ 
             position: 'relative',
-            marginHorizontal: -6, // Étend la zone de blur sur les côtés
+            marginHorizontal: -5, // Étend la zone de blur sur les côtés
             paddingHorizontal: 10, // Maintient l'espacement du texte
         }}>
             <Text style={textStyle}>{word}</Text>
             <View style={{
                 position: 'absolute',
                 top: 0,
-                left: 6,
+                left: 5,
                 right: 0,
                 bottom: 0,
                 overflow: 'hidden',
