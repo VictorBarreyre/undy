@@ -7,6 +7,7 @@ import { StyleSheet, Platform } from 'react-native';
 import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { Pressable } from 'react-native';
+import BlurredTextComponent from './SelectiveBlurText';
 
 const SecretCardBlurred = ({ secret, isExpanded }) => {
     const { userData } = useContext(AuthContext);
@@ -88,50 +89,15 @@ const SecretCardBlurred = ({ secret, isExpanded }) => {
                 </HStack>
 
                 <Box position="relative" overflow="hidden">
-                    <Text
-                        style={[
-                            styles.h4,
-                            {
-                                flexShrink: 1,
-                                flexWrap: 'wrap',
-                            }
-                        ]}
-                        numberOfLines={8}  // Limite à 3 lignes
-                        ellipsizeMode="tail" // Ajoute ... à la fin
-                    >
-                        "{secret.content}"
-                    </Text>
-                    <BlurView
-                        style={{
-                            position: 'absolute',
-                            width:'150%',
-                            top: 0,
-                            left: -100,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'rgba(255, 255, 255, 0.8)',  // Ajout d'une légère opacité
-                        }}
-                        blurType="light"
-                        blurAmount={3}  // Réduction de l'intensité du flou
-                        overlayColor="transparent"  // Important pour l'effet naturel
+                  
+
+                    <BlurredTextComponent
+                        content={secret.content || 'Aucune description disponible.'}
+                        style={{ width: '100%'}}
+                        textStyle={styles.h4}
+                        breakAtLine={8}
                     />
-                    {/* Ajout d'un dégradé sur les bords */}
-                    <Box
-                        position="absolute"
-                        width='10%'
-                        top={0}
-                        left={0}
-                        right={0}
-                        bottom={0}
-                        style={{
-                            backgroundColor: 'transparent',
-                            shadowColor: '#fff',
-                            shadowOffset: { width: 0, height: 0 },
-                            shadowOpacity: 0.3,
-                            shadowRadius: 10,
-                            elevation: 5,
-                        }}
-                    />
+
                 </Box>
 
                 <HStack alignItems="center" justifyContent='space-between'>

@@ -158,6 +158,7 @@ export default function CardHome({ cardData }) {
 
         {/* Wrapper for the text with blur effect */}
         <Box
+        marginLeft={4}
           flex={1} // Ajout
           height="auto"
           position="relative"
@@ -168,8 +169,9 @@ export default function CardHome({ cardData }) {
           <BlurredTextComponent
             content={cardData.content || 'Aucune description disponible.'}
             style={{ width: '90%', paddingBottom: 5, marginTop: 5, marginLeft: 4 }}
-            textStyle={styles.h2}
+            textStyle={styles.h3}
             breakAtLine={8}
+            visibleWords={3}  // Montre les 3 premiers mots
           />
 
         </Box>

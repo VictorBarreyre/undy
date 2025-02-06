@@ -23,9 +23,6 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   const [isOverlayVisible, setOverlayVisible] = useState(false);
 
 
-  const profilePictureUrl = data.user?.profilePicture
-    ? `${DATABASE_URL}${data.user.profilePicture}`
-    : `${DATABASE_URL}/uploads/default.png`;
 
 
     const navigation = useNavigation();
@@ -290,7 +287,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
                             >
                               <Image
                                 source={{
-                                  uri: profilePictureUrl
+                                  uri: item.user.profilePicture
                                 }}
                                 alt={data[0]?.title || 'Carte'}
                                 width={45} // Ajustez la taille de l'image ici
