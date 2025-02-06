@@ -17,32 +17,30 @@ const hashString = (str) => {
   const generateBlurIndices = (textContent) => {
     const words = textContent.split(' ');
     const totalWords = words.length;
-
-    if (totalWords <= 2) return [0];
-
-    let blurIndices = [0]; // Premier mot toujours flouté
-
+    
+    if (totalWords <= 2) return [totalWords - 1]; // Blur uniquement le dernier mot
+    
+    let blurIndices = []; // On ne commence plus avec le premier mot
+    
     for (let i = 1; i < totalWords; i++) {
-      // Utilise le hash du mot et sa position pour déterminer s'il doit être flouté
-      const wordHash = hashString(words[i] + i.toString());
-      const prevWordIsBlurred = blurIndices.includes(i - 1);
-
-      // Décision déterministe basée sur le hash
-      const shouldBlur = !prevWordIsBlurred || (wordHash % 2 === 0);
-
-      if (shouldBlur) {
-        blurIndices.push(i);
-      }
+        const wordHash = hashString(words[i] + i.toString());
+        const prevWordIsBlurred = blurIndices.includes(i - 1);
+        
+        const shouldBlur = !prevWordIsBlurred || (wordHash % 2 === 0);
+        
+        if (shouldBlur) {
+            blurIndices.push(i);
+        }
     }
-
-    // Vérifie les deux derniers mots
-    const lastIndex = totalWords - 1;
-    if (!blurIndices.includes(lastIndex) && !blurIndices.includes(lastIndex - 1)) {
-      blurIndices.push(lastIndex);
+    
+    // Toujours blur le dernier mot, sauf si c'est "..."
+    const lastWord = words[totalWords - 1];
+    if (lastWord !== '...' && !blurIndices.includes(totalWords - 1)) {
+        blurIndices.push(totalWords - 1);
     }
-
+    
     return blurIndices.sort((a, b) => a - b);
-  };
+};
 
   const BlurredWord = ({ word, isLast, textStyle }) => (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
