@@ -10,6 +10,10 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from '@react-native-community/blur';
+import LinearGradient from 'react-native-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
+
+
 
 const formatMessageTime = (timestamp) => {
   const messageDate = new Date(timestamp);
@@ -205,14 +209,39 @@ const ChatScreen = ({ route }) => {
               onPress={() => setIsTimestampVisible(!isTimestampVisible)}
             >
               <Box
-                bg={item.sender === 'user' ? '#FF78B2' : '#FFFFFF'}
                 p={3}
                 borderRadius={20}
                 style={{
                   marginVertical: 4,
                   marginHorizontal: 8,
+                  overflow: 'hidden', // Important for gradient to clip correctly
                 }}
               >
+                {item.sender === 'user' ? (
+                  <LinearGradient
+                    colors={['#FF587E', '#CC4B8D']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                    }}
+                  />
+                ) : (
+                  <Box
+                    bg='#FFFFFF'
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                    }}
+                  />
+                )}
                 <Text
                   color={item.sender === 'user' ? 'white' : 'black'}
                   style={styles.caption}
@@ -347,11 +376,30 @@ const ChatScreen = ({ route }) => {
                   alignItems: 'center'
                 }}
               >
-                <FontAwesomeIcon
-                  icon={faPaperPlane}
-                  color="#FF78B2"
-                  size={20}
-                />
+                <MaskedView
+                  maskElement={
+                    <View style={{ backgroundColor: 'transparent' }}>
+                      <FontAwesomeIcon
+                        icon={faPaperPlane}
+                        color="black"
+                        size={20}
+                      />
+                    </View>
+                  }
+                >
+                  <LinearGradient
+                    colors={['#FF587E', '#CC4B8D']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      width: 22,
+                      height: 22,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      alignContent:'center'
+                    }}
+                  />
+                </MaskedView>
               </TouchableOpacity>
             </HStack>
           </KeyboardAvoidingView>
@@ -399,9 +447,9 @@ const ChatScreen = ({ route }) => {
               <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
                 {/* Header */}
                 <HStack space={2} justifyContent="space-between" flexWrap="wrap">
-                    <Text style={styles.h5}>
-                      Posté par {secretData?.user.name}
-                    </Text>
+                  <Text style={styles.h5}>
+                    Posté par {secretData?.user.name}
+                  </Text>
                 </HStack>
 
                 <Text paddingVertical={100} style={styles.h3}>
@@ -412,8 +460,8 @@ const ChatScreen = ({ route }) => {
                 <HStack justifyContent='space-between' mt={4}>
                   <Text style={styles.caption}>{secretData?.label}</Text>
                   <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
-                      Expire dans {timeLeft}
-                    </Text>
+                    Expire dans {timeLeft}
+                  </Text>
                 </HStack>
               </VStack>
 
