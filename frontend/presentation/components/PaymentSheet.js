@@ -76,6 +76,12 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
         try {
             setLoading(true);
     
+            console.log('Détails du secret avant paiement:', {
+                id: secret._id,
+                price: secret.price,
+                label: secret.label
+            });
+    
             console.log('Création de l\'intention de paiement...');
             const response = await fetch(`${DATABASE_URL}/api/secrets/${secret._id}/create-payment-intent`, {
                 method: 'POST',
@@ -85,24 +91,51 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 },
             });
     
+            // Vérification de la réponse
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Erreur réponse création PaymentIntent:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorText
+                });
+                throw new Error(errorText || 'Erreur lors de la création du paiement');
+            }
+    
             const { clientSecret, paymentId } = await response.json();
+    
+            console.log('Réponse création PaymentIntent:', {
+                clientSecret: clientSecret ? 'Présent' : 'Manquant',
+                paymentId
+            });
+    
             await initializePaymentSheet(clientSecret);
     
             const { error: presentError } = await presentPaymentSheet();
     
             if (presentError) {
+                console.error('Erreur présentation PaymentSheet:', presentError);
+                
                 if (presentError.code === 'Canceled') {
+                    console.log('Paiement annulé par l\'utilisateur');
                     setLoading(false);
                     return;
                 }
                 throw presentError;
             }
     
+            console.log('Paiement réussi, ID du paiement:', paymentId);
+    
             // Appeler onPaymentSuccess avec l'ID du paiement
-            onPaymentSuccess(paymentId);  // Changé pour passer l'ID du paiement
+            onPaymentSuccess(paymentId);
     
         } catch (error) {
-            console.log('Erreur capturée dans handlePayment:', error);
+            console.error('Erreur détaillée dans handlePayment:', {
+                message: error.message,
+                name: error.name,
+                stack: error.stack
+            });
+    
             Alert.alert(
                 'Erreur de paiement',
                 error.message || 'Une erreur est survenue lors du paiement'

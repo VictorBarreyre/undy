@@ -107,24 +107,45 @@ exports.purchaseSecret = async (req, res) => {
     session.startTransaction();
 
     try {
+        // Log des informations de la requête
+        console.log('Purchase Secret Request:', {
+            secretId: req.params.id,
+            paymentIntentId: req.body.paymentIntentId,
+            userId: req.user.id
+        });
+
         const { paymentIntentId } = req.body;
         if (!paymentIntentId) {
+            console.error('Erreur : ID de paiement manquant');
             return res.status(400).json({ message: 'ID de paiement manquant' });
         }
 
+        // Recherche du secret
         const secret = await Secret.findById(req.params.id);
         if (!secret) {
+            console.error('Erreur : Secret non trouvé', { secretId: req.params.id });
             return res.status(404).json({ message: 'Secret introuvable.' });
         }
 
+        // Log détaillé du secret
+        console.log('Secret Details:', {
+            _id: secret._id,
+            label: secret.label,
+            price: secret.price,
+            user: secret.user,
+            purchasedBy: secret.purchasedBy
+        });
+
         // Vérifier si l'utilisateur a déjà acheté le secret
         if (secret.purchasedBy.includes(req.user.id)) {
-            let conversation = await Conversation.findOne({ 
+            console.log('Secret déjà acheté par l\'utilisateur');
+            let conversation = await Conversation.findOne({
                 secret: secret._id,
                 participants: { $elemMatch: { $eq: req.user.id } }
             });
-            
+
             if (!conversation) {
+                console.log('Création d\'une nouvelle conversation');
                 conversation = await Conversation.create([{
                     secret: secret._id,
                     participants: [secret.user, req.user.id],
@@ -141,19 +162,35 @@ exports.purchaseSecret = async (req, res) => {
             });
         }
 
-        // Vérifier le paiement seulement si c'est un nouvel achat
-        const payment = await Payment.findOne({ 
+        // Recherche du paiement
+        const payment = await Payment.findOne({
             paymentIntentId,
             secret: secret._id,
             user: req.user.id
         });
 
+        // Log du paiement
+        console.log('Payment Details:', payment ? {
+            _id: payment._id,
+            secret: payment.secret,
+            user: payment.user,
+            status: payment.status
+        } : 'Aucun paiement trouvé');
+
         if (!payment) {
+            console.error('Erreur : Paiement introuvable', { 
+                paymentIntentId, 
+                secretId: secret._id, 
+                userId: req.user.id 
+            });
             await session.abortTransaction();
             return res.status(400).json({ message: 'Paiement introuvable' });
         }
 
         if (payment.status !== 'succeeded') {
+            console.error('Erreur : Paiement non validé', { 
+                status: payment.status 
+            });
             await session.abortTransaction();
             return res.status(400).json({ message: 'Paiement non validé' });
         }
@@ -163,11 +200,12 @@ exports.purchaseSecret = async (req, res) => {
         await secret.save({ session });
 
         // Créer ou récupérer la conversation
-        let conversation = await Conversation.findOne({ 
+        let conversation = await Conversation.findOne({
             secret: secret._id
         }).session(session);
 
         if (!conversation) {
+            console.log('Création d\'une nouvelle conversation pour le secret');
             conversation = await Conversation.create([{
                 secret: secret._id,
                 participants: [secret.user, req.user.id],
@@ -176,11 +214,17 @@ exports.purchaseSecret = async (req, res) => {
             }], { session });
             conversation = conversation[0];
         } else if (!conversation.participants.includes(req.user.id)) {
+            console.log('Ajout de l\'utilisateur à la conversation existante');
             conversation.participants.push(req.user.id);
             await conversation.save({ session });
         }
 
         await session.commitTransaction();
+
+        console.log('Achat du secret réussi', {
+            conversationId: conversation._id,
+            secretId: secret._id
+        });
 
         res.status(200).json({
             message: 'Secret acheté avec succès.',
@@ -196,9 +240,9 @@ exports.purchaseSecret = async (req, res) => {
             secretId: req.params.id,
             userId: req.user?.id
         });
-        res.status(500).json({ 
-            message: 'Erreur serveur.', 
-            error: error.message 
+        res.status(500).json({
+            message: 'Erreur serveur.',
+            error: error.message
         });
     } finally {
         session.endSession();
