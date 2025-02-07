@@ -83,7 +83,7 @@ exports.createPaymentIntent = async (req, res) => {
             secret: secret._id,
             user: req.user.id,
             amount: secret.price,
-            paymentIntentId: paymentIntent.id,
+            paymentIntentId: paymentIntent.id,  // Utilisez l'ID de Stripe
             status: 'pending'
         }], { session });
 
@@ -91,7 +91,7 @@ exports.createPaymentIntent = async (req, res) => {
 
         res.json({
             clientSecret: paymentIntent.client_secret,
-            paymentId: payment[0]._id
+            paymentId: paymentIntent.id  // Renvoyez l'ID Stripe
         });
 
     } catch (error) {
@@ -101,6 +101,7 @@ exports.createPaymentIntent = async (req, res) => {
         session.endSession();
     }
 };
+
 
 exports.purchaseSecret = async (req, res) => {
     const session = await mongoose.startSession();
@@ -181,14 +182,21 @@ exports.purchaseSecret = async (req, res) => {
             });
         }
 
-        // Enregistrement ou mise à jour du paiement
-        const [payment] = await Payment.create([{
-            secret: secretId,
-            user: userId,
-            amount: secret.price,
-            paymentIntentId,
-            status: 'succeeded'
-        }], { session });
+        // Enregistrement du paiement
+        const payment = await Payment.findOneAndUpdate(
+            { paymentIntentId },
+            {
+                secret: secretId,
+                user: userId,
+                amount: secret.price,
+                status: 'succeeded'
+            },
+            { 
+                upsert: true, 
+                new: true, 
+                session 
+            }
+        );
 
         // Marquer le secret comme acheté
         secret.purchasedBy.push(userId);
