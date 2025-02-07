@@ -8,11 +8,17 @@ import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { Pressable } from 'react-native';
 import BlurredTextComponent from './SelectiveBlurText';
+import PaymentSheet from './PaymentSheet';
+import { useCardData } from '../../infrastructure/context/CardDataContexte';
+import { useNavigation } from '@react-navigation/native';
+
+
 
 const SecretCardBlurred = ({ secret, isExpanded }) => {
     const { userData } = useContext(AuthContext);
     const [timeLeft, setTimeLeft] = useState('');
-
+    const navigation = useNavigation();
+    const { purchaseAndAccessConversation } = useCardData();
 
     const getTimeAgo = (createdAt) => {
         const diffTime = Date.now() - new Date(createdAt);
@@ -100,28 +106,33 @@ const SecretCardBlurred = ({ secret, isExpanded }) => {
 
                 <HStack alignItems="center" justifyContent='space-between'>
                     <Text style={styles.caption}>{secret.label}</Text>
-                    <Pressable
-                        style={[
-                            {
-                                backgroundColor: '#000000',
-                                padding: 8,
-                                paddingLeft: 12,
-                                paddingRight: 12,
-                                borderRadius: 20,
-                            },
-                            ({ pressed }) => ({
-                                opacity: pressed ? 0.6 : 1, // Opacité plus prononcée
-                                transform: [{ scale: pressed ? 0.92 : 1 }], // Scale plus prononcé
-                                backgroundColor: pressed ? '#333' : '#000', // Changement de couleur au press
-                            })
-                        ]}
-                    >
-                        <HStack alignItems="center" space={2}>
-                            <Text style={styles.ctalittle} color="white">
-                                Déverrouiller
-                            </Text>
-                        </HStack>
-                    </Pressable>
+                    <PaymentSheet
+                        secret={secret}
+                        onPaymentSuccess={async (paymentId) => {
+                            try {
+                                const { conversationId, conversation } = await purchaseAndAccessConversation(
+                                    secret._id,
+                                    secret.price,
+                                    paymentId
+                                );
+
+                                navigation.navigate('ChatTab', {
+                                    screen: 'Chat',
+                                    params: {
+                                        conversationId,
+                                        secretData: secret,
+                                        conversation,
+                                        showModalOnMount: true
+                                    }
+                                });
+                            } catch (error) {
+                                console.error('Erreur lors de l\'achat:', error);
+                            }
+                        }}
+                        onPaymentError={(error) => {
+                            console.error('Erreur de paiement:', error);
+                        }}
+                    />
                 </HStack>
             </VStack>
 

@@ -42,6 +42,15 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
   }, [selectedFilters, data, currentIndex, isLoadingData]);
 
+  const getCardHeight = () => {
+    switch (true) {
+      case filteredData.length === 1: return SCREEN_HEIGHT * 0.51;
+      case filteredData.length === 2: return SCREEN_HEIGHT * 0.50;
+      case filteredData.length === 3: return SCREEN_HEIGHT * 0.48;
+      case filteredData.length === 4: return SCREEN_HEIGHT * 0.47;
+      default: return SCREEN_HEIGHT * 0.45;
+    }
+  };
 
   useEffect(() => {
     // Simuler un chargement
@@ -122,11 +131,16 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
       if (!card) return null;
 
+
+      const cardHeight = getCardHeight();
+
+
       const cardStyle = isCurrentCard
         ? [getCardStyle(), styles.cardStyle]
         : [
           styles.cardStyle,
           {
+            height: cardHeight,
             top: 25 * i,
             transform: [{ scale: 1 - 0.05 * i }],
           },
@@ -212,8 +226,7 @@ const styles = StyleSheet.create({
   cardStyle: {
     width: SCREEN_WIDTH * 0.9,
     position: 'absolute',
-    height: SCREEN_HEIGHT * 0.45, // modifie la taille des cartes pour espace ac cta
-    justifyContent: 'center',
+    height: SCREEN_HEIGHT * 0.45, //    justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 10,

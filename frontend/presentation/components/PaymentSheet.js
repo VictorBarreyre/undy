@@ -22,6 +22,7 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     const initializePaymentSheet = async (clientSecret) => {
         try {
             console.log('Début initialisation Stripe');
+            console.log(STRIPE_PUBLISHABLE_KEY)
             await initStripe({
                 publishableKey: STRIPE_PUBLISHABLE_KEY,
                 merchantIdentifier: "merchant.com.anonymous.frontend",

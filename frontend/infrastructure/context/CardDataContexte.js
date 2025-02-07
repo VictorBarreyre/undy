@@ -87,19 +87,18 @@ export const CardDataProvider = ({ children }) => {
     }
 
     try {
-        console.log('Attempting to purchase secret:', { secretId, price, paymentId });
+        console.log('Attempting to purchase secret:', { secretId, paymentId });
 
         const purchaseResponse = await axios.post(
             `${DATABASE_URL}/api/secrets/${secretId}/purchase`,
-            { 
-                price,
-                paymentIntentId: paymentId  // Assurez-vous que le nom correspond à ce qu'attend le backend
+            {
+                paymentIntentId: paymentId
             },
             { headers: { Authorization: `Bearer ${userToken}` } }
         );
 
         if (!purchaseResponse.data.conversationId) {
-            throw new Error('No conversation ID received from purchase');
+            throw new Error('Aucun ID de conversation reçu');
         }
 
         const conversationResponse = await axios.get(
@@ -112,11 +111,10 @@ export const CardDataProvider = ({ children }) => {
             conversation: conversationResponse.data
         };
     } catch (error) {
-        console.error('Error details:', {
+        console.error('Détails de l\'erreur:', {
             message: error.message,
             response: error.response?.data,
             secretId,
-            price,
             paymentId
         });
         throw error;

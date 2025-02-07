@@ -63,7 +63,7 @@ const AddSecret = () => {
 
         // Définir le message approprié
         if (!isTextValid) {
-            setButtonMessage('Le post doit faire plus de 2 mots');
+            setButtonMessage('Trop court pour poster !');
         } else if (!isPriceValid) {
             setButtonMessage('Le prix doit être supérieur à 5€');
         } else if (!isLabelValid) {
