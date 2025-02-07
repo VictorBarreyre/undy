@@ -1,13 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Animated, PanResponder, Dimensions, StyleSheet, Pressable } from 'react-native';
-import { Box, HStack, Text, VStack } from 'native-base';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faUnlock } from '@fortawesome/free-solid-svg-icons';
+import { Animated, PanResponder, Dimensions, StyleSheet, View } from 'react-native';
+import { Box, Spinner, Text, VStack } from 'native-base';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import CardHome from './CardHome';
 import { useNavigation } from '@react-navigation/native';
 import PaymentSheet from './PaymentSheet';
-
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height
@@ -158,6 +155,20 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     }).reverse();
   };
 
+  if (isLoading) {
+    return (
+        <View 
+            style={{
+                flex: 1, 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+            }}
+        >
+            <Spinner color='#FF78B2' size="lg" />
+        </View>
+    );
+ }
+
   if (!filteredData.length) {
     return (
       <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
@@ -179,6 +190,8 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
         secret={currentItem}
         onPaymentSuccess={async (paymentId) => {
           try {
+
+            setIsLoading(true);
             const { conversationId, conversation } = await purchaseAndAccessConversation(
               currentItem._id,
               currentItem.price,
