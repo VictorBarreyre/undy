@@ -25,7 +25,23 @@ const AddSecret = () => {
 
     const MIN_PRICE = 5;
     const MIN_WORDS = 2;
-
+    const CATEGORIES = [
+        "Confession",
+        "Amour",
+        "Travail",
+        "Famille",
+        "Argent",
+        "Amitié",
+        "Trahison",
+        "Regret",
+        "Réussite",
+        "Rêve",
+        "Honte",
+        "Évènement",
+        "Secret de famille",
+        "Infidélité",
+        "Culpabilité"
+      ];
 
 
     const labels = [...new Set(data.map((item) => item.label))];
@@ -181,19 +197,19 @@ const AddSecret = () => {
                                                         mt={1}
                                                         onValueChange={(value) => setSelectedLabel(value)}
                                                     >
-                                                        {labels.map((label, index) => (
-                                                            <Select.Item
-                                                                key={index}
-                                                                label={label}
-                                                                value={label}
-                                                                _text={{
-                                                                    fontSize: 14,
-                                                                    lineHeight: 18,
-                                                                    fontWeight: '500',
-                                                                    fontFamily: 'SF-Pro-Display-Medium'
-                                                                }}
-                                                            />
-                                                        ))}
+                                                      {CATEGORIES.map((category, index) => (
+    <Select.Item
+        key={index}
+        label={category}
+        value={category}
+        _text={{
+            fontSize: 14,
+            lineHeight: 18,
+            fontWeight: '500',
+            fontFamily: 'SF-Pro-Display-Medium'
+        }}
+    />
+))}
                                                     </Select>
                                                 </VStack>
 
