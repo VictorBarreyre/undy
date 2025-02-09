@@ -84,7 +84,7 @@ const Inscription = ({ navigation }) => {
                 p={4}
             >
                 {/* Logo Section */}
-                <Box alignItems="center" mt={16}>
+                <Box alignItems="center" mt={20}>
                     <LogoSvg />
                 </Box>
 

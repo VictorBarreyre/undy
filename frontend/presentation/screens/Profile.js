@@ -60,7 +60,7 @@ export default function Profile({ navigation }) {
 
     const tabs = [
         {
-            title: 'Vos undy',
+            title: 'Vos hushy',
             content: isLoading ? (
                 <Text>Chargement...</Text>
             ) : (

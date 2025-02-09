@@ -1,13 +1,16 @@
 import React, { useState, useContext, useCallback, useRef, useEffect } from 'react';
-import { VStack, Box, Input, Button, Text, Link, ScrollView, Pressable, Icon } from 'native-base';
-import { Animated, View } from 'react-native';
+import { VStack, Box, Input, Button, Text, Link, ScrollView, Pressable, Icon, HStack } from 'native-base';
+import { Animated, View, Platform } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEyeSlash, faEnvelope } from '@fortawesome/free-solid-svg-icons';
+import { faGoogle, faApple } from '@fortawesome/free-brands-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import LogoSvg from '../littlecomponents/Undy';
-import { createAxiosInstance } from '../../data/api/axiosInstance';
+import createAxiosInstance from '../../data/api/axiosInstance';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { appleAuth } from '@invertase/react-native-apple-authentication';
 
 const Connexion = ({ navigation }) => {
     const { login } = useContext(AuthContext);
@@ -21,13 +24,25 @@ const Connexion = ({ navigation }) => {
     const rotateValue = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        Animated.loop(
+        // Configuration des services de connexion
+        GoogleSignin.configure({
+            webClientId: 'VOTRE_WEB_CLIENT_ID', 
+            offlineAccess: true,
+            iosClientId: 'VOTRE_IOS_CLIENT_ID'
+        });
+
+        // Animation de rotation
+        const rotationAnimation = Animated.loop(
             Animated.timing(rotateValue, {
                 toValue: 1,
-                duration: 10000, // 10 seconds for a full rotation
+                duration: 10000,
                 useNativeDriver: true,
             })
-        ).start();
+        );
+        rotationAnimation.start();
+
+        // Nettoyage de l'animation
+        return () => rotationAnimation.stop();
     }, []);
 
     const rotateAnimation = rotateValue.interpolate({
@@ -35,40 +50,86 @@ const Connexion = ({ navigation }) => {
         outputRange: ['0deg', '360deg'],
     });
 
+    // Connexion standard
     const handleLogin = useCallback(async () => {
         try {
-            console.log('Tentative de connexion...');
             const axiosInstance = await createAxiosInstance();
+            
+            if (!axiosInstance) {
+                throw new Error('Impossible de créer l\'instance Axios');
+            }
+    
             const response = await axiosInstance.post('/api/users/login', {
                 email: email.trim().toLowerCase(),
                 password,
             });
     
             if (response.data.token) {
-                console.log('Connexion réussie:', response.data);
-                // Modifier ici pour passer aussi le refresh token
-                await login(response.data.token, response.data.refreshToken); // Assurez-vous que votre API renvoie aussi un refreshToken
+                await login(response.data.token, response.data.refreshToken);
                 setMessage('Connexion réussie !');
+                navigation.navigate('Home');
             } else {
-                console.error('Erreur: Token non reçu.');
                 setMessage('Erreur lors de la génération du token.');
             }
         } catch (error) {
-            console.error('Erreur Axios:', error.response || error.message);
             setMessage(error.response?.data?.message || 'Erreur lors de la connexion');
         }
-    }, [email, password, login]);
+    }, [email, password, login, navigation]);
 
+    // Connexion Google
+    const handleGoogleLogin = useCallback(async () => {
+        try {
+            await GoogleSignin.hasPlayServices();
+            const userInfo = await GoogleSignin.signIn();
+            
+            const axiosInstance = await createAxiosInstance();
+            const response = await axiosInstance.post('/api/users/google-login', {
+                token: userInfo.idToken,
+            });
+
+            await login(response.data.token, response.data.refreshToken);
+            navigation.navigate('Home');
+        } catch (error) {
+            setMessage('Échec de la connexion Google');
+            console.error('Erreur de connexion Google:', error);
+        }
+    }, [login, navigation]);
+
+    // Connexion Apple
+    const handleAppleLogin = useCallback(async () => {
+        try {
+            const appleAuthRequestResponse = await appleAuth.performRequest({
+                requestedOperation: appleAuth.Operation.LOGIN,
+                requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
+            });
+
+            const credentialState = await appleAuth.getCredentialStateForUser(appleAuthRequestResponse.user);
+            
+            if (credentialState === appleAuth.State.AUTHORIZED) {
+                const axiosInstance = await createAxiosInstance();
+                const response = await axiosInstance.post('/api/users/apple-login', {
+                    identityToken: appleAuthRequestResponse.identityToken,
+                    authorizationCode: appleAuthRequestResponse.authorizationCode,
+                });
+
+                await login(response.data.token, response.data.refreshToken);
+                navigation.navigate('Home');
+            }
+        } catch (error) {
+            setMessage('Échec de la connexion Apple');
+            console.error('Erreur de connexion Apple:', error);
+        }
+    }, [login, navigation]);
 
     return (
         <View style={styles.container}>
-            {/* Background rotating animation */}
+            {/* Fond animé */}
             <Animated.Image
                 source={require('../../assets/images/background.png')}
                 style={[styles.backgroundImage, { transform: [{ rotate: rotateAnimation }] }]}
             />
 
-            {/* Overlay with blur effect */}
+            {/* Effet de flou */}
             <BlurView
                 style={styles.overlay}
                 blurType="light"
@@ -77,15 +138,15 @@ const Connexion = ({ navigation }) => {
             />
 
             <ScrollView
-                 width='100%'
                 contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between' }}
                 p={4}
             >
-                {/* Logo Section */}
-                <Box alignItems="center" mt={16}>
+                {/* Section Logo */}
+                <Box alignItems="center" mt={20}>
                     <LogoSvg />
                 </Box>
 
+                {/* Message d'erreur */}
                 {message ? (
                     <Box mt={4} p={4} bg="red.100" borderRadius="md">
                         <Text color="red.500" fontFamily="SF-Pro-Display-Regular">
@@ -94,74 +155,85 @@ const Connexion = ({ navigation }) => {
                     </Box>
                 ) : null}
 
-                {/* Form Section */}
+                {/* Section de connexion */}
                 <Box alignItems="center" mb={4}>
                     <Text
                         style={styles.h4}
                         mt={10}
                         textAlign="center"
                     >
-                        Connexion
+                        Connectez-vous ou{'\n'}créez un compte
                     </Text>
 
-                    <VStack mt={4} space={2} w="90%">
-                        {/* Email */}
-                        <Input
-                            placeholder="Email"
-                            value={email}
-                            onChangeText={setEmail}
-                            autoCapitalize="none"
-                            keyboardType="email-address"
-                        />
+                    <VStack mt={4} space={2} w="100%%">
+                        {/* Bouton Apple */}
+                        <Button
+                           paddingY={4}
+                            w="100%"
+                            bg="black"
+                            _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
+                            justifyContent="center"
+                            onPress={handleAppleLogin}
+                        >
+                            <HStack space={2} alignItems="center" justifyContent="center">
+                                <FontAwesomeIcon icon={faApple} size={16} color="#fff" />
+                                <Text color="white" fontFamily="SF-Pro-Display-Bold">
+                                    Continue with Apple
+                                </Text>
+                            </HStack>
+                        </Button>
 
-                        {/* Password */}
-                        <Input
-                            placeholder="Mot de passe"
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry={!showPassword}
-                            InputRightElement={
-                                <Pressable onPress={() => setShowPassword(!showPassword)}>
-                                    <Icon
-                                        as={<FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />}
-                                        size="5"
-                                        mr="3"
-                                        color="gray.500"
-                                    />
-                                </Pressable>
-                            }
-                        />
+                        {/* Bouton Google */}
+                        <Button
+                           paddingY={4}
+                            w="100%"
+                            bg="white"
+                            _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
+                            justifyContent="center"
+                            onPress={handleGoogleLogin}
+                        >
+                            <HStack space={2} alignItems="center" justifyContent="center">
+                                <FontAwesomeIcon icon={faGoogle} size={16} color="#000" />
+                                <Text color="black" fontFamily="SF-Pro-Display-Bold">
+                                    Continue with Google
+                                </Text>
+                            </HStack>
+                        </Button>
+
+                        {/* Bouton Email */}
+                        <Button
+                           paddingY={4}
+                            w="100%"
+                            bg="black"
+                            _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
+                            justifyContent="center"
+                            onPress={() => navigation.navigate('Inscription')}
+                        >
+                            <HStack space={2} alignItems="center" justifyContent="center">
+                                <FontAwesomeIcon icon={faEnvelope} size={16} color="#fff" />
+                                <Text color="white" fontFamily="SF-Pro-Display-Bold">
+                                    Continue avec l'adresse mail
+                                </Text>
+                            </HStack>
+                        </Button>
                     </VStack>
 
-                    {/* CTA - Login Button */}
-                    <Button
-                        mt={5}
-                        w="90%"
-                        bg="black"
-                        _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
-                        onPress={handleLogin}
-                    >
-                        Se connecter
-                    </Button>
-
-                    {/* Link to Register */}
                     <Link
                         px={10}
                         mt={4}
+                        style={styles.littleCaption}
+                        onPress={() => navigation.navigate('Login')}
                         _text={{
                             color: 'black',
                             fontFamily: 'SF-Pro-Display-Regular',
-                            fontSize: '14px',
+                            fontSize: '12',
                             textAlign: 'center',
-                            lineHeight: '16px',
-                            textDecoration: 'none',
+                            lineHeight: '14',
+                            textDecoration: 'none'
                         }}
-                        onPress={() => navigation.navigate('Inscription')}
                     >
-                        Enfait je n’ai pas de compte{' '}
-                        <Text color="black" fontFamily="SF-Pro-Display-Regular" fontSize="14px">
-                            🙂
-                        </Text>
+                        En vous connectant, vous acceptez nos Conditions d'utilisation et
+                        Politiques de confidentialité
                     </Link>
                 </Box>
             </ScrollView>

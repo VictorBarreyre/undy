@@ -113,7 +113,7 @@ const AddSecret = () => {
                             >
                                 <VStack style={styles.containerAddSecret} space={4}>
                                     <Text style={styles.h3}>
-                                        Ajouter un Undy
+                                        Ajouter un hushy
                                     </Text>
                                     <Box
                                         display="flex"
