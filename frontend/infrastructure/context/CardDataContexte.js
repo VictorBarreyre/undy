@@ -1,38 +1,36 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { DATABASE_URL } from '@env'
-import axios from 'axios';
+import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 import { AuthContext } from './AuthContext';
-import createAxiosInstance from '../../data/api/axiosInstance';
 
-
-// Créer le contexte pour les données des cartes
 const CardDataContext = createContext();
 
-// Hook personnalisé pour accéder aux données
 export const useCardData = () => {
   return useContext(CardDataContext);
 };
 
-// Fournisseur du contexte
 export const CardDataProvider = ({ children }) => {
-
   const [data, setData] = useState([]);
-  const [isLoadingData, setIsLoadingData] = useState(true); // État de chargement
-  const { userToken } = useContext(AuthContext);
-  const [axiosInstance, setAxiosInstance] = useState(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
     const initAxios = async () => {
-      const instance = await createAxiosInstance();
-      setAxiosInstance(instance);
+      try {
+        await createAxiosInstance();
+        await fetchAllSecrets();
+      } catch (error) {
+        console.error('Erreur d\'initialisation axios:', error);
+      }
     };
     initAxios();
   }, []);
 
-
   const handlePostSecret = async ({ selectedLabel, secretText, price, expiresIn = 7 }) => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios instance not initialized');
+    }
     try {
-      return await axiosInstance.post('/api/secrets/createsecrets', {
+      return await instance.post('/api/secrets/createsecrets', {
         label: selectedLabel,
         content: secretText,
         price: parseFloat(price),
@@ -43,11 +41,14 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
-
- const fetchAllSecrets = async () => {
+  const fetchAllSecrets = async () => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios instance not initialized');
+    }
     setIsLoadingData(true);
     try {
-      const response = await axiosInstance.get('/api/secrets');
+      const response = await instance.get('/api/secrets');
       if (response.data && Array.isArray(response.data)) {
         setData(response.data);
       } else {
@@ -55,22 +56,20 @@ export const CardDataProvider = ({ children }) => {
         setData([]);
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des secrets :', error.response?.data || error.message);
+      console.error('Erreur lors de la récupération des secrets :', error);
       setData([]);
     } finally {
       setIsLoadingData(false);
     }
   };
 
-  useEffect(() => {
-    fetchAllSecrets();
-  }, []);
-
-
- 
   const fetchUserSecretsWithCount = async () => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios instance not initialized');
+    }
     try {
-      const { data } = await axiosInstance.get('/api/secrets/user-secrets-with-count');
+      const { data } = await instance.get('/api/secrets/user-secrets-with-count');
       return {
         secrets: Array.isArray(data.secrets) ? data.secrets : [],
         count: typeof data.count === 'number' ? data.count : 0
@@ -81,57 +80,53 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
-
-
   const purchaseAndAccessConversation = async (secretId, price, paymentId) => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios instance not initialized');
+    }
     if (!secretId || !paymentId) {
-        throw new Error('Secret ID et Payment ID sont requis');
+      throw new Error('Secret ID et Payment ID sont requis');
     }
 
     try {
-        console.log('Attempting to purchase secret:', { secretId, paymentId });
+      console.log('Attempting to purchase secret:', { secretId, paymentId });
 
-        const purchaseResponse = await axiosInstance.post(
-            `${DATABASE_URL}/api/secrets/${secretId}/purchase`,
-            {
-                paymentIntentId: paymentId
-            },
-            { headers: { Authorization: `Bearer ${userToken}` } }
-        );
+      const purchaseResponse = await instance.post(
+        `/api/secrets/${secretId}/purchase`,
+        { paymentIntentId: paymentId }
+      );
 
-        if (!purchaseResponse.data.conversationId) {
-            throw new Error('Aucun ID de conversation reçu');
-        }
+      if (!purchaseResponse.data.conversationId) {
+        throw new Error('Aucun ID de conversation reçu');
+      }
 
-        const conversationResponse = await axiosInstance.get(
-            `${DATABASE_URL}/api/secrets/conversations/secret/${secretId}`,
-            { headers: { Authorization: `Bearer ${userToken}` } }
-        );
+      const conversationResponse = await instance.get(
+        `/api/secrets/conversations/secret/${secretId}`
+      );
 
-        return {
-            conversationId: purchaseResponse.data.conversationId,
-            conversation: conversationResponse.data
-        };
+      return {
+        conversationId: purchaseResponse.data.conversationId,
+        conversation: conversationResponse.data
+      };
     } catch (error) {
-        console.error('Détails de l\'erreur:', {
-            message: error.message,
-            response: error.response?.data,
-            secretId,
-            paymentId
-        });
-        throw error;
+      console.error('Détails de l\'erreur:', {
+        message: error.message,
+        response: error.response?.data,
+        secretId,
+        paymentId
+      });
+      throw error;
     }
-};
-
+  };
 
   const fetchPurchasedSecrets = async () => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios instance not initialized');
+    }
     try {
-      const response = await axiosInstance.get(
-        `${DATABASE_URL}/api/secrets/purchased`,
-        {
-          headers: { Authorization: `Bearer ${userToken}` }
-        }
-      );
+      const response = await instance.get('/api/secrets/purchased');
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération des secrets achetés:', error);
@@ -139,19 +134,19 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
-
   const handleAddMessage = async (conversationId, content) => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios instance not initialized');
+    }
     if (!conversationId || !content.trim()) {
       throw new Error('ConversationId et contenu sont requis');
     }
 
     try {
-      const response = await axiosInstance.post(
-        `${DATABASE_URL}/api/secrets/conversations/${conversationId}/messages`,
-        { content },
-        {
-          headers: { Authorization: `Bearer ${userToken}` }
-        }
+      const response = await instance.post(
+        `/api/secrets/conversations/${conversationId}/messages`,
+        { content }
       );
 
       if (response.data) {
@@ -164,12 +159,13 @@ export const CardDataProvider = ({ children }) => {
   };
 
   const getConversationMessages = async (conversationId) => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios instance not initialized');
+    }
     try {
-      const response = await axiosInstance.get(
-        `${DATABASE_URL}/api/secrets/conversations/${conversationId}`,
-        {
-          headers: { Authorization: `Bearer ${userToken}` }
-        }
+      const response = await instance.get(
+        `/api/secrets/conversations/${conversationId}`
       );
 
       console.log("Conversation messages response:", response.data);
@@ -183,7 +179,6 @@ export const CardDataProvider = ({ children }) => {
       throw error;
     }
   };
-
 
   return (
     <CardDataContext.Provider value={{
@@ -202,3 +197,5 @@ export const CardDataProvider = ({ children }) => {
     </CardDataContext.Provider>
   );
 };
+
+export default CardDataProvider;

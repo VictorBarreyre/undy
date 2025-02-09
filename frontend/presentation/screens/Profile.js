@@ -9,7 +9,6 @@ import { Background } from '../../navigation/Background';
 import SecretCard from '../components/SecretCard';
 import TypewriterLoader from '../components/TypewriterLoader';
 import { launchImageLibrary } from 'react-native-image-picker';
-import axios from 'axios';
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -29,22 +28,20 @@ export default function Profile({ navigation }) {
     const [isUploadingImage, setIsUploadingImage] = useState(false);
 
 
+
     useEffect(() => {
         const loadUserData = async () => {
             try {
                 setIsLoading(true);
                 setError(null);
 
-                if (!userToken) {
-                    return;
-                }
-
-                const { secrets, count } = await fetchUserSecretsWithCount(userToken);
-                const purchasedSecretsData = await fetchPurchasedSecrets(); // Ajoutez cette ligne
+                // Plus besoin de vérifier userToken car géré par l'intercepteur
+                const { secrets, count } = await fetchUserSecretsWithCount();
+                const purchasedSecretsData = await fetchPurchasedSecrets();
 
                 setUserSecrets(secrets);
                 setSecretCount(count);
-                setPurchasedSecrets(purchasedSecretsData); // Ajoutez cette ligne
+                setPurchasedSecrets(purchasedSecretsData);
 
             } catch (error) {
                 console.error('Erreur chargement données:', error);
@@ -54,10 +51,9 @@ export default function Profile({ navigation }) {
             }
         };
 
-        if (userToken) {
-            loadUserData();
-        }
-    }, [userToken]);
+        // Plus besoin de vérifier userToken ici
+        loadUserData();
+    }, []);
 
 
 
@@ -182,32 +178,6 @@ export default function Profile({ navigation }) {
 
     const content = "Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l'imprimerie depuis les années 1500, quand un imprimeur anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n'a pas fait que survivre cinq siècles, mais s'est aussi adapté à la bureautique informatique, sans que son contenu n'en soit modifié"
 
-    useEffect(() => {
-        const loadUserData = async () => {
-            try {
-                setIsLoading(true);
-                setError(null);
-
-                if (!userToken) {
-                    return; // Sortir si pas de token
-                }
-
-                const { secrets, count } = await fetchUserSecretsWithCount(userToken);
-                setUserSecrets(secrets);
-                setSecretCount(count);
-
-            } catch (error) {
-                console.error('Erreur chargement données:', error);
-                setError(error.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        if (userToken) {  // Ajouter cette condition
-            loadUserData();
-        }
-    }, [userToken]);
 
     if (isLoading) {
         return <TypewriterLoader />;

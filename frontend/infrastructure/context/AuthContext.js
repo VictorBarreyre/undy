@@ -1,8 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-import { DATABASE_URL } from '@env';
-import createAxiosInstance from '../../data/api/axiosInstance';
+import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 
 export const AuthContext = createContext();
 
@@ -11,36 +9,30 @@ export const AuthProvider = ({ children }) => {
     const [userToken, setUserToken] = useState(null);
     const [userData, setUserData] = useState(null);
     const [isLoadingUserData, setIsLoadingUserData] = useState(true);
-    const [axiosInstance, setAxiosInstance] = useState(null);
-
 
     useEffect(() => {
         const initAxios = async () => {
-            const instance = await createAxiosInstance();
-            setAxiosInstance(instance);
+            try {
+                await createAxiosInstance();
+                await loadStoredData();
+            } catch (error) {
+                console.error('Erreur d\'initialisation axios:', error);
+            }
         };
         initAxios();
     }, []);
 
-
-     // Fonction utilitaire pour nettoyer/formater l'image
-     const cleanProfilePicture = (profilePicture) => {
+    const cleanProfilePicture = (profilePicture) => {
         if (!profilePicture) return null;
-
-        // Si l'URL contient à la fois l'URL du serveur et data:image, extraire juste la partie base64
         if (profilePicture.includes('herokuapp.com') && profilePicture.includes('data:image')) {
             return profilePicture.split('herokuapp.com').pop();
         }
-
-        // Si c'est déjà un base64 propre
         if (profilePicture.startsWith('data:image')) {
             return profilePicture;
         }
-
         return null;
     };
 
-    // Nettoyer les données utilisateur avant de les stocker
     const cleanUserData = (data) => {
         if (!data) return null;
         return {
@@ -48,11 +40,6 @@ export const AuthProvider = ({ children }) => {
             profilePicture: cleanProfilePicture(data.profilePicture)
         };
     };
-
-
-    useEffect(() => {
-        loadStoredData();
-    }, []);
 
     const loadStoredData = async () => {
         try {
@@ -65,13 +52,13 @@ export const AuthProvider = ({ children }) => {
             if (accessToken && refreshToken) {
                 setUserToken(accessToken);
                 setIsLoggedIn(true);
-                
+
                 if (storedUserData) {
                     const parsedData = JSON.parse(storedUserData);
                     setUserData(cleanUserData(parsedData));
                 }
-                
-                await fetchUserData(accessToken);
+
+                await fetchUserData();
             }
         } catch (error) {
             console.error('Erreur loadStoredData:', error);
@@ -79,10 +66,14 @@ export const AuthProvider = ({ children }) => {
             setIsLoadingUserData(false);
         }
     };
-    
-    const fetchUserData = async (token) => {
+
+    const fetchUserData = async () => {
+        const instance = getAxiosInstance();
+        if (!instance) {
+            throw new Error('Axios instance not initialized');
+        }
         try {
-            const response = await axiosInstance.get(`/api/users/profile`);
+            const response = await instance.get('/api/users/profile');
             const cleanedData = cleanUserData(response.data);
             setUserData(cleanedData);
             await AsyncStorage.setItem('userData', JSON.stringify(cleanedData));
@@ -93,22 +84,11 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const fetchUserDataById = async (userId, token) => {
-        setIsLoadingUserData(true);
-        try {
-            const response = await axios.get(`${DATABASE_URL}/api/users/${userId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Error fetching user data:', error);
-            throw error;
-        } finally {
-            setIsLoadingUserData(false);
-        }
-    };
-
     const handleProfileImageUpdate = async (imageFile) => {
+        const instance = getAxiosInstance();
+        if (!instance) {
+            throw new Error('Axios instance not initialized');
+        }
         try {
             const formData = new FormData();
             const fileToUpload = {
@@ -118,7 +98,7 @@ export const AuthProvider = ({ children }) => {
             };
             formData.append('profilePicture', fileToUpload);
 
-            const response = await axiosInstance.put('/api/users/profile-picture', formData, {
+            const response = await instance.put('/api/users/profile-picture', formData, {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'multipart/form-data',
@@ -142,8 +122,12 @@ export const AuthProvider = ({ children }) => {
     };
 
     const updateUserData = async (updatedData) => {
+        const instance = getAxiosInstance();
+        if (!instance) {
+            throw new Error('Axios instance not initialized');
+        }
         try {
-            const response = await axiosInstance.put('/api/users/profile', updatedData);
+            const response = await instance.put('/api/users/profile', updatedData);
             setUserData(response.data);
             await AsyncStorage.setItem('userData', JSON.stringify(response.data));
             return { success: true, message: 'Profil mis à jour avec succès.' };
@@ -153,8 +137,7 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-
-      const login = async (accessToken, refreshToken) => {
+    const login = async (accessToken, refreshToken) => {
         try {
             await AsyncStorage.multiSet([
                 ['accessToken', accessToken],
@@ -162,7 +145,7 @@ export const AuthProvider = ({ children }) => {
             ]);
             setUserToken(accessToken);
             setIsLoggedIn(true);
-            await fetchUserData(accessToken);
+            await fetchUserData();
         } catch (error) {
             console.error('Erreur lors de la connexion:', error);
             throw error;
@@ -182,13 +165,13 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-
     const downloadUserData = async () => {
+        const instance = getAxiosInstance();
+        if (!instance) {
+            throw new Error('Axios instance not initialized');
+        }
         try {
-            const response = await axiosInstance.get(
-                `${DATABASE_URL}/api/users/download`,
-                { headers: { Authorization: `Bearer ${userToken}` } }
-            );
+            const response = await instance.get('/api/users/download');
             return response.data;
         } catch (error) {
             console.error('Erreur téléchargement données:', error);
@@ -197,17 +180,16 @@ export const AuthProvider = ({ children }) => {
     };
 
     const clearUserData = async () => {
+        const instance = getAxiosInstance();
+        if (!instance) {
+            throw new Error('Axios instance not initialized');
+        }
         try {
-            await axiosInstance.delete(
-                `${DATABASE_URL}/api/users/clear`,
-                { headers: { Authorization: `Bearer ${userToken}` } }
-            );
+            await instance.delete('/api/users/clear');
             
             const clearedUserData = {
                 ...userData,
-                // Réinitialiser les champs nécessaires tout en gardant les infos essentielles
                 profilePicture: null,
-                // autres champs à réinitialiser...
             };
             
             setUserData(clearedUserData);
@@ -221,11 +203,12 @@ export const AuthProvider = ({ children }) => {
     };
 
     const deleteUserAccount = async () => {
+        const instance = getAxiosInstance();
+        if (!instance) {
+            throw new Error('Axios instance not initialized');
+        }
         try {
-            await axiosInstance.delete(
-                `${DATABASE_URL}/api/users/delete`,
-                { headers: { Authorization: `Bearer ${userToken}` } }
-            );
+            await instance.delete('/api/users/delete');
             await logout();
             return { success: true, message: 'Compte supprimé avec succès.' };
         } catch (error) {
@@ -242,7 +225,6 @@ export const AuthProvider = ({ children }) => {
                 userData,
                 isLoadingUserData,
                 fetchUserData,
-                fetchUserDataById,
                 login,
                 logout,
                 updateUserData,
