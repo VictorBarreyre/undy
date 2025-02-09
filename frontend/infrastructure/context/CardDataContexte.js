@@ -16,7 +16,7 @@ export const CardDataProvider = ({ children }) => {
     const initAxios = async () => {
       try {
         await createAxiosInstance();
-        await fetchAllSecrets();
+        await fetchUnpurchasedSecrets(); // Utiliser la nouvelle fonction
       } catch (error) {
         console.error('Erreur d\'initialisation axios:', error);
       }
@@ -40,6 +40,29 @@ export const CardDataProvider = ({ children }) => {
       throw error;
     }
   };
+
+  const fetchUnpurchasedSecrets = async () => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios instance not initialized');
+    }
+    setIsLoadingData(true);
+    try {
+      const response = await instance.get('/api/secrets/unpurchased');
+      if (response.data && response.data.secrets) {
+        setData(response.data.secrets);
+      } else {
+        console.error('Données invalides reçues depuis l\'API');
+        setData([]);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des secrets :', error);
+      setData([]);
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
 
   const fetchAllSecrets = async () => {
     const instance = getAxiosInstance();
@@ -186,6 +209,7 @@ export const CardDataProvider = ({ children }) => {
       setData,
       handlePostSecret,
       fetchAllSecrets,
+      fetchUnpurchasedSecrets, // Ajouter la nouvelle fonction au contexte
       fetchUserSecretsWithCount,
       purchaseAndAccessConversation,
       fetchPurchasedSecrets,

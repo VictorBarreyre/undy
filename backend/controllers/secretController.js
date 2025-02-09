@@ -58,6 +58,44 @@ exports.createSecret = async (req, res) => {
     }
 };
 
+
+exports.getUnpurchasedSecrets = async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const userId = req.user.id;
+
+        const secrets = await Secret.find({
+            purchasedBy: { $nin: [userId] }, // Ne pas inclure les secrets déjà achetés
+            user: { $ne: userId }, // Ne pas inclure les secrets créés par l'utilisateur
+            expiresAt: { $gt: new Date() } // Ne pas inclure les secrets expirés
+        })
+        .populate('user', 'name profilePicture')
+        .select('label content price createdAt expiresAt user purchasedBy')
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .sort({ createdAt: -1 }) // Les plus récents d'abord
+        .exec();
+
+        const total = await Secret.countDocuments({
+            purchasedBy: { $nin: [userId] },
+            user: { $ne: userId },
+            expiresAt: { $gt: new Date() }
+        });
+
+        res.status(200).json({
+            secrets,
+            totalPages: Math.ceil(total / limit),
+            currentPage: page
+        });
+    } catch (error) {
+        console.error('Erreur détaillée:', error);
+        res.status(500).json({ 
+            message: 'Erreur lors de la récupération des secrets.',
+            error: error.message 
+        });
+    }
+};
+
 exports.createPaymentIntent = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
