@@ -5,6 +5,7 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import CardHome from './CardHome';
 import { useNavigation } from '@react-navigation/native';
 import PaymentSheet from './PaymentSheet';
+import TypewriterSpinner from './TypewriterSpinner'
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height
@@ -155,19 +156,10 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     }).reverse();
   };
 
-  if (isLoading) {
-    return (
-        <View 
-            style={{
-                flex: 1, 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-            }}
-        >
-            <Spinner color='#FF78B2' size="lg" />
-        </View>
-    );
- }
+  if (isLoading || isLoadingData) {
+    return <TypewriterSpinner text="Undy..." />;
+  }
+
 
   if (!filteredData.length) {
     return (
