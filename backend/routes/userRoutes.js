@@ -1,7 +1,9 @@
 // routes/userRoutes.js
 const express = require('express');
-const { registerUser,
+const { 
+    registerUser,
     loginUser,
+    refreshToken,
     updateUserProfile,
     getUserProfile,
     uploadProfilePicture,
@@ -20,6 +22,8 @@ router.post('/register', registerUser);
 
 // Route pour la connexion
 router.post('/login', loginUser);
+
+router.post('/refresh-token', refreshToken);
 
 // Route pour mettre à jour le profil de l'utilisateur
 router.put('/profile', protect, updateUserProfile);

@@ -43,10 +43,11 @@ const Connexion = ({ navigation }) => {
                 email: email.trim().toLowerCase(),
                 password,
             });
-
+    
             if (response.data.token) {
                 console.log('Connexion réussie:', response.data);
-                login(response.data.token);
+                // Modifier ici pour passer aussi le refresh token
+                await login(response.data.token, response.data.refreshToken); // Assurez-vous que votre API renvoie aussi un refreshToken
                 setMessage('Connexion réussie !');
             } else {
                 console.error('Erreur: Token non reçu.');

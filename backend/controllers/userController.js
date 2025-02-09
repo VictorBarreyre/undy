@@ -1,16 +1,21 @@
 const User = require('../models/User');
+const RefeshToken = require('../models/RefreshToken');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const path = require('path'); // Ajoutez cette ligne en haut du fichier
 const fs = require('fs');
 
-
-
-// Générer un token JWT
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: '30d',
+// Fonction pour générer les tokens
+const generateTokens = (userId) => {
+    const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+        expiresIn: '1h', // Access token expire après 1 heure
     });
+
+    const refreshToken = jwt.sign({ id: userId }, process.env.REFRESH_TOKEN_SECRET, {
+        expiresIn: '7d', // Refresh token expire après 7 jours
+    });
+
+    return { accessToken, refreshToken };
 };
 
 exports.registerUser = async (req, res) => {
@@ -57,42 +62,74 @@ exports.registerUser = async (req, res) => {
     }
 };
 
+exports.refreshToken = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({ message: 'Refresh token manquant' });
+        }
+
+        // Vérifier le refresh token
+        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        
+        // Vérifier si le token existe en base
+        const storedToken = await RefreshToken.findOne({ 
+            userId: decoded.id,
+            token: refreshToken,
+            expiresAt: { $gt: new Date() }
+        });
+
+        if (!storedToken) {
+            return res.status(401).json({ message: 'Refresh token invalide ou expiré' });
+        }
+
+        // Générer un nouveau access token
+        const accessToken = jwt.sign(
+            { id: decoded.id },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        res.json({ accessToken });
+    } catch (error) {
+        console.error('Erreur refresh token:', error);
+        res.status(401).json({ message: 'Refresh token invalide' });
+    }
+};
+
 exports.loginUser = async (req, res) => {
     let { email, password } = req.body;
-
-    console.log('Données reçues :', req.body); // Vérifier les données reçues
 
     if (!email || !password) {
         return res.status(400).json({ message: 'Tous les champs sont requis.' });
     }
 
     try {
-        // Normaliser l'email en minuscules
         email = email.trim().toLowerCase();
-
-        // Vérifier si l'utilisateur existe
         const user = await User.findOne({ email });
 
-        if (!user) {
-            return res.status(400).json({ message: 'Utilisateur non trouvé.' });
+        if (!user || !(await user.matchPassword(password))) {
+            return res.status(400).json({ message: 'Email ou mot de passe incorrect' });
         }
 
-        console.log('Utilisateur trouvé :', user);
+        // Générer les tokens
+        const { accessToken, refreshToken } = generateTokens(user._id);
 
-        // Comparer les mots de passe
-        const isMatch = await user.matchPassword(password);
-        console.log('Le mot de passe est-il correct ?', isMatch);
+        // Sauvegarder le refresh token
+        await RefreshToken.create({
+            userId: user._id,
+            token: refreshToken,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 jours
+        });
 
-        if (user && isMatch) {
-            res.json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                token: generateToken(user._id),
-            });
-        } else {
-            res.status(400).json({ message: 'Email ou mot de passe incorrect' });
-        }
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            token: accessToken,
+            refreshToken: refreshToken
+        });
     } catch (error) {
         console.error('Erreur lors de la connexion :', error);
         res.status(500).json({ message: 'Erreur lors de la connexion' });
