@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import LogoSvg from '../littlecomponents/Undy';
-import createAxiosInstance from '../../data/api/axiosInstance';
+import { createAxiosInstance } from '../../data/api/axiosInstance';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 
 const Connexion = ({ navigation }) => {
