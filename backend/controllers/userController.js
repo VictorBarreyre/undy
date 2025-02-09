@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const RefeshToken = require('../models/RefreshToken');
+const RefreshToken = require('../models/RefreshToken');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const path = require('path'); // Ajoutez cette ligne en haut du fichier
