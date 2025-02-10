@@ -26,8 +26,8 @@ const Connexion = ({ navigation }) => {
     useEffect(() => {
         // Configuration des services de connexion
         GoogleSignin.configure({
-            webClientId: '780283646479-0202heave6heusabd5c2frfkrcdvd8.apps.googleusercontent.com',
-            iosClientId: '780283646479-0202heave6heusabd5c2frfkrcdvd8.apps.googleusercontent.com',
+            webClientId: '780283464479-0202hheave6heusabd5cs2frfkrcdvd8.apps.googleusercontent.com',
+            iosClientId: '780283464479-0202hheave6heusabd5cs2frfkrcdvd8.apps.googleusercontent.com',
             offlineAccess: true,
         });
 
