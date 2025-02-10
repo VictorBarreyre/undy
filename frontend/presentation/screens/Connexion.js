@@ -26,9 +26,9 @@ const Connexion = ({ navigation }) => {
     useEffect(() => {
         // Configuration des services de connexion
         GoogleSignin.configure({
-            webClientId: 'VOTRE_WEB_CLIENT_ID', 
-            offlineAccess: true,
-            iosClientId: 'VOTRE_IOS_CLIENT_ID'
+            webClientId: '780283646479-0202heave6heusabd5c2frfkrcdvd8.apps.googleusercontent.com', 
+        offlineAccess: true,
+        iosClientId: '780283646479-0202heave6heusabd5c2frfkrcdvd8.apps.googleusercontent.com'
         });
 
         // Animation de rotation
