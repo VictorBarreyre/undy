@@ -31,6 +31,7 @@ const Connexion = ({ navigation }) => {
             offlineAccess: true,
         });
 
+
         // Animation de rotation
         const rotationAnimation = Animated.loop(
             Animated.timing(rotateValue, {
