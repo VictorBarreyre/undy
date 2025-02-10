@@ -136,6 +136,49 @@ exports.loginUser = async (req, res) => {
     }
 };
 
+exports.googleLogin = async (req, res) => {
+    try {
+        const { token } = req.body;
+        
+        // Vérifier le token Google
+        const ticket = await googleClient.verifyIdToken({
+            idToken: token,
+            audience: GOOGLE_CLIENT_ID,
+        });
+        
+        const payload = ticket.getPayload();
+        const { email, name, picture } = payload;
+
+        // Rechercher ou créer l'utilisateur
+        let user = await User.findOne({ email });
+        
+        if (!user) {
+            user = await User.create({
+                email,
+                name,
+                profilePicture: picture,
+                // Autres champs par défaut
+            });
+        }
+
+        // Générer les tokens
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
+
+        res.json({
+            token: accessToken,
+            refreshToken,
+            user: {
+                id: user._id,
+                email: user.email,
+                name: user.name,
+            }
+        });
+    } catch (error) {
+        res.status(400).json({ message: 'Échec de la connexion Google' });
+    }
+};
+
 exports.getUserProfile = async (req, res) => {
     try {
         const user = req.user; // L'utilisateur authentifié est attaché à la requête par le middleware "protect"

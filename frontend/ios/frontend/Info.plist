@@ -26,46 +26,38 @@
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
 	<array>
-    <dict>
-        <key>CFBundleURLName</key>
-        <string>com.anonymous.frontend</string>
-        <key>CFBundleURLSchemes</key>
-        <array>
-            <string>com.googleusercontent.apps.780283646479-0202heave6heusabd5c2frfkrcdvd8</string>
-            <string>frontend</string>
-            <string>undy</string>
-        </array>
-    </dict>
-    <dict>
-        <key>CFBundleURLName</key>
-        <string>GoogleSignIn</string>
-        <key>CFBundleURLSchemes</key>
-        <array>
-            <string>com.googleusercontent.apps.780283646479-0202heave6heusabd5c2frfkrcdvd8</string>
-        </array>
-    </dict>
-</array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>GoogleSignIn</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.780283646479-0202heave6heusabd5c2frfkrcdvd8</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>GIDClientID</key>
+	<string>780283646479-0202heave6heusabd5c2frfkrcdvd8.apps.googleusercontent.com</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-<key>NSAppTransportSecurity</key>
-<dict>
-    <key>NSExceptionDomains</key>
-    <dict>
-        <key>undy-5948c5547ec9.herokuapp.com</key> <!-- Remplacez par votre domaine -->
-        <dict>
-            <key>NSIncludesSubdomains</key>
-            <true/>
-            <key>NSExceptionAllowsInsecureHTTPLoads</key>
-            <false/> <!-- HTTP non autorisé -->
-            <key>NSExceptionRequiresForwardSecrecy</key>
-            <false/> <!-- Si le certificat ne supporte pas PFS -->
-            <key>NSRequiresCertificateTransparency</key>
-            <false/> <!-- Si le certificat ne respecte pas la transparence -->
-        </dict>
-    </dict>
-</dict>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>undy-5948c5547ec9.herokuapp.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<false/>
+				<key>NSRequiresCertificateTransparency</key>
+				<false/>
+			</dict>
+		</dict>
+	</dict>
 	<key>UILaunchStoryboardName</key>
 	<string>SplashScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
@@ -101,11 +93,13 @@
 	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
-		<string>https</string> <!-- Permet l'ouverture d'URLs HTTPS -->
-		<string>http</string> <!-- Permet l'ouverture d'URLs HTTP -->
-		<string>sms</string> <!-- Permet d'ouvrir l'application Messages -->
-		<string>fb</string>  <!-- Exemple pour Facebook -->
-		<string>twitter</string> <!-- Exemple pour Twitter -->
+		<string>https</string>
+		<string>http</string>
+		<string>sms</string>
+		<string>fb</string>
+		<string>twitter</string>
+		<string>googlechrome</string>
+		<string>googleusercontent</string>
 	</array>
 </dict>
 </plist>

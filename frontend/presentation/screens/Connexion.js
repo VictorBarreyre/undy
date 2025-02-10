@@ -26,9 +26,9 @@ const Connexion = ({ navigation }) => {
     useEffect(() => {
         // Configuration des services de connexion
         GoogleSignin.configure({
-            webClientId: '780283646479-0202heave6heusabd5c2frfkrcdvd8.apps.googleusercontent.com', 
-        offlineAccess: true,
-        iosClientId: '780283646479-0202heave6heusabd5c2frfkrcdvd8.apps.googleusercontent.com'
+            webClientId: '780283646479-0202heave6heusabd5c2frfkrcdvd8.apps.googleusercontent.com',
+            iosClientId: '780283646479-0202heave6heusabd5c2frfkrcdvd8.apps.googleusercontent.com',
+            offlineAccess: true,
         });
 
         // Animation de rotation
@@ -54,16 +54,16 @@ const Connexion = ({ navigation }) => {
     const handleLogin = useCallback(async () => {
         try {
             const axiosInstance = await createAxiosInstance();
-            
+
             if (!axiosInstance) {
                 throw new Error('Impossible de créer l\'instance Axios');
             }
-    
+
             const response = await axiosInstance.post('/api/users/login', {
                 email: email.trim().toLowerCase(),
                 password,
             });
-    
+
             if (response.data.token) {
                 await login(response.data.token, response.data.refreshToken);
                 setMessage('Connexion réussie !');
@@ -81,7 +81,7 @@ const Connexion = ({ navigation }) => {
         try {
             await GoogleSignin.hasPlayServices();
             const userInfo = await GoogleSignin.signIn();
-            
+
             const axiosInstance = await createAxiosInstance();
             const response = await axiosInstance.post('/api/users/google-login', {
                 token: userInfo.idToken,
@@ -104,7 +104,7 @@ const Connexion = ({ navigation }) => {
             });
 
             const credentialState = await appleAuth.getCredentialStateForUser(appleAuthRequestResponse.user);
-            
+
             if (credentialState === appleAuth.State.AUTHORIZED) {
                 const axiosInstance = await createAxiosInstance();
                 const response = await axiosInstance.post('/api/users/apple-login', {
@@ -168,7 +168,7 @@ const Connexion = ({ navigation }) => {
                     <VStack mt={4} space={2} w="100%%">
                         {/* Bouton Apple */}
                         <Button
-                           paddingY={4}
+                            paddingY={4}
                             w="100%"
                             bg="black"
                             _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
@@ -185,7 +185,7 @@ const Connexion = ({ navigation }) => {
 
                         {/* Bouton Google */}
                         <Button
-                           paddingY={4}
+                            paddingY={4}
                             w="100%"
                             bg="white"
                             _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
@@ -202,7 +202,7 @@ const Connexion = ({ navigation }) => {
 
                         {/* Bouton Email */}
                         <Button
-                           paddingY={4}
+                            paddingY={4}
                             w="100%"
                             bg="black"
                             _text={{ fontFamily: 'SF-Pro-Display-Bold' }}

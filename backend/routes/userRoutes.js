@@ -3,6 +3,7 @@ const express = require('express');
 const { 
     registerUser,
     loginUser,
+    googleLogin,
     refreshToken,
     updateUserProfile,
     getUserProfile,
@@ -22,6 +23,8 @@ router.post('/register', registerUser);
 
 // Route pour la connexion
 router.post('/login', loginUser);
+
+router.post('/google-login', googleLogin);
 
 router.post('/refresh-token', refreshToken);
 
