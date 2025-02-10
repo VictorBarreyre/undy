@@ -11,18 +11,26 @@ export const useCardData = () => {
 export const CardDataProvider = ({ children }) => {
   const [data, setData] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const { isLoggedIn } = useContext(AuthContext);
+
 
   useEffect(() => {
     const initAxios = async () => {
       try {
         await createAxiosInstance();
-        await fetchUnpurchasedSecrets(); // Utiliser la nouvelle fonction
+        if (isLoggedIn) {
+          await fetchUnpurchasedSecrets();
+        } else {
+          setIsLoadingData(false);
+          setData([]);
+        }
       } catch (error) {
         console.error('Erreur d\'initialisation axios:', error);
+        setIsLoadingData(false);
       }
     };
     initAxios();
-  }, []);
+  }, [isLoggedIn]);
 
   const handlePostSecret = async ({ selectedLabel, secretText, price, expiresIn = 7 }) => {
     const instance = getAxiosInstance();
