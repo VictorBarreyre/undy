@@ -16,25 +16,7 @@ import { STRIPE_PUBLISHABLE_KEY } from '@env';
 const Stack = createStackNavigator();
 
 const App = () => {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
-
-  const loadFonts = async () => {
-    await Font.loadAsync({
-      "SF-Pro-Display-Regular": require("./assets/fonts/SF-Pro-Display-Regular.otf"),
-      "SF-Pro-Display-Medium": require("./assets/fonts/SF-Pro-Display-Medium.otf"),
-      "SF-Pro-Display-Semibold": require("./assets/fonts/SF-Pro-Display-Semibold.otf"),
-      "SF-Pro-Display-Bold": require("./assets/fonts/SF-Pro-Display-Bold.otf"),
-    });
-  };
-
-  React.useEffect(() => {
-    loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
-  }, []);
-
-  if (!fontsLoaded) {
-    return
-    <TypewriterLoader />;
-  }
+ 
 
   return (
     <StripeProvider

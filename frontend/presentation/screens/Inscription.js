@@ -79,12 +79,13 @@ const Inscription = ({ navigation }) => {
             />
 
             <ScrollView
-                width='100%'
+                width='95%'
+                alignContent='center'
                 contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between' }}
                 p={4}
             >
                 {/* Logo Section */}
-                <Box alignItems="center" mt={20}>
+                <Box alignItems="center" mt={16}>
                     <LogoSvg />
                 </Box>
 
@@ -97,7 +98,7 @@ const Inscription = ({ navigation }) => {
                 ) : null}
 
                 {/* Form Section */}
-                <Box alignItems="center" width='100%' mb={4}>
+                <Box alignItems="center" mb={4}>
                     <Text
                         style={styles.h4}
                         mt={10}

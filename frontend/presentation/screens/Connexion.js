@@ -11,6 +11,7 @@ import createAxiosInstance from '../../data/api/axiosInstance';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
+import { GOOGLE_WEBCLIENT_ID, GOOGLE_IOS_ID } from '@env'
 
 const Connexion = ({ navigation }) => {
     const { login } = useContext(AuthContext);
@@ -26,11 +27,10 @@ const Connexion = ({ navigation }) => {
     useEffect(() => {
         // Configuration des services de connexion
         GoogleSignin.configure({
-            webClientId: '780283464479-0202hheave6heusabd5cs2frfkrcdvd8.apps.googleusercontent.com',
-            iosClientId: '780283464479-0202hheave6heusabd5cs2frfkrcdvd8.apps.googleusercontent.com',
+            webClientId: GOOGLE_WEBCLIENT_ID,
+            iosClientId: GOOGLE_IOS_ID,
             offlineAccess: true,
         });
-
 
         // Animation de rotation
         const rotationAnimation = Animated.loop(
@@ -166,58 +166,113 @@ const Connexion = ({ navigation }) => {
                         Connectez-vous ou{'\n'}créez un compte
                     </Text>
 
-                    <VStack mt={4} space={2} w="100%%">
-                        {/* Bouton Apple */}
-                        <Button
-                            paddingY={4}
-                            w="100%"
-                            bg="black"
-                            _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
-                            justifyContent="center"
-                            onPress={handleAppleLogin}
-                        >
-                            <HStack space={2} alignItems="center" justifyContent="center">
-                                <FontAwesomeIcon icon={faApple} size={16} color="#fff" />
-                                <Text color="white" fontFamily="SF-Pro-Display-Bold">
-                                    Continue with Apple
-                                </Text>
-                            </HStack>
-                        </Button>
+                    <VStack mt={4} space={2} w="90%">
+                        {/* Form Section */}
+                        {/* Email */}
+                        <Input
+                            placeholder="Email"
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                        />
 
-                        {/* Bouton Google */}
-                        <Button
-                            paddingY={4}
-                            w="100%"
-                            bg="white"
-                            _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
-                            justifyContent="center"
-                            onPress={handleGoogleLogin}
-                        >
-                            <HStack space={2} alignItems="center" justifyContent="center">
-                                <FontAwesomeIcon icon={faGoogle} size={16} color="#000" />
-                                <Text color="black" fontFamily="SF-Pro-Display-Bold">
-                                    Continue with Google
-                                </Text>
-                            </HStack>
-                        </Button>
-
-                        {/* Bouton Email */}
-                        <Button
-                            paddingY={4}
-                            w="100%"
-                            bg="black"
-                            _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
-                            justifyContent="center"
-                            onPress={() => navigation.navigate('Inscription')}
-                        >
-                            <HStack space={2} alignItems="center" justifyContent="center">
-                                <FontAwesomeIcon icon={faEnvelope} size={16} color="#fff" />
-                                <Text color="white" fontFamily="SF-Pro-Display-Bold">
-                                    Continue avec l'adresse mail
-                                </Text>
-                            </HStack>
-                        </Button>
+                        {/* Password */}
+                        <Input
+                            placeholder="Mot de passe"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry={!showPassword}
+                            InputRightElement={
+                                <Pressable onPress={() => setShowPassword(!showPassword)}>
+                                    <Icon
+                                        as={<FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />}
+                                        size="5"
+                                        mr="3"
+                                        color="gray.500"
+                                    />
+                                </Pressable>
+                            }
+                        />
                     </VStack>
+
+                    {/* CTA - Login Button */}
+                    <Button
+                        mt={5}
+                        w="90%"
+                        bg="black"
+                        _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
+                        onPress={handleLogin}
+                    >
+                        Se connecter
+                    </Button>
+
+                    {/* Link to Register */}
+                    <Link
+                        px={10}
+                        mt={4}
+                        mb={4}
+                        _text={{
+                            color: 'black',
+                            fontFamily: 'SF-Pro-Display-Regular',
+                            fontSize: '14px',
+                            textAlign: 'center',
+                            lineHeight: '16px',
+                            textDecoration: 'none',
+                        }}
+                        onPress={() => navigation.navigate('Inscription')}
+                    >
+                        Enfait je n’ai pas de compte{' '}
+                        <Text color="black" fontFamily="SF-Pro-Display-Regular" fontSize="14px">
+                            🙂
+                        </Text>
+                    </Link>
+
+                    <HStack w="90%" mt={2} mb={2} alignItems="center" opacity={0.8}> 
+                        <Box flex={1} h="1px" bg="#94A3B8" />
+                        <Text style={styles.caption} mx={2} color="#94A3B8" >ou</Text>
+                        <Box flex={1} h="1px" bg="#94A3B8" />
+                    </HStack>
+
+
+                    {/* Bouton Apple */}
+                    <Button
+                        mt={4}
+                        paddingY={4}
+                        w="90%"
+                        bg="black"
+                        _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
+                        justifyContent="center"
+                        onPress={handleAppleLogin}
+                    >
+                        <HStack space={2} alignItems="center" justifyContent="center">
+                            <FontAwesomeIcon icon={faApple} size={16} color="#fff" />
+                            <Text color="white" fontFamily="SF-Pro-Display-Bold">
+                                Continue with Apple
+                            </Text>
+                        </HStack>
+                    </Button>
+
+                    {/* Bouton Google */}
+                    <Button
+                        mt={2}
+                        mb={4}
+                        paddingY={4}
+                        w="90%"
+                        bg="white"
+                        _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
+                        justifyContent="center"
+                        onPress={handleGoogleLogin}
+                    >
+                        <HStack space={2} alignItems="center" justifyContent="center">
+                            <FontAwesomeIcon icon={faGoogle} size={16} color="#000" />
+                            <Text color="black" fontFamily="SF-Pro-Display-Bold">
+                                Continue with Google
+                            </Text>
+                        </HStack>
+                    </Button>
+
+
 
                     <Link
                         px={10}
