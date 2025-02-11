@@ -496,18 +496,20 @@ exports.deleteConversation = async (req, res) => {
             return res.status(404).json({ message: 'Secret introuvable.' });
         }
 
-        // Retirer l'utilisateur des participants et des acheteurs du secret
-        conversation.participants = conversation.participants.filter(
-            participantId => participantId.toString() !== req.user.id.toString()
-        );
-
-        // Retirer l'utilisateur de la liste des acheteurs du secret
+        // Correction ici : Utiliser $pull pour retirer spécifiquement l'utilisateur
         secret.purchasedBy = secret.purchasedBy.filter(
             userId => userId.toString() !== req.user.id.toString()
         );
 
-        // Sauvegarder les modifications
-        await secret.save({ session });
+        // Sauvegarder avec une modification directe
+        await Secret.findByIdAndUpdate(secret._id, {
+            $pull: { purchasedBy: req.user.id }
+        }, { session });
+
+        // Retirer l'utilisateur des participants
+        conversation.participants = conversation.participants.filter(
+            participantId => participantId.toString() !== req.user.id.toString()
+        );
 
         // Si plus de participants, supprimer la conversation
         if (conversation.participants.length === 0) {
