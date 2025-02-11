@@ -59,6 +59,16 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     attemptInitialFetch();
   }, [isLoadingData, filteredData.length]);
 
+  const getCardHeight = () => {
+    switch (true) {
+      case filteredData.length === 1: return SCREEN_HEIGHT * 0.51;
+      case filteredData.length === 2: return SCREEN_HEIGHT * 0.50;
+      case filteredData.length === 3: return SCREEN_HEIGHT * 0.48;
+      case filteredData.length === 4: return SCREEN_HEIGHT * 0.47;
+      default: return SCREEN_HEIGHT * 0.45;
+    }
+  };
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
