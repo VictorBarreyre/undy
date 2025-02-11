@@ -476,33 +476,64 @@ exports.getUserSecretsWithCount = async (req, res) => {
 };
 
 exports.deleteConversation = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const conversation = await Conversation.findOne({
             _id: req.params.conversationId,
             participants: req.user.id
-        });
+        }).session(session);
 
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
 
-        // Retirer l'utilisateur des participants
+        // Récupérer le secret associé à la conversation
+        const secret = await Secret.findById(conversation.secret).session(session);
+
+        if (!secret) {
+            return res.status(404).json({ message: 'Secret introuvable.' });
+        }
+
+        // Retirer l'utilisateur des participants et des acheteurs du secret
         conversation.participants = conversation.participants.filter(
             participantId => participantId.toString() !== req.user.id.toString()
         );
 
+        // Retirer l'utilisateur de la liste des acheteurs du secret
+        secret.purchasedBy = secret.purchasedBy.filter(
+            userId => userId.toString() !== req.user.id.toString()
+        );
+
+        // Sauvegarder les modifications
+        await secret.save({ session });
+
         // Si plus de participants, supprimer la conversation
         if (conversation.participants.length === 0) {
-            await Conversation.findByIdAndDelete(req.params.conversationId);
-            return res.status(200).json({ message: 'Conversation supprimée car plus de participants.' });
+            await Conversation.findByIdAndDelete(req.params.conversationId).session(session);
+            await session.commitTransaction();
+            return res.status(200).json({ 
+                message: 'Conversation supprimée car plus de participants.',
+                secretUnpurchased: true
+            });
         }
 
         // Sinon, sauvegarder la conversation mise à jour
-        await conversation.save();
+        await conversation.save({ session });
 
-        res.status(200).json({ message: 'Conversation quittée avec succès.' });
+        await session.commitTransaction();
+
+        res.status(200).json({ 
+            message: 'Conversation quittée avec succès.',
+            secretUnpurchased: true
+        });
+
     } catch (error) {
+        await session.abortTransaction();
         console.error('Erreur lors de la sortie de la conversation:', error);
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+    } finally {
+        session.endSession();
     }
 };

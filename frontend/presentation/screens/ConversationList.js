@@ -10,7 +10,8 @@ import { DATABASE_URL } from '@env';
 import TypewriterLoader from '../components/TypewriterLoader';
 import { useFocusEffect } from '@react-navigation/native'; // Ajoutez cet import
 import { GestureHandlerRootView, Swipeable, RectButton } from 'react-native-gesture-handler';
-import Animated from 'react-native-reanimated';
+import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
+
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -24,9 +25,10 @@ const ConversationsList = ({ navigation }) => {
 
 
   const fetchConversations = async () => {
+  const instance = getAxiosInstance();
     setIsLoading(true);
     try {
-      const response = await axios.get(
+      const response = await instance.get(
         `${DATABASE_URL}/api/secrets/conversations`,
         { headers: { Authorization: `Bearer ${userToken}` } }
       );
@@ -40,8 +42,9 @@ const ConversationsList = ({ navigation }) => {
   };
 
   const deleteConversation = async (conversationId) => {
+    const instance = getAxiosInstance();
     try {
-      await axios.delete(
+      await instance.delete(
         `${DATABASE_URL}/api/secrets/conversations/${conversationId}`,
         { headers: { Authorization: `Bearer ${userToken}` } }
       );
