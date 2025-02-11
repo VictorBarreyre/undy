@@ -13,54 +13,51 @@ const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 300;
 
 const SwipeDeck = ({ selectedFilters = [] }) => {
-  const { data, purchaseAndAccessConversation, isLoadingData } = useCardData();
+  const { data, purchaseAndAccessConversation, isLoadingData, fetchUnpurchasedSecrets } = useCardData();
   const position = useRef(new Animated.ValueXY()).current;
-  const [index, setIndex] = useState(0);
-  const [currentIndex, setCurrentIndex] = useState(0); // Ajout d'un nouvel état pour suivre l'index actuel
-  const [filteredData, setFilteredData] = useState(data);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [filteredData, setFilteredData] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [hasAttemptedRefresh, setHasAttemptedRefresh] = useState(false);
+  const didInitialFetch = useRef(false);
   const navigation = useNavigation();
 
+  // Effet pour la gestion initiale du chargement et filtrage des données
   useEffect(() => {
-    if (!data || isLoadingData) return;
+    if (!isLoadingData && data.length > 0) {
+      const filtered = selectedFilters.length > 0
+        ? data.filter((card) => selectedFilters.includes(card.label))
+        : data;
 
-    const filtered = selectedFilters.length > 0
-      ? data.filter((card) => selectedFilters.includes(card.label))
-      : data;
-
-    setFilteredData(filtered);
-
-    // Mise à jour du currentItem avec l'index courant
-    if (filtered.length > 0) {
-      const actualIndex = currentIndex % filtered.length;
-      setCurrentItem(filtered[actualIndex]);
+      setFilteredData(filtered);
+      if (filtered.length > 0) {
+        const actualIndex = currentIndex % filtered.length;
+        setCurrentItem(filtered[actualIndex]);
+      }
+      setIsLoading(false);
     }
-
   }, [selectedFilters, data, currentIndex, isLoadingData]);
 
-  const getCardHeight = () => {
-    switch (true) {
-      case filteredData.length === 1: return SCREEN_HEIGHT * 0.51;
-      case filteredData.length === 2: return SCREEN_HEIGHT * 0.50;
-      case filteredData.length === 3: return SCREEN_HEIGHT * 0.48;
-      case filteredData.length === 4: return SCREEN_HEIGHT * 0.47;
-      default: return SCREEN_HEIGHT * 0.45;
-    }
-  };
-
+  // Effet pour la tentative unique de rafraîchissement
   useEffect(() => {
-    // Simuler un chargement
-    setTimeout(() => setIsLoading(false), 1000);
-  }, []);
+    const attemptInitialFetch = async () => {
+      if (!didInitialFetch.current && !isLoadingData && filteredData.length === 0) {
+        setIsLoading(true);
+        try {
+          await fetchUnpurchasedSecrets();
+          didInitialFetch.current = true;
+        } catch (error) {
+          console.error('Erreur lors du chargement initial:', error);
+        } finally {
+          setIsLoading(false);
+          setHasAttemptedRefresh(true);
+        }
+      }
+    };
 
-  useEffect(() => {
-    if (currentItem) {
-      console.log("Current Secret ID:", currentItem._id);
-    }
-  }, [currentItem]);
-
+    attemptInitialFetch();
+  }, [isLoadingData, filteredData.length]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -89,12 +86,10 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     }).start(() => onSwipeComplete(direction));
   };
 
-
   const onSwipeComplete = () => {
-    setCurrentIndex(prevIndex => prevIndex + 1); // Incrémente simplement l'index
+    setCurrentIndex(prevIndex => prevIndex + 1);
     position.setValue({ x: 0, y: 0 });
   };
-
 
   const resetPosition = () => {
     Animated.spring(position, {
@@ -110,7 +105,6 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
       outputRange: ['-10deg', '0deg', '10deg'],
     });
-
     return {
       ...position.getLayout(),
       transform: [{ rotate }],
@@ -118,27 +112,20 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   };
 
   const renderCards = () => {
-    if (!filteredData || filteredData.length === 0) {
-      return null;
-    }
+    if (filteredData.length === 0) return null;
 
     return [...Array(Math.min(5, filteredData.length))].map((_, i) => {
       const cardIndex = (currentIndex + i) % filteredData.length;
       const card = filteredData[cardIndex];
       const isCurrentCard = i === 0;
-
       if (!card) return null;
-
-
-      const cardHeight = getCardHeight();
-
 
       const cardStyle = isCurrentCard
         ? [getCardStyle(), styles.cardStyle]
         : [
           styles.cardStyle,
           {
-            height: cardHeight,
+            height: getCardHeight(filteredData.length),
             top: 25 * i,
             transform: [{ scale: 1 - 0.05 * i }],
           },
@@ -156,18 +143,20 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     }).reverse();
   };
 
-  if (isLoading || isLoadingData) {
+  if (isLoading) {
     return <TypewriterSpinner text="Undy..." />;
   }
 
-
-  if (!filteredData.length) {
+  if (hasAttemptedRefresh && filteredData.length === 0) {
     return (
       <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
-        <Text style={styles.h3} textAlign="center" mt={4}>
-          Il n'y a plus rien à afficher !     </Text>
+        <Text style={styles.h3} textAlign="center">
+          Aucun secret disponible
+        </Text>
         <Text style={styles.caption} textAlign="center" color="gray.500" mt={2}>
-          N'hésitez pas à réinitialiser les filtres
+          {selectedFilters.length > 0 
+            ? "Essayez de modifier vos filtres"
+            : "Revenez plus tard pour découvrir de nouveaux secrets"}
         </Text>
       </VStack>
     );
@@ -182,7 +171,6 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
         secret={currentItem}
         onPaymentSuccess={async (paymentId) => {
           try {
-
             setIsLoading(true);
             const { conversationId, conversation } = await purchaseAndAccessConversation(
               currentItem._id,
@@ -190,27 +178,32 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
               paymentId
             );
 
-            navigation.navigate('ChatTab', {
-              screen: 'Chat',
-              params: {
-                conversationId,
-                secretData: currentItem,
-                conversation,
-                showModalOnMount: true
-              }
-            });
+            setTimeout(() => {
+              navigation.navigate('ChatTab', {
+                screen: 'Chat',
+                params: {
+                  conversationId,
+                  secretData: currentItem,
+                  conversation,
+                  showModalOnMount: true
+                }
+              });
+              setIsLoading(false);
+            }, 1500);
           } catch (error) {
             console.error('Erreur lors de l\'achat:', error);
+            setIsLoading(false);
           }
         }}
         onPaymentError={(error) => {
           console.error('Erreur de paiement:', error);
-          // Gérer l'erreur (afficher une alerte, etc.)
+          setIsLoading(false);
         }}
       />
     </VStack>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react'; // Ajout de useMemo
 import { Box, VStack, Text, HStack } from 'native-base';
 import SwipeDeck from '../components/SwipeDeck';
 import FilterBar from '../components/Filter.bar';
@@ -8,9 +8,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 
 const Home = ({navigation}) => {
-
   const [selectedFilters, setSelectedFilters] = useState([]);
-  const [activeType, setActiveType] = useState('Tous'); // Gère le type de contenu sélectionné
+  const [activeType, setActiveType] = useState('Tous');
+
 
   const typeTexts = {
     Tous: "De tout le monde",
@@ -28,18 +28,18 @@ const Home = ({navigation}) => {
     console.log("Type sélectionné :", type);
   };
 
+ 
   return (
     <Background>
-
       <Box alignItems='center' alignContent='center' paddingTop={2} width="100%">
-      <FilterBar onTypeChange={setActiveType} onFilterChange={setSelectedFilters} />
+        <FilterBar onTypeChange={setActiveType} onFilterChange={setSelectedFilters} />
       </Box>
       <VStack style={styles.containerHome} space={4}>
         <VStack paddingLeft={1} space={0}>
           <HStack alignItems='center' justifyContent='space-between'>
             <Text paddingBottom={1} style={styles.h3}>Les derniers hushys 🔥  </Text>
             <FontAwesomeIcon
-              icon={faEllipsis} // Icône des trois points
+              icon={faEllipsis}
               size={16}
               color='black'
               style={{ marginRight: 10 }}

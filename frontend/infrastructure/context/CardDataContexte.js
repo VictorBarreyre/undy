@@ -12,7 +12,8 @@ export const CardDataProvider = ({ children }) => {
   const [data, setData] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const { isLoggedIn } = useContext(AuthContext);
-
+  const [lastFetchTime, setLastFetchTime] = useState(null);
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   useEffect(() => {
     const initAxios = async () => {
@@ -49,7 +50,10 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
-  const fetchUnpurchasedSecrets = async () => {
+  const fetchUnpurchasedSecrets = async (forceFetch = false) => {
+    if (!forceFetch && lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)) {
+      return data;
+    }
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error('Axios instance not initialized');
@@ -131,6 +135,9 @@ export const CardDataProvider = ({ children }) => {
       if (!purchaseResponse.data.conversationId) {
         throw new Error('Aucun ID de conversation reçu');
       }
+
+      setData(currentData => currentData.filter(secret => secret._id !== secretId));
+      setLastFetchTime(null); // Forcer un rafraîchissement au prochain focus
 
       const conversationResponse = await instance.get(
         `/api/secrets/conversations/secret/${secretId}`
