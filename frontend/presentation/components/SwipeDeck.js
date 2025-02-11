@@ -117,7 +117,6 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     });
     position.setValue({ x: 0, y: 0 });
   };
-
   const resetPosition = () => {
     Animated.spring(position, {
       toValue: { x: 0, y: 0 },
@@ -148,7 +147,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
     return [...Array(cardsToRender)].map((_, i) => {
       // Calcul inverse pour garder la dernière carte en premier
-      const cardIndex = (currentIndex + cardsToRender - 1 - i) % filteredData.length;
+      const cardIndex = (currentIndex + i) % filteredData.length;
       const card = filteredData[cardIndex];
       const isCurrentCard = i === 0;
 
