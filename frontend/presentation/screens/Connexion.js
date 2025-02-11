@@ -7,7 +7,7 @@ import { faEye, faEyeSlash, faEnvelope } from '@fortawesome/free-solid-svg-icons
 import { faGoogle, faApple } from '@fortawesome/free-brands-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import LogoSvg from '../littlecomponents/Undy';
-import createAxiosInstance from '../../data/api/axiosInstance';
+import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
@@ -54,25 +54,46 @@ const Connexion = ({ navigation }) => {
     // Connexion standard
     const handleLogin = useCallback(async () => {
         try {
-            const axiosInstance = await createAxiosInstance();
-
-            if (!axiosInstance) {
+            console.log('1. Début de la tentative de connexion');
+            const instance = getAxiosInstance();
+    
+            console.log('2. Instance Axios créée:', !!instance);
+    
+            if (!instance) {
                 throw new Error('Impossible de créer l\'instance Axios');
             }
-
-            const response = await axiosInstance.post('/api/users/login', {
+    
+            console.log('3. Envoi de la requête avec:', {
+                email: email.trim().toLowerCase(),
+                password: '***'
+            });
+    
+            const response = await instance.post('/api/users/login', {
                 email: email.trim().toLowerCase(),
                 password,
             });
-
+    
+            console.log('4. Réponse reçue:', {
+                status: response.status,
+                hasToken: !!response.data.token,
+                hasRefreshToken: !!response.data.refreshToken
+            });
+    
             if (response.data.token) {
+                console.log('5. Token reçu, appel de la fonction login');
                 await login(response.data.token, response.data.refreshToken);
-                setMessage('Connexion réussie !');
+                console.log('6. Login réussi, navigation vers Home');
                 navigation.navigate('Home');
             } else {
                 setMessage('Erreur lors de la génération du token.');
             }
         } catch (error) {
+            console.error('Erreur détaillée:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+                headers: error.response?.headers
+            });
             setMessage(error.response?.data?.message || 'Erreur lors de la connexion');
         }
     }, [email, password, login, navigation]);
@@ -166,7 +187,7 @@ const Connexion = ({ navigation }) => {
                         Connectez-vous ou{'\n'}créez un compte
                     </Text>
 
-                    <VStack mt={4} space={2} w="90%">
+                    <VStack mt={4} space={2} w="100%">
                         {/* Form Section */}
                         {/* Email */}
                         <Input
@@ -199,7 +220,7 @@ const Connexion = ({ navigation }) => {
                     {/* CTA - Login Button */}
                     <Button
                         mt={5}
-                        w="90%"
+                       w="100%"
                         bg="black"
                         _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
                         onPress={handleLogin}
@@ -228,7 +249,7 @@ const Connexion = ({ navigation }) => {
                         </Text>
                     </Link>
 
-                    <HStack w="90%" mt={2} mb={2} alignItems="center" opacity={0.8}> 
+                    <HStack w="95%" mt={2} mb={2} alignItems="center" opacity={0.8}> 
                         <Box flex={1} h="1px" bg="#94A3B8" />
                         <Text style={styles.caption} mx={2} color="#94A3B8" >ou</Text>
                         <Box flex={1} h="1px" bg="#94A3B8" />
@@ -239,7 +260,7 @@ const Connexion = ({ navigation }) => {
                     <Button
                         mt={4}
                         paddingY={4}
-                        w="90%"
+              w="100%"
                         bg="black"
                         _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
                         justifyContent="center"
@@ -258,7 +279,7 @@ const Connexion = ({ navigation }) => {
                         mt={2}
                         mb={4}
                         paddingY={4}
-                        w="90%"
+                    w="100%"
                         bg="white"
                         _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
                         justifyContent="center"
