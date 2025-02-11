@@ -79,7 +79,7 @@ const Inscription = ({ navigation }) => {
             />
 
             <ScrollView
-                width='95%'
+                width='100%'
                 alignContent='center'
                 contentContainerStyle={{ flexGrow: 1, justifyContent: 'space-between' }}
                 p={4}
