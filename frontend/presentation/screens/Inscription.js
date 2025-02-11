@@ -8,7 +8,7 @@ import { AuthContext } from '../../infrastructure/context/AuthContext';
 import API_URL from '../../infrastructure/config/config';
 import { styles } from '../../infrastructure/theme/styles';
 import LogoSvg from '../littlecomponents/Undy';
-import createAxiosInstance from '../../data/api/axiosInstance';
+import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 
 const Inscription = ({ navigation }) => {
     const { login } = useContext(AuthContext);
@@ -40,23 +40,35 @@ const Inscription = ({ navigation }) => {
     const handleRegister = useCallback(async () => {
         try {
             console.log('Tentative d\'inscription...');
-            const axiosInstance = await createAxiosInstance();
-            const response = await axiosInstance.post(`${API_URL}/api/users/register`, {
+            // Créer une nouvelle instance axios avec l'URL de base correcte
+            const instance = await getAxiosInstance();
+            
+            console.log('Données envoyées:', {
+                name,
+                email: email.trim().toLowerCase(),
+                password: '***'
+            });
+    
+            const response = await instance.post('/api/users/register', {
                 name,
                 email: email.trim().toLowerCase(),
                 password,
             });
-
+    
             if (response.data.token) {
                 console.log('Inscription réussie:', response.data);
-                login(response.data.token);
+                await login(response.data.token, response.data.refreshToken);
                 setMessage('Inscription réussie, connexion en cours...');
             } else {
                 console.error('Erreur: Token non reçu.');
                 setMessage('Erreur lors de la génération du token.');
             }
         } catch (error) {
-            console.error('Erreur Axios:', error.response || error.message);
+            console.error('Erreur complète:', {
+                message: error.message,
+                response: error.response?.data,
+                config: error.config
+            });
             setMessage(error.response?.data?.message || "Erreur lors de l'inscription");
         }
     }, [name, email, password, login]);

@@ -49,12 +49,15 @@ exports.registerUser = async (req, res) => {
             subscriptions,
         });
 
+        const { accessToken, refreshToken } = generateTokens(user._id);
+
         res.status(201).json({
             _id: user._id,
             name: user.name,
             email: user.email,
             profilePicture: user.profilePicture,
-            token: generateToken(user._id),
+            token: accessToken,          // Envoyer l'access token
+            refreshToken: refreshToken
         });
     } catch (error) {
         console.error('Erreur lors de l\'inscription :', error);
