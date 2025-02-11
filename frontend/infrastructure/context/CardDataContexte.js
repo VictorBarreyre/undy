@@ -63,6 +63,7 @@ export const CardDataProvider = ({ children }) => {
       const response = await instance.get('/api/secrets/unpurchased');
       if (response.data && response.data.secrets) {
         setData(response.data.secrets);
+        setLastFetchTime(Date.now()); // Ajoutez cette ligne
       } else {
         console.error('Données invalides reçues depuis l\'API');
         setData([]);
