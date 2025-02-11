@@ -154,14 +154,24 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         try {
+            const instance = getAxiosInstance();
+            if (instance) {
+                // Réinitialiser l'instance Axios
+                instance.defaults.headers.common['Authorization'] = '';
+            }
+            
+            // Nettoyer AsyncStorage
             await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
+            
+            // Réinitialiser l'état
             setUserToken(null);
             setIsLoggedIn(false);
             setUserData(null);
+            
             return true;
         } catch (error) {
             console.error('Erreur lors de la déconnexion:', error);
-            return false;
+            throw error; // Propager l'erreur pour la gérer dans le composant
         }
     };
 

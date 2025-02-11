@@ -56,34 +56,34 @@ const Connexion = ({ navigation }) => {
         try {
             console.log('1. Début de la tentative de connexion');
             const instance = getAxiosInstance();
-    
+
             console.log('2. Instance Axios créée:', !!instance);
-    
+
             if (!instance) {
                 throw new Error('Impossible de créer l\'instance Axios');
             }
-    
+
             console.log('3. Envoi de la requête avec:', {
                 email: email.trim().toLowerCase(),
                 password: '***'
             });
-    
+
             const response = await instance.post('/api/users/login', {
                 email: email.trim().toLowerCase(),
                 password,
             });
-    
+
             console.log('4. Réponse reçue:', {
                 status: response.status,
                 hasToken: !!response.data.token,
                 hasRefreshToken: !!response.data.refreshToken
             });
-    
+
             if (response.data.token) {
                 console.log('5. Token reçu, appel de la fonction login');
                 await login(response.data.token, response.data.refreshToken);
-                console.log('6. Login réussi, navigation vers Home');
-                navigation.navigate('Home');
+                console.log('6. Login réussi, navigation vers MainFeed');
+                navigation.navigate('HomeTab', { screen: 'MainFeed' });
             } else {
                 setMessage('Erreur lors de la génération du token.');
             }
@@ -220,7 +220,7 @@ const Connexion = ({ navigation }) => {
                     {/* CTA - Login Button */}
                     <Button
                         mt={5}
-                       w="100%"
+                        w="100%"
                         bg="black"
                         _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
                         onPress={handleLogin}
@@ -249,7 +249,7 @@ const Connexion = ({ navigation }) => {
                         </Text>
                     </Link>
 
-                    <HStack w="95%" mt={2} mb={2} alignItems="center" opacity={0.8}> 
+                    <HStack w="95%" mt={2} mb={2} alignItems="center" opacity={0.8}>
                         <Box flex={1} h="1px" bg="#94A3B8" />
                         <Text style={styles.caption} mx={2} color="#94A3B8" >ou</Text>
                         <Box flex={1} h="1px" bg="#94A3B8" />
@@ -260,7 +260,7 @@ const Connexion = ({ navigation }) => {
                     <Button
                         mt={4}
                         paddingY={4}
-              w="100%"
+                        w="100%"
                         bg="black"
                         _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
                         justifyContent="center"
@@ -279,7 +279,7 @@ const Connexion = ({ navigation }) => {
                         mt={2}
                         mb={4}
                         paddingY={4}
-                    w="100%"
+                        w="100%"
                         bg="white"
                         _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
                         justifyContent="center"

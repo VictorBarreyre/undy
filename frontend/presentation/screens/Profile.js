@@ -263,7 +263,7 @@ export default function Profile({ navigation }) {
                     </HStack>
 
                     <VStack space={2}>
-                        <Text style={styles.h4}>{userData.name} </Text>
+                        <Text style={styles.h4}>{userData?.name} </Text>
                         <Text color='#94A3B8'>
                             {!isExpanded ? (
                                 <>

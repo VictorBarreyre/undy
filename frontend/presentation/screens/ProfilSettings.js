@@ -169,14 +169,14 @@ export default function Profile({ navigation }) {
     const handleLogoutno = async () => {
         try {
             await logout();
-            navigation.dispatch(
-                CommonActions.reset({
-                    index: 0,
-                    routes: [{ name: 'Connexion' }],
-                })
-            );
+            // Le changement de isLoggedIn dans AuthContext 
+            // déclenchera automatiquement la redirection
         } catch (error) {
-            console.error(error);
+            console.error('Erreur de déconnexion:', error);
+            Alert.alert(
+                "Erreur",
+                "Une erreur est survenue lors de la déconnexion"
+            );
         }
     };
 
