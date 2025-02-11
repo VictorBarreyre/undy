@@ -51,6 +51,7 @@ export const CardDataProvider = ({ children }) => {
   };
 
   const fetchUnpurchasedSecrets = async (forceFetch = false) => {
+
     if (!forceFetch && lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)) {
       return data;
     }

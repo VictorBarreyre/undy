@@ -96,8 +96,25 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     }).start(() => onSwipeComplete(direction));
   };
 
-  const onSwipeComplete = () => {
-    setCurrentIndex(prevIndex => prevIndex + 1);
+  const onSwipeComplete = (direction) => {
+    setCurrentIndex(prevIndex => {
+      const newIndex = prevIndex + 1;
+      
+      // Mise à jour du currentItem
+      if (filteredData.length > 0) {
+        const nextItemIndex = newIndex % filteredData.length;
+        setCurrentItem(filteredData[nextItemIndex]);
+      }
+      
+      console.log('Progression:', {
+        direction,
+        oldIndex: prevIndex,
+        newIndex,
+        totalCards: filteredData.length
+      });
+      
+      return newIndex;
+    });
     position.setValue({ x: 0, y: 0 });
   };
 
@@ -124,22 +141,36 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   const renderCards = () => {
     if (filteredData.length === 0) return null;
 
-    return [...Array(Math.min(5, filteredData.length))].map((_, i) => {
-      const cardIndex = (currentIndex + i) % filteredData.length;
+    const cardsToRender = Math.min(5, filteredData.length);
+
+    console.log('Nombre de cartes à rendre:', cardsToRender);
+    console.log('Index courant:', currentIndex);
+
+    return [...Array(cardsToRender)].map((_, i) => {
+      // Calcul inverse pour garder la dernière carte en premier
+      const cardIndex = (currentIndex + cardsToRender - 1 - i) % filteredData.length;
       const card = filteredData[cardIndex];
       const isCurrentCard = i === 0;
-      if (!card) return null;
 
+      console.log(`Carte ${i}:`, {
+        cardIndex,
+        cardId: card?._id,
+        isCurrentCard,
+        content: card?.content
+      });
+  
+      if (!card) return null;
+  
       const cardStyle = isCurrentCard
         ? [getCardStyle(), styles.cardStyle]
         : [
-          styles.cardStyle,
-          {
-            height: getCardHeight(filteredData.length),
-            top: 25 * i,
-            transform: [{ scale: 1 - 0.05 * i }],
-          },
-        ];
+            styles.cardStyle,
+            {
+              position: 'absolute',
+              top: 25 * i, // Changement clé : utiliser i directement
+              transform: [{ scale: 1 - (0.05 * i) }],
+            }
+          ];
 
       return (
         <Animated.View
