@@ -18,6 +18,11 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     const { userToken } = useContext(AuthContext);
     const { purchaseAndAccessConversation } = useCardData(); 
 
+    const getBuyerTotal = (originalPrice) => {
+        const buyerMargin = 0.10;
+        return originalPrice * (1 + buyerMargin);
+    };
+
 
     const initializePaymentSheet = async (clientSecret) => {
         try {
@@ -180,7 +185,7 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 <Text fontSize="md" color="white" fontWeight="bold">
                     {loading
                         ? 'Chargement...'
-                        : `Déverrouiller pour ${secret?.price || '0.00'} €`}
+                        : `Déverrouiller pour ${getBuyerTotal(secret?.price || 0).toFixed(2)} €`}
                 </Text>
             </HStack>
         </Pressable>

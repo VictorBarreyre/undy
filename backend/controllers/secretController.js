@@ -106,30 +106,50 @@ exports.createPaymentIntent = async (req, res) => {
             return res.status(404).json({ message: 'Secret introuvable.' });
         }
 
-        // Créer l'intention de paiement Stripe
+        // Calcul des montants avec les marges
+        const buyerMargin = 0.10; // 10% de marge pour l'acheteur
+        const sellerMargin = 0.15; // 15% de marge pour le vendeur
+
+        const originalPrice = secret.price;
+        const buyerTotal = originalPrice * (1 + buyerMargin); // Prix + 10% pour l'acheteur
+        const sellerAmount = originalPrice * (1 - sellerMargin); // Prix - 15% pour le vendeur
+        const platformFee = buyerTotal - sellerAmount; // La différence va à la plateforme
+
+        // Créer l'intention de paiement Stripe avec le montant total pour l'acheteur
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: secret.price * 100, // Stripe utilise les centimes
+            amount: Math.round(buyerTotal * 100), // Stripe utilise les centimes
             currency: 'eur',
             metadata: {
                 secretId: secret._id.toString(),
-                userId: req.user.id
+                userId: req.user.id,
+                originalPrice: originalPrice.toString(),
+                sellerAmount: sellerAmount.toString(),
+                platformFee: platformFee.toString()
             }
         });
 
-        // Créer un enregistrement de paiement
+        // Créer un enregistrement de paiement avec les détails des marges
         const payment = await Payment.create([{
             secret: secret._id,
             user: req.user.id,
-            amount: secret.price,
-            paymentIntentId: paymentIntent.id,  // Utilisez l'ID de Stripe
-            status: 'pending'
+            amount: buyerTotal, // Montant total payé par l'acheteur
+            paymentIntentId: paymentIntent.id,
+            status: 'pending',
+            metadata: {
+                originalPrice,
+                sellerAmount,
+                platformFee,
+                buyerMargin,
+                sellerMargin
+            }
         }], { session });
 
         await session.commitTransaction();
 
         res.json({
             clientSecret: paymentIntent.client_secret,
-            paymentId: paymentIntent.id  // Renvoyez l'ID Stripe
+            paymentId: paymentIntent.id,
+            buyerTotal: buyerTotal
         });
 
     } catch (error) {
