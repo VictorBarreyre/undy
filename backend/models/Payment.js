@@ -32,3 +32,5 @@ const PaymentSchema = new mongoose.Schema({
       sellerMargin: Number
   }
 }, { timestamps: true });
+
+module.exports = mongoose.model('Payment', PaymentSchema);
