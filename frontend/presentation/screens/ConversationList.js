@@ -19,6 +19,8 @@ const ConversationsList = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [openSwipeId, setOpenSwipeId] = useState(null); // Déplacez le state ici
   const { userToken } = useContext(AuthContext);
+  const [lastUpdate, setLastUpdate] = useState(null);
+
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -81,8 +83,13 @@ const ConversationsList = ({ navigation }) => {
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchConversations();
-    }, [userToken])
+      const now = Date.now();
+      // Ne recharge que si plus de 5 minutes se sont écoulées depuis le dernier chargement
+      if (!lastUpdate || now - lastUpdate > 5 * 60 * 1000) {
+        fetchConversations();
+        setLastUpdate(now);
+      }
+    }, [userToken, lastUpdate])
   );
 
   if (isLoading) {

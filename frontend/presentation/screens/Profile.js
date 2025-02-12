@@ -1,5 +1,5 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { Dimensions, Alert } from 'react-native';
+import React, { useState, useContext, useEffect,useRef } from 'react';
+import { Dimensions, Alert, Animated } from 'react-native';
 import { VStack, Box, Text, Pressable, Image, HStack, FlatList, Spinner } from 'native-base';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
@@ -27,7 +27,18 @@ export default function Profile({ navigation }) {
     const [purchasedSecrets, setPurchasedSecrets] = useState([]);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+    const fadeAnim = useRef(new Animated.Value(0)).current;
 
+    const startAnimation = () => {
+        // Reset la valeur
+        fadeAnim.setValue(0);
+
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+        }).start();
+    };
 
     useEffect(() => {
         const loadUserData = async () => {
@@ -42,6 +53,7 @@ export default function Profile({ navigation }) {
                 setUserSecrets(secrets);
                 setSecretCount(count);
                 setPurchasedSecrets(purchasedSecretsData);
+                startAnimation(); // Démarrer l'animation après le chargement
 
             } catch (error) {
                 console.error('Erreur chargement données:', error);
@@ -185,6 +197,12 @@ export default function Profile({ navigation }) {
 
     return (
         <Background>
+             <Animated.View 
+                style={{ 
+                    flex: 1,
+                    opacity: fadeAnim,
+                }}
+            >
             <Box flex={1} justifyContent="flex-start" paddingTop={5}>
                 <VStack paddingLeft={5} paddingRight={5} space={4}>
                     <HStack alignItems="center" justifyContent="space-between" width="100%">
@@ -325,6 +343,7 @@ export default function Profile({ navigation }) {
 
 
             </Box>
+            </Animated.View>
         </Background >
     );
 };
