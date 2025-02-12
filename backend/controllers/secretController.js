@@ -96,6 +96,22 @@ exports.getUnpurchasedSecrets = async (req, res) => {
     }
 };
 
+const calculatePrices = (originalPrice) => {
+    const buyerMargin = 0.15; // 15% de marge pour l'acheteur
+    const sellerMargin = 0.10; // 10% de marge pour le vendeur
+    
+    const buyerTotal = originalPrice * (1 + buyerMargin);
+    const sellerAmount = originalPrice * (1 - sellerMargin);
+    const platformFee = buyerTotal - sellerAmount;
+    
+    return {
+        buyerTotal: Math.round(buyerTotal * 100), // En centimes pour Stripe
+        sellerAmount: Math.round(sellerAmount * 100),
+        platformFee: Math.round(platformFee * 100),
+        originalPrice: Math.round(originalPrice * 100)
+    };
+};
+
 exports.createPaymentIntent = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -106,40 +122,35 @@ exports.createPaymentIntent = async (req, res) => {
             return res.status(404).json({ message: 'Secret introuvable.' });
         }
 
-        // Calcul des montants avec les marges
-        const buyerMargin = 0.15;
-        const sellerMargin = 0.10;
-        const originalPrice = secret.price;
-        const buyerTotal = originalPrice * (1 + buyerMargin);
-        const sellerAmount = originalPrice * (1 - sellerMargin);
-        const platformFee = buyerTotal - sellerAmount;
+        const priceDetails = calculatePrices(secret.price);
 
-        // Créer l'intention de paiement Stripe
+        // Créer l'intention de paiement Stripe avec le montant total pour l'acheteur
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(buyerTotal * 100),
+            amount: priceDetails.buyerTotal, // Déjà en centimes
             currency: 'eur',
             metadata: {
                 secretId: secret._id.toString(),
                 userId: req.user.id,
-                originalPrice: originalPrice.toString(),
-                sellerAmount: sellerAmount.toString(),
-                platformFee: platformFee.toString()
+                originalPrice: secret.price.toString(),
+                buyerTotal: priceDetails.buyerTotal.toString(),
+                sellerAmount: priceDetails.sellerAmount.toString(),
+                platformFee: priceDetails.platformFee.toString()
             }
         });
 
-        // Créer un enregistrement de paiement avec la méthode qui fonctionnait
+        // Créer un enregistrement de paiement
         const payment = await Payment.create([{
             secret: secret._id,
             user: req.user.id,
-            amount: buyerTotal,
+            amount: priceDetails.buyerTotal / 100, // Convertir en euros pour la DB
             paymentIntentId: paymentIntent.id,
             status: 'pending',
             metadata: {
-                originalPrice,
-                sellerAmount,
-                platformFee,
-                buyerMargin,
-                sellerMargin
+                originalPrice: secret.price,
+                sellerAmount: priceDetails.sellerAmount / 100,
+                platformFee: priceDetails.platformFee / 100,
+                buyerMargin: 0.15,
+                sellerMargin: 0.10
             }
         }], { session });
 
@@ -148,7 +159,7 @@ exports.createPaymentIntent = async (req, res) => {
         res.json({
             clientSecret: paymentIntent.client_secret,
             paymentId: paymentIntent.id,
-            buyerTotal
+            buyerTotal: priceDetails.buyerTotal / 100
         });
 
     } catch (error) {
@@ -212,19 +223,24 @@ exports.purchaseSecret = async (req, res) => {
             });
         }
 
+        // Calcul des prix avec marges
+        const priceDetails = calculatePrices(secret.price);
+
         // Vérification du statut du paiement Stripe
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
         
         console.log('Statut PaymentIntent Stripe:', {
             status: paymentIntent.status,
             amount: paymentIntent.amount,
-            expectedAmount: secret.price * 100
+            expectedAmount: priceDetails.buyerTotal,
+            originalPrice: secret.price,
+            calculatedBuyerTotal: priceDetails.buyerTotal / 100
         });
 
         // Vérifications de sécurité supplémentaires
         if (
             paymentIntent.status !== 'succeeded' || 
-            paymentIntent.amount !== secret.price * 100 || 
+            paymentIntent.amount !== priceDetails.buyerTotal || 
             paymentIntent.metadata.secretId !== secretId ||
             paymentIntent.metadata.userId !== userId
         ) {
@@ -233,21 +249,28 @@ exports.purchaseSecret = async (req, res) => {
                 message: 'Paiement invalide',
                 details: {
                     stripeStatus: paymentIntent.status,
-                    amountCheck: paymentIntent.amount === secret.price * 100,
+                    amountCheck: paymentIntent.amount === priceDetails.buyerTotal,
                     secretIdCheck: paymentIntent.metadata.secretId === secretId,
                     userIdCheck: paymentIntent.metadata.userId === userId
                 }
             });
         }
 
-        // Enregistrement du paiement
+        // Enregistrement du paiement avec les détails des marges
         const payment = await Payment.findOneAndUpdate(
             { paymentIntentId },
             {
                 secret: secretId,
                 user: userId,
-                amount: secret.price,
-                status: 'succeeded'
+                amount: priceDetails.buyerTotal / 100,
+                status: 'succeeded',
+                metadata: {
+                    originalPrice: secret.price,
+                    sellerAmount: priceDetails.sellerAmount / 100,
+                    platformFee: priceDetails.platformFee / 100,
+                    buyerMargin: 0.15,
+                    sellerMargin: 0.10
+                }
             },
             { 
                 upsert: true, 
@@ -283,7 +306,8 @@ exports.purchaseSecret = async (req, res) => {
         console.log('Achat du secret réussi', {
             conversationId: conversation._id,
             secretId,
-            paymentId: payment._id
+            paymentId: payment._id,
+            finalAmount: priceDetails.buyerTotal / 100
         });
 
         res.status(200).json({
