@@ -74,9 +74,14 @@ exports.refreshToken = async (req, res) => {
         }
 
         // Vérifier le refresh token
-        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        let decoded;
+        try {
+            decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        } catch (err) {
+            return res.status(401).json({ message: 'Refresh token invalide ou expiré' });
+        }
         
-        // Vérifier si le token existe en base
+        // Vérifier si le token existe en base et n'est pas expiré
         const storedToken = await RefreshToken.findOne({ 
             userId: decoded.id,
             token: refreshToken,
@@ -84,6 +89,11 @@ exports.refreshToken = async (req, res) => {
         });
 
         if (!storedToken) {
+            // Supprimer les tokens expirés
+            await RefreshToken.deleteMany({ 
+                userId: decoded.id,
+                expiresAt: { $lte: new Date() }
+            });
             return res.status(401).json({ message: 'Refresh token invalide ou expiré' });
         }
 
@@ -94,10 +104,26 @@ exports.refreshToken = async (req, res) => {
             { expiresIn: '1h' }
         );
 
-        res.json({ accessToken });
+        // Générer un nouveau refresh token
+        const newRefreshToken = jwt.sign(
+            { id: decoded.id },
+            process.env.REFRESH_TOKEN_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        // Mettre à jour le refresh token en base
+        await RefreshToken.findByIdAndUpdate(storedToken._id, {
+            token: newRefreshToken,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        });
+
+        res.json({ 
+            accessToken,
+            refreshToken: newRefreshToken
+        });
     } catch (error) {
         console.error('Erreur refresh token:', error);
-        res.status(401).json({ message: 'Refresh token invalide' });
+        res.status(401).json({ message: 'Erreur lors du refresh token' });
     }
 };
 
