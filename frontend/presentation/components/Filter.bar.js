@@ -100,9 +100,6 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
       );
       setFilteredResults(results);
 
-      console.log("Requête de recherche:", searchQuery);
-      console.log("Résultats de la recherche:", results);
-      console.log("Données brutes:", data);
     }
   }, [searchQuery, data]);
 
@@ -306,15 +303,17 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
                                 });
                               }}
                             >
-                              <Image
-                                source={{
-                                  uri: item.user.profilePicture
-                                }}
-                                alt={data[0]?.title || 'Carte'}
-                                width={45} // Ajustez la taille de l'image ici
-                                height={45} // Ajustez la taille de l'image ici
-                                borderRadius="full" // Rendre l'image ronde
-                              />
+                              <Image 
+  source={
+    item.user?.profilePicture 
+      ? { uri: item.user.profilePicture }
+      : require('../../assets/images/default.png')
+  }
+  alt={data[0]?.title || 'Carte'}
+  width={45}
+  height={45}
+  borderRadius="full"
+/>
                             </Pressable>
                             <VStack flex={1}>
                               <HStack space={2} justifyContent="space-between" flexWrap="wrap" marginBottom={2}>
