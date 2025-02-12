@@ -10,6 +10,8 @@ import ProfileStackNavigator from './StackNavigator/ProfileStackNavigator';
 import HomeStackNavigator from './StackNavigator/HomeStackNavigator';
 import ConversationStackNavigator from './StackNavigator/ConversationStackNavigator';
 import MaskedView from '@react-native-masked-view/masked-view';
+import { Animated, Platform, StatusBar } from 'react-native';
+
 
 const Tab = createBottomTabNavigator();
 

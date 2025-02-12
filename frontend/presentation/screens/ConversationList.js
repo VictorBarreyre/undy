@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Dimensions, View } from 'react-native';
-import { FlatList, Pressable } from 'react-native';
+import { FlatList, Pressable, Animated } from 'react-native';
 import { Box, HStack, Text, Image, VStack } from 'native-base';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
-import axios from 'axios';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { DATABASE_URL } from '@env';
 import TypewriterLoader from '../components/TypewriterLoader';
@@ -13,9 +12,7 @@ import { GestureHandlerRootView, Swipeable, RectButton } from 'react-native-gest
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 
 
-
 const SCREEN_WIDTH = Dimensions.get('window').width;
-
 
 const ConversationsList = ({ navigation }) => {
   const [conversations, setConversations] = useState([]);
@@ -23,7 +20,21 @@ const ConversationsList = ({ navigation }) => {
   const [openSwipeId, setOpenSwipeId] = useState(null); // Déplacez le state ici
   const { userToken } = useContext(AuthContext);
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
+  const startAnimation = () => {
+    // Reset les valeurs
+    fadeAnim.setValue(0);
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    
+    ]).start();
+  };
 
   const fetchConversations = async () => {
   const instance = getAxiosInstance();
@@ -34,12 +45,23 @@ const ConversationsList = ({ navigation }) => {
         { headers: { Authorization: `Bearer ${userToken}` } }
       );
       setConversations(response.data);
+      startAnimation(); // Démarrer l'animation après le chargement
     } catch (error) {
       console.error('Erreur chargement conversations:', error);
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
+  }, [isLoading, conversations]);
+
 
   const deleteConversation = async (conversationId) => {
     const instance = getAxiosInstance();
@@ -64,12 +86,24 @@ const ConversationsList = ({ navigation }) => {
   );
 
   if (isLoading) {
-    return <TypewriterLoader />;
+    return (
+      <Background>
+        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+          <TypewriterLoader />
+        </Animated.View>
+      </Background>
+    );
   }
 
   if (conversations.length === 0) {
     return (
       <Background>
+        <Animated.View 
+          style={{ 
+            flex: 1, 
+            opacity: fadeAnim,
+          }}
+        >  
         <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
           <Text style={styles.h3} textAlign="center" mt={4}>
             Vous n'avez pas encore déverrouillé d'Undy
@@ -78,6 +112,7 @@ const ConversationsList = ({ navigation }) => {
             Déverrouillez un undy pour commencer une conversation !
           </Text>
         </VStack>
+        </Animated.View>
       </Background>
     );
   }
@@ -178,6 +213,12 @@ const ConversationsList = ({ navigation }) => {
 
   return (
     <Background>
+        <Animated.View 
+        style={{ 
+          flex: 1, 
+          opacity: fadeAnim,
+        }}
+      > 
       <Box flex={1} justifyContent="flex-start" paddingTop={5}>
         <VStack paddingLeft={5} paddingRight={5} space={4}>
           <HStack alignItems="center" justifyContent="center" width="100%">
@@ -196,6 +237,7 @@ const ConversationsList = ({ navigation }) => {
           />
         </VStack>
       </Box>
+      </Animated.View>
     </Background>
   );
 };
