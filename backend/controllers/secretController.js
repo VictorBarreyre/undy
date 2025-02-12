@@ -107,15 +107,15 @@ exports.createPaymentIntent = async (req, res) => {
         }
 
         // Calcul des montants avec les marges
-        const buyerMargin = 0.10; // 10% de marge pour l'acheteur
-        const sellerMargin = 0.15; // 15% de marge pour le vendeur
+        const buyerMargin = 0.15; // 15% de marge pour l'acheteur
+        const sellerMargin = 0.10; // 10% de marge pour le vendeur
 
         const originalPrice = secret.price;
-        const buyerTotal = originalPrice * (1 + buyerMargin); // Prix + 10% pour l'acheteur
-        const sellerAmount = originalPrice * (1 - sellerMargin); // Prix - 15% pour le vendeur
-        const platformFee = buyerTotal - sellerAmount; // La différence va à la plateforme
+        const buyerTotal = originalPrice * (1 + buyerMargin);
+        const sellerAmount = originalPrice * (1 - sellerMargin);
+        const platformFee = buyerTotal - sellerAmount;
 
-        // Créer l'intention de paiement Stripe avec le montant total pour l'acheteur
+        // Créer l'intention de paiement Stripe
         const paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(buyerTotal * 100), // Stripe utilise les centimes
             currency: 'eur',
@@ -128,11 +128,11 @@ exports.createPaymentIntent = async (req, res) => {
             }
         });
 
-        // Créer un enregistrement de paiement avec les détails des marges
-        const payment = await Payment.create([{
+        // Créer un enregistrement de paiement - CORRECTION ICI
+        const payment = new Payment({
             secret: secret._id,
             user: req.user.id,
-            amount: buyerTotal, // Montant total payé par l'acheteur
+            amount: buyerTotal,
             paymentIntentId: paymentIntent.id,
             status: 'pending',
             metadata: {
@@ -142,7 +142,9 @@ exports.createPaymentIntent = async (req, res) => {
                 buyerMargin,
                 sellerMargin
             }
-        }], { session });
+        });
+
+        await payment.save({ session }); // Sauvegarde avec la session
 
         await session.commitTransaction();
 
@@ -154,6 +156,7 @@ exports.createPaymentIntent = async (req, res) => {
 
     } catch (error) {
         await session.abortTransaction();
+        console.error('Erreur createPaymentIntent:', error);
         res.status(500).json({ message: error.message });
     } finally {
         session.endSession();

@@ -1,15 +1,29 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { Box, HStack, Text, Image, VStack } from 'native-base';
+import { Box, HStack, Text, VStack } from 'native-base';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { styles } from '../../infrastructure/theme/styles';
-import { StyleSheet, Platform } from 'react-native'
+import { StyleSheet, Platform } from 'react-native';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 
+const calculatePrices = (originalPrice) => {
+    const buyerMargin = 0.10; // 10% pour l'acheteur
+    const sellerMargin = 0.15; // 15% pour le vendeur
+    
+    const buyerPrice = originalPrice * (1 + buyerMargin);
+    const sellerEarnings = originalPrice * (1 - sellerMargin);
+    
+    return {
+        originalPrice,
+        buyerPrice: Number(buyerPrice.toFixed(2)),
+        sellerEarnings: Number(sellerEarnings.toFixed(2))
+    };
+};
 
-const SecretCard = ({ secret }) => {
+const SecretCard = ({ secret, isPurchased = false }) => {
     const { userData } = useContext(AuthContext);
     const [timeLeft, setTimeLeft] = useState('');
+    const priceDetails = calculatePrices(secret.price);
 
     const getTimeAgo = (createdAt) => {
         const diffTime = Date.now() - new Date(createdAt);
@@ -43,15 +57,49 @@ const SecretCard = ({ secret }) => {
         setTimeLeft(calculateTimeLeft());
         const timer = setInterval(() => {
             setTimeLeft(calculateTimeLeft());
-        }, 60000); // Mise à jour chaque minute
+        }, 60000);
 
         return () => clearInterval(timer);
     }, [secret.expiresAt]);
 
+    const renderPriceInfo = () => {
+        // Si c'est un secret acheté
+        if (isPurchased) {
+            return (
+                <Text style={styles.caption}>Prix payé : {priceDetails.buyerPrice} €</Text>
+            );
+        }
+
+        // Si c'est le créateur du secret qui le voit
+        if (secret.user === userData?.id) {
+            return (
+                <HStack justifyContent="space-between" alignItems="center">
+                    <Text style={styles.caption}>{secret.label}</Text>
+                    <VStack alignItems="end">
+                        <Text style={[styles.littleCaption, { color: '#94A3B8' }]}>
+                            Prix de base : {priceDetails.originalPrice} €
+                        </Text>
+                        <Text style={[styles.littleCaption, { color: '#94A3B8' }]}>
+                            Vos gains : {priceDetails.sellerEarnings} €
+                        </Text>
+                    </VStack>
+                </HStack>
+            );
+        }
+
+        // Pour les autres utilisateurs
+        return (
+            <HStack justifyContent="space-between">
+                <Text style={styles.caption}>{secret.label}</Text>
+                <Text style={styles.caption}>Prix : {priceDetails.buyerPrice} €</Text>
+            </HStack>
+        );
+    };
+
     return (
         <Box
-            width='100%'  // Changé de 90% à 100%
-            height="100%" // Ajouté
+            width="100%"
+            height="100%"
             borderRadius="md"
             p={4}
             backgroundColor="white"
@@ -64,21 +112,22 @@ const SecretCard = ({ secret }) => {
                 elevation: 5
             }}
         >
-            <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
+            <VStack justifyContent="space-between" width="100%" space={2} flexGrow={1} flexShrink={1}>
                 <HStack space={2} justifyContent="space-between" flexWrap="wrap">
                     <VStack>
-                        <Text color='#94A3B8' style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
-                        <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
+                        <Text color="#94A3B8" style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
+                        <Text color="#FF78B2" mt={1} style={styles.littleCaption}>
                             Expire dans {timeLeft}
                         </Text>
                     </VStack>
                     <FontAwesomeIcon
-                        icon={faEllipsis} // Icône des trois points
+                        icon={faEllipsis}
                         size={16}
-                        color='#94A3B8'
+                        color="#94A3B8"
                         style={{ marginRight: 10 }}
                     />
                 </HStack>
+                
                 <Text
                     style={[
                         styles.h4,
@@ -87,17 +136,14 @@ const SecretCard = ({ secret }) => {
                             flexWrap: 'wrap',
                         }
                     ]}
-                    numberOfLines={10}  // Limite à 3 lignes
-                    ellipsizeMode="tail" // Ajoute ... à la fin
+                    numberOfLines={10}
+                    ellipsizeMode="tail"
                 >
                     "{secret.content}"
                 </Text>
-                <HStack justifyContent='space-between'>
-                    <Text style={styles.caption}>{secret.label}</Text>
-                    <Text style={styles.caption}>Prix : {secret.price} €</Text>
-                </HStack>
-            </VStack>
 
+                {renderPriceInfo()}
+            </VStack>
         </Box>
     );
 };

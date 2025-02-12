@@ -19,7 +19,7 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     const { purchaseAndAccessConversation } = useCardData(); 
 
     const getBuyerTotal = (originalPrice) => {
-        const buyerMargin = 0.10;
+        const buyerMargin = 0.15;
         return originalPrice * (1 + buyerMargin);
     };
 

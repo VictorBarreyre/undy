@@ -8,6 +8,22 @@ export const useCardData = () => {
   return useContext(CardDataContext);
 };
 
+export const calculatePrices = (originalPrice) => {
+  const buyerMargin = 0.10; // 10% pour l'acheteur
+  const sellerMargin = 0.15; // 15% pour le vendeur
+  
+  const buyerPrice = originalPrice * (1 + buyerMargin);
+  const sellerEarnings = originalPrice * (1 - sellerMargin);
+  const platformFee = buyerPrice - sellerEarnings;
+  
+  return {
+    originalPrice,
+    buyerPrice,
+    sellerEarnings,
+    platformFee
+  };
+};
+
 export const CardDataProvider = ({ children }) => {
   const [data, setData] = useState([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -107,8 +123,15 @@ export const CardDataProvider = ({ children }) => {
     }
     try {
       const { data } = await instance.get('/api/secrets/user-secrets-with-count');
+      
+      // Ajouter les calculs de prix pour chaque secret
+      const secretsWithPrices = data.secrets.map(secret => ({
+        ...secret,
+        priceDetails: calculatePrices(secret.price)
+      }));
+      
       return {
-        secrets: Array.isArray(data.secrets) ? data.secrets : [],
+        secrets: Array.isArray(secretsWithPrices) ? secretsWithPrices : [],
         count: typeof data.count === 'number' ? data.count : 0
       };
     } catch (error) {
@@ -167,7 +190,14 @@ export const CardDataProvider = ({ children }) => {
     }
     try {
       const response = await instance.get('/api/secrets/purchased');
-      return response.data;
+      
+      // Ajouter les calculs de prix pour chaque secret acheté
+      const purchasedWithPrices = response.data.map(secret => ({
+        ...secret,
+        priceDetails: calculatePrices(secret.price)
+      }));
+      
+      return purchasedWithPrices;
     } catch (error) {
       console.error('Erreur lors de la récupération des secrets achetés:', error);
       return [];
