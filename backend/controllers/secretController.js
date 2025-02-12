@@ -128,8 +128,8 @@ exports.createPaymentIntent = async (req, res) => {
             }
         });
 
-        // Créer un enregistrement de paiement - CORRECTION ICI
-        const payment = new Payment({
+        // Créer un enregistrement de paiement en utilisant mongoose.model directement
+        const payment = await mongoose.model('Payment').create({
             secret: secret._id,
             user: req.user.id,
             amount: buyerTotal,
@@ -143,8 +143,6 @@ exports.createPaymentIntent = async (req, res) => {
                 sellerMargin
             }
         });
-
-        await payment.save({ session }); // Sauvegarde avec la session
 
         await session.commitTransaction();
 
