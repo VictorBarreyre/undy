@@ -5,7 +5,9 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import CardHome from './CardHome';
 import { useNavigation } from '@react-navigation/native';
 import PaymentSheet from './PaymentSheet';
-import TypewriterSpinner from './TypewriterSpinner'
+import TypewriterSpinner from './TypewriterSpinner';
+import { useFocusEffect } from '@react-navigation/native';
+
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height
@@ -22,6 +24,17 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   const [hasAttemptedRefresh, setHasAttemptedRefresh] = useState(false);
   const didInitialFetch = useRef(false);
   const navigation = useNavigation();
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setIsTransitioning(false);
+      setIsLoading(false);
+      fadeAnim.setValue(1);
+    }, [])
+  );
+
 
   // Effet pour la gestion initiale du chargement et filtrage des données
   useEffect(() => {
@@ -58,6 +71,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
     attemptInitialFetch();
   }, [isLoadingData, filteredData.length]);
+
 
   const getCardHeight = () => {
     switch (true) {
@@ -99,24 +113,19 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   const onSwipeComplete = (direction) => {
     setCurrentIndex(prevIndex => {
       const newIndex = prevIndex + 1;
-      
+
       // Mise à jour du currentItem
       if (filteredData.length > 0) {
         const nextItemIndex = newIndex % filteredData.length;
         setCurrentItem(filteredData[nextItemIndex]);
       }
-      
-      console.log('Progression:', {
-        direction,
-        oldIndex: prevIndex,
-        newIndex,
-        totalCards: filteredData.length
-      });
-      
+
+
       return newIndex;
     });
     position.setValue({ x: 0, y: 0 });
   };
+
   const resetPosition = () => {
     Animated.spring(position, {
       toValue: { x: 0, y: 0 },
@@ -142,34 +151,31 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
     const cardsToRender = Math.min(5, filteredData.length);
 
-    console.log('Nombre de cartes à rendre:', cardsToRender);
-    console.log('Index courant:', currentIndex);
-
     return [...Array(cardsToRender)].map((_, i) => {
       // Calcul inverse pour garder la dernière carte en premier
       const cardIndex = (currentIndex + i) % filteredData.length;
       const card = filteredData[cardIndex];
       const isCurrentCard = i === 0;
 
-      console.log(`Carte ${i}:`, {
-        cardIndex,
-        cardId: card?._id,
-        isCurrentCard,
-        content: card?.content
-      });
-  
+
       if (!card) return null;
-  
+
+      const cardHeight = getCardHeight();
+
       const cardStyle = isCurrentCard
         ? [getCardStyle(), styles.cardStyle]
         : [
-            styles.cardStyle,
-            {
-              position: 'absolute',
-              top: 25 * i, // Changement clé : utiliser i directement
-              transform: [{ scale: 1 - (0.05 * i) }],
-            }
-          ];
+          styles.cardStyle,
+          {
+            marginTop: 0, // Annule la marge par défa
+            position: 'absolute',
+            height: cardHeight,
+            top: 25 * i, // Changement clé : utiliser i directement
+            transform: [{ scale: 1 - (0.05 * i) }],
+          }
+        ];
+
+
 
       return (
         <Animated.View
@@ -183,9 +189,6 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     }).reverse();
   };
 
-  if (isLoading) {
-    return <TypewriterSpinner text="Undy..." />;
-  }
 
   if (hasAttemptedRefresh && filteredData.length === 0) {
     return (
@@ -194,7 +197,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
           Aucun secret disponible
         </Text>
         <Text style={styles.caption} textAlign="center" color="gray.500" mt={2}>
-          {selectedFilters.length > 0 
+          {selectedFilters.length > 0
             ? "Essayez de modifier vos filtres"
             : "Revenez plus tard pour découvrir de nouveaux secrets"}
         </Text>
@@ -202,45 +205,74 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     );
   }
 
-  return (
-    <VStack style={styles.container}>
-      <Box style={styles.cardContainer}>
-        {renderCards()}
-      </Box>
-      <PaymentSheet
-        secret={currentItem}
-        onPaymentSuccess={async (paymentId) => {
-          try {
-            setIsLoading(true);
-            const { conversationId, conversation } = await purchaseAndAccessConversation(
-              currentItem._id,
-              currentItem.price,
-              paymentId
-            );
+  const handlePaymentSuccess = async (paymentId) => {
+    try {
+      setIsTransitioning(true); // Démarre la transition
 
-            setTimeout(() => {
-              navigation.navigate('ChatTab', {
-                screen: 'Chat',
-                params: {
-                  conversationId,
-                  secretData: currentItem,
-                  conversation,
-                  showModalOnMount: true
-                }
-              });
-              setIsLoading(false);
-            }, 1500);
-          } catch (error) {
-            console.error('Erreur lors de l\'achat:', error);
-            setIsLoading(false);
+      // Fade out animation
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(async () => {
+        setIsLoading(true);
+
+        // Une fois le fade out terminé, on procède à l'achat
+        const { conversationId, conversation } = await purchaseAndAccessConversation(
+          currentItem._id,
+          currentItem.price,
+          paymentId
+        );
+
+        // Navigation vers le chat
+        navigation.navigate('ChatTab', {
+          screen: 'Chat',
+          params: {
+            conversationId,
+            secretData: currentItem,
+            conversation,
+            showModalOnMount: true
           }
-        }}
-        onPaymentError={(error) => {
-          console.error('Erreur de paiement:', error);
-          setIsLoading(false);
-        }}
-      />
-    </VStack>
+        });
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'achat:', error);
+      setIsLoading(false);
+      setIsTransitioning(false);
+      // Reset de l'animation en cas d'erreur
+      fadeAnim.setValue(1);
+    }
+  };
+
+  if (isLoading) {
+    return <TypewriterSpinner text="Undy..." />;
+  }
+
+  if (isTransitioning) {
+    return <TypewriterSpinner text="Undy..." />;
+  }
+
+
+  return (
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+
+      <VStack style={styles.container}>
+        <Box style={styles.cardContainer}>
+          {renderCards()}
+        </Box>
+        <PaymentSheet
+          secret={currentItem}
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentError={(error) => {
+            console.error('Erreur de paiement:', error);
+            setIsLoading(false);
+            setIsTransitioning(false);
+            fadeAnim.setValue(1);
+          }}
+        />
+      </VStack>
+    </Animated.View>
+
   );
 };
 
@@ -253,12 +285,14 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
     alignItems: 'center',
+
   },
 
   cardContainer: {
     position: 'relative', // Conserve les cartes avec position absolue à l'intérieur
     width: '100%',
     height: '92%', // modifie la taille des cartes pour espace ac cta à jour avec cardStyle
+
   },
 
   cardStyle: {

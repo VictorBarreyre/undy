@@ -124,12 +124,11 @@ export default function CardHome({ cardData }) {
       borderRadius="lg"
       overflow="hidden"
       backgroundColor="white"
-      marginTop={2}
+      marginTop={1}
       shadow={10}
       paddingTop={1}
       paddingBottom={4}
       justifyContent="space-between"
-      style={styles.boxShadow}
     >
       {/* Contenu texte */}
       <VStack height={'100%'} justifyContent="space-between" padding={3} space={2} flex={1} >

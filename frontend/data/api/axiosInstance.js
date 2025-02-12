@@ -75,7 +75,7 @@ const createAxiosInstance = async () => {
                             throw new Error('No refresh token available');
                         }
 
-                        const response = await axios.post(`${baseURL}/api/refresh-token`, {
+                        const response = await axios.post(`${baseURL}/api/users/refresh-token`, {
                             refreshToken
                         });
 

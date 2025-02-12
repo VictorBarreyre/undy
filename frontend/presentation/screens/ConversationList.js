@@ -24,6 +24,7 @@ const ConversationsList = ({ navigation }) => {
   const { userToken } = useContext(AuthContext);
 
 
+
   const fetchConversations = async () => {
   const instance = getAxiosInstance();
     setIsLoading(true);
@@ -32,7 +33,6 @@ const ConversationsList = ({ navigation }) => {
         `${DATABASE_URL}/api/secrets/conversations`,
         { headers: { Authorization: `Bearer ${userToken}` } }
       );
-      console.log('Toutes les conversations:', response.data);
       setConversations(response.data);
     } catch (error) {
       console.error('Erreur chargement conversations:', error);
@@ -149,9 +149,11 @@ const ConversationsList = ({ navigation }) => {
        
             >
               <Image
-                source={{
-                  uri: item.secret?.user?.profilePicture || 'https://via.placeholder.com/40'
-                }}
+                 source={
+                  item.secret?.user?.profilePicture 
+                    ? { uri: item.secret.user.profilePicture }
+                    : require('../../assets/images/default.png')
+                }
                 alt="Profile"
                 width={45}
                 height={45}

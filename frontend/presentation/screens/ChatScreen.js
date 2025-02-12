@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -74,10 +74,14 @@ const ChatScreen = ({ route }) => {
   const [isTimestampVisible, setIsTimestampVisible] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   const [isModalVisible, setModalVisible] = useState(showModalOnMount || false);
+  const isInitialMount = useRef(true);
+
 
   useEffect(() => {
-    if (showModalOnMount) {
+    // Ne montrer la modale que lors du montage initial si showModalOnMount est true
+    if (isInitialMount.current && showModalOnMount) {
       setModalVisible(true);
+      isInitialMount.current = false;
     }
   }, [showModalOnMount]);
 
@@ -186,9 +190,11 @@ const ChatScreen = ({ route }) => {
         >
           {item.sender !== 'user' && (
             <Image
-              source={{
-                uri: conversation.secret.user.profilePicture || 'https://via.placeholder.com/40'
-              }}
+              source={
+                conversation.secret.user.profilePicture
+                  ? { uri: conversation.secret.user.profilePicture }
+                  : require('../../assets/images/default.png')
+              }
               alt="Profile"
               size={8}
               rounded="full"
@@ -266,9 +272,11 @@ const ChatScreen = ({ route }) => {
 
           {item.sender === 'user' && (
             <Image
-              source={{
-                uri: userData?.profilePicture || 'https://via.placeholder.com/40'
-              }}
+              source={
+                userData?.profilePicture
+                  ? { uri: userData.profilePicture }
+                  : require('../../assets/images/default.png')
+              }
               alt="Profile"
               size={8}
               rounded="full"
@@ -293,14 +301,16 @@ const ChatScreen = ({ route }) => {
             </TouchableOpacity>
 
             <HStack flex={1} alignItems="center" space={5}>
-              <Image
-                source={{
-                  uri: secretData?.user?.profilePicture || 'https://via.placeholder.com/40'
-                }}
-                alt="Profile"
-                size={12}
-                rounded="full"
-              />
+            <Image
+  source={
+    secretData?.user?.profilePicture 
+      ? { uri: secretData.user.profilePicture }
+      : require('../../assets/images/default.png')
+  }
+  alt="Profile"
+  size={12}
+  rounded="full"
+/>
               <VStack space={1} flex={1}>
                 <HStack justifyContent="space-between" alignItems="center">
                   <Text style={styles.h5}>
@@ -396,7 +406,7 @@ const ChatScreen = ({ route }) => {
                       height: 22,
                       justifyContent: 'center',
                       alignItems: 'center',
-                      alignContent:'center'
+                      alignContent: 'center'
                     }}
                   />
                 </MaskedView>
