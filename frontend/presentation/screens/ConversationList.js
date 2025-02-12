@@ -95,9 +95,7 @@ const ConversationsList = ({ navigation }) => {
   if (isLoading) {
     return (
       <Background>
-        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
           <TypewriterLoader />
-        </Animated.View>
       </Background>
     );
   }

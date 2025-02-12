@@ -22,6 +22,8 @@ const AddSecret = () => {
     const [secretPostAvailable, setSecretPostAvailable] = useState('false')
     const [expiresIn, setExpiresIn] = useState(7);
     const [buttonMessage, setButtonMessage] = useState('Poster le secret');
+    const [boxHeight, setBoxHeight] = useState('70%');
+
 
     const MIN_PRICE = 5;
     const MIN_WORDS = 2;
@@ -41,10 +43,17 @@ const AddSecret = () => {
         "Secret de famille",
         "Infidélité",
         "Culpabilité"
-      ];
+    ];
 
 
     const labels = [...new Set(data.map((item) => item.label))];
+
+    const calculatePriceAfterMargin = (originalPrice) => {
+        if (!originalPrice) return 0;
+        const margin = 0.1; // 10%
+        const priceNumber = Number(originalPrice);
+        return (priceNumber * (1 - margin)).toFixed(2);
+    };
 
 
 
@@ -67,6 +76,7 @@ const AddSecret = () => {
             Alert.alert('Erreur', error.message);
         }
     };
+
 
 
     // Surveille les changements dans les champs et met à jour l'état de `secretPostAvailable`
@@ -98,7 +108,7 @@ const AddSecret = () => {
                 {/* Fermer le clavier en cliquant en dehors */}
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <FlatList
-                        contentContainerStyle={{ flexGrow: 1, paddingBottom: 118, marginBottom: 200 }}
+                        contentContainerStyle={{ flexGrow: 1, paddingBottom: 160, marginBottom: 200 }}
                         keyboardShouldPersistTaps="handled"
                         data={[]} // Pas de données à afficher, juste pour utiliser FlatList
                         renderItem={null} // Pas de rendu d'éléments
@@ -119,7 +129,7 @@ const AddSecret = () => {
                                         display="flex"
                                         width="100%"
                                         marginX="auto"
-                                        minHeight="70%"
+                                        minHeight='70%'
                                         borderRadius="lg"
                                         backgroundColor="white"
                                         marginTop={2}
@@ -164,6 +174,8 @@ const AddSecret = () => {
                                                 />
                                             </Box>
 
+
+
                                             <HStack mt={6} alignItems="start" alignContent="center" justifyContent="space-between" width="95%" space={2}>
                                                 <VStack width="30%" alignItems="left">
                                                     <Text left={2} style={styles.ctalittle}>Catégorie</Text>
@@ -197,19 +209,19 @@ const AddSecret = () => {
                                                         mt={1}
                                                         onValueChange={(value) => setSelectedLabel(value)}
                                                     >
-                                                      {CATEGORIES.map((category, index) => (
-    <Select.Item
-        key={index}
-        label={category}
-        value={category}
-        _text={{
-            fontSize: 14,
-            lineHeight: 18,
-            fontWeight: '500',
-            fontFamily: 'SF-Pro-Display-Medium'
-        }}
-    />
-))}
+                                                        {CATEGORIES.map((category, index) => (
+                                                            <Select.Item
+                                                                key={index}
+                                                                label={category}
+                                                                value={category}
+                                                                _text={{
+                                                                    fontSize: 14,
+                                                                    lineHeight: 18,
+                                                                    fontWeight: '500',
+                                                                    fontFamily: 'SF-Pro-Display-Medium'
+                                                                }}
+                                                            />
+                                                        ))}
                                                     </Select>
                                                 </VStack>
 
@@ -286,7 +298,7 @@ const AddSecret = () => {
                                                             value={7}
                                                             _text={{
                                                                 fontSize: 14,
-                                                                 lineHeight: 18,
+                                                                lineHeight: 18,
                                                                 fontWeight: '500',
                                                                 fontFamily: 'SF-Pro-Display-Medium'
                                                             }}
@@ -304,8 +316,20 @@ const AddSecret = () => {
                                                     </Select>
                                                 </VStack>
                                             </HStack>
+
                                         </VStack>
                                     </Box>
+
+                                    {price ? (
+                                        <Text
+                                            style={[styles.caption]}
+                                            color="#94A3B8"
+                                            textAlign="center"
+
+                                        >
+                                            Vous recevrez {calculatePriceAfterMargin(price)}€
+                                        </Text>
+                                    ) : null}
                                     <Pressable
                                         marginTop={7}
                                         onPress={handlePress}
