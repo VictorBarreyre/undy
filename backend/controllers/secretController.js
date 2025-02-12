@@ -107,9 +107,8 @@ exports.createPaymentIntent = async (req, res) => {
         }
 
         // Calcul des montants avec les marges
-        const buyerMargin = 0.15; // 15% de marge pour l'acheteur
-        const sellerMargin = 0.10; // 10% de marge pour le vendeur
-
+        const buyerMargin = 0.15;
+        const sellerMargin = 0.10;
         const originalPrice = secret.price;
         const buyerTotal = originalPrice * (1 + buyerMargin);
         const sellerAmount = originalPrice * (1 - sellerMargin);
@@ -117,7 +116,7 @@ exports.createPaymentIntent = async (req, res) => {
 
         // Créer l'intention de paiement Stripe
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(buyerTotal * 100), // Stripe utilise les centimes
+            amount: Math.round(buyerTotal * 100),
             currency: 'eur',
             metadata: {
                 secretId: secret._id.toString(),
@@ -128,8 +127,8 @@ exports.createPaymentIntent = async (req, res) => {
             }
         });
 
-        // Créer un enregistrement de paiement en utilisant mongoose.model directement
-        const payment = await mongoose.model('Payment').create({
+        // Créer un enregistrement de paiement avec la méthode qui fonctionnait
+        const payment = await Payment.create([{
             secret: secret._id,
             user: req.user.id,
             amount: buyerTotal,
@@ -142,14 +141,14 @@ exports.createPaymentIntent = async (req, res) => {
                 buyerMargin,
                 sellerMargin
             }
-        });
+        }], { session });
 
         await session.commitTransaction();
 
         res.json({
             clientSecret: paymentIntent.client_secret,
             paymentId: paymentIntent.id,
-            buyerTotal: buyerTotal
+            buyerTotal
         });
 
     } catch (error) {
