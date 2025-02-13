@@ -275,21 +275,6 @@ exports.getUnpurchasedSecrets = async (req, res) => {
     }
 };
 
-const calculatePrices = (originalPrice) => {
-    const buyerMargin = 0.15; // 15% de marge pour l'acheteur
-    const sellerMargin = 0.10; // 10% de marge pour le vendeur
-
-    const buyerTotal = originalPrice * (1 + buyerMargin);
-    const sellerAmount = originalPrice * (1 - sellerMargin);
-    const platformFee = buyerTotal - sellerAmount;
-
-    return {
-        buyerTotal: Math.round(buyerTotal * 100), // En centimes pour Stripe
-        sellerAmount: Math.round(sellerAmount * 100),
-        platformFee: Math.round(platformFee * 100),
-        originalPrice: Math.round(originalPrice * 100)
-    };
-};
 
 // Remplacer la fonction calculatePrices par celle-ci
 const calculateStripeFees = async (basePrice, sellerId) => {
@@ -564,8 +549,6 @@ exports.getSecretConversation = async (req, res) => {
                 select: 'label content user'
             });
 
-        console.log("Conversation trouvée:", JSON.stringify(conversation, null, 2)); // Debug
-
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
@@ -598,8 +581,6 @@ exports.getConversation = async (req, res) => {
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
-
-        console.log("Conversation messages:", conversation.messages); // Log des messages de la conversation
 
         res.status(200).json({
             messages: conversation.messages,
@@ -653,8 +634,6 @@ exports.getUserConversations = async (req, res) => {
                 }
             })
             .sort({ updatedAt: -1 });
-
-        console.log('Conversations avec données complètes:', JSON.stringify(conversations, null, 2));
 
         res.status(200).json(conversations);
     } catch (error) {
