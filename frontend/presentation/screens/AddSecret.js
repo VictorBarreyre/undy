@@ -57,24 +57,27 @@ const AddSecret = () => {
 
     useEffect(() => {
         const handleDeepLink = async (event) => {
-          const url = event.url;
+          // Décodez l'URL complète
+          const fullUrl = decodeURIComponent(event.url);
+          console.log('Full Deep Link URL:', fullUrl);
+      
+          // Extraction de l'URL Stripe originale
+          const stripeUrlMatch = fullUrl.match(/url=(.+)$/);
+          const stripeUrl = stripeUrlMatch ? decodeURIComponent(stripeUrlMatch[1]) : null;
           
-          console.log('Deep Link URL:', url);
+          console.log('Extracted Stripe URL:', stripeUrl);
           
-          if (url.includes('stripe/return') || url.includes('stripe/refresh')) {
+          if (fullUrl.includes('stripe-return') && stripeUrl) {
             try {
-              const stripeStatus = await handleStripeOnboardingRefresh();
-              if (stripeStatus.success) {
-                Alert.alert('Succès', 'Configuration du compte terminée avec succès !');
-                navigation.navigate('Profile');
-              }
+              // Ouvrir directement l'URL Stripe dans le navigateur
+              await Linking.openURL(stripeUrl);
             } catch (error) {
-              Alert.alert('Erreur', error.message);
+              Alert.alert('Erreur', 'Impossible d\'ouvrir l\'URL Stripe');
             }
           }
         };
       
-        Linking.addEventListener('url', handleDeepLink);
+        const subscription = Linking.addEventListener('url', handleDeepLink);
       
         Linking.getInitialURL().then(url => {
           if (url) {
@@ -83,12 +86,11 @@ const AddSecret = () => {
         });
       
         return () => {
-          Linking.removeEventListener('url', handleDeepLink);
+          subscription.remove();
         };
       }, []);
 
-
-    const handlePress = async () => {
+      const handlePress = async () => {
         try {
             const result = await handlePostSecret({
                 selectedLabel,
@@ -104,8 +106,18 @@ const AddSecret = () => {
                     [
                         {
                             text: "Configurer maintenant",
-                            onPress: () => {
-                                Linking.openURL(result.stripeOnboardingUrl);
+                            onPress: async () => {
+                                try {
+                                    const stripeStatus = await handleStripeOnboardingRefresh();
+                                    
+                                    if (stripeStatus.stripeOnboardingUrl) {
+                                        await Linking.openURL(stripeStatus.stripeOnboardingUrl);
+                                    } else {
+                                        Alert.alert('Information', stripeStatus.message);
+                                    }
+                                } catch (error) {
+                                    Alert.alert('Erreur', error.message);
+                                }
                             }
                         },
                         {
@@ -118,7 +130,7 @@ const AddSecret = () => {
                 Alert.alert('Succès', result.message);
             }
     
-            // Réinitialiser les champs dans tous les cas
+            // Réinitialiser les champs
             setSecretText('');
             setSelectedLabel('');
             setPrice('');
@@ -127,7 +139,7 @@ const AddSecret = () => {
         }
     };
 
-
+    
     useEffect(() => {
         // Cette fonction serait appelée quand l'app est ouverte via l'URL de retour Stripe
         const handleStripeReturn = async () => {

@@ -158,56 +158,63 @@ exports.createSecret = async (req, res) => {
 // Ajouter une route pour gérer le rafraîchissement de l'onboarding si nécessaire
 exports.refreshStripeOnboarding = async (req, res) => {
     try {
-        // Récupérer l'utilisateur avec ses informations Stripe
         const user = await User.findById(req.user.id).select('+lastStripeOnboardingUrl stripeAccountId stripeAccountStatus');
 
         if (!user.stripeAccountId) {
             return res.status(400).json({
+                status: 'no_account',
                 message: 'Aucun compte Stripe associé',
                 needsRegistration: true
             });
         }
 
-        // Définir dynamiquement les URLs de retour
-        const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
-        const refreshUrl = `${baseReturnUrl}/stripe/refresh`;
-        const returnUrl = `${baseReturnUrl}/stripe/return`;
-
         // Vérifier le statut du compte Stripe
         const account = await stripe.accounts.retrieve(user.stripeAccountId);
 
-        // Si le compte est déjà complètement configuré
+        // Détails du statut du compte
+        const accountStatus = {
+            charges_enabled: account.charges_enabled,
+            payouts_enabled: account.payouts_enabled,
+            details_submitted: account.details_submitted
+        };
+
+        // Si le compte est complètement configuré
         if (account.charges_enabled && account.payouts_enabled) {
             user.stripeAccountStatus = 'active';
             user.stripeOnboardingComplete = true;
             await user.save();
 
             return res.status(200).json({
-                message: 'Compte déjà configuré',
-                stripeStatus: 'active'
+                status: 'active',
+                message: 'Compte Stripe complètement configuré',
+                accountStatus
             });
         }
 
         // Créer un nouveau lien d'onboarding
         const accountLink = await stripe.accountLinks.create({
             account: user.stripeAccountId,
-            refresh_url: refreshUrl,
-            return_url: returnUrl,
+            refresh_url: `${baseReturnUrl}/stripe/refresh`,
+            return_url: `${baseReturnUrl}/stripe/return`,
             type: 'account_onboarding',
         });
 
-        // Mettre à jour l'URL d'onboarding dans la base de données
+        // Mettre à jour l'URL d'onboarding
         user.lastStripeOnboardingUrl = accountLink.url;
         user.stripeAccountStatus = 'pending';
         await user.save();
 
-        res.json({
+        return res.status(201).json({
+            status: 'pending',
+            message: 'Configuration du compte Stripe en cours',
             url: accountLink.url,
-            stripeStatus: user.stripeAccountStatus
+            accountStatus
         });
+
     } catch (error) {
         console.error('Erreur refresh onboarding:', error);
         res.status(500).json({
+            status: 'error',
             message: error.message,
             stripeStatus: 'error'
         });

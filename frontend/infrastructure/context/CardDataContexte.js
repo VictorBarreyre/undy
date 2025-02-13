@@ -100,11 +100,39 @@ const handleStripeOnboardingRefresh = async () => {
       
       console.log('Réponse rafraîchissement Stripe:', response.data);
 
-      return {
-          success: true,
-          stripeOnboardingUrl: response.data.url,
-          stripeStatus: response.data.stripeStatus
-      };
+      // Nouvelle logique basée sur le statut
+      switch(response.data.status) {
+          case 'active':
+              return {
+                  success: true,
+                  verified: true,
+                  stripeStatus: 'active',
+                  message: 'Compte Stripe complètement configuré'
+              };
+          
+          case 'pending':
+              return {
+                  success: true,
+                  verified: false,
+                  stripeOnboardingUrl: response.data.url,
+                  stripeStatus: 'pending',
+                  message: 'Configuration du compte Stripe en cours'
+              };
+          
+          case 'no_account':
+              return {
+                  success: false,
+                  verified: false,
+                  needsRegistration: true,
+                  message: 'Aucun compte Stripe associé'
+              };
+          
+          default:
+              return {
+                  success: false,
+                  message: 'Statut inconnu'
+              };
+      }
   } catch (error) {
       console.error('Erreur rafraîchissement Stripe:', error?.response?.data || error.message);
       throw new Error(error?.response?.data?.message || 'Erreur lors du rafraîchissement de la configuration Stripe');
