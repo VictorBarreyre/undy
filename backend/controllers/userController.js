@@ -293,18 +293,20 @@ exports.getUserTransactions = async (req, res) => {
         // Transformer les données
         const formattedTransactions = transactions.data.map(transaction => ({
             id: transaction.id,
-            grossAmount: transaction.amount / 100, // Montant brut en euros
-            fees: transaction.fee / 100, // Frais en euros
-            netAmount: transaction.net / 100, // Montant net en euros
-            date: new Date(transaction.created * 1000).toLocaleDateString('fr-FR'),
-            status: transaction.status,
-            type: transaction.type
+            grossAmount: transaction.amount ? transaction.amount / 100 : 0, // Vérification de amount
+            fees: transaction.fee ? transaction.fee / 100 : 0, // Vérification de fee
+            netAmount: transaction.net ? transaction.net / 100 : 0, // Vérification de net
+            date: transaction.created 
+                ? new Date(transaction.created * 1000).toLocaleDateString('fr-FR') 
+                : 'Date non disponible',
+            status: transaction.status || 'Statut inconnu',
+            type: transaction.type || 'Type inconnu'
         }));
         
         res.json(formattedTransactions);
     } catch (error) {
         console.error('Erreur lors de la récupération des transactions :', error);
-        res.status(500).json({ message: 'Erreur lors de la récupération des transactions' });
+        res.status(500).json({ message: 'Erreur lors de la récupération des transactions', errorDetails: error.message });
     }
 };
 
