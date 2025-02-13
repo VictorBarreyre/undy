@@ -276,6 +276,49 @@ exports.getUserProfile = async (req, res) => {
     }
 };
 
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+exports.getUserTransactions = async (req, res) => {
+    try {
+        const user = req.user;
+
+        if (!user.stripeAccountId) {
+            return res.status(400).json({ message: 'Compte Stripe non configuré' });
+        }
+
+        const transactions = await stripe.balanceTransactions.list({
+            stripe_account: user.stripeAccountId,
+        });
+
+        res.json(transactions.data);
+    } catch (error) {
+        console.error('Erreur lors de la récupération des transactions :', error);
+        res.status(500).json({ message: 'Erreur lors de la récupération des transactions' });
+    }
+};
+
+exports.createTransferIntent = async (req, res) => {
+    try {
+        const user = req.user;
+        const { amount } = req.body;
+
+        if (!user.stripeAccountId) {
+            return res.status(400).json({ message: 'Compte Stripe non configuré' });
+        }
+
+        const transferIntent = await stripe.transfers.create({
+            amount: Math.round(amount * 100), // Montant en centimes
+            currency: 'eur',
+            destination: user.stripeAccountId,
+        });
+
+        res.json({ clientSecret: transferIntent.client_secret });
+    } catch (error) {
+        console.error('Erreur lors de la création de l\'intention de virement :', error);
+        res.status(500).json({ message: 'Erreur lors de la création de l\'intention de virement' });
+    }
+};
+
 exports.getUserById = async (req, res) => {
     try {
         const userId = req.params.id;

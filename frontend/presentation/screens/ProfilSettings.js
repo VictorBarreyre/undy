@@ -9,7 +9,7 @@ import { faUser, faEnvelope, faLock, faDollarSign, faBirthdayCake, faPhone, faBu
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 import TypewriterLoader from '../components/TypewriterLoader';
-import { CommonActions } from '@react-navigation/native';
+import EarningsModal from '../components/EarningModal';
 import { BlurView } from '@react-native-community/blur';
 
 
@@ -25,6 +25,7 @@ export default function Profile({ navigation }) {
     const [notificationsEnabled, setNotificationsEnabled] = useState(userData?.notifs || false);
     const [contactsEnabled, setContactsEnabled] = useState(userData?.contacts || false);
     const [inputValue, setInputValue] = useState('')
+    const [earningsModalVisible, setEarningsModalVisible] = useState(false);
 
     const [isLoading, setIsLoading] = useState(false);
 
@@ -39,11 +40,16 @@ export default function Profile({ navigation }) {
     };
 
     const openEditModal = (field, currentValue) => {
-        setSelectedField(field);
-        setTempValue(currentValue);
-        setInputValue(currentValue || ''); // Ajoutez cette ligne
-        setModalVisible(true);
+        if (field === 'income') {
+            setEarningsModalVisible(true);
+        } else {
+            setSelectedField(field);
+            setTempValue(currentValue);
+            setInputValue(currentValue || '');
+            setModalVisible(true);
+        }
     };
+
 
     const saveChanges = async () => {
         console.log('Selected Field:', selectedField);
@@ -411,6 +417,12 @@ export default function Profile({ navigation }) {
                     </VStack>
                 </Box>
             </ScrollView>
+
+            <EarningsModal
+                isOpen={earningsModalVisible}
+                onClose={() => setEarningsModalVisible(false)}
+                userData={userData}
+            />
 
             <Modal isOpen={modalVisible} onClose={() => setModalVisible(false)}>
                 <View width='100%' style={{ flex: 1 }}>

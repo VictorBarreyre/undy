@@ -9,6 +9,8 @@ const {
     getUserProfile,
     uploadProfilePicture,
     downloadUserData,
+    getUserTransactions,
+    createTransferIntent,
     clearUserData,
     deleteUserAccount,
     getUserById } = require('../controllers/userController');
@@ -33,6 +35,11 @@ router.put('/profile', protect, updateUserProfile);
 
 // Route protégée pour obtenir le profil de l'utilisateur connecté
 router.get('/profile', protect, getUserProfile); // Utilisation du middleware "protect"
+
+router.get('/transactions', protect, getUserTransactions);
+
+router.post('/create-transfer-intent', protect, createTransferIntent);
+
 
 // Route pour télécharger une photo de profil
 router.put(
