@@ -44,7 +44,7 @@ exports.createSecret = async (req, res) => {
                     business_type: 'individual',
                     business_profile: {
                         mcc: '5734', // Code pour services digitaux
-                        url: baseReturnUrl
+                        url: 'https://hushy.app'
                     }
                 });
 
