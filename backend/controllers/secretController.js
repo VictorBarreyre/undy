@@ -26,8 +26,8 @@ exports.createSecret = async (req, res) => {
 
         // Définir dynamiquement les URLs de retour
         const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
-        const refreshUrl = `${baseReturnUrl}/stripe-refresh`;
-        const returnUrl = `${baseReturnUrl}/stripe-return`;
+        const refreshUrl = `${baseReturnUrl}/stripe/refresh`;
+        const returnUrl = `${baseReturnUrl}/stripe/return`;
 
         // Si l'utilisateur n'a pas de compte Stripe, en créer un
         if (!user.stripeAccountId) {
@@ -170,8 +170,8 @@ exports.refreshStripeOnboarding = async (req, res) => {
 
         // Définir dynamiquement les URLs de retour
         const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
-        const refreshUrl = `${baseReturnUrl}/stripe-refresh`;
-        const returnUrl = `${baseReturnUrl}/stripe-return`;
+        const refreshUrl = `${baseReturnUrl}/stripe/refresh`;
+        const returnUrl = `${baseReturnUrl}/stripe/return`;
 
         // Vérifier le statut du compte Stripe
         const account = await stripe.accounts.retrieve(user.stripeAccountId);

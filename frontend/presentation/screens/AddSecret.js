@@ -55,18 +55,17 @@ const AddSecret = () => {
         return (priceNumber * (1 - sellerMargin)).toFixed(2);
     };
 
-
     useEffect(() => {
         const handleDeepLink = async (event) => {
           const url = event.url;
           
-          // Vérifier si l'URL correspond à un retour Stripe
-          if (url.includes('stripe-return') || url.includes('stripe-refresh')) {
+          console.log('Deep Link URL:', url);
+          
+          if (url.includes('stripe/return') || url.includes('stripe/refresh')) {
             try {
               const stripeStatus = await handleStripeOnboardingRefresh();
               if (stripeStatus.success) {
                 Alert.alert('Succès', 'Configuration du compte terminée avec succès !');
-                // Naviguer vers l'écran approprié
                 navigation.navigate('Profile');
               }
             } catch (error) {
@@ -75,17 +74,14 @@ const AddSecret = () => {
           }
         };
       
-        // Ajouter l'écouteur de liens
         Linking.addEventListener('url', handleDeepLink);
       
-        // Vérifier l'URL initiale
         Linking.getInitialURL().then(url => {
           if (url) {
             handleDeepLink({ url });
           }
         });
       
-        // Nettoyer l'écouteur
         return () => {
           Linking.removeEventListener('url', handleDeepLink);
         };
