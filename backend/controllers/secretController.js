@@ -291,6 +291,28 @@ const calculatePrices = (originalPrice) => {
     };
 };
 
+// Remplacer la fonction calculatePrices par celle-ci
+const calculateStripeFees = async (basePrice, sellerId) => {
+    // Récupérer le compte Stripe du vendeur
+    const seller = await User.findById(sellerId).select('stripeAccountId');
+    if (!seller || !seller.stripeAccountId) {
+        throw new Error('Compte vendeur non trouvé ou non configuré pour Stripe');
+    }
+
+    // Convertir le prix en centimes pour Stripe
+    const amountInCents = Math.round(basePrice * 100);
+    
+    // 25% de frais de plateforme
+    const applicationFeeAmount = Math.round(amountInCents * 0.25);
+
+    return {
+        amount: amountInCents,
+        application_fee_amount: applicationFeeAmount,
+        seller_stripe_account: seller.stripeAccountId
+    };
+};
+
+// Modifier createPaymentIntent
 exports.createPaymentIntent = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -301,35 +323,39 @@ exports.createPaymentIntent = async (req, res) => {
             return res.status(404).json({ message: 'Secret introuvable.' });
         }
 
-        const priceDetails = calculatePrices(secret.price);
+        // Calculer les frais
+        const { amount, application_fee_amount, seller_stripe_account } = 
+            await calculateStripeFees(secret.price, secret.user);
 
-        // Créer l'intention de paiement Stripe avec le montant total pour l'acheteur
+        // Créer l'intention de paiement Stripe
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: priceDetails.buyerTotal, // Déjà en centimes
+            amount,
             currency: 'eur',
+            application_fee_amount,
+            transfer_data: {
+                destination: seller_stripe_account,
+            },
+            automatic_payment_methods: {
+                enabled: true,
+            },
             metadata: {
                 secretId: secret._id.toString(),
-                userId: req.user.id,
-                originalPrice: secret.price.toString(),
-                buyerTotal: priceDetails.buyerTotal.toString(),
-                sellerAmount: priceDetails.sellerAmount.toString(),
-                platformFee: priceDetails.platformFee.toString()
+                buyerId: req.user.id,
+                originalPrice: secret.price.toString()
             }
         });
 
-        // Créer un enregistrement de paiement
+        // Créer l'enregistrement de paiement
         const payment = await Payment.create([{
             secret: secret._id,
             user: req.user.id,
-            amount: priceDetails.buyerTotal / 100, // Convertir en euros pour la DB
+            amount: amount / 100, // Convertir en euros pour la DB
             paymentIntentId: paymentIntent.id,
             status: 'pending',
             metadata: {
                 originalPrice: secret.price,
-                sellerAmount: priceDetails.sellerAmount / 100,
-                platformFee: priceDetails.platformFee / 100,
-                buyerMargin: 0.15,
-                sellerMargin: 0.10
+                applicationFee: application_fee_amount / 100,
+                stripeAccountId: seller_stripe_account
             }
         }], { session });
 
@@ -338,7 +364,7 @@ exports.createPaymentIntent = async (req, res) => {
         res.json({
             clientSecret: paymentIntent.client_secret,
             paymentId: paymentIntent.id,
-            buyerTotal: priceDetails.buyerTotal / 100
+            amount: amount / 100
         });
 
     } catch (error) {
@@ -350,7 +376,7 @@ exports.createPaymentIntent = async (req, res) => {
     }
 };
 
-
+// Modifier purchaseSecret pour s'adapter aux nouveaux frais
 exports.purchaseSecret = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -360,25 +386,18 @@ exports.purchaseSecret = async (req, res) => {
         const secretId = req.params.id;
         const userId = req.user.id;
 
-        // Logs détaillés d'entrée
-        console.log('Purchase Secret Request:', {
-            secretId,
-            paymentIntentId,
-            userId
-        });
+        console.log('Purchase Secret Request:', { secretId, paymentIntentId, userId });
 
-        // Vérification des paramètres d'entrée
         if (!paymentIntentId) {
             return res.status(400).json({ message: 'ID de paiement manquant' });
         }
 
-        // Recherche du secret
         const secret = await Secret.findById(secretId);
         if (!secret) {
             return res.status(404).json({ message: 'Secret introuvable.' });
         }
 
-        // Vérification si le secret est déjà acheté
+        // Vérifier si déjà acheté
         if (secret.purchasedBy.includes(userId)) {
             let conversation = await Conversation.findOne({
                 secret: secretId,
@@ -402,67 +421,30 @@ exports.purchaseSecret = async (req, res) => {
             });
         }
 
-        // Calcul des prix avec marges
-        const priceDetails = calculatePrices(secret.price);
-
-        // Vérification du statut du paiement Stripe
+        // Vérifier le paiement Stripe
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-        console.log('Statut PaymentIntent Stripe:', {
-            status: paymentIntent.status,
-            amount: paymentIntent.amount,
-            expectedAmount: priceDetails.buyerTotal,
-            originalPrice: secret.price,
-            calculatedBuyerTotal: priceDetails.buyerTotal / 100
-        });
-
-        // Vérifications de sécurité supplémentaires
         if (
             paymentIntent.status !== 'succeeded' ||
-            paymentIntent.amount !== priceDetails.buyerTotal ||
             paymentIntent.metadata.secretId !== secretId ||
-            paymentIntent.metadata.userId !== userId
+            paymentIntent.metadata.buyerId !== userId
         ) {
             await session.abortTransaction();
-            return res.status(400).json({
-                message: 'Paiement invalide',
-                details: {
-                    stripeStatus: paymentIntent.status,
-                    amountCheck: paymentIntent.amount === priceDetails.buyerTotal,
-                    secretIdCheck: paymentIntent.metadata.secretId === secretId,
-                    userIdCheck: paymentIntent.metadata.userId === userId
-                }
-            });
+            return res.status(400).json({ message: 'Paiement invalide' });
         }
 
-        // Enregistrement du paiement avec les détails des marges
+        // Mettre à jour le payment dans la DB
         const payment = await Payment.findOneAndUpdate(
             { paymentIntentId },
-            {
-                secret: secretId,
-                user: userId,
-                amount: priceDetails.buyerTotal / 100,
-                status: 'succeeded',
-                metadata: {
-                    originalPrice: secret.price,
-                    sellerAmount: priceDetails.sellerAmount / 100,
-                    platformFee: priceDetails.platformFee / 100,
-                    buyerMargin: 0.15,
-                    sellerMargin: 0.10
-                }
-            },
-            {
-                upsert: true,
-                new: true,
-                session
-            }
+            { status: 'succeeded' },
+            { session, new: true }
         );
 
         // Marquer le secret comme acheté
         secret.purchasedBy.push(userId);
         await secret.save({ session });
 
-        // Gestion de la conversation
+        // Créer ou mettre à jour la conversation
         let conversation = await Conversation.findOne({
             secret: secretId
         }).session(session);
@@ -475,19 +457,9 @@ exports.purchaseSecret = async (req, res) => {
                 messages: []
             }], { session });
             conversation = conversation[0];
-        } else if (!conversation.participants.includes(userId)) {
-            conversation.participants.push(userId);
-            await conversation.save({ session });
         }
 
         await session.commitTransaction();
-
-        console.log('Achat du secret réussi', {
-            conversationId: conversation._id,
-            secretId,
-            paymentId: payment._id,
-            finalAmount: priceDetails.buyerTotal / 100
-        });
 
         res.status(200).json({
             message: 'Secret acheté avec succès.',
@@ -497,16 +469,8 @@ exports.purchaseSecret = async (req, res) => {
 
     } catch (error) {
         await session.abortTransaction();
-        console.error('Erreur détaillée lors de l\'achat:', {
-            errorMessage: error.message,
-            stack: error.stack,
-            secretId: req.params.id,
-            userId: req.user?.id
-        });
-        res.status(500).json({
-            message: 'Erreur serveur.',
-            error: error.message
-        });
+        console.error('Erreur achat:', error);
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     } finally {
         session.endSession();
     }
