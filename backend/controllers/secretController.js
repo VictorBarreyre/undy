@@ -301,7 +301,7 @@ const calculateStripeFees = async (basePrice, sellerId) => {
 
     // Convertir le prix en centimes pour Stripe
     const amountInCents = Math.round(basePrice * 100);
-    
+
     // 25% de frais de plateforme
     const applicationFeeAmount = Math.round(amountInCents * 0.25);
 
@@ -324,7 +324,7 @@ exports.createPaymentIntent = async (req, res) => {
         }
 
         // Calculer les frais
-        const { amount, application_fee_amount, seller_stripe_account } = 
+        const { amount, application_fee_amount, seller_stripe_account } =
             await calculateStripeFees(secret.price, secret.user);
 
         // Créer l'intention de paiement Stripe
@@ -353,9 +353,9 @@ exports.createPaymentIntent = async (req, res) => {
             paymentIntentId: paymentIntent.id,
             status: 'pending',
             metadata: {
-                originalPrice: secret.price,
-                applicationFee: application_fee_amount / 100,
-                stripeAccountId: seller_stripe_account
+                originalPrice: amount,
+                platformFee: application_fee_amount,
+                sellerAmount: amount - application_fee_amount
             }
         }], { session });
 
@@ -508,7 +508,7 @@ exports.confirmPayment = async (req, res) => {
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
 
-        
+
         if (paymentIntent.status === 'succeeded') {
             payment.status = 'succeeded';
             await payment.save({ session });
