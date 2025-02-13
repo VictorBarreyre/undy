@@ -287,7 +287,7 @@ exports.getUserTransactions = async (req, res) => {
         }
 
         const transactions = await stripe.balanceTransactions.list({
-            stripe_account: user.stripeAccountId,
+            stripeAccount: user.stripeAccountId,
         });
 
         res.json(transactions.data);

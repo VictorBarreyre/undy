@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { useStripe } from '@stripe/stripe-react-native';
 import axios from 'axios';
 import { styles } from '../../infrastructure/theme/styles';
+import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance'
 
 const EarningsModal = ({ isOpen, onClose, userData }) => {
     const [transactions, setTransactions] = useState([]);
@@ -13,12 +14,16 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
 
     useEffect(() => {
         const fetchTransactions = async () => {
+            const instance = getAxiosInstance();
             try {
                 setIsLoading(true);
-                const response = await axios.get('/api/transactions', {
+                const response = await instance.get('/api/users/transactions', {
                     headers: {
                         Authorization: `Bearer ${userData.token}`,
                     },
+                    params: {
+                        stripeAccountId: userData.stripeAccountId // Ajoutez le stripeAccountId ici
+                    }
                 });
                 setTransactions(response.data);
                 setIsLoading(false);
@@ -31,16 +36,18 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
         if (isOpen) {
             fetchTransactions();
         }
-    }, [isOpen, userData.token]);
+    }, [isOpen, userData.token, userData.stripeAccountId]);
 
     const handleTransferFunds = async () => {
+        const instance = getAxiosInstance();
         try {
             // Récupérer le montant total des revenus
             const totalEarnings = transactions.reduce((total, transaction) => total + transaction.amount, 0);
     
             // Créer une intention de paiement avec Stripe
-            const response = await axios.post('/api/create-transfer-intent', {
+            const response = await instance.post('/api/users/create-transfer-intent', {
                 amount: totalEarnings,
+                stripeAccountId: userData.stripeAccountId // Ajoutez également ici
             }, {
                 headers: {
                     Authorization: `Bearer ${userData.token}`,
@@ -75,7 +82,7 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
         }
     };
 
-    
+
     return (
         <Modal isOpen={isOpen} onClose={onClose}>
             <View width='100%' style={{ flex: 1 }}>
