@@ -91,7 +91,10 @@ export const AuthProvider = ({ children }) => {
             const cleanedData = cleanUserData(response.data);
             setUserData(cleanedData);
             await AsyncStorage.setItem('userData', JSON.stringify(cleanedData));
-            return cleanedData;
+            setUserData({
+                ...cleanedData,
+                totalEarnings: response.data.totalEarnings // Ajoutez cette ligne
+            });
         } catch (error) {
             console.error('Erreur fetchUserData:', error);
             throw error;
