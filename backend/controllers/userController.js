@@ -291,6 +291,7 @@ exports.getUserTransactions = async (req, res) => {
         });
 
         res.json(transactions.data);
+        console.log(transactions.data)
     } catch (error) {
         console.error('Erreur lors de la récupération des transactions :', error);
         res.status(500).json({ message: 'Erreur lors de la récupération des transactions' });
