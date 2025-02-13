@@ -15,7 +15,7 @@ const SCREEN_HEIGHT = Dimensions.get('window').height;
 const AddSecret = () => {
 
     const { userData } = useContext(AuthContext); // Utilisation correcte de useContext
-    const { data, handlePostSecret } = useCardData();
+    const { data, handlePostSecret, handleStripeOnboardingRefresh } = useCardData();
     const [secretText, setSecretText] = useState('');
     const [selectedLabel, setSelectedLabel] = useState(''); // État pour la sélection du label
     const [price, setPrice] = useState(''); // État pour le prix
@@ -127,19 +127,29 @@ const AddSecret = () => {
                     ]
                 );
             } else {
-                Alert.alert('Succès', result.message);
+                Alert.alert(
+                    "Félicitations ! 🎉",
+                    "Votre secret a été publié avec succès. Il est maintenant disponible à la vente !",
+                    [
+                        {
+                            text: "Super !",
+                            onPress: () => {
+                                // Reset form fields
+                                setSecretText('');
+                                setSelectedLabel('');
+                                setPrice('');
+                                setExpiresIn(7);
+                            }
+                        }
+                    ]
+                );
             }
-    
-            // Réinitialiser les champs
-            setSecretText('');
-            setSelectedLabel('');
-            setPrice('');
         } catch (error) {
             Alert.alert('Erreur', error.message);
         }
     };
 
-    
+
     useEffect(() => {
         // Cette fonction serait appelée quand l'app est ouverte via l'URL de retour Stripe
         const handleStripeReturn = async () => {

@@ -210,8 +210,50 @@ exports.googleLogin = async (req, res) => {
 
 exports.getUserProfile = async (req, res) => {
     try {
-        const user = req.user; // L'utilisateur authentifié est attaché à la requête par le middleware "protect"
-        const baseUrl = `${req.protocol}://${req.get('host')}`; // URL de base du serveur
+        const user = req.user;
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+        // Si l'utilisateur a un compte Stripe actif, récupérer les infos supplémentaires
+        let stripeData = {};
+        if (user.stripeAccountId && user.stripeAccountStatus === 'active') {
+            try {
+                const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+                
+                // Récupérer le compte Stripe
+                const account = await stripe.accounts.retrieve(user.stripeAccountId);
+                
+                // Récupérer le solde
+                const balance = await stripe.balance.retrieve({
+                    stripeAccount: user.stripeAccountId
+                });
+
+                // Calculer le total des revenus (disponible + en attente)
+                const available = balance.available.reduce((sum, bal) => sum + bal.amount, 0);
+                const pending = balance.pending.reduce((sum, bal) => sum + bal.amount, 0);
+                const totalEarnings = (available + pending) / 100; // Conversion en euros
+
+                // Récupérer l'IBAN (si disponible)
+                let externalAccount = null;
+                if (account.external_accounts && account.external_accounts.data.length > 0) {
+                    const bankAccount = account.external_accounts.data[0];
+                    externalAccount = `****${bankAccount.last4}`;
+                }
+
+                stripeData = {
+                    totalEarnings,
+                    stripeExternalAccount: externalAccount
+                };
+
+                // Mettre à jour l'utilisateur avec les nouvelles données
+                await User.findByIdAndUpdate(user._id, {
+                    totalEarnings,
+                    stripeExternalAccount: externalAccount
+                });
+            } catch (stripeError) {
+                console.error('Erreur lors de la récupération des données Stripe:', stripeError);
+            }
+        }
+
         res.json({
             _id: user._id,
             name: user.name,
@@ -222,9 +264,13 @@ exports.getUserProfile = async (req, res) => {
             notifs: user.notifs,
             contacts: user.contacts,
             subscriptions: user.subscriptions,
+            stripeAccountId: user.stripeAccountId,
+            stripeAccountStatus: user.stripeAccountStatus,
+            stripeOnboardingComplete: user.stripeOnboardingComplete,
+            ...stripeData // Ajoute totalEarnings et stripeExternalAccount si disponibles
         });
     } catch (error) {
-        console.error('Erreur lors de la récupération du profil utilisateur :', error);
+        console.error('Erreur lors de la récupération du profil utilisateur:', error);
         res.status(500).json({ message: 'Erreur lors de la récupération du profil utilisateur' });
     }
 };

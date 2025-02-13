@@ -28,6 +28,10 @@ export default function Profile({ navigation }) {
 
     const [isLoading, setIsLoading] = useState(false);
 
+    if (userData) {
+        const { profilePicture, ...userDataWithoutPicture } = userData;
+        console.log('Données utilisateur :', userDataWithoutPicture);
+    }
 
     const truncateText = (text, maxLength) => {
         if (!text) return ''; // Gérer les cas où le texte est null ou undefined
@@ -44,17 +48,17 @@ export default function Profile({ navigation }) {
     const saveChanges = async () => {
         console.log('Selected Field:', selectedField);
         console.log('Input Value:', inputValue); // Ajoutez ce log pour déboguer
-    
+
         // Utilisez la valeur correcte en fonction du type de champ
         const valueToUpdate = selectedField === 'birthdate' ? tempValue : inputValue;
-    
-        const updatedData = { 
+
+        const updatedData = {
             ...userData,
             [selectedField]: valueToUpdate
         };
-    
+
         console.log('Données à mettre à jour avant envoi:', updatedData); // Pour déboguer
-    
+
         const result = await updateUserData(updatedData);
         setMessage(result.message);
         setIsSuccess(result.success);
@@ -190,8 +194,31 @@ export default function Profile({ navigation }) {
         password: { label: 'Mot de passe', icon: faLock, value: '*********' },
         phone: { label: 'Numéro de téléphone', icon: faPhone, truncateLength: 10 },
         birthdate: { label: 'Date de naissance', icon: faBirthdayCake, truncateLength: 10 },
-        income: { label: 'Vos revenus', icon: faDollarSign, truncateLength: 10 },
-        bank: { label: 'Compte bancaire', icon: faBuildingColumns, truncateLength: 10 },
+        income: {
+            label: 'Vos revenus',
+            icon: faDollarSign,
+            truncateLength: 15,
+            getValue: (userData) => {
+                if (!userData?.totalEarnings && userData?.totalEarnings !== 0) {
+                    return '0,00 €';
+                }
+                return new Intl.NumberFormat('fr-FR', {
+                    style: 'currency',
+                    currency: 'EUR'
+                }).format(userData.totalEarnings || 0);
+            }
+        },
+        bank: {
+            label: 'Compte bancaire',
+            icon: faBuildingColumns,
+            truncateLength: 20,
+            getValue: (userData) => {
+                if (!userData?.stripeAccountStatus || userData.stripeAccountStatus !== 'active') {
+                    return 'Non configuré';
+                }
+                return userData.stripeAccountId ? 'Configuré' : 'Non configuré';
+            }
+        },
         notifs: { label: 'Mes notifications', icon: faBell, truncateLength: 10 },
         contacts: { label: 'Mes contacts', icon: faUserGroup, truncateLength: 10 },
         abonnements: { label: 'Mes abonnements', icon: faPerson, truncateLength: 10 },
@@ -247,7 +274,13 @@ export default function Profile({ navigation }) {
                                     const field = fieldMappings[key];
                                     const value = key === 'password'
                                         ? field.value
-                                        : userData?.[key] || 'Non renseigné'; // Priorité à une valeur spécifique (ex: password)
+                                        : key === 'income' || key === 'bank'
+                                            ? field.getValue(userData)
+                                            : key === 'notifs'
+                                                ? (notificationsEnabled ? 'Activé' : 'Désactivé')
+                                                : key === 'contacts'
+                                                    ? (contactsEnabled ? 'Activé' : 'Désactivé')
+                                                    : truncateText(userData?.[key] || 'Non renseigné', field.truncateLength || 15);
 
                                     // Vérifie si c'est le dernier élément
                                     const isLast = index === Object.keys(fieldMappings).length - 1;

@@ -67,6 +67,11 @@ const UserSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    stripeExternalAccount: {
+        type: String,  // Pour stocker l'IBAN masqué
+        select: true,
+        sparse: true
+    },
     lastStripeOnboardingUrl: {
         type: String, // Pour stocker temporairement l'URL d'onboarding
         select: false // Ne pas inclure par défaut dans les requêtes
