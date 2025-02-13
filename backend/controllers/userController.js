@@ -281,17 +281,27 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 exports.getUserTransactions = async (req, res) => {
     try {
         const user = req.user;
-
+        
         if (!user.stripeAccountId) {
             return res.status(400).json({ message: 'Compte Stripe non configuré' });
         }
-
+        
         const transactions = await stripe.balanceTransactions.list({
             stripeAccount: user.stripeAccountId,
         });
-
-        res.json(transactions.data);
-        console.log(transactions.data)
+        
+        // Transformer les données
+        const formattedTransactions = transactions.data.map(transaction => ({
+            id: transaction.id,
+            grossAmount: transaction.amount / 100, // Montant brut en euros
+            fees: transaction.fee / 100, // Frais en euros
+            netAmount: transaction.net / 100, // Montant net en euros
+            date: new Date(transaction.created * 1000).toLocaleDateString('fr-FR'),
+            status: transaction.status,
+            type: transaction.type
+        }));
+        
+        res.json(formattedTransactions);
     } catch (error) {
         console.error('Erreur lors de la récupération des transactions :', error);
         res.status(500).json({ message: 'Erreur lors de la récupération des transactions' });

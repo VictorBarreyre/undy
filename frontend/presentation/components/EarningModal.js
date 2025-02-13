@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Text, View, Button, VStack, Box, Input } from 'native-base';
+import { Modal, Text, View, Button, VStack, Box, Input, HStack } from 'native-base';
 import { BlurView } from '@react-native-community/blur';
 import { Platform } from 'react-native';
 import { useStripe } from '@stripe/stripe-react-native';
@@ -32,7 +32,7 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
                 setIsLoading(false);
             }
         };
-    
+
         if (isOpen) {
             fetchTransactions();
         }
@@ -43,7 +43,7 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
         try {
             // Récupérer le montant total des revenus
             const totalEarnings = transactions.reduce((total, transaction) => total + transaction.amount, 0);
-    
+
             // Créer une intention de paiement avec Stripe
             const response = await instance.post('/api/users/create-transfer-intent', {
                 amount: totalEarnings,
@@ -53,27 +53,27 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
                     Authorization: `Bearer ${userData.token}`,
                 },
             });
-    
+
             const { clientSecret } = response.data;
-    
+
             // Initialiser le formulaire de paiement Stripe
             const { error } = await initPaymentSheet({
                 paymentIntentClientSecret: clientSecret,
             });
-    
+
             if (error) {
                 console.error('Erreur lors de l\'initialisation du formulaire de paiement :', error);
                 return;
             }
-    
+
             // Présenter le formulaire de paiement Stripe
             const { error: presentError } = await presentPaymentSheet();
-    
+
             if (presentError) {
                 console.error('Erreur lors de la présentation du formulaire de paiement :', presentError);
                 return;
             }
-    
+
             // Le virement a été effectué avec succès
             console.log('Virement effectué avec succès !');
             onClose();
@@ -130,11 +130,12 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
                                 ) : (
                                     <>
                                         {transactions.map((transaction) => (
-                                            <View key={transaction.id}>
-                                                <Text>Montant : {transaction.amount} €</Text>
-                                                <Text>Date : {transaction.date}</Text>
-                                                {/* Affichez d'autres détails de la transaction */}
-                                            </View>
+                                            <VStack key={transaction.id} space={4} width="100%">
+                                                <HStack space={4} justifyContent='space-between' width="100%">
+                                                    <Text>Montant : {transaction.amount.toFixed(2)} €</Text>
+                                                    <Text>Date : {transaction.date}</Text>
+                                                </HStack>
+                                            </VStack>
                                         ))}
                                         <Text>Total des revenus : {userData.totalEarnings} €</Text>
                                     </>
