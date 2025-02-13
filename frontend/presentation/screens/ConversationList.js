@@ -161,7 +161,7 @@ const ConversationsList = ({ navigation }) => {
         >
           <FontAwesome5
             name="trash-alt"
-            size={20}
+            size={15}
             color="#FF78B2"
           />
         </Pressable>
