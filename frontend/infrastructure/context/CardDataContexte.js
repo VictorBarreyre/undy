@@ -49,65 +49,67 @@ export const CardDataProvider = ({ children }) => {
     initAxios();
   }, [isLoggedIn]);
 
+
   const handlePostSecret = async ({ selectedLabel, secretText, price, expiresIn = 7 }) => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+        throw new Error('Axios instance not initialized');
     }
     try {
-      const response = await instance.post('/api/secrets/createsecrets', {
-        label: selectedLabel,
-        content: secretText,
-        price: parseFloat(price),
-        expiresIn
-      });
+        const response = await instance.post('/api/secrets/createsecrets', {
+            label: selectedLabel,
+            content: secretText,
+            price: parseFloat(price),
+            expiresIn
+        });
 
-      // Si un URL d'onboarding est présent, le secret est créé mais nécessite une configuration Stripe
-      if (response.data.stripeOnboardingUrl) {
+        console.log('Réponse création secret:', response.data);
+
+        // Le reste de votre code reste identique
+        if (response.data.stripeOnboardingUrl) {
+            return {
+                success: true,
+                requiresStripeSetup: true,
+                secret: response.data.secret,
+                stripeOnboardingUrl: response.data.stripeOnboardingUrl,
+                stripeStatus: response.data.stripeStatus,
+                message: response.data.message
+            };
+        }
+
         return {
-          success: true,
-          requiresStripeSetup: true,
-          secret: response.data.secret,
-          stripeOnboardingUrl: response.data.stripeOnboardingUrl,
-          stripeStatus: response.data.stripeStatus,
-          message: response.data.message
+            success: true,
+            requiresStripeSetup: false,
+            secret: response.data.secret,
+            message: response.data.message
         };
-      }
-
-      // Si pas d'URL d'onboarding, le secret est créé et prêt à être vendu
-      return {
-        success: true,
-        requiresStripeSetup: false,
-        secret: response.data.secret,
-        message: response.data.message
-      };
-
     } catch (error) {
-      console.error('Erreur création secret:', error?.response?.data || error.message);
-      throw new Error(error?.response?.data?.message || 'Erreur lors de la création du secret');
+        console.error('Erreur création secret:', error?.response?.data || error.message);
+        throw new Error(error?.response?.data?.message || 'Erreur lors de la création du secret');
     }
-  };
+};
   
   
-  const handleStripeOnboardingRefresh = async () => {
-    const instance = getAxiosInstance();
-    if (!instance) {
+const handleStripeOnboardingRefresh = async () => {
+  const instance = getAxiosInstance();
+  if (!instance) {
       throw new Error('Axios instance not initialized');
-    }
-    try {
+  }
+  try {
       const response = await instance.post('/api/secrets/stripe/refresh-onboarding');
+      
+      console.log('Réponse rafraîchissement Stripe:', response.data);
+
       return {
-        success: true,
-        stripeOnboardingUrl: response.data.url,
-        stripeStatus: response.data.stripeStatus
+          success: true,
+          stripeOnboardingUrl: response.data.url,
+          stripeStatus: response.data.stripeStatus
       };
-    } catch (error) {
+  } catch (error) {
       console.error('Erreur rafraîchissement Stripe:', error?.response?.data || error.message);
       throw new Error(error?.response?.data?.message || 'Erreur lors du rafraîchissement de la configuration Stripe');
-    }
-  };
-
-
+  }
+};
 
   const fetchUnpurchasedSecrets = async (forceFetch = false) => {
 
