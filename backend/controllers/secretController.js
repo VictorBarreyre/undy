@@ -1,19 +1,18 @@
 const Secret = require('../models/Secret');
 const User = require('../models/User'); // Assurez-vous que le chemin est correct
 const mongoose = require('mongoose');
-const Conversation = require ('../models/Conversation')
+const Conversation = require('../models/Conversation')
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Payment = require('../models/Payment');
-
 
 
 exports.createSecret = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
-    
+
     try {
         const { label, content, price, expiresIn = 7 } = req.body;
-        
+
         // Validation des champs requis
         if (!label || !content || price == null) {
             return res.status(400).json({ message: 'Tous les champs sont requis.' });
@@ -25,6 +24,11 @@ exports.createSecret = async (req, res) => {
             return res.status(404).json({ message: "Utilisateur introuvable." });
         }
 
+        // Définir dynamiquement les URLs de retour
+        const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
+        const refreshUrl = `${baseReturnUrl}/stripe-refresh`;
+        const returnUrl = `${baseReturnUrl}/stripe-return`;
+
         // Si l'utilisateur n'a pas de compte Stripe, en créer un
         if (!user.stripeAccountId) {
             try {
@@ -34,21 +38,21 @@ exports.createSecret = async (req, res) => {
                     country: 'FR',
                     email: user.email,
                     capabilities: {
-                        card_payments: {requested: true},
-                        transfers: {requested: true},
+                        card_payments: { requested: true },
+                        transfers: { requested: true },
                     },
                     business_type: 'individual',
                     business_profile: {
                         mcc: '5734', // Code pour services digitaux
-                        url: process.env.FRONTEND_URL
+                        url: baseReturnUrl
                     }
                 });
 
                 // Créer le lien d'onboarding
                 const accountLink = await stripe.accountLinks.create({
                     account: account.id,
-                    refresh_url: `${process.env.FRONTEND_URL}/profile/stripe-refresh`,
-                    return_url: `${process.env.FRONTEND_URL}/profile/stripe-return`,
+                    refresh_url: refreshUrl,
+                    return_url: returnUrl,
                     type: 'account_onboarding',
                 });
 
@@ -93,8 +97,8 @@ exports.createSecret = async (req, res) => {
         if (!user.stripeOnboardingComplete || user.stripeAccountStatus !== 'active') {
             const accountLink = await stripe.accountLinks.create({
                 account: user.stripeAccountId,
-                refresh_url: `${process.env.FRONTEND_URL}/profile/stripe-refresh`,
-                return_url: `${process.env.FRONTEND_URL}/profile/stripe-return`,
+                refresh_url: refreshUrl,
+                return_url: returnUrl,
                 type: 'account_onboarding',
             });
 
@@ -156,21 +160,29 @@ exports.refreshStripeOnboarding = async (req, res) => {
     try {
         // Récupérer l'utilisateur avec ses informations Stripe
         const user = await User.findById(req.user.id).select('+lastStripeOnboardingUrl stripeAccountId stripeAccountStatus');
-        
+
         if (!user.stripeAccountId) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Aucun compte Stripe associé',
-                needsRegistration: true 
+                needsRegistration: true
             });
         }
 
+        // Définir dynamiquement les URLs de retour
+        const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
+        const refreshUrl = `${baseReturnUrl}/stripe-refresh`;
+        const returnUrl = `${baseReturnUrl}/stripe-return`;
+
         // Vérifier le statut du compte Stripe
         const account = await stripe.accounts.retrieve(user.stripeAccountId);
-        
+
         // Si le compte est déjà complètement configuré
         if (account.charges_enabled && account.payouts_enabled) {
-            await user.updateStripeStatus('active');
-            return res.status(200).json({ 
+            user.stripeAccountStatus = 'active';
+            user.stripeOnboardingComplete = true;
+            await user.save();
+
+            return res.status(200).json({
                 message: 'Compte déjà configuré',
                 stripeStatus: 'active'
             });
@@ -179,29 +191,30 @@ exports.refreshStripeOnboarding = async (req, res) => {
         // Créer un nouveau lien d'onboarding
         const accountLink = await stripe.accountLinks.create({
             account: user.stripeAccountId,
-            refresh_url: `${process.env.FRONTEND_URL}/profile/stripe-refresh`,
-            return_url: `${process.env.FRONTEND_URL}/profile/stripe-return`,
+            refresh_url: refreshUrl,
+            return_url: returnUrl,
             type: 'account_onboarding',
         });
 
         // Mettre à jour l'URL d'onboarding dans la base de données
         user.lastStripeOnboardingUrl = accountLink.url;
+        user.stripeAccountStatus = 'pending';
         await user.save();
 
-        res.json({ 
+        res.json({
             url: accountLink.url,
             stripeStatus: user.stripeAccountStatus
         });
     } catch (error) {
         console.error('Erreur refresh onboarding:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: error.message,
             stripeStatus: 'error'
         });
     }
 };
 
- exports.getAllSecrets = async (req, res) => {
+exports.getAllSecrets = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query;
         const secrets = await Secret.find()
@@ -228,12 +241,12 @@ exports.getUnpurchasedSecrets = async (req, res) => {
             user: { $ne: userId }, // Ne pas inclure les secrets créés par l'utilisateur
             expiresAt: { $gt: new Date() } // Ne pas inclure les secrets expirés
         })
-        .populate('user', 'name profilePicture')
-        .select('label content price createdAt expiresAt user purchasedBy')
-        .limit(limit * 1)
-        .skip((page - 1) * limit)
-        .sort({ createdAt: -1 }) // Les plus récents d'abord
-        .exec();
+            .populate('user', 'name profilePicture')
+            .select('label content price createdAt expiresAt user purchasedBy')
+            .limit(limit * 1)
+            .skip((page - 1) * limit)
+            .sort({ createdAt: -1 }) // Les plus récents d'abord
+            .exec();
 
         const total = await Secret.countDocuments({
             purchasedBy: { $nin: [userId] },
@@ -248,9 +261,9 @@ exports.getUnpurchasedSecrets = async (req, res) => {
         });
     } catch (error) {
         console.error('Erreur détaillée:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Erreur lors de la récupération des secrets.',
-            error: error.message 
+            error: error.message
         });
     }
 };
@@ -258,11 +271,11 @@ exports.getUnpurchasedSecrets = async (req, res) => {
 const calculatePrices = (originalPrice) => {
     const buyerMargin = 0.15; // 15% de marge pour l'acheteur
     const sellerMargin = 0.10; // 10% de marge pour le vendeur
-    
+
     const buyerTotal = originalPrice * (1 + buyerMargin);
     const sellerAmount = originalPrice * (1 - sellerMargin);
     const platformFee = buyerTotal - sellerAmount;
-    
+
     return {
         buyerTotal: Math.round(buyerTotal * 100), // En centimes pour Stripe
         sellerAmount: Math.round(sellerAmount * 100),
@@ -364,7 +377,7 @@ exports.purchaseSecret = async (req, res) => {
                 secret: secretId,
                 participants: { $elemMatch: { $eq: userId } }
             });
-            
+
             if (!conversation) {
                 conversation = await Conversation.create([{
                     secret: secretId,
@@ -387,7 +400,7 @@ exports.purchaseSecret = async (req, res) => {
 
         // Vérification du statut du paiement Stripe
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-        
+
         console.log('Statut PaymentIntent Stripe:', {
             status: paymentIntent.status,
             amount: paymentIntent.amount,
@@ -398,13 +411,13 @@ exports.purchaseSecret = async (req, res) => {
 
         // Vérifications de sécurité supplémentaires
         if (
-            paymentIntent.status !== 'succeeded' || 
-            paymentIntent.amount !== priceDetails.buyerTotal || 
+            paymentIntent.status !== 'succeeded' ||
+            paymentIntent.amount !== priceDetails.buyerTotal ||
             paymentIntent.metadata.secretId !== secretId ||
             paymentIntent.metadata.userId !== userId
         ) {
             await session.abortTransaction();
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Paiement invalide',
                 details: {
                     stripeStatus: paymentIntent.status,
@@ -431,10 +444,10 @@ exports.purchaseSecret = async (req, res) => {
                     sellerMargin: 0.10
                 }
             },
-            { 
-                upsert: true, 
-                new: true, 
-                session 
+            {
+                upsert: true,
+                new: true,
+                session
             }
         );
 
@@ -530,15 +543,15 @@ exports.getPurchasedSecrets = async (req, res) => {
         const purchasedSecrets = await Secret.find({
             purchasedBy: { $in: [req.user.id] }
         })
-        .populate('user', 'name profilePicture') // Pour avoir les infos de l'auteur
-        .sort({ createdAt: -1 }); // Pour avoir les plus récents d'abord
+            .populate('user', 'name profilePicture') // Pour avoir les infos de l'auteur
+            .sort({ createdAt: -1 }); // Pour avoir les plus récents d'abord
 
         res.status(200).json(purchasedSecrets);
     } catch (error) {
         console.error('Erreur lors de la récupération des secrets achetés:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             message: 'Erreur lors de la récupération des secrets achetés',
-            error: error.message 
+            error: error.message
         });
     }
 };
@@ -546,21 +559,21 @@ exports.getPurchasedSecrets = async (req, res) => {
 
 exports.getSecretConversation = async (req, res) => {
     try {
-        const conversation = await Conversation.findOne({ 
-            secret: req.params.secretId,  
-            participants: req.user.id 
+        const conversation = await Conversation.findOne({
+            secret: req.params.secretId,
+            participants: req.user.id
         })
-        .populate('participants', 'name profilePicture')
-        .populate('messages.sender', 'name profilePicture')
-        .select('participants messages secret expiresAt')
-        .populate({
-            path: 'secret',
-            populate: {
-                path: 'user',
-                select: 'name profilePicture'
-            },
-            select: 'label content user'
-        });
+            .populate('participants', 'name profilePicture')
+            .populate('messages.sender', 'name profilePicture')
+            .select('participants messages secret expiresAt')
+            .populate({
+                path: 'secret',
+                populate: {
+                    path: 'user',
+                    select: 'name profilePicture'
+                },
+                select: 'label content user'
+            });
 
         console.log("Conversation trouvée:", JSON.stringify(conversation, null, 2)); // Debug
 
@@ -577,37 +590,37 @@ exports.getSecretConversation = async (req, res) => {
 
 exports.getConversation = async (req, res) => {
     try {
-      const conversation = await Conversation.findOne({
-        _id: req.params.conversationId,
-        participants: req.user.id
-      })
-      .populate({
-        path: 'messages.sender',
-        select: 'name profilePicture'
-      })
-      .populate({
-        path: 'secret',
-        populate: {
-          path: 'user',
-          select: 'name profilePicture'
+        const conversation = await Conversation.findOne({
+            _id: req.params.conversationId,
+            participants: req.user.id
+        })
+            .populate({
+                path: 'messages.sender',
+                select: 'name profilePicture'
+            })
+            .populate({
+                path: 'secret',
+                populate: {
+                    path: 'user',
+                    select: 'name profilePicture'
+                }
+            });
+
+        if (!conversation) {
+            return res.status(404).json({ message: 'Conversation introuvable.' });
         }
-      });
-  
-      if (!conversation) {
-        return res.status(404).json({ message: 'Conversation introuvable.' });
-      }
-  
-      console.log("Conversation messages:", conversation.messages); // Log des messages de la conversation
-  
-      res.status(200).json({
-        messages: conversation.messages,
-        conversationId: conversation._id
-      });
+
+        console.log("Conversation messages:", conversation.messages); // Log des messages de la conversation
+
+        res.status(200).json({
+            messages: conversation.messages,
+            conversationId: conversation._id
+        });
     } catch (error) {
-      console.error('Erreur lors de la récupération des messages de la conversation:', error); // Log d'erreur
-      res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+        console.error('Erreur lors de la récupération des messages de la conversation:', error); // Log d'erreur
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
-  };
+};
 
 
 exports.addMessageToConversation = async (req, res) => {
@@ -639,18 +652,18 @@ exports.getUserConversations = async (req, res) => {
         const conversations = await Conversation.find({
             participants: req.user.id
         })
-        .populate('participants', 'name profilePicture')
-        .populate({
-            path: 'secret',
-            select: 'label content user', // Assurez-vous d'inclure user dans select
-            model: 'Secret',
-            populate: {
-                path: 'user', // Faites référence au champ user du modèle Secret
-                model: 'User',
-                select: 'name profilePicture'
-            }
-        })
-        .sort({ updatedAt: -1 });
+            .populate('participants', 'name profilePicture')
+            .populate({
+                path: 'secret',
+                select: 'label content user', // Assurez-vous d'inclure user dans select
+                model: 'Secret',
+                populate: {
+                    path: 'user', // Faites référence au champ user du modèle Secret
+                    model: 'User',
+                    select: 'name profilePicture'
+                }
+            })
+            .sort({ updatedAt: -1 });
 
         console.log('Conversations avec données complètes:', JSON.stringify(conversations, null, 2));
 
@@ -667,7 +680,7 @@ exports.getUserSecretsWithCount = async (req, res) => {
             .find({ user: req.user.id }) // changement de _id à id
             .select('label content price createdAt expiresAt') // ajout de expiresAt
             .lean();
-        
+
         return res.status(200).json({
             secrets,
             count: secrets.length
@@ -718,7 +731,7 @@ exports.deleteConversation = async (req, res) => {
         if (conversation.participants.length === 0) {
             await Conversation.findByIdAndDelete(req.params.conversationId).session(session);
             await session.commitTransaction();
-            return res.status(200).json({ 
+            return res.status(200).json({
                 message: 'Conversation supprimée car plus de participants.',
                 secretUnpurchased: true
             });
@@ -729,7 +742,7 @@ exports.deleteConversation = async (req, res) => {
 
         await session.commitTransaction();
 
-        res.status(200).json({ 
+        res.status(200).json({
             message: 'Conversation quittée avec succès.',
             secretUnpurchased: true
         });

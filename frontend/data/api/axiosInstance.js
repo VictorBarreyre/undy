@@ -20,6 +20,7 @@ const processQueue = (error, token = null) => {
 const createAxiosInstance = async () => {
     try {
         const baseURL = await getAPIURL();
+        
         if (!instance) {
             instance = axios.create({
                 baseURL,
@@ -29,7 +30,7 @@ const createAxiosInstance = async () => {
                 },
             });
 
-            // Intercepteur pour ajouter automatiquement le token aux requêtes
+            // Intercepteur pour ajouter le token aux requêtes
             instance.interceptors.request.use(
                 async (config) => {
                     const token = await AsyncStorage.getItem('accessToken');
@@ -43,17 +44,18 @@ const createAxiosInstance = async () => {
                 }
             );
 
-             // Response interceptor with queue management
-             instance.interceptors.response.use(
+            // Intercepteur de réponse avec gestion de queue
+            instance.interceptors.response.use(
                 (response) => response,
                 async (error) => {
                     const originalRequest = error.config;
 
-                    // If error is not 401 or request has already been retried
+                    // Si ce n'est pas une erreur 401 ou si la requête a déjà été retentée
                     if (error.response?.status !== 401 || originalRequest._retry) {
                         return Promise.reject(error);
                     }
 
+                    // Si un refresh est déjà en cours, mettre la requête en file d'attente
                     if (isRefreshing) {
                         try {
                             const token = await new Promise((resolve, reject) => {
@@ -72,24 +74,38 @@ const createAxiosInstance = async () => {
                     try {
                         const refreshToken = await AsyncStorage.getItem('refreshToken');
                         if (!refreshToken) {
+                            // Nettoyage en cas d'absence de refresh token
+                            await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
                             throw new Error('No refresh token available');
                         }
 
+                        // Tentative de rafraîchissement du token
                         const response = await axios.post(`${baseURL}/api/users/refresh-token`, {
                             refreshToken
                         });
 
-                        const { accessToken } = response.data;
+                        const { accessToken, newRefreshToken } = response.data;
 
-                        await AsyncStorage.setItem('accessToken', accessToken);
+                        // Sauvegarde des nouveaux tokens
+                        await AsyncStorage.multiSet([
+                            ['accessToken', accessToken],
+                            ['refreshToken', newRefreshToken || refreshToken]
+                        ]);
+
+                        // Mise à jour des headers
                         instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
                         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
+                        // Traitement de la file d'attente
                         processQueue(null, accessToken);
+                        
                         return instance(originalRequest);
                     } catch (refreshError) {
+                        // En cas d'échec du refresh, nettoyage complet
                         processQueue(refreshError, null);
                         await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
+                        
+                        console.error('Erreur de rafraîchissement du token:', refreshError);
                         throw refreshError;
                     } finally {
                         isRefreshing = false;
@@ -97,9 +113,16 @@ const createAxiosInstance = async () => {
                 }
             );
         }
+
+        // Initialisation des headers avec le token existant
+        const existingToken = await AsyncStorage.getItem('accessToken');
+        if (existingToken) {
+            instance.defaults.headers.common['Authorization'] = `Bearer ${existingToken}`;
+        }
+
         return instance;
     } catch (error) {
-        console.error('Erreur lors de la création de l\'instance Axios :', error);
+        console.error('Erreur lors de la création de l\'instance Axios:', error);
         throw error;
     }
 };

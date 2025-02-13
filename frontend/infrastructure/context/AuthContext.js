@@ -48,17 +48,31 @@ export const AuthProvider = ({ children }) => {
                 AsyncStorage.getItem('refreshToken'),
                 AsyncStorage.getItem('userData')
             ]);
-
-            if (accessToken && refreshToken) {
+    
+            if (accessToken) {
+                // Important : définir le token avant de faire des requêtes
+                const instance = getAxiosInstance();
+                if (instance) {
+                    instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+                }
+                
                 setUserToken(accessToken);
                 setIsLoggedIn(true);
-
+    
                 if (storedUserData) {
                     const parsedData = JSON.parse(storedUserData);
                     setUserData(cleanUserData(parsedData));
                 }
-
-                await fetchUserData();
+    
+                // Ne faire cette requête que si on a aussi un refresh token
+                if (refreshToken) {
+                    try {
+                        await fetchUserData();
+                    } catch (error) {
+                        console.log('Erreur fetchUserData, tentative de refresh...');
+                        // Ne pas throw l'erreur ici
+                    }
+                }
             }
         } catch (error) {
             console.error('Erreur loadStoredData:', error);
