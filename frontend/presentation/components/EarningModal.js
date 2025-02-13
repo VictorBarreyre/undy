@@ -124,20 +124,26 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
                             <Text style={styles.h5} numberOfLines={1} ellipsizeMode="tail">
                                 Détails des revenus
                             </Text>
-                            <Box width="100%">
+                            <Box mb={4} width="100%">
                                 {isLoading ? (
                                     <Text>Chargement des transactions...</Text>
                                 ) : (
                                     <>
                                         {transactions.map((transaction) => (
-                                            <VStack key={transaction.id} space={4} width="100%">
+                                            <VStack key={transaction.id} mb={4} width="100%">
                                                 <HStack space={4} justifyContent='space-between' width="100%">
-                                                    <Text>Montant : {transaction.amount.toFixed(2)} €</Text>
-                                                    <Text>Date : {transaction.date}</Text>
+                                                    <VStack>
+                                                        <Text>Montant brut : {(transaction.grossAmount || 0).toFixed(2)} €</Text>
+                                                        <Text>Frais : {(transaction.fees || 0).toFixed(2)} €</Text>
+                                                        <Text fontWeight="bold">Montant net : {(transaction.netAmount || 0).toFixed(2)} €</Text>
+                                                        <Text>Statut : {transaction.status}</Text>
+                                                        <Text>Type : {transaction.type}</Text>
+                                                    </VStack>
+                                                    <Text> {transaction.date}</Text>
                                                 </HStack>
                                             </VStack>
                                         ))}
-                                        <Text>Total des revenus : {userData.totalEarnings} €</Text>
+                                        <Text style={styles.h4}>Total des revenus : {userData.totalEarnings} €</Text>
                                     </>
                                 )}
                             </Box>
