@@ -6,41 +6,200 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Payment = require('../models/Payment');
 
 
+
 exports.createSecret = async (req, res) => {
-    const { label, content, price, expiresIn = 7 } = req.body; // expiresIn en jours
- 
-    if (!label || !content || price == null) {
-        return res.status(400).json({ message: 'Tous les champs sont requis.' });
-    }
- 
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    
     try {
-        const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
+        const { label, content, price, expiresIn = 7 } = req.body;
         
-        const secret = await Secret.create({
+        // Validation des champs requis
+        if (!label || !content || price == null) {
+            return res.status(400).json({ message: 'Tous les champs sont requis.' });
+        }
+
+        // Trouver l'utilisateur avec les champs Stripe
+        const user = await User.findById(req.user.id).select('email stripeAccountId stripeAccountStatus stripeOnboardingComplete');
+        if (!user) {
+            return res.status(404).json({ message: "Utilisateur introuvable." });
+        }
+
+        // Si l'utilisateur n'a pas de compte Stripe, en créer un
+        if (!user.stripeAccountId) {
+            try {
+                // Créer le compte Stripe Connect
+                const account = await stripe.accounts.create({
+                    type: 'express',
+                    country: 'FR',
+                    email: user.email,
+                    capabilities: {
+                        card_payments: {requested: true},
+                        transfers: {requested: true},
+                    },
+                    business_type: 'individual',
+                    business_profile: {
+                        mcc: '5734', // Code pour services digitaux
+                        url: process.env.FRONTEND_URL
+                    }
+                });
+
+                // Créer le lien d'onboarding
+                const accountLink = await stripe.accountLinks.create({
+                    account: account.id,
+                    refresh_url: `${process.env.FRONTEND_URL}/profile/stripe-refresh`,
+                    return_url: `${process.env.FRONTEND_URL}/profile/stripe-return`,
+                    type: 'account_onboarding',
+                });
+
+                // Mettre à jour l'utilisateur avec les informations Stripe
+                user.stripeAccountId = account.id;
+                user.stripeAccountStatus = 'pending';
+                user.stripeOnboardingComplete = false;
+                user.lastStripeOnboardingUrl = accountLink.url;
+                await user.save({ session });
+
+                // Créer le secret
+                const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
+                const secret = await Secret.create([{
+                    label,
+                    content,
+                    price,
+                    user: req.user.id,
+                    expiresAt,
+                    status: 'pending' // Le secret est en attente de la configuration Stripe
+                }], { session });
+
+                await session.commitTransaction();
+
+                // Retourner les informations nécessaires au frontend
+                return res.status(201).json({
+                    message: 'Secret créé. Configuration du compte de paiement requise.',
+                    secret: secret[0],
+                    stripeOnboardingUrl: accountLink.url,
+                    stripeStatus: 'pending'
+                });
+            } catch (error) {
+                await session.abortTransaction();
+                console.error('Erreur création compte Stripe:', error);
+                return res.status(500).json({
+                    message: 'Erreur lors de la création du compte de paiement',
+                    error: error.message
+                });
+            }
+        }
+
+        // Vérifier si l'onboarding est complet pour les utilisateurs ayant déjà un compte Stripe
+        if (!user.stripeOnboardingComplete || user.stripeAccountStatus !== 'active') {
+            const accountLink = await stripe.accountLinks.create({
+                account: user.stripeAccountId,
+                refresh_url: `${process.env.FRONTEND_URL}/profile/stripe-refresh`,
+                return_url: `${process.env.FRONTEND_URL}/profile/stripe-return`,
+                type: 'account_onboarding',
+            });
+
+            // Créer le secret en statut pending
+            const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
+            const secret = await Secret.create([{
+                label,
+                content,
+                price,
+                user: req.user.id,
+                expiresAt,
+                status: 'pending'
+            }], { session });
+
+            await session.commitTransaction();
+
+            return res.status(201).json({
+                message: 'Secret créé. Veuillez compléter la configuration de votre compte.',
+                secret: secret[0],
+                stripeOnboardingUrl: accountLink.url,
+                stripeStatus: user.stripeAccountStatus
+            });
+        }
+
+        // Si tout est configuré, créer le secret normalement
+        const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
+        const secret = await Secret.create([{
             label,
             content,
             price,
             user: req.user.id,
-            expiresAt
-        });
- 
-        const user = await User.findById(req.user.id).select('profilePicture');
-        if (!user) return res.status(404).json({ message: "Utilisateur introuvable." });
- 
-        const secretWithUserPhoto = {
-            ...secret.toObject(),
-            user: {
-                _id: user._id,
-                profilePicture: user.profilePicture || '/uploads/default-profile.png',
-            },
-        };
- 
-        res.status(201).json(secretWithUserPhoto);
-    } catch (error) {
-        res.status(500).json({ message: 'Erreur serveur.', details: error.message });
-    }
- };
+            expiresAt,
+            status: 'active'
+        }], { session });
 
+        await session.commitTransaction();
+
+        res.status(201).json({
+            message: 'Secret créé avec succès',
+            secret: secret[0],
+            stripeStatus: 'active'
+        });
+
+    } catch (error) {
+        await session.abortTransaction();
+        console.error('Erreur création secret:', error);
+        res.status(500).json({
+            message: 'Erreur serveur.',
+            error: error.message
+        });
+    } finally {
+        session.endSession();
+    }
+};
+
+
+// Ajouter une route pour gérer le rafraîchissement de l'onboarding si nécessaire
+exports.refreshStripeOnboarding = async (req, res) => {
+    try {
+        // Récupérer l'utilisateur avec ses informations Stripe
+        const user = await User.findById(req.user.id).select('+lastStripeOnboardingUrl stripeAccountId stripeAccountStatus');
+        
+        if (!user.stripeAccountId) {
+            return res.status(400).json({ 
+                message: 'Aucun compte Stripe associé',
+                needsRegistration: true 
+            });
+        }
+
+        // Vérifier le statut du compte Stripe
+        const account = await stripe.accounts.retrieve(user.stripeAccountId);
+        
+        // Si le compte est déjà complètement configuré
+        if (account.charges_enabled && account.payouts_enabled) {
+            await user.updateStripeStatus('active');
+            return res.status(200).json({ 
+                message: 'Compte déjà configuré',
+                stripeStatus: 'active'
+            });
+        }
+
+        // Créer un nouveau lien d'onboarding
+        const accountLink = await stripe.accountLinks.create({
+            account: user.stripeAccountId,
+            refresh_url: `${process.env.FRONTEND_URL}/profile/stripe-refresh`,
+            return_url: `${process.env.FRONTEND_URL}/profile/stripe-return`,
+            type: 'account_onboarding',
+        });
+
+        // Mettre à jour l'URL d'onboarding dans la base de données
+        user.lastStripeOnboardingUrl = accountLink.url;
+        await user.save();
+
+        res.json({ 
+            url: accountLink.url,
+            stripeStatus: user.stripeAccountStatus
+        });
+    } catch (error) {
+        console.error('Erreur refresh onboarding:', error);
+        res.status(500).json({ 
+            message: error.message,
+            stripeStatus: 'error'
+        });
+    }
+};
 
  exports.getAllSecrets = async (req, res) => {
     try {

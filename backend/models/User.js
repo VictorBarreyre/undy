@@ -11,7 +11,7 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
-        lowercase: true, // Force les emails en minuscules
+        lowercase: true,
         match: [
             /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
             'Veuillez entrer un email valide',
@@ -23,35 +23,57 @@ const UserSchema = new mongoose.Schema({
     },
     birthdate: {
         type: Date,
-        required: false, // Champ optionnel pour la date de naissance
+        required: false,
     },
     phone: {
         type: String,
-        required: false, // Champ optionnel pour le numéro de téléphone
+        required: false,
         trim: true,
     },
     profilePicture: {
         type: String,
-        maxLength: 5242880, // Environ 5MB en base64
+        maxLength: 5242880,
     },
     notifs: {
         type: Boolean,
-        required: false, // Champ optionnel pour les notifications
-        default: true, // Par défaut, les notifications sont activées
+        required: false,
+        default: true,
     },
     contacts: {
         type: Boolean,
-        required: false, // Champ optionnel pour les contacts
-        default: true, // Par défaut, les contacts sont activés
+        required: false,
+        default: true,
     },
     subscriptions: {
         type: Number,
-        required: false, // Champ optionnel pour les abonnements
-        default: 0, // Par défaut, aucun abonnement
+        required: false,
+        default: 0,
     },
+    // Nouveaux champs pour Stripe
+    stripeAccountId: {
+        type: String,
+        sparse: true, // Permet d'avoir des valeurs null tout en gardant l'unicité
+    },
+    stripeAccountStatus: {
+        type: String,
+        enum: ['pending', 'active', 'inactive', 'rejected'],
+        default: 'pending'
+    },
+    stripeOnboardingComplete: {
+        type: Boolean,
+        default: false
+    },
+    totalEarnings: {
+        type: Number,
+        default: 0
+    },
+    lastStripeOnboardingUrl: {
+        type: String, // Pour stocker temporairement l'URL d'onboarding
+        select: false // Ne pas inclure par défaut dans les requêtes
+    }
 }, { timestamps: true });
 
-// Avant de sauvegarder, hacher le mot de passe
+// Middleware existant pour le mot de passe
 UserSchema.pre('save', async function(next) {
     if (!this.isModified('password')) {
         return next();
@@ -62,9 +84,23 @@ UserSchema.pre('save', async function(next) {
     next();
 });
 
-// Méthode pour comparer les mots de passe lors de la connexion
+// Méthode existante pour comparer les mots de passe
 UserSchema.methods.matchPassword = async function(enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Nouvelle méthode pour vérifier si l'utilisateur peut recevoir des paiements
+UserSchema.methods.canReceivePayments = function() {
+    return this.stripeAccountId && this.stripeAccountStatus === 'active' && this.stripeOnboardingComplete;
+};
+
+// Méthode pour mettre à jour le statut Stripe
+UserSchema.methods.updateStripeStatus = async function(status) {
+    this.stripeAccountStatus = status;
+    if (status === 'active') {
+        this.stripeOnboardingComplete = true;
+    }
+    return this.save();
 };
 
 module.exports = mongoose.model('User', UserSchema);

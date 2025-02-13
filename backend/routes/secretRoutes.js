@@ -13,39 +13,32 @@ const {
     getConversation, 
     deleteConversation,
     createPaymentIntent,
-    confirmPayment
+    confirmPayment,
+    refreshStripeOnboarding // Ajouter l'import
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
 
-
 // Routes publiques
-router.get('/', getAllSecrets); // Récupérer tous les secrets
+router.get('/', getAllSecrets);
 
-// Routes privées
-router.post('/createsecrets', protect, createSecret); // Créer un secret
+// Routes Stripe et paiements
+router.post('/createsecrets', protect, createSecret);
+router.post('/:id/create-payment-intent', protect, createPaymentIntent);
+router.post('/:id/confirm-payment', protect, confirmPayment);
+router.post('/:id/purchase', protect, purchaseSecret);
+router.get('/stripe/refresh-onboarding', protect, refreshStripeOnboarding); // Nouvelle route
 
+// Routes des secrets
 router.get('/unpurchased', protect, getUnpurchasedSecrets);
-
-router.post('/:id/purchase', protect, purchaseSecret); // Acheter un secret
-
 router.get('/purchased', protect, getPurchasedSecrets);
-
 router.get('/user-secrets-with-count', protect, getUserSecretsWithCount);
 
-router.get('/conversations', protect, getUserConversations); // Obtenir toutes les conversations de l'utilisateur
-
-router.get('/conversations/secret/:secretId', protect, getSecretConversation); // Obtenir la conversation d'un secret spécifique
-
-router.post('/conversations/:conversationId/messages', protect, addMessageToConversation); // Ajouter un message à une conversation
-
-router.get('/conversations/:conversationId', protect, getConversation); // Nouvelle route
-
+// Routes des conversations
+router.get('/conversations', protect, getUserConversations);
+router.get('/conversations/secret/:secretId', protect, getSecretConversation);
+router.post('/conversations/:conversationId/messages', protect, addMessageToConversation);
+router.get('/conversations/:conversationId', protect, getConversation);
 router.delete('/conversations/:conversationId', protect, deleteConversation);
-
-router.post('/:id/create-payment-intent', protect, createPaymentIntent);
-
-router.post('/:id/confirm-payment', protect, confirmPayment);
-
 
 module.exports = router;

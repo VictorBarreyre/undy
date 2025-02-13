@@ -50,33 +50,68 @@ const AddSecret = () => {
 
     const calculatePriceAfterMargin = (originalPrice) => {
         if (!originalPrice) return 0;
-        const margin = 0.1; // 10%
+        const sellerMargin = 0.10; // 10% maintenant
         const priceNumber = Number(originalPrice);
-        return (priceNumber * (1 - margin)).toFixed(2);
+        return (priceNumber * (1 - sellerMargin)).toFixed(2);
     };
-
-
 
     const handlePress = async () => {
         try {
-            await handlePostSecret({
-                secretText,
+            const result = await handlePostSecret({
                 selectedLabel,
+                secretText,
                 price,
-                authToken: userData.token, // Ajoutez le token de l'utilisateur
-
+                expiresIn
             });
-
-            // Réinitialiser les champs
+    
+            if (result.requiresStripeSetup) {
+                Alert.alert(
+                    "Configuration nécessaire",
+                    "Votre secret a été créé. Pour pouvoir le vendre, vous devez configurer votre compte de paiement.",
+                    [
+                        {
+                            text: "Configurer maintenant",
+                            onPress: () => {
+                                Linking.openURL(result.stripeOnboardingUrl);
+                            }
+                        },
+                        {
+                            text: "Plus tard",
+                            style: "cancel"
+                        }
+                    ]
+                );
+            } else {
+                Alert.alert('Succès', result.message);
+            }
+    
+            // Réinitialiser les champs dans tous les cas
             setSecretText('');
             setSelectedLabel('');
             setPrice('');
-            Alert.alert('Succès', 'Votre secret a été posté avec succès !');
         } catch (error) {
             Alert.alert('Erreur', error.message);
         }
     };
 
+
+    useEffect(() => {
+        // Cette fonction serait appelée quand l'app est ouverte via l'URL de retour Stripe
+        const handleStripeReturn = async () => {
+          try {
+            // Rafraîchir le statut
+            const stripeStatus = await handleStripeOnboardingRefresh();
+            if (stripeStatus.success) {
+              Alert.alert('Succès', 'Configuration du compte terminée avec succès !');
+            }
+          } catch (error) {
+            Alert.alert('Erreur', error.message);
+          }
+        };
+    
+        // Logique pour détecter le retour de Stripe
+        // ... selon votre configuration de deep linking
+      }, []);
 
 
     // Surveille les changements dans les champs et met à jour l'état de `secretPostAvailable`

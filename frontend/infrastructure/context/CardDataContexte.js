@@ -55,16 +55,59 @@ export const CardDataProvider = ({ children }) => {
       throw new Error('Axios instance not initialized');
     }
     try {
-      return await instance.post('/api/secrets/createsecrets', {
+      const response = await instance.post('/api/secrets/createsecrets', {
         label: selectedLabel,
         content: secretText,
         price: parseFloat(price),
         expiresIn
       });
+
+      // Si un URL d'onboarding est présent, le secret est créé mais nécessite une configuration Stripe
+      if (response.data.stripeOnboardingUrl) {
+        return {
+          success: true,
+          requiresStripeSetup: true,
+          secret: response.data.secret,
+          stripeOnboardingUrl: response.data.stripeOnboardingUrl,
+          stripeStatus: response.data.stripeStatus,
+          message: response.data.message
+        };
+      }
+
+      // Si pas d'URL d'onboarding, le secret est créé et prêt à être vendu
+      return {
+        success: true,
+        requiresStripeSetup: false,
+        secret: response.data.secret,
+        message: response.data.message
+      };
+
     } catch (error) {
-      throw error;
+      console.error('Erreur création secret:', error?.response?.data || error.message);
+      throw new Error(error?.response?.data?.message || 'Erreur lors de la création du secret');
     }
   };
+  
+  
+  const handleStripeOnboardingRefresh = async () => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios instance not initialized');
+    }
+    try {
+      const response = await instance.post('/api/secrets/stripe/refresh-onboarding');
+      return {
+        success: true,
+        stripeOnboardingUrl: response.data.url,
+        stripeStatus: response.data.stripeStatus
+      };
+    } catch (error) {
+      console.error('Erreur rafraîchissement Stripe:', error?.response?.data || error.message);
+      throw new Error(error?.response?.data?.message || 'Erreur lors du rafraîchissement de la configuration Stripe');
+    }
+  };
+
+
 
   const fetchUnpurchasedSecrets = async (forceFetch = false) => {
 
@@ -255,6 +298,7 @@ export const CardDataProvider = ({ children }) => {
       data,
       setData,
       handlePostSecret,
+      handleStripeOnboardingRefresh,
       fetchAllSecrets,
       fetchUnpurchasedSecrets, // Ajouter la nouvelle fonction au contexte
       fetchUserSecretsWithCount,
