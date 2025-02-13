@@ -16,11 +16,12 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
     const [loading, setLoading] = useState(false);
     const { userToken } = useContext(AuthContext);
-    const { purchaseAndAccessConversation } = useCardData(); 
+    const { purchaseAndAccessConversation } = useCardData();
 
-    const getBuyerTotal = (originalPrice) => {
-        const buyerMargin = 0.15;
-        return originalPrice * (1 + buyerMargin);
+    const getDisplayPrice = (price) => {
+        // Le prix affiché est maintenant le prix de base 
+        // Les frais seront ajoutés automatiquement par Stripe
+        return price.toFixed(2);
     };
 
 
@@ -80,13 +81,13 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     const handlePayment = async () => {
         try {
             setLoading(true);
-    
+
             console.log('Détails du secret avant paiement:', {
                 id: secret._id,
                 price: secret.price,
                 label: secret.label
             });
-    
+
             console.log('Création de l\'intention de paiement...');
             const response = await fetch(`${DATABASE_URL}/api/secrets/${secret._id}/create-payment-intent`, {
                 method: 'POST',
@@ -95,7 +96,7 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                     'Authorization': `Bearer ${userToken}`,
                 },
             });
-    
+
             // Vérification de la réponse
             if (!response.ok) {
                 const errorText = await response.text();
@@ -106,21 +107,21 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 });
                 throw new Error(errorText || 'Erreur lors de la création du paiement');
             }
-    
+
             const { clientSecret, paymentId } = await response.json();
-    
+
             console.log('Réponse création PaymentIntent:', {
                 clientSecret: clientSecret ? 'Présent' : 'Manquant',
                 paymentId
             });
-    
+
             await initializePaymentSheet(clientSecret);
-    
+
             const { error: presentError } = await presentPaymentSheet();
-    
+
             if (presentError) {
                 console.error('Erreur présentation PaymentSheet:', presentError);
-                
+
                 if (presentError.code === 'Canceled') {
                     console.log('Paiement annulé par l\'utilisateur');
                     setLoading(false);
@@ -128,19 +129,19 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 }
                 throw presentError;
             }
-    
+
             console.log('Paiement réussi, ID du paiement:', paymentId);
-    
+
             // Appeler onPaymentSuccess avec l'ID du paiement
             onPaymentSuccess(paymentId);
-    
+
         } catch (error) {
             console.error('Erreur détaillée dans handlePayment:', {
                 message: error.message,
                 name: error.name,
                 stack: error.stack
             });
-    
+
             Alert.alert(
                 'Erreur de paiement',
                 error.message || 'Une erreur est survenue lors du paiement'
@@ -185,7 +186,7 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 <Text fontSize="md" color="white" fontWeight="bold">
                     {loading
                         ? 'Chargement...'
-                        : `Déverrouiller pour ${getBuyerTotal(secret?.price || 0).toFixed(2)} €`}
+                        : `Déverrouiller pour ${getDisplayPrice(secret?.price || 0)} €`}
                 </Text>
             </HStack>
         </Pressable>

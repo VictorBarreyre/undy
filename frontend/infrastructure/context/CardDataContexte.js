@@ -9,18 +9,14 @@ export const useCardData = () => {
 };
 
 export const calculatePrices = (originalPrice) => {
-  const buyerMargin = 0.10; // 10% pour l'acheteur
-  const sellerMargin = 0.15; // 15% pour le vendeur
-  
-  const buyerPrice = originalPrice * (1 + buyerMargin);
-  const sellerEarnings = originalPrice * (1 - sellerMargin);
-  const platformFee = buyerPrice - sellerEarnings;
+  // Le vendeur reçoit 75% (100% - 25% de frais de plateforme)
+  const sellerEarnings = originalPrice * 0.75;
+  const platformFee = originalPrice * 0.25;
   
   return {
-    originalPrice,
-    buyerPrice,
-    sellerEarnings,
-    platformFee
+      originalPrice,
+      sellerEarnings,
+      platformFee
   };
 };
 

@@ -424,6 +424,14 @@ exports.purchaseSecret = async (req, res) => {
         // Vérifier le paiement Stripe
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
+        console.log('Détails du PaymentIntent Stripe:', {
+            id: paymentIntent.id,
+            status: paymentIntent.status,
+            amount: paymentIntent.amount,
+            seller: paymentIntent.transfer_data.destination,
+            platformFees: paymentIntent.application_fee_amount
+        });
+
         if (
             paymentIntent.status !== 'succeeded' ||
             paymentIntent.metadata.secretId !== secretId ||
@@ -439,6 +447,14 @@ exports.purchaseSecret = async (req, res) => {
             { status: 'succeeded' },
             { session, new: true }
         );
+
+        console.log('Paiement mis à jour en base:', {
+            paymentId: payment._id,
+            status: payment.status,
+            amount: payment.amount,
+            platformFees: payment.metadata.platformFee,
+            sellerEarnings: payment.metadata.sellerAmount
+        });
 
         // Marquer le secret comme acheté
         secret.purchasedBy.push(userId);
@@ -491,6 +507,8 @@ exports.confirmPayment = async (req, res) => {
         // Vérifier le statut du paiement avec Stripe
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
+
+        
         if (paymentIntent.status === 'succeeded') {
             payment.status = 'succeeded';
             await payment.save({ session });
