@@ -216,7 +216,7 @@ export default function Profile({ navigation }) {
                 if (!userData?.stripeAccountStatus || userData.stripeAccountStatus !== 'active') {
                     return 'Non configuré';
                 }
-                return userData.stripeAccountId ? 'Configuré' : 'Non configuré';
+                return userData.stripeExternalAccount || 'Non configuré';
             }
         },
         notifs: { label: 'Mes notifications', icon: faBell, truncateLength: 10 },
