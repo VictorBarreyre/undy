@@ -10,6 +10,8 @@ import TypewriterLoader from '../components/TypewriterLoader';
 import { useFocusEffect } from '@react-navigation/native'; // Ajoutez cet import
 import { GestureHandlerRootView, Swipeable, RectButton } from 'react-native-gesture-handler';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
+import { FontAwesome5 } from '@expo/vector-icons';
+
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -34,12 +36,12 @@ const ConversationsList = ({ navigation }) => {
         duration: 500,
         useNativeDriver: true,
       }),
-    
+
     ]).start();
   };
 
   const fetchConversations = async () => {
-  const instance = getAxiosInstance();
+    const instance = getAxiosInstance();
     setIsLoading(true);
     try {
       const response = await instance.get(
@@ -95,7 +97,7 @@ const ConversationsList = ({ navigation }) => {
   if (isLoading) {
     return (
       <Background>
-          <TypewriterLoader />
+        <TypewriterLoader />
       </Background>
     );
   }
@@ -103,34 +105,49 @@ const ConversationsList = ({ navigation }) => {
   if (conversations.length === 0) {
     return (
       <Background>
-        <Animated.View 
-          style={{ 
-            flex: 1, 
+        <Animated.View
+          style={{
+            flex: 1,
             opacity: fadeAnim,
           }}
-        >  
-        <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
-          <Text style={styles.h3} textAlign="center" mt={4}>
-            Vous n'avez pas encore déverrouillé d'Undy
-          </Text>
-          <Text style={styles.caption} textAlign="center" color="gray.500" mt={2}>
-            Déverrouillez un undy pour commencer une conversation !
-          </Text>
-        </VStack>
+        >
+          <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
+            <Text style={styles.h3} textAlign="center" mt={4}>
+              Vous n'avez pas encore déverrouillé d'Undy
+            </Text>
+            <Text style={styles.caption} textAlign="center" color="gray.500" mt={2}>
+              Déverrouillez un undy pour commencer une conversation !
+            </Text>
+          </VStack>
         </Animated.View>
       </Background>
     );
   }
 
-  const renderRightActions = (conversationId) => {
+  const renderRightActions = (conversationId, dragX) => {
+
+    const trans = dragX.interpolate({
+      inputRange: [-70, 0],
+      outputRange: [0, 70],
+      extrapolate: 'clamp'
+    });
+  
+    const opacity = dragX.interpolate({
+      inputRange: [-70, -60, 0],
+      outputRange: [1, 0, 0],
+      extrapolate: 'clamp'
+    });
+  
     return (
-      <View
+      <Animated.View
         style={{
-          width: 100,
-          backgroundColor: '#FF0000',
+          width: 70,
+          backgroundColor: 'transparent',
           justifyContent: 'center',
-          alignItems: 'center',
-         
+          alignItems: 'flex-end',
+        
+          transform: [{ translateX: trans }],
+          opacity: opacity
         }}
       >
         <Pressable
@@ -139,12 +156,16 @@ const ConversationsList = ({ navigation }) => {
             justifyContent: 'center',
             alignItems: 'center',
             flex: 1,
-            width: '100%',
+            width: '60%',
           }}
         >
-          <Text color='white' style={styles.h5}>Supprimer</Text>
+          <FontAwesome5
+            name="trash-alt"
+            size={20}
+            color="#FF78B2"
+          />
         </Pressable>
-      </View>
+      </Animated.View>
     );
   };
 
@@ -164,14 +185,14 @@ const ConversationsList = ({ navigation }) => {
 
       <GestureHandlerRootView>
         <Swipeable
-            ref={(ref) => (row[item._id] = ref)}
-            renderRightActions={() => renderRightActions(item._id)}
-            onSwipeableOpen={() => {
-              closeRow(item._id);
-              setOpenSwipeId(item._id); // Utilisez le state global
-            }}
-            onSwipeableWillClose={() => setOpenSwipeId(null)}
-            overshootRight={false}
+          ref={(ref) => (row[item._id] = ref)}
+          renderRightActions={(_, dragX) => renderRightActions(item._id, dragX)}
+          onSwipeableOpen={() => {
+            closeRow(item._id);
+            setOpenSwipeId(item._id);
+          }}
+          onSwipeableWillClose={() => setOpenSwipeId(null)}
+          overshootRight={false}
         >
           <Pressable
             onPress={() => navigation.navigate('Chat', {
@@ -185,12 +206,12 @@ const ConversationsList = ({ navigation }) => {
               space={3}
               py={4}
               borderBottomWidth={1}
-              borderColor="#94A3B820" 
-       
+              borderColor="#94A3B820"
+
             >
               <Image
-                 source={
-                  item.secret?.user?.profilePicture 
+                source={
+                  item.secret?.user?.profilePicture
                     ? { uri: item.secret.user.profilePicture }
                     : require('../../assets/images/default.png')
                 }
@@ -218,30 +239,30 @@ const ConversationsList = ({ navigation }) => {
 
   return (
     <Background>
-        <Animated.View 
-        style={{ 
-          flex: 1, 
+      <Animated.View
+        style={{
+          flex: 1,
           opacity: fadeAnim,
         }}
-      > 
-      <Box flex={1} justifyContent="flex-start" paddingTop={5}>
-        <VStack paddingLeft={5} paddingRight={5} space={4}>
-          <HStack alignItems="center" justifyContent="center" width="100%">
+      >
+        <Box flex={1} justifyContent="flex-start" paddingTop={5}>
+          <VStack paddingLeft={5} paddingRight={5} space={4}>
+            <HStack alignItems="center" justifyContent="center" width="100%">
 
-            {/* Texte */}
-            <Text style={styles.h3} width='auto' textAlign="center">
-              Conversations
-            </Text>
+              {/* Texte */}
+              <Text style={styles.h3} width='auto' textAlign="center">
+                Conversations
+              </Text>
 
 
-          </HStack>
-          <FlatList
-            data={conversations}
-            renderItem={renderConversation}
-            keyExtractor={item => item._id}
-          />
-        </VStack>
-      </Box>
+            </HStack>
+            <FlatList
+              data={conversations}
+              renderItem={renderConversation}
+              keyExtractor={item => item._id}
+            />
+          </VStack>
+        </Box>
       </Animated.View>
     </Background>
   );
