@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Animated, PanResponder, Dimensions, StyleSheet, View } from 'react-native';
 import { Box, Spinner, Text, VStack } from 'native-base';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
+import { AuthContext } from '../../infrastructure/context/AuthContext';
 import CardHome from './CardHome';
 import { useNavigation } from '@react-navigation/native';
 import PaymentSheet from './PaymentSheet';
@@ -16,6 +17,7 @@ const SWIPE_OUT_DURATION = 300;
 
 const SwipeDeck = ({ selectedFilters = [] }) => {
   const { data, purchaseAndAccessConversation, isLoadingData, fetchUnpurchasedSecrets } = useCardData();
+  const { isLoggedIn } = useContext(AuthContext);
   const position = useRef(new Animated.ValueXY()).current;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [filteredData, setFilteredData] = useState([]);
@@ -34,6 +36,24 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       fadeAnim.setValue(1);
     }, [])
   );
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      // Toujours charger les données dès que l'utilisateur est connecté
+      if (isLoggedIn) {
+        try {
+          setIsLoading(true);
+          await fetchUnpurchasedSecrets();
+        } catch (error) {
+          console.error('Erreur de chargement initial:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+  
+    loadInitialData();
+  }, [isLoggedIn]); // Retirez data.length des dépendances
 
 
   useEffect(() => {
@@ -74,7 +94,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
     attemptInitialFetch();
   }, [isLoadingData, filteredData.length]);
-  
+
 
   const getCardHeight = () => {
     switch (true) {

@@ -10,6 +10,7 @@ export const AuthProvider = ({ children }) => {
     const [userData, setUserData] = useState(null);
     const [isLoadingUserData, setIsLoadingUserData] = useState(true);
 
+
     useEffect(() => {
         const initAxios = async () => {
             try {

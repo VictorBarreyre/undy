@@ -32,7 +32,7 @@ export const CardDataProvider = ({ children }) => {
       try {
         await createAxiosInstance();
         if (isLoggedIn) {
-          await fetchUnpurchasedSecrets();
+          await fetchUnpurchasedSecrets(true);
         } else {
           setIsLoadingData(false);
           setData([]);
@@ -332,7 +332,7 @@ const handleStripeOnboardingRefresh = async () => {
       fetchPurchasedSecrets,
       handleAddMessage,
       getConversationMessages,
-      isLoadingData
+      isLoadingData,
     }}>
       {children}
     </CardDataContext.Provider>
