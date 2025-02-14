@@ -11,10 +11,14 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "scheme": "hushy",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.frontend",
-      "associatedDomains": ["applinks:hushy.app"]
+      "associatedDomains": [
+        "applinks:hushy.app",
+        "webcredentials:hushy.app"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -26,10 +30,16 @@
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": {
-            "scheme": "hushy",
-            "host": "profile"
-          },
+          "data": [
+            {
+              "scheme": "hushy",
+              "host": "profile"
+            },
+            {
+              "scheme": "hushy",
+              "host": "stripe-return"
+            }
+          ],
           "category": [
             "CATEGORY_BROWSABLE",
             "CATEGORY_DEFAULT"
@@ -38,8 +48,10 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "scheme": "hushy"
+      "favicon": "./assets/favicon.png",
+      "deepLinking": {
+        "schemes": ["hushy"]
+      }
+    }
   }
 }

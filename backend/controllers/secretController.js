@@ -158,7 +158,7 @@ exports.createSecret = async (req, res) => {
 // Ajouter une route pour gérer le rafraîchissement de l'onboarding si nécessaire
 exports.refreshStripeOnboarding = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('+lastStripeOnboardingUrl stripeAccountId stripeAccountStatus');
+        const user = await User.findById(req.user.id);
 
         if (!user.stripeAccountId) {
             return res.status(400).json({
@@ -171,12 +171,9 @@ exports.refreshStripeOnboarding = async (req, res) => {
         // Vérifier le statut du compte Stripe
         const account = await stripe.accounts.retrieve(user.stripeAccountId);
 
-        // Détails du statut du compte
-        const accountStatus = {
-            charges_enabled: account.charges_enabled,
-            payouts_enabled: account.payouts_enabled,
-            details_submitted: account.details_submitted
-        };
+        // Générer l'URL de retour dynamique
+        const baseReturnUrl = 'hushy://stripe-return'; // Votre schéma d'URL personnalisé
+        const returnUrl = `${baseReturnUrl}?stripeAccountId=${user.stripeAccountId}&status=${account.charges_enabled ? 'success' : 'pending'}`;
 
         // Si le compte est complètement configuré
         if (account.charges_enabled && account.payouts_enabled) {
@@ -187,20 +184,15 @@ exports.refreshStripeOnboarding = async (req, res) => {
             return res.status(200).json({
                 status: 'active',
                 message: 'Compte Stripe complètement configuré',
-                accountStatus
+                returnUrl
             });
         }
-
-        // Définir dynamiquement les URLs de retour
-        const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
-        const refreshUrl = `${baseReturnUrl}/stripe/refresh`;
-        const returnUrl = `${baseReturnUrl}/stripe/return`;
 
         // Créer un nouveau lien d'onboarding
         const accountLink = await stripe.accountLinks.create({
             account: user.stripeAccountId,
-            refresh_url: `${baseReturnUrl}/stripe/refresh`,
-            return_url: `${baseReturnUrl}/stripe/return`,
+            refresh_url: `hushy://stripe-refresh`,
+            return_url: returnUrl,
             type: 'account_onboarding',
         });
 
@@ -213,15 +205,14 @@ exports.refreshStripeOnboarding = async (req, res) => {
             status: 'pending',
             message: 'Configuration du compte Stripe en cours',
             url: accountLink.url,
-            accountStatus
+            returnUrl
         });
 
     } catch (error) {
         console.error('Erreur refresh onboarding:', error);
         res.status(500).json({
             status: 'error',
-            message: error.message,
-            stripeStatus: 'error'
+            message: error.message
         });
     }
 };

@@ -135,6 +135,38 @@ const handleStripeOnboardingRefresh = async () => {
   }
 };
 
+
+const handleStripeReturn = async (url) => {
+  try {
+      // Extraire les paramètres de l'URL
+      const parsedUrl = new URL(url);
+      const stripeAccountId = parsedUrl.searchParams.get('stripeAccountId');
+      const status = parsedUrl.searchParams.get('status');
+
+      if (status === 'success') {
+          // Rafraîchir le statut Stripe
+          const stripeStatus = await handleStripeOnboardingRefresh();
+          
+          return {
+              success: true,
+              message: 'Compte Stripe configuré avec succès',
+              stripeStatus
+          };
+      } else {
+          return {
+              success: false,
+              message: 'Configuration Stripe en cours'
+          };
+      }
+  } catch (error) {
+      console.error('Erreur de retour Stripe:', error);
+      return {
+          success: false,
+          message: error.message
+      };
+  }
+};
+
   const fetchUnpurchasedSecrets = async (forceFetch = false) => {
 
     if (!forceFetch && lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)) {
@@ -333,6 +365,7 @@ const handleStripeOnboardingRefresh = async () => {
       handleAddMessage,
       getConversationMessages,
       isLoadingData,
+      handleStripeReturn,
     }}>
       {children}
     </CardDataContext.Provider>

@@ -15,7 +15,7 @@ const SCREEN_HEIGHT = Dimensions.get('window').height;
 const AddSecret = () => {
 
     const { userData } = useContext(AuthContext); // Utilisation correcte de useContext
-    const { data, handlePostSecret, handleStripeOnboardingRefresh } = useCardData();
+    const { data, handlePostSecret, handleStripeOnboardingRefresh, handleStripeReturn } = useCardData();
     const [secretText, setSecretText] = useState('');
     const [selectedLabel, setSelectedLabel] = useState(''); // État pour la sélection du label
     const [price, setPrice] = useState(''); // État pour le prix
@@ -57,38 +57,57 @@ const AddSecret = () => {
 
     useEffect(() => {
         const handleDeepLink = async (event) => {
-          // Décodez l'URL complète
-          const fullUrl = decodeURIComponent(event.url);
-          console.log('Full Deep Link URL:', fullUrl);
-      
-          // Extraction de l'URL Stripe originale
-          const stripeUrlMatch = fullUrl.match(/url=(.+)$/);
-          const stripeUrl = stripeUrlMatch ? decodeURIComponent(stripeUrlMatch[1]) : null;
-          
-          console.log('Extracted Stripe URL:', stripeUrl);
-          
-          if (fullUrl.includes('stripe-return') && stripeUrl) {
             try {
-              // Ouvrir directement l'URL Stripe dans le navigateur
-              await Linking.openURL(stripeUrl);
+                const url = event.url || event;
+                
+                if (!url) return;
+
+                // Décodez et parsez l'URL
+                const fullUrl = decodeURIComponent(url);
+                const parsedUrl = new URL(fullUrl);
+                
+                // Vérifiez le schéma et le host
+                if (
+                    parsedUrl.protocol === 'hushy:' && 
+                    (parsedUrl.hostname === 'stripe-return' || parsedUrl.hostname === 'profile')
+                ) {
+                    const result = await handleStripeReturn(fullUrl);
+                    
+                    if (result.success) {
+                        Alert.alert(
+                            'Succès',
+                            'Votre compte Stripe a été configuré avec succès !',
+                            [{ text: 'OK' }]
+                        );
+                    } else {
+                        Alert.alert(
+                            'Configuration en cours',
+                            result.message,
+                            [{ text: 'OK' }]
+                        );
+                    }
+                }
             } catch (error) {
-              Alert.alert('Erreur', 'Impossible d\'ouvrir l\'URL Stripe');
+                console.error('Deep link error:', error);
+                Alert.alert('Erreur', 'Impossible de traiter le lien');
             }
-          }
         };
-      
+
+        // Écouteur d'événements pour les liens entrants
         const subscription = Linking.addEventListener('url', handleDeepLink);
-      
+
+        // Vérifier l'URL initiale au lancement
         Linking.getInitialURL().then(url => {
-          if (url) {
-            handleDeepLink({ url });
-          }
+            if (url) {
+                handleDeepLink({ url });
+            }
         });
-      
+
         return () => {
-          subscription.remove();
+            subscription.remove();
         };
-      }, []);
+    }, [handleStripeReturn]);
+
 
       const handlePress = async () => {
         try {

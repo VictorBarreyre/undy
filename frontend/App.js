@@ -11,7 +11,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import StackNavigator from './navigation/StackNavigator/StackNavigator';
 import { StripeProvider } from "@stripe/stripe-react-native";
 import { STRIPE_PUBLISHABLE_KEY } from '@env';
-
+import DeepLinkHandler from "./presentation/components/DeepLinkHandler";
 
 const Stack = createStackNavigator();
 
@@ -48,6 +48,7 @@ const App = () => {
             <SafeAreaProvider>
               <NavigationContainer>
                 <StackNavigator />
+                <DeepLinkHandler />
               </NavigationContainer>
             </SafeAreaProvider>
           </NativeBaseProvider>
