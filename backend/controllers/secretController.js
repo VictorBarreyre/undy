@@ -191,6 +191,11 @@ exports.refreshStripeOnboarding = async (req, res) => {
             });
         }
 
+        // Définir dynamiquement les URLs de retour
+        const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
+        const refreshUrl = `${baseReturnUrl}/stripe/refresh`;
+        const returnUrl = `${baseReturnUrl}/stripe/return`;
+
         // Créer un nouveau lien d'onboarding
         const accountLink = await stripe.accountLinks.create({
             account: user.stripeAccountId,
