@@ -176,9 +176,7 @@ const deleteStripeAccount = async () => {
   
   try {
 
-    console.log('URL de suppression:', `/api/stripe/delete-account`);
-
-      const response = await instance.delete('/api/stripe/delete-account');
+      const response = await instance.delete('/api/secrets/stripe/delete-account');
       
       return {
           success: true,

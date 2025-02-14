@@ -168,14 +168,14 @@ exports.refreshStripeOnboarding = async (req, res) => {
             });
         }
 
-        // Vérifier le statut du compte Stripe
         const account = await stripe.accounts.retrieve(user.stripeAccountId);
+        
+        // Créer une URL de redirection qui pointe vers votre page de redirection
+        const redirectBaseUrl = process.env.FRONTEND_URL ;
+        const returnUrl = `${redirectBaseUrl}/redirect-to-app.html`;
+        const refreshUrl = `${redirectBaseUrl}/redirect-to-app.html`;
 
-        // Générer l'URL de retour dynamique
-        const baseReturnUrl = 'hushy://stripe-return'; // Votre schéma d'URL personnalisé
-        const returnUrl = `${baseReturnUrl}?stripeAccountId=${user.stripeAccountId}&status=${account.charges_enabled ? 'success' : 'pending'}`;
-
-        // Si le compte est complètement configuré
+        // Si le compte est déjà configuré
         if (account.charges_enabled && account.payouts_enabled) {
             user.stripeAccountStatus = 'active';
             user.stripeOnboardingComplete = true;
@@ -183,20 +183,17 @@ exports.refreshStripeOnboarding = async (req, res) => {
 
             return res.status(200).json({
                 status: 'active',
-                message: 'Compte Stripe complètement configuré',
-                returnUrl
+                message: 'Compte Stripe complètement configuré'
             });
         }
 
-        // Créer un nouveau lien d'onboarding
         const accountLink = await stripe.accountLinks.create({
             account: user.stripeAccountId,
-            refresh_url: `hushy://stripe-refresh`,
+            refresh_url: refreshUrl,
             return_url: returnUrl,
             type: 'account_onboarding',
         });
 
-        // Mettre à jour l'URL d'onboarding
         user.lastStripeOnboardingUrl = accountLink.url;
         user.stripeAccountStatus = 'pending';
         await user.save();
@@ -204,8 +201,7 @@ exports.refreshStripeOnboarding = async (req, res) => {
         return res.status(201).json({
             status: 'pending',
             message: 'Configuration du compte Stripe en cours',
-            url: accountLink.url,
-            returnUrl
+            url: accountLink.url
         });
 
     } catch (error) {
