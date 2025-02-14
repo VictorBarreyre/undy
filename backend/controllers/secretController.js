@@ -170,23 +170,40 @@ exports.refreshStripeOnboarding = async (req, res) => {
 
         const account = await stripe.accounts.retrieve(user.stripeAccountId);
         
-        // Créer une URL de redirection qui pointe vers votre page de redirection
-        const redirectBaseUrl = process.env.FRONTEND_URL ;
-        const returnUrl = `${redirectBaseUrl}/redirect-to-app.html`;
-        const refreshUrl = `${redirectBaseUrl}/redirect-to-app.html`;
+        // Log pour debug
+        console.log('Stripe Account Status:', {
+            charges_enabled: account.charges_enabled,
+            payouts_enabled: account.payouts_enabled,
+            details_submitted: account.details_submitted
+        });
 
-        // Si le compte est déjà configuré
-        if (account.charges_enabled && account.payouts_enabled) {
+        const redirectBaseUrl = process.env.FRONTEND_URL;
+        const returnUrl = `${redirectBaseUrl}/redirect-to-app.html?status=success`;
+        const refreshUrl = `${redirectBaseUrl}/redirect-to-app.html?status=pending`;
+
+        // Vérification complète du statut du compte
+        if (account.charges_enabled && account.payouts_enabled && account.details_submitted) {
+            // Mise à jour du statut utilisateur
             user.stripeAccountStatus = 'active';
             user.stripeOnboardingComplete = true;
             await user.save();
 
+            // Mise à jour de tous les secrets en attente
+            await Secret.updateMany(
+                { user: req.user.id, status: 'pending' },
+                { status: 'active' }
+            );
+
             return res.status(200).json({
+                success: true,
+                verified: true,
                 status: 'active',
-                message: 'Compte Stripe complètement configuré'
+                message: 'Compte Stripe complètement configuré',
+                returnUrl: 'hushy://stripe-return?status=success'
             });
         }
 
+        // Si le compte n'est pas complètement configuré, créer un nouveau lien
         const accountLink = await stripe.accountLinks.create({
             account: user.stripeAccountId,
             refresh_url: refreshUrl,
@@ -194,19 +211,70 @@ exports.refreshStripeOnboarding = async (req, res) => {
             type: 'account_onboarding',
         });
 
+        // Mise à jour du statut utilisateur
         user.lastStripeOnboardingUrl = accountLink.url;
         user.stripeAccountStatus = 'pending';
         await user.save();
 
-        return res.status(201).json({
+        return res.status(200).json({
+            success: true,
+            verified: false,
             status: 'pending',
             message: 'Configuration du compte Stripe en cours',
-            url: accountLink.url
+            stripeOnboardingUrl: accountLink.url,
+            stripeStatus: 'pending'
         });
 
     } catch (error) {
         console.error('Erreur refresh onboarding:', error);
-        res.status(500).json({
+        return res.status(500).json({
+            success: false,
+            status: 'error',
+            message: error.message
+        });
+    }
+};
+
+exports.checkStripeStatus = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user.stripeAccountId) {
+            return res.status(400).json({
+                status: 'no_account',
+                verified: false
+            });
+        }
+
+        const account = await stripe.accounts.retrieve(user.stripeAccountId);
+        
+        if (account.charges_enabled && account.payouts_enabled && account.details_submitted) {
+            // Mettre à jour le statut utilisateur si nécessaire
+            if (!user.stripeOnboardingComplete) {
+                user.stripeOnboardingComplete = true;
+                user.stripeAccountStatus = 'active';
+                await user.save();
+
+                // Mettre à jour tous les secrets en attente
+                await Secret.updateMany(
+                    { user: req.user.id, status: 'pending' },
+                    { status: 'active' }
+                );
+            }
+
+            return res.status(200).json({
+                status: 'active',
+                verified: true,
+                success: true
+            });
+        }
+
+        return res.status(200).json({
+            status: 'pending',
+            verified: false
+        });
+    } catch (error) {
+        console.error('Erreur vérification status:', error);
+        return res.status(500).json({
             status: 'error',
             message: error.message
         });

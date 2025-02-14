@@ -1,11 +1,16 @@
+// Dans redirect-to-app.html
 <!DOCTYPE html>
 <html>
 <head>
     <title>Redirection...</title>
     <script>
         window.onload = function() {
-            // Redirection immédiate vers votre app
-            window.location.href = 'hushy://stripe-return';
+            // Récupérer le statut de l'URL si présent
+            const urlParams = new URLSearchParams(window.location.search);
+            const status = urlParams.get('status');
+            
+            // Redirection avec le statut
+            window.location.href = `hushy://stripe-return?status=${status || 'success'}`;
         }
     </script>
 </head>
