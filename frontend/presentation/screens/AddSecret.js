@@ -108,7 +108,8 @@ const AddSecret = () => {
         };
     }, [handleStripeReturn]);
 
-    const handlePress = async () => {
+
+      const handlePress = async () => {
         try {
             const result = await handlePostSecret({
                 selectedLabel,
@@ -117,9 +118,7 @@ const AddSecret = () => {
                 expiresIn
             });
     
-            // On ne montre l'alerte de configuration que si requiresStripeSetup est true
-            // et que l'utilisateur n'a pas encore de compte Stripe
-            if (result.requiresStripeSetup && !userData?.stripeAccountId) {
+            if (result.requiresStripeSetup) {
                 Alert.alert(
                     "Configuration nécessaire",
                     "Votre secret a été créé. Pour pouvoir le vendre, vous devez configurer votre compte de paiement.",
@@ -147,7 +146,6 @@ const AddSecret = () => {
                     ]
                 );
             } else {
-                // Message de succès simple pour les utilisateurs ayant déjà un compte Stripe
                 Alert.alert(
                     "Félicitations ! 🎉",
                     "Votre secret a été publié avec succès. Il est maintenant disponible à la vente !",
