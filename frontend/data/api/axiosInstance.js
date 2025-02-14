@@ -47,52 +47,58 @@ const createAxiosInstance = async () => {
             (response) => response,
             async (error) => {
                 const originalRequest = error.config;
-
-                // Si ce n'est pas une erreur 401 ou si la requête a déjà été retentée
-                if (error.response?.status !== 401 || originalRequest._retry) {
-                    return Promise.reject(error);
-                }
-
-                // Si un refresh est déjà en cours, mettre la requête en file d'attente
-                if (isRefreshing) {
-                    return new Promise((resolve, reject) => {
-                        failedQueue.push({ resolve, reject });
-                    }).then(token => {
-                        originalRequest.headers.Authorization = `Bearer ${token}`;
-                        return instance(originalRequest);
-                    }).catch(err => Promise.reject(err));
-                }
-
-                originalRequest._retry = true;
-                isRefreshing = true;
-
-                try {
-                    const refreshToken = await AsyncStorage.getItem('refreshToken');
-                    if (!refreshToken) {
-                        throw new Error('No refresh token');
-                    }
-
-                    const response = await instance.post('/api/users/refresh-token', { refreshToken });
-                    const { accessToken, refreshToken: newRefreshToken } = response.data;
-
-                    await AsyncStorage.multiSet([
-                        ['accessToken', accessToken],
-                        ['refreshToken', newRefreshToken || refreshToken]
-                    ]);
-
-                    instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-                    originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-
-                    processQueue(null, accessToken);
+        
+                // Vérifier si on doit rafraîchir
+                if (error.response?.status === 401 && 
+                    error.response?.data?.shouldRefresh && 
+                    !originalRequest._retry) {
                     
-                    return instance(originalRequest);
-                } catch (refreshError) {
-                    processQueue(refreshError, null);
-                    await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
-                    throw refreshError;
-                } finally {
-                    isRefreshing = false;
+                    if (isRefreshing) {
+                        return new Promise((resolve, reject) => {
+                            failedQueue.push({ resolve, reject });
+                        }).then(token => {
+                            originalRequest.headers.Authorization = `Bearer ${token}`;
+                            return instance(originalRequest);
+                        }).catch(err => Promise.reject(err));
+                    }
+        
+                    originalRequest._retry = true;
+                    isRefreshing = true;
+        
+                    try {
+                        const refreshToken = await AsyncStorage.getItem('refreshToken');
+                        if (!refreshToken) {
+                            throw new Error('No refresh token');
+                        }
+        
+                        const response = await axios.post(
+                            `${instance.defaults.baseURL}/api/users/refresh-token`,
+                            { refreshToken },
+                            { headers: { 'Content-Type': 'application/json' } }
+                        );
+        
+                        const { accessToken, newRefreshToken } = response.data;
+        
+                        await AsyncStorage.multiSet([
+                            ['accessToken', accessToken],
+                            ['refreshToken', newRefreshToken || refreshToken]
+                        ]);
+        
+                        instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+                        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        
+                        processQueue(null, accessToken);
+                        return instance(originalRequest);
+                    } catch (refreshError) {
+                        processQueue(refreshError, null);
+                        await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
+                        throw refreshError;
+                    } finally {
+                        isRefreshing = false;
+                    }
                 }
+        
+                return Promise.reject(error);
             }
         );
 
