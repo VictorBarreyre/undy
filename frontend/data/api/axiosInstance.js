@@ -21,104 +21,80 @@ const createAxiosInstance = async () => {
     try {
         const baseURL = await getAPIURL();
         
-        if (!instance) {
-            instance = axios.create({
-                baseURL,
-                timeout: 10000,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
+        // Créer une nouvelle instance Axios
+        instance = axios.create({
+            baseURL,
+            timeout: 10000,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
 
-            // Intercepteur pour ajouter le token aux requêtes
-            instance.interceptors.request.use(
-                async (config) => {
-                    const token = await AsyncStorage.getItem('accessToken');
-                    if (token) {
-                        config.headers.Authorization = `Bearer ${token}`;
-                    }
-                    return config;
-                },
-                (error) => {
+        // Intercepteur pour ajouter le token aux requêtes
+        instance.interceptors.request.use(
+            async (config) => {
+                const token = await AsyncStorage.getItem('accessToken');
+                if (token) {
+                    config.headers.Authorization = `Bearer ${token}`;
+                }
+                return config;
+            },
+            (error) => Promise.reject(error)
+        );
+
+        // Intercepteur de réponse avec gestion de queue
+        instance.interceptors.response.use(
+            (response) => response,
+            async (error) => {
+                const originalRequest = error.config;
+
+                // Si ce n'est pas une erreur 401 ou si la requête a déjà été retentée
+                if (error.response?.status !== 401 || originalRequest._retry) {
                     return Promise.reject(error);
                 }
-            );
 
-            // Intercepteur de réponse avec gestion de queue
-            instance.interceptors.response.use(
-                (response) => response,
-                async (error) => {
-                    const originalRequest = error.config;
-
-                    // Si ce n'est pas une erreur 401 ou si la requête a déjà été retentée
-                    if (error.response?.status !== 401 || originalRequest._retry) {
-                        return Promise.reject(error);
-                    }
-
-                    // Si un refresh est déjà en cours, mettre la requête en file d'attente
-                    if (isRefreshing) {
-                        try {
-                            const token = await new Promise((resolve, reject) => {
-                                failedQueue.push({ resolve, reject });
-                            });
-                            originalRequest.headers.Authorization = `Bearer ${token}`;
-                            return instance(originalRequest);
-                        } catch (err) {
-                            return Promise.reject(err);
-                        }
-                    }
-
-                    originalRequest._retry = true;
-                    isRefreshing = true;
-
-                    try {
-                        const refreshToken = await AsyncStorage.getItem('refreshToken');
-                        if (!refreshToken) {
-                            // Nettoyage en cas d'absence de refresh token
-                            await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
-                            throw new Error('No refresh token available');
-                        }
-
-                        // Tentative de rafraîchissement du token
-                        const response = await axios.post(`${baseURL}/api/users/refresh-token`, {
-                            refreshToken
-                        });
-
-                        const { accessToken, newRefreshToken } = response.data;
-
-                        // Sauvegarde des nouveaux tokens
-                        await AsyncStorage.multiSet([
-                            ['accessToken', accessToken],
-                            ['refreshToken', newRefreshToken || refreshToken]
-                        ]);
-
-                        // Mise à jour des headers
-                        instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-                        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-
-                        // Traitement de la file d'attente
-                        processQueue(null, accessToken);
-                        
+                // Si un refresh est déjà en cours, mettre la requête en file d'attente
+                if (isRefreshing) {
+                    return new Promise((resolve, reject) => {
+                        failedQueue.push({ resolve, reject });
+                    }).then(token => {
+                        originalRequest.headers.Authorization = `Bearer ${token}`;
                         return instance(originalRequest);
-                    } catch (refreshError) {
-                        // En cas d'échec du refresh, nettoyage complet
-                        processQueue(refreshError, null);
-                        await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
-                        
-                        console.error('Erreur de rafraîchissement du token:', refreshError);
-                        throw refreshError;
-                    } finally {
-                        isRefreshing = false;
-                    }
+                    }).catch(err => Promise.reject(err));
                 }
-            );
-        }
 
-        // Initialisation des headers avec le token existant
-        const existingToken = await AsyncStorage.getItem('accessToken');
-        if (existingToken) {
-            instance.defaults.headers.common['Authorization'] = `Bearer ${existingToken}`;
-        }
+                originalRequest._retry = true;
+                isRefreshing = true;
+
+                try {
+                    const refreshToken = await AsyncStorage.getItem('refreshToken');
+                    if (!refreshToken) {
+                        throw new Error('No refresh token');
+                    }
+
+                    const response = await instance.post('/api/users/refresh-token', { refreshToken });
+                    const { accessToken, refreshToken: newRefreshToken } = response.data;
+
+                    await AsyncStorage.multiSet([
+                        ['accessToken', accessToken],
+                        ['refreshToken', newRefreshToken || refreshToken]
+                    ]);
+
+                    instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+                    originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+
+                    processQueue(null, accessToken);
+                    
+                    return instance(originalRequest);
+                } catch (refreshError) {
+                    processQueue(refreshError, null);
+                    await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
+                    throw refreshError;
+                } finally {
+                    isRefreshing = false;
+                }
+            }
+        );
 
         return instance;
     } catch (error) {

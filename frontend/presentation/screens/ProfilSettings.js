@@ -299,7 +299,7 @@ export default function Profile({ navigation }) {
                                                 paddingBottom={isLast ? 1 : 4}
                                                 px={1}
                                                 borderBottomWidth={isLast ? 0 : 1} // Retire la bordure pour le dernier élément
-                                                borderColor={isLast ? "transparent" : "gray.200"} // Rend la bordure invisible pour le dernier élément
+                                                borderColor={isLast ? "transparent" : "#94A3B820"} // Rend la bordure invisible pour le dernier élément
                                                 alignItems="center"
                                                 width="100%"
                                             >

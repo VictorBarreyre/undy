@@ -129,21 +129,33 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
                                     <Text>Chargement des transactions...</Text>
                                 ) : (
                                     <>
-                                        {transactions.map((transaction) => (
-                                            <VStack key={transaction.id} mb={4} width="100%">
-                                                <HStack space={4} justifyContent='space-between' width="100%">
+                                        {transactions.map((transaction, index) => (
+                                            <VStack
+                                                key={transaction.id}
+                                                mb={4}
+                                                width="100%"
+                                            >
+                                                <HStack
+                                                    space={4}
+                                                    justifyContent='space-between'
+                                                    width="100%"
+                                                    paddingTop={4}
+                                                    paddingBottom={4}
+                                                    px={1}
+                                                    borderBottomWidth={1}
+                                                    borderColor={"#94A3B820"}
+
+                                                >
                                                     <VStack>
                                                         <Text>Montant brut : {(transaction.grossAmount || 0).toFixed(2)} €</Text>
                                                         <Text>Frais : {(transaction.fees || 0).toFixed(2)} €</Text>
                                                         <Text fontWeight="bold">Montant net : {(transaction.netAmount || 0).toFixed(2)} €</Text>
-                                                        <Text>Statut : {transaction.status}</Text>
-                                                        <Text>Type : {transaction.type}</Text>
                                                     </VStack>
-                                                    <Text> {transaction.date}</Text>
+                                                    <Text>{transaction.date}</Text>
                                                 </HStack>
                                             </VStack>
                                         ))}
-                                        <Text style={styles.h4}>Total des revenus : {userData.totalEarnings} €</Text>
+                                        <Text mt={4} style={styles.h4}>Total des revenus : {userData.totalEarnings} €</Text>
                                     </>
                                 )}
                             </Box>
@@ -156,8 +168,8 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
                                     backgroundColor: "gray.800"
                                 }}
                             >
-                                <Text color="white" style={styles.ctalittle}>
-                                    Virer les fonds
+                                <Text color="white" style={styles.cta}>
+                                    Récupérer les fonds
                                 </Text>
                             </Button>
                         </VStack>
