@@ -43,7 +43,7 @@ router.get('/stripe-refresh', protect, (req, res) => {
     });
 });
 
-router.post('/reset-stripe-status', authMiddleware, resetStripeStatus);
+router.post('/reset-stripe-status', protect, resetStripeStatus);
 router.delete('/stripe/delete-account', protect, deleteStripeAccount);
 
 
