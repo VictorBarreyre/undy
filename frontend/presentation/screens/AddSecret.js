@@ -23,6 +23,8 @@ const AddSecret = () => {
     const [expiresIn, setExpiresIn] = useState(7);
     const [buttonMessage, setButtonMessage] = useState('Poster le secret');
     const [boxHeight, setBoxHeight] = useState('70%');
+    const [alertStep, setAlertStep] = useState(1);
+
 
 
     const MIN_PRICE = 5;
@@ -59,57 +61,47 @@ const AddSecret = () => {
         const handleDeepLink = async (event) => {
             try {
                 const url = event.url || event;
-                
+    
                 if (!url) return;
-
+    
                 // Décodez et parsez l'URL
                 const fullUrl = decodeURIComponent(url);
                 const parsedUrl = new URL(fullUrl);
-                
+    
                 // Vérifiez le schéma et le host
                 if (
-                    parsedUrl.protocol === 'hushy:' && 
+                    parsedUrl.protocol === 'hushy:' &&
                     (parsedUrl.hostname === 'stripe-return' || parsedUrl.hostname === 'profile')
                 ) {
                     const result = await handleStripeReturn(fullUrl);
-                    
-                    if (result.success) {
-                        Alert.alert(
-                            'Succès',
-                            'Votre compte Stripe a été configuré avec succès !',
-                            [{ text: 'OK' }]
-                        );
-                    } else {
-                        Alert.alert(
-                            'Configuration en cours',
-                            result.message,
-                            [{ text: 'OK' }]
-                        );
-                    }
+    
+        
+    
+        
                 }
             } catch (error) {
                 console.error('Deep link error:', error);
                 Alert.alert('Erreur', 'Impossible de traiter le lien');
             }
         };
-
+    
         // Écouteur d'événements pour les liens entrants
         const subscription = Linking.addEventListener('url', handleDeepLink);
-
+    
         // Vérifier l'URL initiale au lancement
         Linking.getInitialURL().then(url => {
             if (url) {
                 handleDeepLink({ url });
             }
         });
-
+    
         return () => {
             subscription.remove();
         };
     }, [handleStripeReturn]);
 
 
-      const handlePress = async () => {
+    const handlePress = async () => {
         try {
             const result = await handlePostSecret({
                 selectedLabel,
@@ -117,7 +109,7 @@ const AddSecret = () => {
                 price,
                 expiresIn
             });
-    
+
             if (result.requiresStripeSetup) {
                 Alert.alert(
                     "Configuration nécessaire",
@@ -128,7 +120,7 @@ const AddSecret = () => {
                             onPress: async () => {
                                 try {
                                     const stripeStatus = await handleStripeOnboardingRefresh();
-                                    
+
                                     if (stripeStatus.stripeOnboardingUrl) {
                                         await Linking.openURL(stripeStatus.stripeOnboardingUrl);
                                     } else {
@@ -167,25 +159,6 @@ const AddSecret = () => {
             Alert.alert('Erreur', error.message);
         }
     };
-
-
-    useEffect(() => {
-        // Cette fonction serait appelée quand l'app est ouverte via l'URL de retour Stripe
-        const handleStripeReturn = async () => {
-          try {
-            // Rafraîchir le statut
-            const stripeStatus = await handleStripeOnboardingRefresh();
-            if (stripeStatus.success) {
-              Alert.alert('Succès', 'Configuration du compte terminée avec succès !');
-            }
-          } catch (error) {
-            Alert.alert('Erreur', error.message);
-          }
-        };
-    
-        // Logique pour détecter le retour de Stripe
-        // ... selon votre configuration de deep linking
-      }, []);
 
 
     // Surveille les changements dans les champs et met à jour l'état de `secretPostAvailable`
@@ -337,11 +310,11 @@ const AddSecret = () => {
                                                 <VStack width="33%" alignItems="center">
                                                     <Text style={styles.ctalittle}>Son prix</Text>
                                                     <Input
-                                                        value={price}
+                                                        value={`${price}${price ? '€' : ''}`}
                                                         width="100%"
                                                         padding={0}
                                                         onChangeText={(text) => {
-                                                            // Autoriser uniquement les caractères numériques
+                                                            // Enlever le symbole € et tout autre caractère non numérique
                                                             const numericText = text.replace(/[^0-9]/g, '');
                                                             setPrice(numericText);
                                                         }}
@@ -359,7 +332,6 @@ const AddSecret = () => {
                                                         }}
                                                     />
                                                 </VStack>
-
                                                 <VStack width="20%" alignItems="end">
                                                     <Text left={2} style={styles.ctalittle}>Durée</Text>
                                                     <Select

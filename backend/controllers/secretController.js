@@ -42,6 +42,24 @@ exports.createSecret = async (req, res) => {
                         transfers: { requested: true },
                     },
                     business_type: 'individual',
+                    individual: {
+                        // Forcer la vérification d'identité
+                        verification: {
+                            document: {
+                                required: true
+                            }
+                        }
+                    },
+                    settings: {
+                        // Configurer les paramètres de vérification
+                        verifications: {
+                            identity: {
+                                document: {
+                                    required: true
+                                }
+                            }
+                        }
+                    },
                     business_profile: {
                         mcc: '5734', // Code pour services digitaux
                         url: 'https://hushy.app'
@@ -54,6 +72,7 @@ exports.createSecret = async (req, res) => {
                     refresh_url: refreshUrl,
                     return_url: returnUrl,
                     type: 'account_onboarding',
+                    collect: ['eventually_due']
                 });
 
                 // Mettre à jour l'utilisateur avec les informations Stripe

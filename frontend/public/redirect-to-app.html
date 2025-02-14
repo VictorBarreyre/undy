@@ -1,20 +1,93 @@
-// Dans redirect-to-app.html
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Redirection...</title>
-    <script>
-        window.onload = function() {
-            // Récupérer le statut de l'URL si présent
-            const urlParams = new URLSearchParams(window.location.search);
-            const status = urlParams.get('status');
-            
-            // Redirection avec le statut
-            window.location.href = `hushy://stripe-return?status=${status || 'success'}`;
+    <title>Configuration Stripe - Hushy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0; /* Slight variation in background */
+            text-align: center;
         }
-    </script>
+
+        .container {
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .logo {
+            height: 50px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #000;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .redirect-button {
+            background-color: #000;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        .redirect-button:hover {
+            background-color: #333; /* Slight hover effect */
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #000;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-    <p>Redirection vers l'application...</p>
+    <div class="container">
+        <img src="/hushy.png" alt="Hushy Logo" class="logo">
+        <h1>Configuration presque terminée</h1>
+        <p>Votre compte de paiement est en cours de configuration. Vous allez être redirigé automatiquement vers l'application Hushy.</p>
+        <div class="spinner"></div>
+        <a href="hushy://stripe-return" class="redirect-button" id="redirectButton">
+            Retourner sur l'application
+        </a>
+    </div>
+
+    <script>
+        window.onload = function() {
+            setTimeout(function() {
+                window.location.href = 'hushy://stripe-return';
+            }, 2000); // Redirection automatique après 2 secondes
+        };
+    </script>
 </body>
 </html>
