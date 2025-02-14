@@ -174,7 +174,7 @@ const resetStripeAccount = async () => {
   }
   
   try {
-      const response = await instance.post('/api/secrets/stripe/reset-status');
+      const response = await instance.post('/api/secrets/stripe/reset-stripe-status');
       
       if (response.data.success) {
           return {
@@ -434,7 +434,8 @@ const deleteStripeAccount = async () => {
       getConversationMessages,
       isLoadingData,
       handleStripeReturn,
-      deleteStripeAccount
+      deleteStripeAccount,
+      resetStripeAccount
     }}>
       {children}
     </CardDataContext.Provider>

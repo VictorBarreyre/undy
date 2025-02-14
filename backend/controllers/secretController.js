@@ -282,10 +282,7 @@ exports.checkStripeStatus = async (req, res) => {
 };
 
 exports.resetStripeStatus = async (req, res) => {
-    if (process.env.NODE_ENV !== 'development') {
-        return res.status(403).json({ message: 'Non disponible en production' });
-    }
-
+   
     try {
         const user = await User.findById(req.user.id);
         
