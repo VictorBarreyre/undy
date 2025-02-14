@@ -218,6 +218,9 @@ exports.refreshStripeOnboarding = async (req, res) => {
 };
 
 exports.deleteStripeAccount = async (req, res) => {
+
+    console.log('Requête de suppression de compte Stripe reçue');
+    console.log('Utilisateur:', req.user);
     try {
         const user = await User.findById(req.user.id);
         

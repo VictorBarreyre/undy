@@ -11,6 +11,8 @@ import { Background } from '../../navigation/Background';
 import TypewriterLoader from '../components/TypewriterLoader';
 import EarningsModal from '../components/EarningModal';
 import { BlurView } from '@react-native-community/blur';
+import { useCardData } from '../../infrastructure/context/CardDataContexte';
+
 
 
 
@@ -27,6 +29,8 @@ export default function Profile({ navigation }) {
     const [contactsEnabled, setContactsEnabled] = useState(userData?.contacts || false);
     const [inputValue, setInputValue] = useState('')
     const [earningsModalVisible, setEarningsModalVisible] = useState(false);
+    const { deleteStripeAccount } = useCardData();
+
 
     const [isLoading, setIsLoading] = useState(false);
 
