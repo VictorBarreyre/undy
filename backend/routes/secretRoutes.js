@@ -14,7 +14,8 @@ const {
     deleteConversation,
     createPaymentIntent,
     confirmPayment,
-    refreshStripeOnboarding // Ajouter l'import
+    refreshStripeOnboarding,
+    deleteStripeAccount
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -40,6 +41,8 @@ router.get('/stripe-refresh', protect, (req, res) => {
         status: 'success'
     });
 });
+router.delete('/stripe/delete-account', protect, deleteStripeAccount);
+
 
 
 // Routes des secrets

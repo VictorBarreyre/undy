@@ -167,6 +167,42 @@ const handleStripeReturn = async (url) => {
   }
 };
 
+
+const deleteStripeAccount = async () => {
+  const instance = getAxiosInstance();
+  if (!instance) {
+      throw new Error('Axios instance not initialized');
+  }
+  
+  try {
+      const response = await instance.delete('/api/stripe/delete-account');
+      
+      return {
+          success: true,
+          message: 'Compte Stripe supprimé avec succès',
+          status: response.data.status
+      };
+  } catch (error) {
+      console.error('Erreur suppression compte Stripe:', error);
+      
+      // Gérer spécifiquement l'erreur de solde non nul
+      if (error.response?.data?.availableBalance || error.response?.data?.pendingBalance) {
+          return {
+              success: false,
+              message: 'Impossible de supprimer le compte. Des fonds sont encore disponibles.',
+              availableBalance: error.response.data.availableBalance,
+              pendingBalance: error.response.data.pendingBalance
+          };
+      }
+      
+      return {
+          success: false,
+          message: error.response?.data?.message || 'Erreur lors de la suppression du compte Stripe',
+          error: error.response?.data || error.message
+      };
+  }
+};
+
   const fetchUnpurchasedSecrets = async (forceFetch = false) => {
 
     if (!forceFetch && lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)) {
@@ -366,6 +402,7 @@ const handleStripeReturn = async (url) => {
       getConversationMessages,
       isLoadingData,
       handleStripeReturn,
+      deleteStripeAccount
     }}>
       {children}
     </CardDataContext.Provider>

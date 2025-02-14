@@ -217,6 +217,52 @@ exports.refreshStripeOnboarding = async (req, res) => {
     }
 };
 
+exports.deleteStripeAccount = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        
+        if (!user.stripeAccountId) {
+            return res.status(400).json({ 
+                message: 'Aucun compte Stripe existant' 
+            });
+        }
+
+        // Vérifier s'il y a des soldes ou des transactions en attente
+        const balance = await stripe.balance.retrieve({
+            stripeAccount: user.stripeAccountId
+        });
+
+        if (balance.available.length > 0 || balance.pending.length > 0) {
+            return res.status(400).json({
+                message: 'Impossible de supprimer le compte. Des fonds sont encore disponibles.',
+                availableBalance: balance.available,
+                pendingBalance: balance.pending
+            });
+        }
+
+        // Supprimer le compte Stripe
+        await stripe.accounts.del(user.stripeAccountId);
+
+        // Mettre à jour le modèle utilisateur
+        user.stripeAccountId = undefined;
+        user.stripeAccountStatus = null;
+        user.stripeOnboardingComplete = false;
+        await user.save();
+
+        res.status(200).json({
+            message: 'Compte Stripe supprimé avec succès',
+            status: 'deleted'
+        });
+
+    } catch (error) {
+        console.error('Erreur suppression compte Stripe:', error);
+        res.status(500).json({ 
+            message: 'Erreur lors de la suppression du compte Stripe',
+            error: error.message 
+        });
+    }
+};
+
 exports.getAllSecrets = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query;
