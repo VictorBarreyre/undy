@@ -15,7 +15,8 @@ const {
     createPaymentIntent,
     confirmPayment,
     refreshStripeOnboarding,
-    deleteStripeAccount
+    deleteStripeAccount,
+    resetStripeStatus
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -41,8 +42,9 @@ router.get('/stripe-refresh', protect, (req, res) => {
         status: 'success'
     });
 });
-router.delete('/stripe/delete-account', protect, deleteStripeAccount);
 
+router.post('/reset-stripe-status', authMiddleware, resetStripeStatus);
+router.delete('/stripe/delete-account', protect, deleteStripeAccount);
 
 
 // Routes des secrets

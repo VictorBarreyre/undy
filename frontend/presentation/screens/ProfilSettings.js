@@ -29,7 +29,7 @@ export default function Profile({ navigation }) {
     const [contactsEnabled, setContactsEnabled] = useState(userData?.contacts || false);
     const [inputValue, setInputValue] = useState('')
     const [earningsModalVisible, setEarningsModalVisible] = useState(false);
-    const { deleteStripeAccount } = useCardData();
+    const { resetStripeAccount } = useCardData();
 
 
     const [isLoading, setIsLoading] = useState(false);
@@ -170,45 +170,49 @@ export default function Profile({ navigation }) {
     };
 
 
-    const handleDeleteStripeAccount = async () => {
+    const handleResetStripeAccount = async () => {
         Alert.alert(
-            "Supprimer le compte Stripe",
-            "Êtes-vous sûr de vouloir supprimer votre compte Stripe ? Cette action est irréversible.",
+            "Réinitialiser le compte Stripe",
+            "Êtes-vous sûr de vouloir réinitialiser votre compte Stripe ? Vous devrez refaire le processus d'onboarding.",
             [
                 {
                     text: "Annuler",
                     style: "cancel"
                 },
                 {
-                    text: "Supprimer",
+                    text: "Réinitialiser",
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            const result = await deleteStripeAccount();
+                            const result = await resetStripeAccount();
                             
                             if (result.success) {
                                 Alert.alert(
                                     "Succès", 
-                                    "Votre compte Stripe a été supprimé",
-                                    [{ text: 'OK' }]
+                                    "Votre compte Stripe a été réinitialisé. Vous allez être redirigé vers l'onboarding.",
+                                    [{ 
+                                        text: 'OK',
+                                        onPress: () => {
+                                            if (result.url) {
+                                                // Rediriger vers l'URL d'onboarding si disponible
+                                                Linking.openURL(result.url);
+                                            }
+                                        }
+                                    }]
                                 );
+                                setStripeModalVisible(false);
                             } else {
-                                // Gestion des cas où la suppression échoue
-                                const errorMessage = result.availableBalance 
-                                    ? "Impossible de supprimer. Des fonds sont encore disponibles sur votre compte."
-                                    : result.message || "Erreur lors de la suppression du compte Stripe";
-                                
                                 Alert.alert(
                                     "Erreur", 
-                                    errorMessage,
+                                    result.message || "Erreur lors de la réinitialisation du compte Stripe",
                                     [{ text: 'OK' }]
                                 );
                             }
                         } catch (error) {
-                            console.error('Erreur de suppression du compte Stripe:', error);
+                            console.error('Erreur de réinitialisation du compte Stripe:', error);
                             Alert.alert(
                                 'Erreur', 
-                                'Une erreur est survenue lors de la suppression',
+                                'Une erreur est survenue lors de la réinitialisation',
                                 [{ text: 'OK' }]
                             );
                         }
@@ -485,69 +489,69 @@ export default function Profile({ navigation }) {
             />
 
 <Modal 
-                isOpen={stripeModalVisible} 
-                onClose={() => setStripeModalVisible(false)}
+    isOpen={stripeModalVisible} 
+    onClose={() => setStripeModalVisible(false)}
+>
+    <View width='100%' style={{ flex: 1 }}>
+        <BlurView
+            style={[
+                styles.blurBackground,
+                {
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                }
+            ]}
+            blurType="light"
+            blurAmount={8}
+            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+        >
+            <Modal.Content
+                width="90%"
+                style={{
+                    ...styles.shadowBox,
+                    elevation: 5,
+                    backgroundColor: 'white',
+                    borderRadius: 8,
+                    padding: 16
+                }}
             >
-                <View width='100%' style={{ flex: 1 }}>
-                    <BlurView
-                        style={[
-                            styles.blurBackground,
-                            {
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                flex: 1,
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                            }
-                        ]}
-                        blurType="light"
-                        blurAmount={8}
-                        reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+                <Modal.CloseButton 
+                    _icon={{
+                        color: "#94A3B8",
+                        size: "sm"
+                    }}
+                />
+
+                <VStack space={4} width="100%">
+                    <Text style={styles.h5} textAlign="center">
+                        Réinitialiser votre compte Stripe
+                    </Text>
+
+                    <Text 
+                        style={styles.caption} 
+                        color="#94A3B8" 
+                        textAlign="center" 
+                        mb={4}
                     >
-                        <Modal.Content
-                            width="90%"
-                            style={{
-                                ...styles.shadowBox,
-                                elevation: 5,
-                                backgroundColor: 'white',
-                                borderRadius: 8,
-                                padding: 16
-                            }}
-                        >
-                            <Modal.CloseButton 
-                                _icon={{
-                                    color: "#94A3B8",
-                                    size: "sm"
-                                }}
-                            />
+                        Cette action réinitialisera votre compte Stripe. Vous devrez refaire le processus d'onboarding.
+                    </Text>
 
-                            <VStack space={4} width="100%">
-                                <Text style={styles.h5} textAlign="center">
-                                    Supprimer votre compte Stripe
-                                </Text>
-
-                                <Text 
-                                    style={styles.caption} 
-                                    color="#94A3B8" 
-                                    textAlign="center" 
-                                    mb={4}
-                                >
-                                    Êtes-vous sûr de vouloir supprimer définitivement votre compte Stripe ?
-                                </Text>
-
-                                <Button 
-                                    onPress={handleDeleteStripeAccount}
-                                    backgroundColor="red.500"
-                                    borderRadius="full"
-                                >
-                                    <Text color="white" style={styles.ctalittle}>
-                                        Supprimer le compte Stripe
-                                    </Text>
-                                </Button>
-                            </VStack>
-                        </Modal.Content>
-                    </BlurView>
-                </View>
-            </Modal>
+                    <Button 
+                        onPress={handleResetStripeAccount}
+                        backgroundColor="orange.500"
+                        borderRadius="full"
+                    >
+                        <Text color="white" style={styles.ctalittle}>
+                            Réinitialiser le compte Stripe
+                        </Text>
+                    </Button>
+                </VStack>
+            </Modal.Content>
+        </BlurView>
+    </View>
+</Modal>
 
             <Modal isOpen={modalVisible} onClose={() => setModalVisible(false)}>
                 <View width='100%' style={{ flex: 1 }}>

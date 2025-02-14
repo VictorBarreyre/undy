@@ -167,6 +167,37 @@ const handleStripeReturn = async (url) => {
   }
 };
 
+const resetStripeAccount = async () => {
+  const instance = getAxiosInstance();
+  if (!instance) {
+      throw new Error('Axios instance not initialized');
+  }
+  
+  try {
+      const response = await instance.post('/api/secrets/stripe/reset-status');
+      
+      if (response.data.success) {
+          return {
+              success: true,
+              message: 'Compte Stripe réinitialisé avec succès',
+              status: response.data.status,
+              url: response.data.stripeOnboardingUrl // Si vous avez besoin de rediriger vers l'onboarding
+          };
+      } else {
+          return {
+              success: false,
+              message: response.data.message || 'Erreur lors de la réinitialisation du compte'
+          };
+      }
+  } catch (error) {
+      console.error('Erreur réinitialisation compte Stripe:', error);
+      return {
+          success: false,
+          message: error.response?.data?.message || 'Erreur lors de la réinitialisation du compte Stripe'
+      };
+  }
+};
+
 
 const deleteStripeAccount = async () => {
   const instance = getAxiosInstance();

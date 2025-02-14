@@ -281,6 +281,56 @@ exports.checkStripeStatus = async (req, res) => {
     }
 };
 
+exports.resetStripeStatus = async (req, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+        return res.status(403).json({ message: 'Non disponible en production' });
+    }
+
+    try {
+        const user = await User.findById(req.user.id);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'Utilisateur non trouvé' });
+        }
+
+        // Réinitialiser le statut utilisateur
+        user.stripeAccountStatus = 'pending';
+        user.stripeOnboardingComplete = false;
+        user.lastStripeOnboardingUrl = null;
+        await user.save();
+
+        // Réinitialiser les secrets
+        await Secret.updateMany(
+            { user: req.user.id },
+            { status: 'pending' }
+        );
+
+        // Désactiver les capacités sur Stripe
+        if (user.stripeAccountId) {
+            await stripe.accounts.update(user.stripeAccountId, {
+                capabilities: {
+                    card_payments: { requested: false },
+                    transfers: { requested: false }
+                }
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Statut Stripe réinitialisé'
+        });
+    } catch (error) {
+        console.error('Erreur reset status:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+
+
+
 exports.deleteStripeAccount = async (req, res) => {
 
     console.log('Requête de suppression de compte Stripe reçue');
