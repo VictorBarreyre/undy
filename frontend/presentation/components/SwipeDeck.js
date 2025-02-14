@@ -36,9 +36,8 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   );
 
 
-  // Effet pour la gestion initiale du chargement et filtrage des données
   useEffect(() => {
-    if (!isLoadingData && data.length > 0) {
+    const processData = () => {
       const filtered = selectedFilters.length > 0
         ? data.filter((card) => selectedFilters.includes(card.label))
         : data;
@@ -49,15 +48,19 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
         setCurrentItem(filtered[actualIndex]);
       }
       setIsLoading(false);
+    };
+
+    if (!isLoadingData && data.length > 0) {
+      processData();
     }
   }, [selectedFilters, data, currentIndex, isLoadingData]);
 
-  // Effet pour la tentative unique de rafraîchissement
+  // Deuxième useEffect
   useEffect(() => {
     const attemptInitialFetch = async () => {
       if (!didInitialFetch.current && !isLoadingData && filteredData.length === 0) {
-        setIsLoading(true);
         try {
+          setIsLoading(true);
           await fetchUnpurchasedSecrets();
           didInitialFetch.current = true;
         } catch (error) {
@@ -71,7 +74,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
 
     attemptInitialFetch();
   }, [isLoadingData, filteredData.length]);
-
+  
 
   const getCardHeight = () => {
     switch (true) {

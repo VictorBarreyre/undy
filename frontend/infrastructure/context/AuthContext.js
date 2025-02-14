@@ -17,10 +17,12 @@ export const AuthProvider = ({ children }) => {
                 await loadStoredData();
             } catch (error) {
                 console.error('Erreur d\'initialisation axios:', error);
+                setIsLoadingUserData(false);  // Toujours mettre à false
             }
         };
+
         initAxios();
-    }, []);
+    }, []); // Dépendance vide pour n'exécuter qu'une fois
 
     const cleanProfilePicture = (profilePicture) => {
         if (!profilePicture) return null;
@@ -173,22 +175,22 @@ export const AuthProvider = ({ children }) => {
         try {
             const instance = getAxiosInstance();
             if (instance) {
-                // Réinitialiser l'instance Axios
                 instance.defaults.headers.common['Authorization'] = '';
             }
             
-            // Nettoyer AsyncStorage
             await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
             
-            // Réinitialiser l'état
+            // Réinitialiser tous les états
             setUserToken(null);
             setIsLoggedIn(false);
             setUserData(null);
+            setIsLoadingUserData(false);  // Ajouter cette ligne
             
             return true;
         } catch (error) {
             console.error('Erreur lors de la déconnexion:', error);
-            throw error; // Propager l'erreur pour la gérer dans le composant
+            setIsLoadingUserData(false);  // Même en cas d'erreur
+            throw error;
         }
     };
 

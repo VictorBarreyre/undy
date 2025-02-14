@@ -15,35 +15,43 @@ export default function CardHome({ cardData }) {
   const [textHeight, setTextHeight] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
 
-
+  const safeCardData = cardData || {};
 
   useEffect(() => {
-    // Vérification de sécurité
-    if (!cardData || !cardData.expiresAt) return;
-
     const calculateTimeLeft = () => {
-        const expirationDate = new Date(cardData.expiresAt);
-        const now = new Date();
-        const difference = expirationDate - now;
+      if (!safeCardData.expiresAt) return 'N/A';
 
-        if (difference <= 0) {
-            return 'Expiré';
-        }
+      const expirationDate = new Date(safeCardData.expiresAt);
+      const now = new Date();
+      const difference = expirationDate - now;
 
-        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((difference / 1000 / 60) % 60);
+      if (difference <= 0) return 'Expiré';
 
-        return `${days}j ${hours}h ${minutes}m`;
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+
+      return `${days}j ${hours}h ${minutes}m`;
     };
 
     setTimeLeft(calculateTimeLeft());
     const timer = setInterval(() => {
-        setTimeLeft(calculateTimeLeft());
+      setTimeLeft(calculateTimeLeft());
     }, 60000);
 
     return () => clearInterval(timer);
-}, [cardData?.expiresAt]);
+  }, [safeCardData.expiresAt]);
+
+
+  useEffect(() => {
+    const checkContentLength = () => {
+      const content = safeCardData.content || '';
+      setIsSingleLine(content.length <= 24);
+    };
+
+    checkContentLength();
+  }, [safeCardData.content]);
+
 
   const profilePictureUrl = cardData.user?.profilePicture
 
@@ -101,20 +109,6 @@ export default function CardHome({ cardData }) {
   };
 
 
-  useEffect(() => {
-    // Vérification de sécurité
-    if (!cardData || !cardData.content) return;
-
-    const checkContentLength = () => {
-        if (cardData.content.length > 24) {
-            setIsSingleLine(false);
-        } else {
-            setIsSingleLine(true);
-        }
-    };
-
-    checkContentLength();
-}, [cardData?.content]);
 
   return (
     <Box
