@@ -499,73 +499,98 @@ export default function Profile({ navigation }) {
             />
 
             <Actionsheet isOpen={modalVisible} onClose={() => setModalVisible(false)}>
-                    <Actionsheet.Content>
-                        <VStack width="100%" space={4} px={4}>
-                            <Text style={styles.h4} textAlign="center">
-                                Modifier votre {fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}
-                            </Text>
+                <Actionsheet.Content>
+                    <VStack width="100%" space={4} px={4}>
+                        {selectedField === 'abonnements' && (!userData?.subscriptions || userData.subscriptions === 0) ? (
+                            <>
+                                <Text style={styles.h4} textAlign="center">
+                                    Mes abonnements
+                                </Text>
+                                <Text
+                                    style={styles.caption}
+                                    color="#94A3B8"
+                                    textAlign="center"
+                                >
+                                    Vous n'avez pas encore d'abonnements.
+                                    Découvrez nos offres pour enrichir votre expérience.
+                                </Text>
+                                <Button
+                                    onPress={() => {
+                                        navigation.navigate('Subscriptions');
+                                        setModalVisible(false);
+                                    }}
+                                    backgroundColor="black"
+                                    borderRadius="full"
+                                >
+                                    <Text color="white" style={styles.cta}>
+                                        Voir les abonnements
+                                    </Text>
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <Text style={styles.h4} textAlign="center">
+                                    Modifier votre {fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}
+                                </Text>
 
-                            {/* Input Section */}
-                            <Box width="100%">
-                                {selectedField === 'birthdate' ? (
-                                    Platform.OS === 'web' ? (
+                                <Box width="100%">
+                                    {selectedField === 'birthdate' ? (
+                                        Platform.OS === 'web' ? (
+                                            <Input
+                                                type="date"
+                                                value={tempValue}
+                                                onChange={(e) => setTempValue(e.target.value)}
+                                                size="md"
+                                                backgroundColor="gray.100"
+                                                borderRadius="md"
+                                            />
+                                        ) : (
+                                            <DateTimePicker
+                                                value={tempValue ? new Date(tempValue) : new Date()}
+                                                mode="date"
+                                                display="spinner"
+                                                textColor="#000"
+                                                style={styles.datePicker}
+                                                onChange={handleDateChange}
+                                            />
+                                        )
+                                    ) : (
                                         <Input
-                                            type="date"
-                                            value={tempValue}
-                                            onChange={(e) => setTempValue(e.target.value)}
+                                            placeholder={`Modifier votre ${fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}`}
+                                            value={inputValue}
+                                            onChangeText={(text) => {
+                                                setInputValue(text);
+                                            }}
+                                            marginTop={2}
+                                            marginBottom={1}
                                             size="md"
                                             backgroundColor="gray.100"
-                                            borderRadius="md"
+                                            borderRadius="30"
+                                            _focus={{
+                                                backgroundColor: "gray.50",
+                                                borderColor: "gray.300"
+                                            }}
                                         />
-                                    ) : (
+                                    )}
+                                </Box>
 
-
-                                        <DateTimePicker
-                                            value={tempValue ? new Date(tempValue) : new Date()}
-                                            mode="date"
-                                            display="spinner" // Utiliser "spinner" pour un affichage plus compact
-                                            textColor="#000" // Couleur du texte
-                                            style={styles.datePicker} // Appliquer des styles personnalisés
-                                            onChange={handleDateChange}
-                                        />
-
-                                    )
-                                ) : (
-                                    <Input
-                                        placeholder={`Modifier votre ${fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}`}
-                                        value={inputValue}
-                                        onChangeText={(text) => {
-                                            setInputValue(text);
-                                        }}
-                                        marginTop={4}
-                                        marginBottom={4}
-                                        size="md"
-                                        backgroundColor="gray.100"
-                                        borderRadius="30"
-                                        _focus={{
-                                            backgroundColor: "gray.50",
-                                            borderColor: "gray.300"
-                                        }}
-                                    />
-                                )}
-                            </Box>
-
-                            {/* Footer avec bouton */}
-                            <Button
-                                backgroundColor="black"
-                                onPress={saveChanges}
-                                borderRadius="full"
-                                py={3}
-                                _pressed={{
-                                    backgroundColor: "gray.800"
-                                }}
-                            >
-                                <Text color="white" style={styles.cta}>
-                                    Enregistrer
-                                </Text>
-                            </Button>
-                        </VStack>
-                    </Actionsheet.Content>
+                                <Button
+                                    backgroundColor="black"
+                                    onPress={saveChanges}
+                                    borderRadius="full"
+                                    py={3}
+                                    _pressed={{
+                                        backgroundColor: "gray.800"
+                                    }}
+                                >
+                                    <Text color="white" style={styles.cta}>
+                                        Enregistrer
+                                    </Text>
+                                </Button>
+                            </>
+                        )}
+                    </VStack>
+                </Actionsheet.Content>
             </Actionsheet>
         </Background>
     );

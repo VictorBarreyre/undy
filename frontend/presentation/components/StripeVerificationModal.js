@@ -160,7 +160,7 @@ const StripeVerificationActionSheet = ({
                                     borderRadius="full"
                                     flex={1}
                                 >
-                                    <Text color="black" style={styles.ctalittle}>
+                                    <Text color="black" style={styles.cta}>
                                         Choisir un document
                                     </Text>
                                 </Button>
