@@ -374,6 +374,9 @@ exports.updateUserProfile = async (req, res) => {
 
             const updatedUser = await user.save();
 
+            // Générer un nouveau token après la mise à jour
+            const { accessToken } = generateTokens(updatedUser._id);
+
             res.json({
                 _id: updatedUser._id,
                 name: updatedUser.name,
@@ -384,7 +387,7 @@ exports.updateUserProfile = async (req, res) => {
                 notifs: updatedUser.notifs,
                 contacts: updatedUser.contacts,
                 subscriptions: updatedUser.subscriptions,
-                token: generateToken(updatedUser._id),
+                token: accessToken, // Utiliser le nouvel access token
             });
         } else {
             res.status(404).json({ message: 'Utilisateur non trouvé' });

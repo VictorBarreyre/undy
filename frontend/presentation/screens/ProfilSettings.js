@@ -486,10 +486,11 @@ export default function Profile({ navigation }) {
                 isOpen={earningsModalVisible}
                 onClose={() => setEarningsModalVisible(false)}
                 userData={userData}
+                navigation={navigation}
             />
 
-<Modal 
-    isOpen={stripeModalVisible} 
+<Modal
+    isOpen={stripeModalVisible}
     onClose={() => setStripeModalVisible(false)}
 >
     <View width='100%' style={{ flex: 1 }}>
@@ -517,7 +518,7 @@ export default function Profile({ navigation }) {
                     padding: 16
                 }}
             >
-                <Modal.CloseButton 
+                <Modal.CloseButton
                     _icon={{
                         color: "#94A3B8",
                         size: "sm"
@@ -525,28 +526,74 @@ export default function Profile({ navigation }) {
                 />
 
                 <VStack space={4} width="100%">
-                    <Text style={styles.h5} textAlign="center">
-                        Réinitialiser votre compte Stripe
-                    </Text>
+                    {userData?.stripeAccountStatus !== 'active' ? (
+                        <>
+                            <Text style={styles.h5} textAlign="center">
+                                Configuration du compte bancaire
+                            </Text>
 
-                    <Text 
-                        style={styles.caption} 
-                        color="#94A3B8" 
-                        textAlign="center" 
-                        mb={4}
-                    >
-                        Cette action réinitialisera votre compte Stripe. Vous devrez refaire le processus d'onboarding.
-                    </Text>
+                            <Text
+                                style={styles.caption}
+                                color="#94A3B8"
+                                textAlign="center"
+                                mb={4}
+                            >
+                                Votre compte bancaire sera configuré automatiquement lors de la publication de votre premier secret.
+                            </Text>
 
-                    <Button 
-                        onPress={handleResetStripeAccount}
-                        backgroundColor="orange.500"
-                        borderRadius="full"
-                    >
-                        <Text color="white" style={styles.ctalittle}>
-                            Réinitialiser le compte Stripe
-                        </Text>
-                    </Button>
+                            <Button
+                                onPress={() => {
+                                    setStripeModalVisible(false);
+                                    navigation.navigate('AddSecret');
+                                }}
+                                backgroundColor="black"
+                                borderRadius="full"
+                            >
+                                <Text color="white" style={styles.ctalittle}>
+                                    Publier un secret
+                                </Text>
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <Text style={styles.h5} textAlign="center">
+                                Compte Stripe configuré
+                            </Text>
+
+                            <Text
+                                style={styles.caption}
+                                color="#94A3B8"
+                                textAlign="center"
+                                mb={4}
+                            >
+                                Votre compte bancaire est actif. Vous pouvez réinitialiser ou gérer votre compte Stripe si nécessaire.
+                            </Text>
+
+                            <Button
+                                onPress={handleResetStripeAccount}
+                                backgroundColor="orange.500"
+                                borderRadius="full"
+                                mb={2}
+                            >
+                                <Text color="white" style={styles.ctalittle}>
+                                    Réinitialiser le compte Stripe
+                                </Text>
+                            </Button>
+
+                            <Button
+                                onPress={() => {
+                                    // Ajouter une action pour gérer le compte Stripe
+                                    // Par exemple, ouvrir un lien vers le dashboard Stripe
+                                }}
+                                backgroundColor="black"
+                                borderRadius="full"
+                            >
+                                <Text color="white" style={styles.ctalittle}>
+                                    Gérer mon compte
+                                </Text>
+                            </Button>
+                        </>
+                    )}
                 </VStack>
             </Modal.Content>
         </BlurView>

@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Text, View, Button, VStack, Box, Input, HStack } from 'native-base';
+import { Modal, Text, View, Button, VStack, Box, HStack } from 'native-base';
 import { BlurView } from '@react-native-community/blur';
 import { Platform } from 'react-native';
 import { useStripe } from '@stripe/stripe-react-native';
-import axios from 'axios';
 import { styles } from '../../infrastructure/theme/styles';
-import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance'
+import { getAxiosInstance } from '../../data/api/axiosInstance';
 
-const EarningsModal = ({ isOpen, onClose, userData }) => {
+const EarningsModal = ({ 
+    isOpen, 
+    onClose, 
+    userData, 
+    isConfigured = false, 
+    navigation 
+}) => {
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
@@ -22,7 +27,7 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
                         Authorization: `Bearer ${userData.token}`,
                     },
                     params: {
-                        stripeAccountId: userData.stripeAccountId // Ajoutez le stripeAccountId ici
+                        stripeAccountId: userData.stripeAccountId
                     }
                 });
                 setTransactions(response.data);
@@ -33,21 +38,19 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
             }
         };
 
-        if (isOpen) {
+        if (isOpen && isConfigured) {
             fetchTransactions();
         }
-    }, [isOpen, userData.token, userData.stripeAccountId]);
+    }, [isOpen, isConfigured, userData.token, userData.stripeAccountId]);
 
     const handleTransferFunds = async () => {
         const instance = getAxiosInstance();
         try {
-            // Récupérer le montant total des revenus
             const totalEarnings = transactions.reduce((total, transaction) => total + transaction.amount, 0);
 
-            // Créer une intention de paiement avec Stripe
             const response = await instance.post('/api/users/create-transfer-intent', {
                 amount: totalEarnings,
-                stripeAccountId: userData.stripeAccountId // Ajoutez également ici
+                stripeAccountId: userData.stripeAccountId
             }, {
                 headers: {
                     Authorization: `Bearer ${userData.token}`,
@@ -56,7 +59,6 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
 
             const { clientSecret } = response.data;
 
-            // Initialiser le formulaire de paiement Stripe
             const { error } = await initPaymentSheet({
                 paymentIntentClientSecret: clientSecret,
             });
@@ -66,7 +68,6 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
                 return;
             }
 
-            // Présenter le formulaire de paiement Stripe
             const { error: presentError } = await presentPaymentSheet();
 
             if (presentError) {
@@ -74,14 +75,12 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
                 return;
             }
 
-            // Le virement a été effectué avec succès
             console.log('Virement effectué avec succès !');
             onClose();
         } catch (error) {
             console.error('Erreur lors du virement des fonds :', error);
         }
     };
-
 
     return (
         <Modal isOpen={isOpen} onClose={onClose}>
@@ -120,59 +119,88 @@ const EarningsModal = ({ isOpen, onClose, userData }) => {
                                 size: "sm"
                             }}
                         />
-                        <VStack justifyContent="space-between" width='100%' space={4}>
-                            <Text style={styles.h5} numberOfLines={1} ellipsizeMode="tail">
-                                Détails des revenus
-                            </Text>
-                            <Box mb={4} width="100%">
-                                {isLoading ? (
-                                    <Text>Chargement des transactions...</Text>
-                                ) : (
-                                    <>
-                                        {transactions.map((transaction, index) => (
-                                            <VStack
-                                                key={transaction.id}
-                                                mb={4}
-                                                width="100%"
-                                            >
-                                                <HStack
-                                                    space={4}
-                                                    justifyContent='space-between'
-                                                    width="100%"
-                                                    paddingTop={4}
-                                                    paddingBottom={4}
-                                                    px={1}
-                                                    borderBottomWidth={1}
-                                                    borderColor={"#94A3B820"}
-
-                                                >
-                                                    <VStack>
-                                                        <Text>Montant brut : {(transaction.grossAmount || 0).toFixed(2)} €</Text>
-                                                        <Text>Frais : {(transaction.fees || 0).toFixed(2)} €</Text>
-                                                        <Text fontWeight="bold">Montant net : {(transaction.netAmount || 0).toFixed(2)} €</Text>
-                                                    </VStack>
-                                                    <Text>{transaction.date}</Text>
-                                                </HStack>
-                                            </VStack>
-                                        ))}
-                                        <Text mt={4} style={styles.h4}>Total des revenus : {userData.totalEarnings} €</Text>
-                                    </>
-                                )}
-                            </Box>
-                            <Button
-                                backgroundColor="black"
-                                onPress={handleTransferFunds}
-                                borderRadius="full"
-                                py={3}
-                                _pressed={{
-                                    backgroundColor: "gray.800"
-                                }}
-                            >
-                                <Text color="white" style={styles.cta}>
-                                    Récupérer les fonds
+                        {!isConfigured ? (
+                            <VStack space={4} width="100%" alignItems="center">
+                                <Text style={styles.h5} textAlign="center">
+                                    Détails des revenus
                                 </Text>
-                            </Button>
-                        </VStack>
+                                <Text 
+                                    style={styles.caption} 
+                                    color="#94A3B8" 
+                                    textAlign="center" 
+                                    paddingY={4}
+                                >
+                                    Vous n'avez pas encore généré de revenus. Commencez à vendre vos secrets pour gagner de l'argent.
+                                </Text>
+                                <Button
+                                    onPress={() => {
+                                        onClose();
+                                        navigation.navigate('AddSecret');
+                                    }}
+                                    backgroundColor="black"
+                                    borderRadius="full"
+                                >
+                                    <Text color="white" style={styles.ctalittle}>
+                                        Publier un secret
+                                    </Text>
+                                </Button>
+                            </VStack>
+                        ) : (
+                            <VStack space={4} width="100%">
+                                <Text style={styles.h5} textAlign="center">
+                                    Détails des revenus
+                                </Text>
+                                <Box mb={4} width="100%">
+                                    {isLoading ? (
+                                        <Text textAlign="center">Chargement des transactions...</Text>
+                                    ) : (
+                                        <>
+                                            {transactions.map((transaction) => (
+                                                <VStack
+                                                    key={transaction.id}
+                                                    mb={4}
+                                                    width="100%"
+                                                >
+                                                    <HStack
+                                                        space={4}
+                                                        justifyContent='space-between'
+                                                        width="100%"
+                                                        paddingTop={4}
+                                                        paddingBottom={4}
+                                                        px={1}
+                                                        borderBottomWidth={1}
+                                                        borderColor={"#94A3B820"}
+                                                    >
+                                                        <VStack>
+                                                            <Text>Montant brut : {(transaction.grossAmount || 0).toFixed(2)} €</Text>
+                                                            <Text>Frais : {(transaction.fees || 0).toFixed(2)} €</Text>
+                                                            <Text fontWeight="bold">Montant net : {(transaction.netAmount || 0).toFixed(2)} €</Text>
+                                                        </VStack>
+                                                        <Text>{transaction.date}</Text>
+                                                    </HStack>
+                                                </VStack>
+                                            ))}
+                                            <Text mt={4} style={styles.h4} textAlign="center">
+                                                Total des revenus : {userData.totalEarnings} €
+                                            </Text>
+                                        </>
+                                    )}
+                                </Box>
+                                <Button
+                                    backgroundColor="black"
+                                    onPress={handleTransferFunds}
+                                    borderRadius="full"
+                                    py={3}
+                                    _pressed={{
+                                        backgroundColor: "gray.800"
+                                    }}
+                                >
+                                    <Text color="white" style={styles.ctalittle}>
+                                        Récupérer les fonds
+                                    </Text>
+                                </Button>
+                            </VStack>
+                        )}
                     </Modal.Content>
                 </BlurView>
             </View>
