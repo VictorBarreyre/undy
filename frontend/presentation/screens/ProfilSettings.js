@@ -44,7 +44,7 @@ export default function Profile({ navigation }) {
         return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
     };
 
-   
+
     const saveChanges = async () => {
         console.log('Selected Field:', selectedField);
         console.log('Input Value:', inputValue); // Ajoutez ce log pour déboguer
@@ -185,12 +185,12 @@ export default function Profile({ navigation }) {
                     onPress: async () => {
                         try {
                             const result = await resetStripeAccount();
-                            
+
                             if (result.success) {
                                 Alert.alert(
-                                    "Succès", 
+                                    "Succès",
                                     "Votre compte Stripe a été réinitialisé. Vous allez être redirigé vers l'onboarding.",
-                                    [{ 
+                                    [{
                                         text: 'OK',
                                         onPress: () => {
                                             if (result.url) {
@@ -203,7 +203,7 @@ export default function Profile({ navigation }) {
                                 setStripeModalVisible(false);
                             } else {
                                 Alert.alert(
-                                    "Erreur", 
+                                    "Erreur",
                                     result.message || "Erreur lors de la réinitialisation du compte Stripe",
                                     [{ text: 'OK' }]
                                 );
@@ -211,7 +211,7 @@ export default function Profile({ navigation }) {
                         } catch (error) {
                             console.error('Erreur de réinitialisation du compte Stripe:', error);
                             Alert.alert(
-                                'Erreur', 
+                                'Erreur',
                                 'Une erreur est survenue lors de la réinitialisation',
                                 [{ text: 'OK' }]
                             );
@@ -222,7 +222,7 @@ export default function Profile({ navigation }) {
         );
     };
 
-    
+
 
     const handleLogoutno = async () => {
         try {
@@ -489,116 +489,116 @@ export default function Profile({ navigation }) {
                 navigation={navigation}
             />
 
-<Modal
-    isOpen={stripeModalVisible}
-    onClose={() => setStripeModalVisible(false)}
->
-    <View width='100%' style={{ flex: 1 }}>
-        <BlurView
-            style={[
-                styles.blurBackground,
-                {
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    flex: 1,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                }
-            ]}
-            blurType="light"
-            blurAmount={8}
-            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
-        >
-            <Modal.Content
-                width="90%"
-                style={{
-                    ...styles.shadowBox,
-                    elevation: 5,
-                    backgroundColor: 'white',
-                    borderRadius: 8,
-                    padding: 16
-                }}
+            <Modal
+                isOpen={stripeModalVisible}
+                onClose={() => setStripeModalVisible(false)}
             >
-                <Modal.CloseButton
-                    _icon={{
-                        color: "#94A3B8",
-                        size: "sm"
-                    }}
-                />
-
-                <VStack space={4} width="100%">
-                    {userData?.stripeAccountStatus !== 'active' ? (
-                        <>
-                            <Text style={styles.h5} textAlign="center">
-                                Configuration du compte bancaire
-                            </Text>
-
-                            <Text
-                                style={styles.caption}
-                                color="#94A3B8"
-                                textAlign="center"
-                                mb={4}
-                            >
-                                Votre compte bancaire sera configuré automatiquement lors de la publication de votre premier secret.
-                            </Text>
-
-                            <Button
-                                onPress={() => {
-                                    setStripeModalVisible(false);
-                                    navigation.navigate('AddSecret');
+                <View width='100%' style={{ flex: 1 }}>
+                    <BlurView
+                        style={[
+                            styles.blurBackground,
+                            {
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                flex: 1,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                            }
+                        ]}
+                        blurType="light"
+                        blurAmount={8}
+                        reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+                    >
+                        <Modal.Content
+                            width="90%"
+                            style={{
+                                ...styles.shadowBox,
+                                elevation: 5,
+                                backgroundColor: 'white',
+                                borderRadius: 8,
+                                padding: 16
+                            }}
+                        >
+                            <Modal.CloseButton
+                                _icon={{
+                                    color: "#94A3B8",
+                                    size: "sm"
                                 }}
-                                backgroundColor="black"
-                                borderRadius="full"
-                            >
-                                <Text color="white" style={styles.ctalittle}>
-                                    Publier un secret
-                                </Text>
-                            </Button>
-                        </>
-                    ) : (
-                        <>
-                            <Text style={styles.h5} textAlign="center">
-                                Compte Stripe configuré
-                            </Text>
+                            />
 
-                            <Text
-                                style={styles.caption}
-                                color="#94A3B8"
-                                textAlign="center"
-                                mb={4}
-                            >
-                                Votre compte bancaire est actif. Vous pouvez réinitialiser ou gérer votre compte Stripe si nécessaire.
-                            </Text>
+                            <VStack space={4} width="100%">
+                                {userData?.stripeAccountStatus !== 'active' ? (
+                                    <>
+                                        <Text style={styles.h5} textAlign="center">
+                                            Configuration du compte bancaire
+                                        </Text>
 
-                            <Button
-                                onPress={handleResetStripeAccount}
-                                backgroundColor="orange.500"
-                                borderRadius="full"
-                                mb={2}
-                            >
-                                <Text color="white" style={styles.ctalittle}>
-                                    Réinitialiser le compte Stripe
-                                </Text>
-                            </Button>
+                                        <Text
+                                            style={styles.caption}
+                                            color="#94A3B8"
+                                            textAlign="center"
+                                            mb={4}
+                                        >
+                                            Votre compte bancaire sera configuré automatiquement lors de la publication de votre premier secret.
+                                        </Text>
 
-                            <Button
-                                onPress={() => {
-                                    // Ajouter une action pour gérer le compte Stripe
-                                    // Par exemple, ouvrir un lien vers le dashboard Stripe
-                                }}
-                                backgroundColor="black"
-                                borderRadius="full"
-                            >
-                                <Text color="white" style={styles.ctalittle}>
-                                    Gérer mon compte
-                                </Text>
-                            </Button>
-                        </>
-                    )}
-                </VStack>
-            </Modal.Content>
-        </BlurView>
-    </View>
-</Modal>
+                                        <Button
+                                            onPress={() => {
+                                                setStripeModalVisible(false);
+                                                navigation.navigate('AddSecret');
+                                            }}
+                                            backgroundColor="black"
+                                            borderRadius="full"
+                                        >
+                                            <Text color="white" style={styles.ctalittle}>
+                                                Publier un secret
+                                            </Text>
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Text style={styles.h5} textAlign="center">
+                                            Compte Stripe configuré
+                                        </Text>
+
+                                        <Text
+                                            style={styles.caption}
+                                            color="#94A3B8"
+                                            textAlign="center"
+                                            mb={4}
+                                        >
+                                            Votre compte bancaire est actif. Vous pouvez réinitialiser ou gérer votre compte Stripe si nécessaire.
+                                        </Text>
+
+                                        <Button
+                                            onPress={handleResetStripeAccount}
+                                            backgroundColor="orange.500"
+                                            borderRadius="full"
+                                            mb={2}
+                                        >
+                                            <Text color="white" style={styles.ctalittle}>
+                                                Réinitialiser le compte Stripe
+                                            </Text>
+                                        </Button>
+
+                                        <Button
+                                            onPress={() => {
+                                                // Ajouter une action pour gérer le compte Stripe
+                                                // Par exemple, ouvrir un lien vers le dashboard Stripe
+                                            }}
+                                            backgroundColor="black"
+                                            borderRadius="full"
+                                        >
+                                            <Text color="white" style={styles.ctalittle}>
+                                                Gérer mon compte
+                                            </Text>
+                                        </Button>
+                                    </>
+                                )}
+                            </VStack>
+                        </Modal.Content>
+                    </BlurView>
+                </View>
+            </Modal>
 
             <Modal isOpen={modalVisible} onClose={() => setModalVisible(false)}>
                 <View width='100%' style={{ flex: 1 }}>
@@ -656,27 +656,17 @@ export default function Profile({ navigation }) {
                                                 borderRadius="md"
                                             />
                                         ) : (
-                                            <>
-                                                <TouchableOpacity
-                                                    onPress={() => setShowDatePicker(true)}
-                                                    style={{
-                                                        backgroundColor: "#F3F4F6",
-                                                        padding: 12,
-                                                        borderRadius: 8,
-                                                        alignItems: 'center'
-                                                    }}
-                                                >
-                                                    <Text style={styles.caption}>Sélectionner une date</Text>
-                                                </TouchableOpacity>
-                                                {showDatePicker && (
-                                                    <DateTimePicker
-                                                        value={tempValue ? new Date(tempValue) : new Date()}
-                                                        mode="date"
-                                                        display="default"
-                                                        onChange={handleDateChange}
-                                                    />
-                                                )}
-                                            </>
+
+
+                                            <DateTimePicker
+                                                value={tempValue ? new Date(tempValue) : new Date()}
+                                                mode="date"
+                                                display="spinner" // Utiliser "spinner" pour un affichage plus compact
+                                                textColor="#000" // Couleur du texte
+                                                style={styles.datePicker} // Appliquer des styles personnalisés
+                                                onChange={handleDateChange}
+                                            />
+
                                         )
                                     ) : (
                                         <Input
@@ -732,6 +722,24 @@ const customStyles = StyleSheet.create({
         alignItems: 'start',
         alignContent: 'start'
     },
+
+    datePicker: {
+        width: '100%',
+        backgroundColor: 'white',
+        borderRadius: 8,
+        overflow: 'hidden',
+        ...Platform.select({
+          ios: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+          },
+          android: {
+            elevation: 4,
+          },
+        }),
+      },
 
 
     shadowBox: {
