@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { VStack, Box, Text, Button, Pressable, Modal, Input, HStack, Spinner, Switch } from 'native-base';
+import { VStack, Box, Text, Button, Pressable, Actionsheet, Input, HStack, Spinner, Switch } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, View } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
@@ -12,6 +12,7 @@ import TypewriterLoader from '../components/TypewriterLoader';
 import EarningsModal from '../components/EarningModal';
 import { BlurView } from '@react-native-community/blur';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
+import StripeVerificationModal from '../components/StripeVerificationModal';
 
 
 
@@ -489,224 +490,83 @@ export default function Profile({ navigation }) {
                 navigation={navigation}
             />
 
-            <Modal
+            <StripeVerificationModal
                 isOpen={stripeModalVisible}
                 onClose={() => setStripeModalVisible(false)}
-            >
-                <View width='100%' style={{ flex: 1 }}>
-                    <BlurView
-                        style={[
-                            styles.blurBackground,
-                            {
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                flex: 1,
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                            }
-                        ]}
-                        blurType="light"
-                        blurAmount={8}
-                        reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
-                    >
-                        <Modal.Content
-                            width="90%"
-                            style={{
-                                ...styles.shadowBox,
-                                elevation: 5,
-                                backgroundColor: 'white',
-                                borderRadius: 8,
-                                padding: 16
-                            }}
-                        >
-                            <Modal.CloseButton
-                                _icon={{
-                                    color: "#94A3B8",
-                                    size: "sm"
-                                }}
-                            />
+                userData={userData}
+                resetStripeAccount={handleResetStripeAccount}
+                navigation={navigation}
+            />
 
-                            <VStack space={4} width="100%">
-                                {userData?.stripeAccountStatus !== 'active' ? (
-                                    <>
-                                        <Text style={styles.h5} textAlign="center">
-                                            Configuration du compte bancaire
-                                        </Text>
+            <Actionsheet isOpen={modalVisible} onClose={() => setModalVisible(false)}>
+                    <Actionsheet.Content>
+                        <VStack width="100%" space={4} px={4}>
+                            <Text style={styles.h4} textAlign="center">
+                                Modifier votre {fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}
+                            </Text>
 
-                                        <Text
-                                            style={styles.caption}
-                                            color="#94A3B8"
-                                            textAlign="center"
-                                            mb={4}
-                                        >
-                                            Votre compte bancaire sera configuré automatiquement lors de la publication de votre premier secret.
-                                        </Text>
-
-                                        <Button
-                                            onPress={() => {
-                                                setStripeModalVisible(false);
-                                                navigation.navigate('AddSecret');
-                                            }}
-                                            backgroundColor="black"
-                                            borderRadius="full"
-                                        >
-                                            <Text color="white" style={styles.ctalittle}>
-                                                Publier un secret
-                                            </Text>
-                                        </Button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Text style={styles.h5} textAlign="center">
-                                            Compte Stripe configuré
-                                        </Text>
-
-                                        <Text
-                                            style={styles.caption}
-                                            color="#94A3B8"
-                                            textAlign="center"
-                                            mb={4}
-                                        >
-                                            Votre compte bancaire est actif. Vous pouvez réinitialiser ou gérer votre compte Stripe si nécessaire.
-                                        </Text>
-
-                                        <Button
-                                            onPress={handleResetStripeAccount}
-                                            backgroundColor="orange.500"
-                                            borderRadius="full"
-                                            mb={2}
-                                        >
-                                            <Text color="white" style={styles.ctalittle}>
-                                                Réinitialiser le compte Stripe
-                                            </Text>
-                                        </Button>
-
-                                        <Button
-                                            onPress={() => {
-                                                // Ajouter une action pour gérer le compte Stripe
-                                                // Par exemple, ouvrir un lien vers le dashboard Stripe
-                                            }}
-                                            backgroundColor="black"
-                                            borderRadius="full"
-                                        >
-                                            <Text color="white" style={styles.ctalittle}>
-                                                Gérer mon compte
-                                            </Text>
-                                        </Button>
-                                    </>
-                                )}
-                            </VStack>
-                        </Modal.Content>
-                    </BlurView>
-                </View>
-            </Modal>
-
-            <Modal isOpen={modalVisible} onClose={() => setModalVisible(false)}>
-                <View width='100%' style={{ flex: 1 }}>
-                    <BlurView
-                        style={[
-                            styles.blurBackground,
-                            {
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                flex: 1,
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                            }
-                        ]}
-                        blurType="light"
-                        blurAmount={8}
-                        reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
-                    >
-                        <Modal.Content
-                            width="90%"
-                            style={{
-                                ...styles.shadowBox,
-                                shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
-                                shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
-                                shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
-                                shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
-                                elevation: 5,
-                                backgroundColor: 'white',
-                                borderRadius: 8,
-                                padding: 16
-                            }}
-                        >
-                            <Modal.CloseButton
-                                _icon={{
-                                    color: "#94A3B8",
-                                    size: "sm"
-                                }}
-                            />
-
-                            <VStack justifyContent="space-between" width='100%' space={4}>
-                                {/* Header */}
-                                <Text style={styles.h5} numberOfLines={1} ellipsizeMode="tail">
-                                    Modifier votre {fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}
-                                </Text>
-
-                                {/* Input Section */}
-                                <Box width="100%">
-                                    {selectedField === 'birthdate' ? (
-                                        Platform.OS === 'web' ? (
-                                            <Input
-                                                type="date"
-                                                value={tempValue}
-                                                onChange={(e) => setTempValue(e.target.value)}
-                                                size="md"
-                                                backgroundColor="gray.100"
-                                                borderRadius="md"
-                                            />
-                                        ) : (
-
-
-                                            <DateTimePicker
-                                                value={tempValue ? new Date(tempValue) : new Date()}
-                                                mode="date"
-                                                display="spinner" // Utiliser "spinner" pour un affichage plus compact
-                                                textColor="#000" // Couleur du texte
-                                                style={styles.datePicker} // Appliquer des styles personnalisés
-                                                onChange={handleDateChange}
-                                            />
-
-                                        )
-                                    ) : (
+                            {/* Input Section */}
+                            <Box width="100%">
+                                {selectedField === 'birthdate' ? (
+                                    Platform.OS === 'web' ? (
                                         <Input
-                                            placeholder={`Modifier votre ${fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}`}
-                                            value={inputValue}
-                                            onChangeText={(text) => {
-                                                setInputValue(text);
-                                            }}
-                                            marginTop={4}
-                                            marginBottom={4}
+                                            type="date"
+                                            value={tempValue}
+                                            onChange={(e) => setTempValue(e.target.value)}
                                             size="md"
                                             backgroundColor="gray.100"
-                                            borderRadius="30"
-                                            _focus={{
-                                                backgroundColor: "gray.50",
-                                                borderColor: "gray.300"
-                                            }}
+                                            borderRadius="md"
                                         />
-                                    )}
-                                </Box>
+                                    ) : (
 
-                                {/* Footer avec bouton */}
-                                <Button
-                                    backgroundColor="black"
-                                    onPress={saveChanges}
-                                    borderRadius="full"
-                                    py={3}
-                                    _pressed={{
-                                        backgroundColor: "gray.800"
-                                    }}
-                                >
-                                    <Text color="white" style={styles.ctalittle}>
-                                        Enregistrer
-                                    </Text>
-                                </Button>
-                            </VStack>
-                        </Modal.Content>
-                    </BlurView>
-                </View>
-            </Modal>
+
+                                        <DateTimePicker
+                                            value={tempValue ? new Date(tempValue) : new Date()}
+                                            mode="date"
+                                            display="spinner" // Utiliser "spinner" pour un affichage plus compact
+                                            textColor="#000" // Couleur du texte
+                                            style={styles.datePicker} // Appliquer des styles personnalisés
+                                            onChange={handleDateChange}
+                                        />
+
+                                    )
+                                ) : (
+                                    <Input
+                                        placeholder={`Modifier votre ${fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}`}
+                                        value={inputValue}
+                                        onChangeText={(text) => {
+                                            setInputValue(text);
+                                        }}
+                                        marginTop={4}
+                                        marginBottom={4}
+                                        size="md"
+                                        backgroundColor="gray.100"
+                                        borderRadius="30"
+                                        _focus={{
+                                            backgroundColor: "gray.50",
+                                            borderColor: "gray.300"
+                                        }}
+                                    />
+                                )}
+                            </Box>
+
+                            {/* Footer avec bouton */}
+                            <Button
+                                backgroundColor="black"
+                                onPress={saveChanges}
+                                borderRadius="full"
+                                py={3}
+                                _pressed={{
+                                    backgroundColor: "gray.800"
+                                }}
+                            >
+                                <Text color="white" style={styles.cta}>
+                                    Enregistrer
+                                </Text>
+                            </Button>
+                        </VStack>
+                    </Actionsheet.Content>
+            </Actionsheet>
         </Background>
     );
 };
@@ -729,17 +589,17 @@ const customStyles = StyleSheet.create({
         borderRadius: 8,
         overflow: 'hidden',
         ...Platform.select({
-          ios: {
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-          },
-          android: {
-            elevation: 4,
-          },
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 4,
+            },
         }),
-      },
+    },
 
 
     shadowBox: {

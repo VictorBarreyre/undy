@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Text, View, Button, VStack, Box, HStack } from 'native-base';
-import { BlurView } from '@react-native-community/blur';
-import { Platform } from 'react-native';
+import { Actionsheet, Text, VStack, Box, HStack, Button } from 'native-base';
+import { Platform, Alert } from 'react-native';
 import { useStripe } from '@stripe/stripe-react-native';
 import { styles } from '../../infrastructure/theme/styles';
 import { getAxiosInstance } from '../../data/api/axiosInstance';
 
-const EarningsModal = ({ 
+const EarningsActionSheet = ({ 
     isOpen, 
     onClose, 
     userData, 
@@ -83,129 +82,100 @@ const EarningsModal = ({
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose}>
-            <View width='100%' style={{ flex: 1 }}>
-                <BlurView
-                    style={[
-                        styles.blurBackground,
-                        {
-                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                            flex: 1,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }
-                    ]}
-                    blurType="light"
-                    blurAmount={8}
-                    reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
-                >
-                    <Modal.Content
-                        width="90%"
-                        style={{
-                            ...styles.shadowBox,
-                            shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
-                            shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
-                            shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
-                            shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
-                            elevation: 5,
-                            backgroundColor: 'white',
-                            borderRadius: 8,
-                            padding: 16
-                        }}
-                    >
-                        <Modal.CloseButton
-                            _icon={{
-                                color: "#94A3B8",
-                                size: "sm"
+        <Actionsheet isOpen={isOpen} onClose={onClose}>
+            <Actionsheet.Content 
+                backgroundColor="white"
+                maxHeight="100%"
+                _content={{
+                    py: 0,  // Supprime le padding vertical
+                    px: 6  
+                }}
+            >
+                {!isConfigured ? (
+                    <VStack space={4} px={4} width="97%" alignItems="center">
+                        <Text style={styles.h4} textAlign="center">
+                            Détails des revenus
+                        </Text>
+                        <Text 
+                            style={styles.caption} 
+                            color="#94A3B8" 
+                            textAlign="center" 
+                            mb={2}
+                        >
+                            Vous n'avez pas encore généré de revenus. Commencez à vendre vos secrets pour gagner de l'argent.
+                        </Text>
+                        <Button
+                            onPress={() => {
+                                onClose();
+                                navigation.navigate('AddSecret');
                             }}
-                        />
-                        {!isConfigured ? (
-                            <VStack space={4} width="100%" alignItems="center">
-                                <Text style={styles.h5} textAlign="center">
-                                    Détails des revenus
-                                </Text>
-                                <Text 
-                                    style={styles.caption} 
-                                    color="#94A3B8" 
-                                    textAlign="center" 
-                                    paddingY={4}
-                                >
-                                    Vous n'avez pas encore généré de revenus. Commencez à vendre vos secrets pour gagner de l'argent.
-                                </Text>
-                                <Button
-                                    onPress={() => {
-                                        onClose();
-                                        navigation.navigate('AddSecret');
-                                    }}
-                                    backgroundColor="black"
-                                    borderRadius="full"
-                                >
-                                    <Text color="white" style={styles.ctalittle}>
-                                        Publier un secret
-                                    </Text>
-                                </Button>
-                            </VStack>
-                        ) : (
-                            <VStack space={4} width="100%">
-                                <Text style={styles.h5} textAlign="center">
-                                    Détails des revenus
-                                </Text>
-                                <Box mb={4} width="100%">
-                                    {isLoading ? (
-                                        <Text textAlign="center">Chargement des transactions...</Text>
-                                    ) : (
-                                        <>
-                                            {transactions.map((transaction) => (
-                                                <VStack
-                                                    key={transaction.id}
-                                                    mb={4}
-                                                    width="100%"
-                                                >
-                                                    <HStack
-                                                        space={4}
-                                                        justifyContent='space-between'
-                                                        width="100%"
-                                                        paddingTop={4}
-                                                        paddingBottom={4}
-                                                        px={1}
-                                                        borderBottomWidth={1}
-                                                        borderColor={"#94A3B820"}
-                                                    >
-                                                        <VStack>
-                                                            <Text>Montant brut : {(transaction.grossAmount || 0).toFixed(2)} €</Text>
-                                                            <Text>Frais : {(transaction.fees || 0).toFixed(2)} €</Text>
-                                                            <Text fontWeight="bold">Montant net : {(transaction.netAmount || 0).toFixed(2)} €</Text>
-                                                        </VStack>
-                                                        <Text>{transaction.date}</Text>
-                                                    </HStack>
+                            backgroundColor="black"
+                            borderRadius="full"
+                        >
+                            <Text color="white" style={styles.cta}>
+                                Publier un secret
+                            </Text>
+                        </Button>
+                    </VStack>
+                ) : (
+                    <VStack space={4} width="97%" >
+                        <Text style={styles.h4} textAlign="center">
+                            Détails des revenus
+                        </Text>
+                        <Box mb={2} width="100%">
+                            {isLoading ? (
+                                <Text textAlign="center">Chargement des transactions...</Text>
+                            ) : (
+                                <>
+                                    {transactions.map((transaction) => (
+                                        <VStack
+                                            key={transaction.id}
+                                            mb={4}
+                                            width="100%"
+                                        >
+                                            <HStack
+                                                space={4}
+                                                justifyContent='space-between'
+                                                width="100%"
+                                                paddingTop={4}
+                                                paddingBottom={4}
+                                                px={1}
+                                                borderBottomWidth={1}
+                                                borderColor={"#94A3B820"}
+                                            >
+                                                <VStack>
+                                                    <Text>Montant brut : {(transaction.grossAmount || 0).toFixed(2)} €</Text>
+                                                    <Text>Frais : {(transaction.fees || 0).toFixed(2)} €</Text>
+                                                    <Text fontWeight="bold">Montant net : {(transaction.netAmount || 0).toFixed(2)} €</Text>
                                                 </VStack>
-                                            ))}
-                                            <Text mt={4} style={styles.h4} textAlign="center">
-                                                Total des revenus : {userData.totalEarnings} €
-                                            </Text>
-                                        </>
-                                    )}
-                                </Box>
-                                <Button
-                                    backgroundColor="black"
-                                    onPress={handleTransferFunds}
-                                    borderRadius="full"
-                                    py={3}
-                                    _pressed={{
-                                        backgroundColor: "gray.800"
-                                    }}
-                                >
-                                    <Text color="white" style={styles.ctalittle}>
-                                        Récupérer les fonds
+                                                <Text>{transaction.date}</Text>
+                                            </HStack>
+                                        </VStack>
+                                    ))}
+                                    <Text mt={4} style={styles.h4} textAlign="center">
+                                        Total des revenus : {userData.totalEarnings} €
                                     </Text>
-                                </Button>
-                            </VStack>
-                        )}
-                    </Modal.Content>
-                </BlurView>
-            </View>
-        </Modal>
+                                </>
+                            )}
+                        </Box>
+                        <Button
+                            backgroundColor="black"
+                            onPress={handleTransferFunds}
+                            borderRadius="full"
+                            py={3}
+                            _pressed={{
+                                backgroundColor: "gray.800"
+                            }}
+                        >
+                            <Text color="white" style={styles.cta}>
+                                Récupérer les fonds
+                            </Text>
+                        </Button>
+                    </VStack>
+                )}
+            </Actionsheet.Content>
+        </Actionsheet>
     );
 };
 
-export default EarningsModal;
+export default EarningsActionSheet;

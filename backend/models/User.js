@@ -75,6 +75,14 @@ const UserSchema = new mongoose.Schema({
     lastStripeOnboardingUrl: {
         type: String, // Pour stocker temporairement l'URL d'onboarding
         select: false // Ne pas inclure par défaut dans les requêtes
+    },
+    stripeIdentityVerified: {
+        type: Boolean,
+        default: false
+    },
+    stripeIdentityDocumentId: {
+        type: String,
+        default: null
     }
 }, { timestamps: true });
 
