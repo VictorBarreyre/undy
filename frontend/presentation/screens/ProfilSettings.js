@@ -1,7 +1,7 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext,useEffect } from 'react';
 import { VStack, Box, Text, Button, Pressable, Actionsheet, Input, HStack, Spinner, Switch } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, View } from 'react-native';
+import { TouchableOpacity, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -13,6 +13,11 @@ import EarningsModal from '../components/EarningModal';
 import { BlurView } from '@react-native-community/blur';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import StripeVerificationModal from '../components/StripeVerificationModal';
+import Contacts from 'react-native-contacts';
+import NotificationService from '../Notifications/NotificationService';
+
+
+
 
 
 
@@ -31,6 +36,7 @@ export default function Profile({ navigation }) {
     const [inputValue, setInputValue] = useState('')
     const [earningsModalVisible, setEarningsModalVisible] = useState(false);
     const { resetStripeAccount } = useCardData();
+
 
 
     const [isLoading, setIsLoading] = useState(false);
@@ -73,10 +79,49 @@ export default function Profile({ navigation }) {
         setTempValue(currentDate.toISOString().split('T')[0]);
     };
 
-    const toggleNotifications = () => {
-        setNotificationsEnabled(!notificationsEnabled);
-        updateUserData({ ...userData, notifs: !notificationsEnabled });
+
+    useEffect(() => {
+        const syncNotificationState = async () => {
+            if (userData?.notifs) {
+                const hasPermission = await NotificationService.checkPermissions();
+                setNotificationsEnabled(hasPermission);
+            }
+        };
+    
+        syncNotificationState();
+    }, [userData]);
+
+      const toggleNotifications = async () => {
+        try {
+            if (!notificationsEnabled) {
+                console.log("Tentative d'activation des notifications");
+                const activated = await NotificationService.activateNotifications();
+                
+                if (activated) {
+                    console.log("Notifications activées avec succès");
+                    setNotificationsEnabled(true);
+                    await updateUserData({
+                        ...userData,
+                        notifs: true
+                    });
+                } else {
+                    console.log("Échec de l'activation des notifications");
+                    setNotificationsEnabled(false);
+                }
+            } else {
+                console.log("Désactivation des notifications");
+                setNotificationsEnabled(false);
+                await updateUserData({
+                    ...userData,
+                    notifs: false
+                });
+            }
+        } catch (error) {
+            console.error("Erreur toggleNotifications:", error);
+            Alert.alert("Erreur", "Problème lors de la gestion des notifications");
+        }
     };
+
 
     const toggleContacts = () => {
         setContactsEnabled(!notificationsEnabled);
