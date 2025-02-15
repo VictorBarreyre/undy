@@ -49,6 +49,11 @@ const UserSchema = new mongoose.Schema({
         required: false,
         default: 0,
     },
+    hasSubscriptions: {
+        type: Number,
+        required: false,
+        default: 0,
+    },
     // Nouveaux champs pour Stripe
     stripeAccountId: {
         type: String,

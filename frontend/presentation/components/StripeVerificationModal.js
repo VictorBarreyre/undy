@@ -125,7 +125,7 @@ const StripeVerificationActionSheet = ({
                     ) : userData?.stripeAccountStatus === 'active' && !userData?.stripeIdentityVerified ? (
                         <>
                             <Text style={styles.h4} textAlign="center">
-                                Vérification d'identité Stripe
+                                Vérification d'identité
                             </Text>
 
                             <Text

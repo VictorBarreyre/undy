@@ -268,6 +268,7 @@ exports.getUserProfile = async (req, res) => {
             notifs: user.notifs,
             contacts: user.contacts,
             subscriptions: user.subscriptions,
+            hasSubscriptions:user.hasSubscriptions,
             stripeAccountId: user.stripeAccountId,
             stripeAccountStatus: user.stripeAccountStatus,
             stripeOnboardingComplete: user.stripeOnboardingComplete,
