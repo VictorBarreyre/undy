@@ -318,19 +318,25 @@ exports.getUserTransactions = async (req, res) => {
                 ? new Date(transaction.created * 1000).toLocaleDateString('fr-FR')
                 : 'Date non disponible',
             status: transaction.status || 'Statut inconnu',
-            type: transaction.type === 'payout' ? 'transfer' : transaction.type, // Convertir payout en transfer
+            type: transaction.type === 'payout' ? 'transfer' : transaction.type,
             description: transaction.description
         }));
 
         // Calculer les totaux des transactions
         const totals = formattedTransactions.reduce((acc, transaction) => {
+            // Calculer le total des ventes (revenus bruts)
+            if (transaction.type === 'charge') {
+                acc.totalSales += transaction.grossAmount;
+            }
+            
+            // Calculer les revenus transférés
             if (transaction.type === 'transfer') {
                 acc.transferredAmount += transaction.netAmount;
             }
-            acc.totalEarnings += transaction.netAmount;
+            
             return acc;
         }, { 
-            totalEarnings: 0,
+            totalSales: 0,
             transferredAmount: 0
         });
 
@@ -343,10 +349,10 @@ exports.getUserTransactions = async (req, res) => {
             },
             transactions: formattedTransactions,
             stats: {
-                totalEarnings: totals.totalEarnings,
-                transferredAmount: totals.transferredAmount,
-                availableBalance: available,
-                pendingBalance: pending
+                totalSales: totals.totalSales, // Total des ventes
+                transferredAmount: totals.transferredAmount, // Montant transféré
+                availableBalance: available, // Solde disponible pour transfert
+                pendingBalance: pending // Solde en attente
             }
         });
 
