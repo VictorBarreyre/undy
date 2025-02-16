@@ -294,45 +294,51 @@ exports.getUserTransactions = async (req, res) => {
             return res.status(400).json({ message: 'Compte Stripe non configuré' });
         }
 
-        // Log pour vérifier l'ID du compte
-        console.log('Stripe Account ID:', user.stripeAccountId);
-
-        // Récupérer les transactions
-        const transactions = await stripe.balanceTransactions.list({
-            stripeAccount: user.stripeAccountId,
-            limit: 100 // Augmentez la limite pour capturer plus de transactions
-        });
-
-        // Log pour voir toutes les transactions
-        console.log('Transactions brutes:', JSON.stringify(transactions.data, null, 2));
-
-        // Calculer le volume total des ventes
-        const totalSalesCalculation = transactions.data.reduce((acc, transaction) => {
-            // Log de chaque transaction pour comprendre son type
-            console.log(`Transaction type: ${transaction.type}, Amount: ${transaction.amount / 100}`);
-
-            // Ne prendre que les charges (ventes)
-            if (transaction.type === 'charge') {
-                acc.totalGross += transaction.amount / 100;
-                acc.totalFees += transaction.fee / 100;
-            }
-            return acc;
-        }, { 
-            totalGross: 0,
-            totalFees: 0
-        });
-
-        // Log du calcul final
-        console.log('Calcul des ventes totales:', totalSalesCalculation);
-
         // Récupérer le solde actuel
         const balance = await stripe.balance.retrieve({
             stripeAccount: user.stripeAccountId,
         });
 
-        // Calculer les soldes
+        // Calculer les totaux du solde
         const available = balance.available.reduce((sum, bal) => sum + bal.amount, 0) / 100;
         const pending = balance.pending.reduce((sum, bal) => sum + bal.amount, 0) / 100;
+
+        // Récupérer les transactions
+        const transactions = await stripe.balanceTransactions.list({
+            stripeAccount: user.stripeAccountId,
+        });
+
+        // Transformer les transactions
+        const formattedTransactions = transactions.data.map(transaction => ({
+            id: transaction.id,
+            grossAmount: transaction.amount ? transaction.amount / 100 : 0,
+            fees: transaction.fee ? transaction.fee / 100 : 0,
+            netAmount: transaction.net ? transaction.net / 100 : 0,
+            date: transaction.created 
+                ? new Date(transaction.created * 1000).toLocaleDateString('fr-FR')
+                : 'Date non disponible',
+            status: transaction.status || 'Statut inconnu',
+            type: transaction.type === 'payout' ? 'transfer' : transaction.type,
+            description: transaction.description
+        }));
+
+        // Calculer les totaux des transactions
+        const totals = formattedTransactions.reduce((acc, transaction) => {
+            // Calculer le total des ventes (revenus bruts)
+            if (transaction.type === 'charge') {
+                acc.totalSales += transaction.grossAmount;
+            }
+            
+            // Calculer les revenus transférés
+            if (transaction.type === 'transfer') {
+                acc.transferredAmount += transaction.netAmount;
+            }
+            
+            return acc;
+        }, { 
+            totalSales: 0,
+            transferredAmount: 0
+        });
 
         // Renvoyer toutes les informations
         res.json({
@@ -341,27 +347,20 @@ exports.getUserTransactions = async (req, res) => {
                 pending,
                 total: available + pending
             },
-            transactions: transactions.data.map(transaction => ({
-                id: transaction.id,
-                type: transaction.type,
-                amount: transaction.amount / 100,
-                fee: transaction.fee / 100,
-                net: transaction.net / 100,
-            })),
+            transactions: formattedTransactions,
             stats: {
-                totalSales: totalSalesCalculation.totalGross, 
-                totalFees: totalSalesCalculation.totalFees, 
-                availableBalance: available,
-                pendingBalance: pending
+                totalSales: totals.totalSales, // Total des ventes
+                transferredAmount: totals.transferredAmount, // Montant transféré
+                availableBalance: available, // Solde disponible pour transfert
+                pendingBalance: pending // Solde en attente
             }
         });
 
     } catch (error) {
-        console.error('Erreur détaillée lors de la récupération des transactions :', error);
+        console.error('Erreur lors de la récupération des transactions :', error);
         res.status(500).json({ 
             message: 'Erreur lors de la récupération des transactions', 
-            errorDetails: error.message,
-            fullError: error
+            errorDetails: error.message 
         });
     }
 };
