@@ -15,6 +15,8 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     const [loading, setLoading] = useState(false);
     const { userToken } = useContext(AuthContext);
     const { purchaseAndAccessConversation } = useCardData();
+    const [paymentDetails, setPaymentDetails] = useState(null);
+
 
     const getDisplayPrice = (price) => {
         // Calculer les frais : 10% pour le vendeur + 15% de frais de plateforme

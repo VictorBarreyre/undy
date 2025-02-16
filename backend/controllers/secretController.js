@@ -456,22 +456,32 @@ const calculateStripeFees = async (basePrice, sellerId) => {
         throw new Error('Compte vendeur non trouvé ou non configuré pour Stripe');
     }
 
-    // 10% prélevés sur le prix du vendeur
-    const sellerFee = basePrice * 0.10;
-    const sellerNetAmount = basePrice - sellerFee;
-
-    // 15% additionnels sur le prix total pour l'acheteur
-    const buyerAdditionalFee = sellerNetAmount * 0.15;
-    const totalAmountForBuyer = basePrice + buyerAdditionalFee;
+    // 1. Calculer les frais de plateforme sur le prix du vendeur (10%)
+    const platformFeeOnSellerPrice = basePrice * 0.10;
+    
+    // 2. Calculer le montant net pour le vendeur après la première commission
+    const sellerNetAmount = basePrice - platformFeeOnSellerPrice;
+    
+    // 3. Calculer la commission supplémentaire sur le montant net (15%)
+    const additionalPlatformFee = sellerNetAmount * 0.15;
+    
+    // 4. Calculer le prix total pour l'acheteur
+    const totalAmountForBuyer = basePrice + additionalPlatformFee;
+    
+    // Convertir en centimes pour Stripe
+    const amountInCents = Math.round(totalAmountForBuyer * 100);
+    const totalPlatformFeeInCents = Math.round(
+        (platformFeeOnSellerPrice + additionalPlatformFee) * 100
+    );
 
     return {
-        amount: Math.round(totalAmountForBuyer * 100),
-        application_fee_amount: Math.round(buyerAdditionalFee * 100),
-        seller_amount: Math.round(sellerNetAmount * 100),
-        buyer_fees: Math.round(buyerAdditionalFee * 100),
+        amount: amountInCents, // Montant total payé par l'acheteur
+        application_fee_amount: totalPlatformFeeInCents, // Total des frais de plateforme
+        seller_amount: Math.round(sellerNetAmount * 100), // Montant net pour le vendeur
         seller_stripe_account: seller.stripeAccountId
     };
 };
+
 
 exports.createPaymentIntent = async (req, res) => {
     const session = await mongoose.startSession();
