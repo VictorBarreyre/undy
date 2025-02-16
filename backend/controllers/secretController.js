@@ -450,6 +450,12 @@ exports.getUnpurchasedSecrets = async (req, res) => {
 
 
 const calculateStripeFees = async (basePrice, sellerId) => {
+    // Récupérer le compte Stripe du vendeur
+    const seller = await User.findById(sellerId).select('stripeAccountId');
+    if (!seller || !seller.stripeAccountId) {
+        throw new Error('Compte vendeur non trouvé ou non configuré pour Stripe');
+    }
+
     // 10% prélevés sur le prix du vendeur
     const sellerFee = basePrice * 0.10;
     const sellerNetAmount = basePrice - sellerFee;
