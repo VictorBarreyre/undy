@@ -317,10 +317,12 @@ exports.getUserTransactions = async (req, res) => {
             date: transaction.created 
                 ? new Date(transaction.created * 1000).toLocaleDateString('fr-FR')
                 : 'Date non disponible',
-            status: transaction.status || 'Statut inconnu',
-            type: transaction.type === 'payout' ? 'transfer' : transaction.type,
+                status: transaction.status === 'available' ? 'succeeded' : transaction.status,
+                type: transaction.type === 'payout' ? 'transfer' : transaction.type,
             description: transaction.description
         }));
+
+        console.log(formattedTransactions)
 
         // Calculer les totaux des transactions
         const totals = formattedTransactions.reduce((acc, transaction) => {
