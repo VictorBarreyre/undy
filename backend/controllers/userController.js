@@ -299,14 +299,27 @@ exports.getUserTransactions = async (req, res) => {
             stripeAccount: user.stripeAccountId,
         });
 
-        // Calculer les totaux du solde
-        const available = balance.available.reduce((sum, bal) => sum + bal.amount, 0) / 100;
-        const pending = balance.pending.reduce((sum, bal) => sum + bal.amount, 0) / 100;
-
         // Récupérer les transactions
         const transactions = await stripe.balanceTransactions.list({
             stripeAccount: user.stripeAccountId,
         });
+
+        // Calculer le volume total des ventes
+        const totalSalesCalculation = transactions.data.reduce((acc, transaction) => {
+            // Ne prendre que les charges (ventes)
+            if (transaction.type === 'charge') {
+                acc.totalGross += transaction.amount / 100;
+                acc.totalFees += transaction.fee / 100;
+            }
+            return acc;
+        }, { 
+            totalGross: 0,
+            totalFees: 0
+        });
+
+        // Calculer les autres informations de solde
+        const available = balance.available.reduce((sum, bal) => sum + bal.amount, 0) / 100;
+        const pending = balance.pending.reduce((sum, bal) => sum + bal.amount, 0) / 100;
 
         // Transformer les transactions
         const formattedTransactions = transactions.data.map(transaction => ({
@@ -322,24 +335,6 @@ exports.getUserTransactions = async (req, res) => {
             description: transaction.description
         }));
 
-        // Calculer les totaux des transactions
-        const totals = formattedTransactions.reduce((acc, transaction) => {
-            // Calculer le total des ventes (revenus bruts)
-            if (transaction.type === 'charge') {
-                acc.totalSales += transaction.grossAmount;
-            }
-            
-            // Calculer les revenus transférés
-            if (transaction.type === 'transfer') {
-                acc.transferredAmount += transaction.netAmount;
-            }
-            
-            return acc;
-        }, { 
-            totalSales: 0,
-            transferredAmount: 0
-        });
-
         // Renvoyer toutes les informations
         res.json({
             balance: {
@@ -349,10 +344,11 @@ exports.getUserTransactions = async (req, res) => {
             },
             transactions: formattedTransactions,
             stats: {
-                totalSales: totals.totalSales, // Total des ventes
-                transferredAmount: totals.transferredAmount, // Montant transféré
-                availableBalance: available, // Solde disponible pour transfert
-                pendingBalance: pending // Solde en attente
+                totalSales: totalSalesCalculation.totalGross, // Volume total des ventes
+                totalFees: totalSalesCalculation.totalFees, // Total des frais
+                totalNetSales: totalSalesCalculation.totalGross - totalSalesCalculation.totalFees, // Revenus nets
+                availableBalance: available,
+                pendingBalance: pending
             }
         });
 
