@@ -509,18 +509,11 @@ exports.createPaymentIntent = async (req, res) => {
                 secretId: secret._id.toString(),
                 buyerId: req.user.id,
                 originalPrice: secret.price.toString(),
-                buyerFees: buyer_fees / 100,
                 sellerAmount: seller_amount / 100,
                 platformFee: application_fee_amount / 100
             },
-            // Ajout d'une expiration pour les PaymentIntents non aboutis
-            cancellation_reason: 'requested_by_customer',
-            
-            // Définir un délai d'expiration (par exemple 30 minutes)
-            setup_future_usage: 'one_time',
-            
-            // Ajouter une description pour traçabilité
-            description: `Secret Purchase: ${secret._id} - User: ${req.user.id}`
+            // Suppression du paramètre cancellation_reason
+            setup_future_usage: 'one_time'
         });
 
         // Créer l'enregistrement de paiement
