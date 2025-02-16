@@ -10,8 +10,6 @@ import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 
 
-
-
 const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
     const [loading, setLoading] = useState(false);
@@ -19,11 +17,14 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     const { purchaseAndAccessConversation } = useCardData();
 
     const getDisplayPrice = (price) => {
-        // Le prix affiché est maintenant le prix de base 
-        // Les frais seront ajoutés automatiquement par Stripe
-        return price.toFixed(2);
+        // Calculer les frais : 10% pour le vendeur + 15% de frais de plateforme
+        const sellerFee = price * 0.10;
+        const platformFee = (price - sellerFee) * 0.15;
+        const totalPrice = price + platformFee;
+        
+        return totalPrice.toFixed(2);
     };
-
+    
 
     const initializePaymentSheet = async (clientSecret) => {
         try {
@@ -78,17 +79,11 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
         }
     };
 
+
     const handlePayment = async () => {
         try {
             setLoading(true);
-
-            console.log('Détails du secret avant paiement:', {
-                id: secret._id,
-                price: secret.price,
-                label: secret.label
-            });
-
-            console.log('Création de l\'intention de paiement...');
+    
             const response = await fetch(`${DATABASE_URL}/api/secrets/${secret._id}/create-payment-intent`, {
                 method: 'POST',
                 headers: {
@@ -96,57 +91,50 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                     'Authorization': `Bearer ${userToken}`,
                 },
             });
-
-            // Vérification de la réponse
+    
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('Erreur réponse création PaymentIntent:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    errorText
-                });
                 throw new Error(errorText || 'Erreur lors de la création du paiement');
             }
+    
+           const { 
+            clientSecret, 
+            paymentId, 
+            amount, 
+            buyerFees 
+        } = await response.json();
 
-            const { clientSecret, paymentId } = await response.json();
 
-            console.log('Réponse création PaymentIntent:', {
-                clientSecret: clientSecret ? 'Présent' : 'Manquant',
-                paymentId
-            });
-
+        setPaymentDetails(prevDetails => ({
+            ...prevDetails,
+            buyerFees: buyerFees
+        }));
+    
             await initializePaymentSheet(clientSecret);
-
+    
             const { error: presentError } = await presentPaymentSheet();
-
+    
             if (presentError) {
-                console.error('Erreur présentation PaymentSheet:', presentError);
-
+                // Différencier les annulations volontaires des autres erreurs
                 if (presentError.code === 'Canceled') {
-                    console.log('Paiement annulé par l\'utilisateur');
-                    setLoading(false);
+                    // Ne pas traiter comme une erreur si l'utilisateur annule volontairement
                     return;
                 }
                 throw presentError;
             }
-
-            console.log('Paiement réussi, ID du paiement:', paymentId);
-
-            // Appeler onPaymentSuccess avec l'ID du paiement
+    
+            // Uniquement appeler onPaymentSuccess si le paiement est réellement effectué
             onPaymentSuccess(paymentId);
-
+    
         } catch (error) {
-            console.error('Erreur détaillée dans handlePayment:', {
-                message: error.message,
-                name: error.name,
-                stack: error.stack
-            });
-
-            Alert.alert(
-                'Erreur de paiement',
-                error.message || 'Une erreur est survenue lors du paiement'
-            );
-            onPaymentError(error);
+            // Ne pas afficher d'alerte si c'est une annulation volontaire
+            if (error.code !== 'Canceled') {
+                Alert.alert(
+                    'Erreur de paiement',
+                    error.message || 'Une erreur est survenue lors du paiement'
+                );
+                onPaymentError(error);
+            }
         } finally {
             setLoading(false);
         }

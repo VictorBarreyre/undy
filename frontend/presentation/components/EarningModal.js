@@ -21,42 +21,42 @@ const EarningsActionSheet = ({
         userData?.stripeOnboardingComplete;
 
 
-        useEffect(() => {
-            const fetchTransactions = async () => {
-                const instance = getAxiosInstance();
-                try {
-                    setIsLoading(true);
-                    const response = await instance.get('/api/users/transactions');
-                    const data = response.data;
-        
-                    console.log('tout les data ', data)
-        
-                    // Filtrer uniquement les transactions de type 'payment' et avec netAmount positif
-                    const totalEarnings = data.transactions
-                        .filter(transaction => transaction.type === 'payment')
-                        .reduce((total, transaction) => 
-                            total + (transaction.netAmount || 0), 0);
-        
-                    console.log('tout le fric ', totalEarnings)
-            
-                    setTransactionStats({
-                        ...data.stats,
-                        totalEarnings: totalEarnings
-                    });
-        
-                    setTransactions(data.transactions);
-        
-                } catch (error) {
-                    console.error('Erreur:', error);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-        
-            if (isOpen && isConfigured) {
-                fetchTransactions();
+    useEffect(() => {
+        const fetchTransactions = async () => {
+            const instance = getAxiosInstance();
+            try {
+                setIsLoading(true);
+                const response = await instance.get('/api/users/transactions');
+                const data = response.data;
+
+                console.log('tout les data ', data)
+
+                // Filtrer uniquement les transactions de type 'payment' et avec netAmount positif
+                const totalEarnings = data.transactions
+                    .filter(transaction => transaction.type === 'payment')
+                    .reduce((total, transaction) =>
+                        total + (transaction.netAmount || 0), 0);
+
+                console.log('tout le fric ', totalEarnings)
+
+                setTransactionStats({
+                    ...data.stats,
+                    totalEarnings: totalEarnings
+                });
+
+                setTransactions(data.transactions);
+
+            } catch (error) {
+                console.error('Erreur:', error);
+            } finally {
+                setIsLoading(false);
             }
-        }, [isOpen, isConfigured]);
+        };
+
+        if (isOpen && isConfigured) {
+            fetchTransactions();
+        }
+    }, [isOpen, isConfigured]);
 
 
     const handleTransferFunds = async () => {
@@ -163,7 +163,7 @@ const EarningsActionSheet = ({
                                                 borderColor="#94A3B820"
                                             >
                                                 <HStack justifyContent="space-between" alignItems="center" mb={2}>
-                                                    <Text fontWeight="bold" color="#94A3B8">
+                                                    <Text fontWeight="bold" color="black">
                                                         {transaction.type === 'transfer' ? 'Transfert' : 'Vente'}
                                                     </Text>
                                                     <Text color={transaction.status === 'succeeded' ? '#40D861' : '#FF78B2'}>
@@ -173,14 +173,14 @@ const EarningsActionSheet = ({
 
                                                 <HStack justifyContent="space-between" alignItems="flex-start">
                                                     <VStack space={2}>
-                                                        <Text color="#94A3B8">Montant brut</Text>
-                                                        <Text color="#94A3B8">Frais</Text>
-                                                        <Text fontWeight="bold">Montant net</Text>
+                                                      
+                                                    <Text style={styles.caption} color="#94A3B8">
+                                                        {transaction.date}
+                                                    </Text>
                                                     </VStack>
 
                                                     <VStack space={2} alignItems="flex-end">
-                                                        <Text>{(transaction.grossAmount || 0).toFixed(2)} €</Text>
-                                                        <Text color="#FF78B2">-{(transaction.fees || 0).toFixed(2)} €</Text>
+                                                      
                                                         <Text fontWeight="bold" color="#40D861">
                                                             {(transaction.netAmount || 0).toFixed(2)} €
                                                         </Text>
@@ -188,9 +188,7 @@ const EarningsActionSheet = ({
                                                 </HStack>
 
                                                 <HStack justifyContent="space-between" alignItems="center" mt={3}>
-                                                    <Text style={styles.caption} color="#94A3B8">
-                                                        {transaction.date}
-                                                    </Text>
+                                            
                                                     {transaction.description && (
                                                         <Text style={styles.caption} color="#94A3B8" numberOfLines={1}>
                                                             {transaction.description}
@@ -212,12 +210,12 @@ const EarningsActionSheet = ({
                                     borderColor="#94A3B820"
                                 >
                                     <VStack space={3}>
-                                    <HStack justifyContent="space-between">
-    <Text style={styles.caption}>Total gagné</Text>
-    <Text fontWeight="bold">
-        {(transactionStats.totalEarnings || 0).toFixed(2)} €
-    </Text>
-</HStack>
+                                        <HStack justifyContent="space-between">
+                                            <Text style={styles.caption}>Total gagné</Text>
+                                            <Text fontWeight="bold">
+                                                {(transactionStats.totalEarnings || 0).toFixed(2)} €
+                                            </Text>
+                                        </HStack>
 
                                         <HStack justifyContent="space-between">
                                             <Text style={styles.caption}>Disponible</Text>

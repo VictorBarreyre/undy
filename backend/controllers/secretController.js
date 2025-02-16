@@ -24,6 +24,12 @@ exports.createSecret = async (req, res) => {
             return res.status(404).json({ message: "Utilisateur introuvable." });
         }
 
+        console.log('Création de secret pour utilisateur:', {
+            userId: req.user.id,
+            stripeAccountId: user.stripeAccountId,
+            stripeAccountStatus: user.stripeAccountStatus
+        });
+
         // Définir dynamiquement les URLs de retour
         const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
         const refreshUrl = `${baseReturnUrl}/stripe/refresh`;
@@ -32,7 +38,8 @@ exports.createSecret = async (req, res) => {
         // Si l'utilisateur n'a pas de compte Stripe, en créer un
         if (!user.stripeAccountId) {
             try {
-                // Créer le compte Stripe Connect
+                console.log('Création nouveau compte Stripe');
+                
                 const account = await stripe.accounts.create({
                     type: 'express',
                     country: 'FR',
@@ -42,47 +49,32 @@ exports.createSecret = async (req, res) => {
                         transfers: { requested: true },
                     },
                     business_type: 'individual',
-                    individual: {
-                        // Forcer la vérification d'identité
-                        verification: {
-                            document: {
-                                required: true
-                            }
-                        }
-                    },
-                    settings: {
-                        // Configurer les paramètres de vérification
-                        verifications: {
-                            identity: {
-                                document: {
-                                    required: true
-                                }
-                            }
-                        }
-                    },
                     business_profile: {
-                        mcc: '5734', // Code pour services digitaux
+                        mcc: '5734',
                         url: 'https://hushy.app'
                     }
                 });
 
-                // Créer le lien d'onboarding
                 const accountLink = await stripe.accountLinks.create({
                     account: account.id,
                     refresh_url: refreshUrl,
                     return_url: returnUrl,
                     type: 'account_onboarding',
-                    collect: ['eventually_due']
                 });
 
-                // Mettre à jour l'utilisateur avec les informations Stripe
+                console.log('Compte Stripe créé:', {
+                    accountId: account.id,
+                    accountLinkUrl: accountLink.url
+                });
+
+                // Mettre à jour l'utilisateur
                 user.stripeAccountId = account.id;
                 user.stripeAccountStatus = 'pending';
                 user.stripeOnboardingComplete = false;
                 user.lastStripeOnboardingUrl = accountLink.url;
                 await user.save({ session });
 
-                // Créer le secret
+                // Créer le secret en attente
                 const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
                 const secret = await Secret.create([{
                     label,
@@ -90,17 +82,17 @@ exports.createSecret = async (req, res) => {
                     price,
                     user: req.user.id,
                     expiresAt,
-                    status: 'pending' // Le secret est en attente de la configuration Stripe
+                    status: 'pending'
                 }], { session });
 
                 await session.commitTransaction();
 
-                // Retourner les informations nécessaires au frontend
                 return res.status(201).json({
                     message: 'Secret créé. Configuration du compte de paiement requise.',
                     secret: secret[0],
                     stripeOnboardingUrl: accountLink.url,
-                    stripeStatus: 'pending'
+                    stripeStatus: 'pending',
+                    requiresStripeSetup: true
                 });
             } catch (error) {
                 await session.abortTransaction();
@@ -112,8 +104,10 @@ exports.createSecret = async (req, res) => {
             }
         }
 
-        // Vérifier si l'onboarding est complet pour les utilisateurs ayant déjà un compte Stripe
+        // Vérifier si l'onboarding est complet
         if (!user.stripeOnboardingComplete || user.stripeAccountStatus !== 'active') {
+            console.log('Configuration Stripe incomplète, création nouveau lien');
+            
             const accountLink = await stripe.accountLinks.create({
                 account: user.stripeAccountId,
                 refresh_url: refreshUrl,
@@ -121,7 +115,7 @@ exports.createSecret = async (req, res) => {
                 type: 'account_onboarding',
             });
 
-            // Créer le secret en statut pending
+            // Créer le secret en attente
             const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
             const secret = await Secret.create([{
                 label,
@@ -138,11 +132,14 @@ exports.createSecret = async (req, res) => {
                 message: 'Secret créé. Veuillez compléter la configuration de votre compte.',
                 secret: secret[0],
                 stripeOnboardingUrl: accountLink.url,
-                stripeStatus: user.stripeAccountStatus
+                stripeStatus: 'pending',
+                requiresStripeSetup: true
             });
         }
 
-        // Si tout est configuré, créer le secret normalement
+        // Création normale du secret (compte Stripe déjà configuré)
+        console.log('Création de secret avec compte Stripe actif');
+        
         const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
         const secret = await Secret.create([{
             label,
@@ -155,16 +152,17 @@ exports.createSecret = async (req, res) => {
 
         await session.commitTransaction();
 
-        res.status(201).json({
+        return res.status(201).json({
             message: 'Secret créé avec succès',
             secret: secret[0],
-            stripeStatus: 'active'
+            stripeStatus: 'active',
+            requiresStripeSetup: false
         });
 
     } catch (error) {
         await session.abortTransaction();
         console.error('Erreur création secret:', error);
-        res.status(500).json({
+        return res.status(500).json({
             message: 'Erreur serveur.',
             error: error.message
         });
@@ -189,23 +187,40 @@ exports.refreshStripeOnboarding = async (req, res) => {
 
         const account = await stripe.accounts.retrieve(user.stripeAccountId);
         
-        // Créer une URL de redirection qui pointe vers votre page de redirection
-        const redirectBaseUrl = process.env.FRONTEND_URL ;
-        const returnUrl = `${redirectBaseUrl}/redirect-to-app.html`;
-        const refreshUrl = `${redirectBaseUrl}/redirect-to-app.html`;
+        // Log pour debug
+        console.log('Stripe Account Status:', {
+            charges_enabled: account.charges_enabled,
+            payouts_enabled: account.payouts_enabled,
+            details_submitted: account.details_submitted
+        });
 
-        // Si le compte est déjà configuré
-        if (account.charges_enabled && account.payouts_enabled) {
+        const redirectBaseUrl = process.env.FRONTEND_URL;
+        const returnUrl = `${redirectBaseUrl}/redirect-to-app.html?status=success`;
+        const refreshUrl = `${redirectBaseUrl}/redirect-to-app.html?status=pending`;
+
+        // Vérification complète du statut du compte
+        if (account.charges_enabled && account.payouts_enabled && account.details_submitted) {
+            // Mise à jour du statut utilisateur
             user.stripeAccountStatus = 'active';
             user.stripeOnboardingComplete = true;
             await user.save();
 
+            // Mise à jour de tous les secrets en attente
+            await Secret.updateMany(
+                { user: req.user.id, status: 'pending' },
+                { status: 'active' }
+            );
+
             return res.status(200).json({
+                success: true,
+                verified: true,
                 status: 'active',
-                message: 'Compte Stripe complètement configuré'
+                message: 'Compte Stripe complètement configuré',
+                returnUrl: 'hushy://stripe-return?status=success'
             });
         }
 
+        // Si le compte n'est pas complètement configuré, créer un nouveau lien
         const accountLink = await stripe.accountLinks.create({
             account: user.stripeAccountId,
             refresh_url: refreshUrl,
@@ -213,24 +228,122 @@ exports.refreshStripeOnboarding = async (req, res) => {
             type: 'account_onboarding',
         });
 
+        // Mise à jour du statut utilisateur
         user.lastStripeOnboardingUrl = accountLink.url;
         user.stripeAccountStatus = 'pending';
         await user.save();
 
-        return res.status(201).json({
+        return res.status(200).json({
+            success: true,
+            verified: false,
             status: 'pending',
             message: 'Configuration du compte Stripe en cours',
-            url: accountLink.url
+            stripeOnboardingUrl: accountLink.url,
+            stripeStatus: 'pending'
         });
 
     } catch (error) {
         console.error('Erreur refresh onboarding:', error);
-        res.status(500).json({
+        return res.status(500).json({
+            success: false,
             status: 'error',
             message: error.message
         });
     }
 };
+
+exports.checkStripeStatus = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user.stripeAccountId) {
+            return res.status(400).json({
+                status: 'no_account',
+                verified: false
+            });
+        }
+
+        const account = await stripe.accounts.retrieve(user.stripeAccountId);
+        
+        if (account.charges_enabled && account.payouts_enabled && account.details_submitted) {
+            // Mettre à jour le statut utilisateur si nécessaire
+            if (!user.stripeOnboardingComplete) {
+                user.stripeOnboardingComplete = true;
+                user.stripeAccountStatus = 'active';
+                await user.save();
+
+                // Mettre à jour tous les secrets en attente
+                await Secret.updateMany(
+                    { user: req.user.id, status: 'pending' },
+                    { status: 'active' }
+                );
+            }
+
+            return res.status(200).json({
+                status: 'active',
+                verified: true,
+                success: true
+            });
+        }
+
+        return res.status(200).json({
+            status: 'pending',
+            verified: false
+        });
+    } catch (error) {
+        console.error('Erreur vérification status:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
+    }
+};
+
+exports.resetStripeStatus = async (req, res) => {
+   
+    try {
+        const user = await User.findById(req.user.id);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'Utilisateur non trouvé' });
+        }
+
+        // Réinitialiser le statut utilisateur
+        user.stripeAccountStatus = 'pending';
+        user.stripeOnboardingComplete = false;
+        user.lastStripeOnboardingUrl = null;
+        await user.save();
+
+        // Réinitialiser les secrets
+        await Secret.updateMany(
+            { user: req.user.id },
+            { status: 'pending' }
+        );
+
+        // Désactiver les capacités sur Stripe
+        if (user.stripeAccountId) {
+            await stripe.accounts.update(user.stripeAccountId, {
+                capabilities: {
+                    card_payments: { requested: false },
+                    transfers: { requested: false }
+                }
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Statut Stripe réinitialisé'
+        });
+    } catch (error) {
+        console.error('Erreur reset status:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+
+
 
 exports.deleteStripeAccount = async (req, res) => {
 
@@ -336,23 +449,20 @@ exports.getUnpurchasedSecrets = async (req, res) => {
 };
 
 
-// Remplacer la fonction calculatePrices par celle-ci
 const calculateStripeFees = async (basePrice, sellerId) => {
-    // Récupérer le compte Stripe du vendeur
-    const seller = await User.findById(sellerId).select('stripeAccountId');
-    if (!seller || !seller.stripeAccountId) {
-        throw new Error('Compte vendeur non trouvé ou non configuré pour Stripe');
-    }
+    // 10% prélevés sur le prix du vendeur
+    const sellerFee = basePrice * 0.10;
+    const sellerNetAmount = basePrice - sellerFee;
 
-    // Convertir le prix en centimes pour Stripe
-    const amountInCents = Math.round(basePrice * 100);
-
-    // 25% de frais de plateforme
-    const applicationFeeAmount = Math.round(amountInCents * 0.25);
+    // 15% additionnels sur le prix total pour l'acheteur
+    const buyerAdditionalFee = sellerNetAmount * 0.15;
+    const totalAmountForBuyer = basePrice + buyerAdditionalFee;
 
     return {
-        amount: amountInCents,
-        application_fee_amount: applicationFeeAmount,
+        amount: Math.round(totalAmountForBuyer * 100),
+        application_fee_amount: Math.round(buyerAdditionalFee * 100),
+        seller_amount: Math.round(sellerNetAmount * 100),
+        buyer_fees: Math.round(buyerAdditionalFee * 100),
         seller_stripe_account: seller.stripeAccountId
     };
 };
@@ -369,8 +479,13 @@ exports.createPaymentIntent = async (req, res) => {
         }
 
         // Calculer les frais
-        const { amount, application_fee_amount, seller_stripe_account } =
-            await calculateStripeFees(secret.price, secret.user);
+        const { 
+            amount, 
+            application_fee_amount, 
+            seller_amount, 
+            buyer_fees,
+            seller_stripe_account 
+        } = await calculateStripeFees(secret.price, secret.user);
 
         // Créer l'intention de paiement Stripe
         const paymentIntent = await stripe.paymentIntents.create({
@@ -379,6 +494,7 @@ exports.createPaymentIntent = async (req, res) => {
             application_fee_amount,
             transfer_data: {
                 destination: seller_stripe_account,
+                amount: seller_amount
             },
             automatic_payment_methods: {
                 enabled: true,
@@ -386,21 +502,33 @@ exports.createPaymentIntent = async (req, res) => {
             metadata: {
                 secretId: secret._id.toString(),
                 buyerId: req.user.id,
-                originalPrice: secret.price.toString()
-            }
+                originalPrice: secret.price.toString(),
+                buyerFees: buyer_fees / 100,
+                sellerAmount: seller_amount / 100,
+                platformFee: application_fee_amount / 100
+            },
+            // Ajout d'une expiration pour les PaymentIntents non aboutis
+            cancellation_reason: 'requested_by_customer',
+            
+            // Définir un délai d'expiration (par exemple 30 minutes)
+            setup_future_usage: 'one_time',
+            
+            // Ajouter une description pour traçabilité
+            description: `Secret Purchase: ${secret._id} - User: ${req.user.id}`
         });
 
         // Créer l'enregistrement de paiement
         const payment = await Payment.create([{
             secret: secret._id,
             user: req.user.id,
-            amount: amount / 100, // Convertir en euros pour la DB
+            amount: amount / 100, // Montant total payé
             paymentIntentId: paymentIntent.id,
             status: 'pending',
             metadata: {
-                originalPrice: amount,
-                platformFee: application_fee_amount,
-                sellerAmount: amount - application_fee_amount
+                originalPrice: secret.price,
+                sellerAmount: seller_amount / 100,
+                platformFee: application_fee_amount / 100,
+                totalAmountCharged: amount / 100
             }
         }], { session });
 
@@ -409,7 +537,10 @@ exports.createPaymentIntent = async (req, res) => {
         res.json({
             clientSecret: paymentIntent.client_secret,
             paymentId: paymentIntent.id,
-            amount: amount / 100
+            amount: amount / 100,
+            sellerAmount: seller_amount / 100,
+            platformFee: application_fee_amount / 100,
+            buyerFees: buyer_fees / 100
         });
 
     } catch (error) {
