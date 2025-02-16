@@ -136,7 +136,7 @@ const EarningsActionSheet = ({
                                     showsVerticalScrollIndicator={true}
                                 >
 
-                                    {transactions.map((transaction) => (
+                                    {transactions.map((transaction, index) => (
                                         <VStack
                                             key={transaction.id}
                                             mb={4}
@@ -145,7 +145,7 @@ const EarningsActionSheet = ({
                                             <Box
                                                 width="100%"
                                                 padding={4}
-                                                borderBottomWidth={1}
+                                                borderBottomWidth={index === transactions.length - 1 ? 0 : 1} // Enlever la bordure pour le dernier élément
                                                 borderColor="#94A3B820"
                                             >
                                                 <HStack justifyContent="space-between" alignItems="center" mb={2}>

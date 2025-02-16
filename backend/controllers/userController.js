@@ -318,7 +318,7 @@ exports.getUserTransactions = async (req, res) => {
                 ? new Date(transaction.created * 1000).toLocaleDateString('fr-FR')
                 : 'Date non disponible',
             status: transaction.status || 'Statut inconnu',
-            type: transaction.type || 'Type inconnu',
+            type: transaction.type === 'payout' ? 'transfer' : transaction.type, // Convertir payout en transfer
             description: transaction.description
         }));
 
