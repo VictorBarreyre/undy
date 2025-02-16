@@ -136,6 +136,7 @@ const StripeVerificationActionSheet = ({
                             >
                                 Pour finaliser la configuration de votre compte Stripe, 
                                 nous avons besoin d'une photo de votre pièce d'identité.
+                                Ne tardez pas si voulez pouvoir continuer à recevoir des paiements et à les transférer sur votre compte
                             </Text>
 
                             {identityDocument ? (

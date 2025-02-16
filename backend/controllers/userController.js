@@ -284,6 +284,8 @@ exports.getUserProfile = async (req, res) => {
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
+
+
 exports.getUserTransactions = async (req, res) => {
     try {
         const user = req.user;
@@ -291,28 +293,69 @@ exports.getUserTransactions = async (req, res) => {
         if (!user.stripeAccountId) {
             return res.status(400).json({ message: 'Compte Stripe non configuré' });
         }
-        
+
+        // Récupérer le solde actuel
+        const balance = await stripe.balance.retrieve({
+            stripeAccount: user.stripeAccountId,
+        });
+
+        // Calculer les totaux du solde
+        const available = balance.available.reduce((sum, bal) => sum + bal.amount, 0) / 100;
+        const pending = balance.pending.reduce((sum, bal) => sum + bal.amount, 0) / 100;
+
+        // Récupérer les transactions
         const transactions = await stripe.balanceTransactions.list({
             stripeAccount: user.stripeAccountId,
         });
-        
-        // Transformer les données
+
+        // Transformer les transactions
         const formattedTransactions = transactions.data.map(transaction => ({
             id: transaction.id,
-            grossAmount: transaction.amount ? transaction.amount / 100 : 0, // Vérification de amount
-            fees: transaction.fee ? transaction.fee / 100 : 0, // Vérification de fee
-            netAmount: transaction.net ? transaction.net / 100 : 0, // Vérification de net
+            grossAmount: transaction.amount ? transaction.amount / 100 : 0,
+            fees: transaction.fee ? transaction.fee / 100 : 0,
+            netAmount: transaction.net ? transaction.net / 100 : 0,
             date: transaction.created 
-                ? new Date(transaction.created * 1000).toLocaleDateString('fr-FR') 
+                ? new Date(transaction.created * 1000).toLocaleDateString('fr-FR')
                 : 'Date non disponible',
             status: transaction.status || 'Statut inconnu',
-            type: transaction.type || 'Type inconnu'
+            type: transaction.type || 'Type inconnu',
+            description: transaction.description
         }));
-        
-        res.json(formattedTransactions);
+
+        // Calculer les totaux des transactions
+        const totals = formattedTransactions.reduce((acc, transaction) => {
+            if (transaction.type === 'transfer') {
+                acc.transferredAmount += transaction.netAmount;
+            }
+            acc.totalEarnings += transaction.netAmount;
+            return acc;
+        }, { 
+            totalEarnings: 0,
+            transferredAmount: 0
+        });
+
+        // Renvoyer toutes les informations
+        res.json({
+            balance: {
+                available,
+                pending,
+                total: available + pending
+            },
+            transactions: formattedTransactions,
+            stats: {
+                totalEarnings: totals.totalEarnings,
+                transferredAmount: totals.transferredAmount,
+                availableBalance: available,
+                pendingBalance: pending
+            }
+        });
+
     } catch (error) {
         console.error('Erreur lors de la récupération des transactions :', error);
-        res.status(500).json({ message: 'Erreur lors de la récupération des transactions', errorDetails: error.message });
+        res.status(500).json({ 
+            message: 'Erreur lors de la récupération des transactions', 
+            errorDetails: error.message 
+        });
     }
 };
 

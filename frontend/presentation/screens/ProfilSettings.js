@@ -18,10 +18,6 @@ import NotificationService from '../Notifications/NotificationService';
 
 
 
-
-
-
-
 export default function Profile({ navigation }) {
     const { userData, isLoadingUserData, updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount } = useContext(AuthContext);
     const [selectedField, setSelectedField] = useState(null);
@@ -93,31 +89,48 @@ export default function Profile({ navigation }) {
 
     const toggleNotifications = async () => {
         try {
-            if (!notificationsEnabled) {
-                console.log("Tentative d'activation des notifications");
-                const activated = await NotificationService.activateNotifications();
-
-                if (activated) {
-                    // Envoyer UNIQUEMENT le champ notifs
-                    await updateUserData({
-                        notifs: true,
-                        _id: userData._id // Si nécessaire pour l'identification
+            const newNotifState = !notificationsEnabled;
+            
+            // On met à jour l'état local immédiatement pour une meilleure UX
+            setNotificationsEnabled(newNotifState);
+    
+            if (newNotifState) {
+                // Vérifier les permissions avant d'activer
+                const hasPermission = await NotificationService.checkPermissions();
+                if (hasPermission) {
+                    // Mettre à jour la base de données
+                    const result = await updateUserData({
+                        notifs: true
                     });
-
-                    setNotificationsEnabled(true);
+    
+                    if (result.success) {
+                        // Envoyer la notification de test après la mise à jour réussie
+                        setTimeout(async () => {
+                            await NotificationService.sendTestNotification();
+                        }, 500); // Délai de 500ms
+                    } else {
+                        // En cas d'échec, revenir à l'état précédent
+                        setNotificationsEnabled(false);
+                    }
+                } else {
+                    // Si pas de permission, revenir à l'état précédent
+                    setNotificationsEnabled(false);
                 }
             } else {
-                // Désactivation des notifications
-                await updateUserData({
-                    notifs: false,
-                    _id: userData._id // Si nécessaire pour l'identification
+                // Désactiver les notifications
+                const result = await updateUserData({
+                    notifs: false
                 });
-                setNotificationsEnabled(false);
+    
+                if (!result.success) {
+                    // En cas d'échec, revenir à l'état précédent
+                    setNotificationsEnabled(true);
+                }
             }
         } catch (error) {
             console.error("Erreur toggleNotifications:", error);
-            // Remettre le toggle dans son état d'origine
-            setNotificationsEnabled(!notificationsEnabled);
+            // En cas d'erreur, revenir à l'état précédent
+            setNotificationsEnabled(!newNotifState);
             Alert.alert(
                 "Erreur",
                 "Un problème est survenu lors de la mise à jour des préférences de notification"
@@ -125,6 +138,7 @@ export default function Profile({ navigation }) {
         }
     };
 
+    
     const toggleContacts = () => {
         setContactsEnabled(!notificationsEnabled);
         updateUserData({ ...userData, contacts: !contactsEnabled });

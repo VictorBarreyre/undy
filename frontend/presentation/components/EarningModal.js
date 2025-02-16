@@ -9,18 +9,34 @@ const EarningsActionSheet = ({
     isOpen, 
     onClose, 
     userData, 
-    isConfigured, 
     navigation 
 }) => {
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
+    const isConfigured = userData?.stripeAccountStatus === 'active' && 
+    userData?.stripeAccountId && 
+    userData?.stripeOnboardingComplete;
+
+
     useEffect(() => {
         const fetchTransactions = async () => {
             const instance = getAxiosInstance();
             try {
                 setIsLoading(true);
+                console.log('État du compte:', {
+                    status: userData?.stripeAccountStatus,
+                    id: userData?.stripeAccountId,
+                    onboarding: userData?.stripeOnboardingComplete,
+                    isConfigured: isConfigured
+                });
+
+                if (!isConfigured) {
+                    setIsLoading(false);
+                    return;
+                }
+
                 const response = await instance.get('/api/users/transactions', {
                     headers: {
                         Authorization: `Bearer ${userData.token}`,
@@ -30,17 +46,18 @@ const EarningsActionSheet = ({
                     }
                 });
                 setTransactions(response.data);
-                setIsLoading(false);
             } catch (error) {
                 console.error('Erreur lors de la récupération des transactions :', error);
+            } finally {
                 setIsLoading(false);
             }
         };
 
-        if (isOpen && isConfigured) {
+        if (isOpen) {
             fetchTransactions();
         }
-    }, [isOpen, isConfigured, userData.token, userData.stripeAccountId]);
+    }, [isOpen, isConfigured, userData]);
+
 
     const handleTransferFunds = async () => {
         const instance = getAxiosInstance();
@@ -153,7 +170,7 @@ const EarningsActionSheet = ({
                                         </VStack>
                                     ))}
                                     <Text mt={4} style={styles.h4} textAlign="center">
-                                        Total des revenus : {userData.totalEarnings} €
+                                        Revenus disponibles : {userData.totalEarnings} €
                                     </Text>
                                 </>
                             )}
