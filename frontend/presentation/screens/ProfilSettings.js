@@ -1,7 +1,7 @@
-import React, { useState, useContext,useEffect } from 'react';
-import { VStack, Box, Text, Button, Pressable, Actionsheet, Input, HStack, Spinner, Switch } from 'native-base';
+import React, { useState, useContext, useEffect } from 'react';
+import { VStack, Box, Text, Button, Pressable, Actionsheet, Input, HStack, Spinner } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { TouchableOpacity, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
+import { TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, Switch as RNSwitch } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -87,41 +87,43 @@ export default function Profile({ navigation }) {
                 setNotificationsEnabled(hasPermission);
             }
         };
-    
+
         syncNotificationState();
     }, [userData]);
 
-      const toggleNotifications = async () => {
+    const toggleNotifications = async () => {
         try {
             if (!notificationsEnabled) {
                 console.log("Tentative d'activation des notifications");
                 const activated = await NotificationService.activateNotifications();
-                
+
                 if (activated) {
-                    console.log("Notifications activées avec succès");
-                    setNotificationsEnabled(true);
+                    // Envoyer UNIQUEMENT le champ notifs
                     await updateUserData({
-                        ...userData,
-                        notifs: true
+                        notifs: true,
+                        _id: userData._id // Si nécessaire pour l'identification
                     });
-                } else {
-                    console.log("Échec de l'activation des notifications");
-                    setNotificationsEnabled(false);
+
+                    setNotificationsEnabled(true);
                 }
             } else {
-                console.log("Désactivation des notifications");
-                setNotificationsEnabled(false);
+                // Désactivation des notifications
                 await updateUserData({
-                    ...userData,
-                    notifs: false
+                    notifs: false,
+                    _id: userData._id // Si nécessaire pour l'identification
                 });
+                setNotificationsEnabled(false);
             }
         } catch (error) {
             console.error("Erreur toggleNotifications:", error);
-            Alert.alert("Erreur", "Problème lors de la gestion des notifications");
+            // Remettre le toggle dans son état d'origine
+            setNotificationsEnabled(!notificationsEnabled);
+            Alert.alert(
+                "Erreur",
+                "Un problème est survenu lors de la mise à jour des préférences de notification"
+            );
         }
     };
-
 
     const toggleContacts = () => {
         setContactsEnabled(!notificationsEnabled);
@@ -427,13 +429,17 @@ export default function Profile({ navigation }) {
                                                     </Text>
                                                 </HStack>
                                                 {key === 'notifs' || key === 'contacts' ? (
-                                                    <Switch
-                                                        isChecked={key === 'notifs' ? notificationsEnabled : contactsEnabled} // Utilise la bonne variable pour l'état
-                                                        onToggle={key === 'notifs' ? toggleNotifications : toggleContacts} // Utilise la bonne fonction pour le toggle
-                                                        style={{ transform: [{ scale: 0.7 }] }} // Ajustez la taille ici
-                                                        trackColor={{ false: "#E2E8F0", true: "#E2E8F0" }} // Couleur de la piste
-                                                        thumbColor={(key === 'notifs' ? notificationsEnabled : contactsEnabled) ? "#40D861" : "#FF78B2"} // Couleur du bouton
-                                                    />
+                                                   <RNSwitch
+                                                   value={key === 'notifs' ? notificationsEnabled : contactsEnabled}
+                                                   onValueChange={key === 'notifs' ? toggleNotifications : toggleContacts}
+                                                   trackColor={{ 
+                                                       false: "#E2E8F0",
+                                                       true: "#E2E8F0"
+                                                   }}
+                                                   thumbColor={(key === 'notifs' ? notificationsEnabled : contactsEnabled) ? "#83D9FF" : "#FF78B2"}
+                                                   ios_backgroundColor="#E2E8F0"
+                                                   style={{ transform: [{ scale: 0.7 }] }}
+                                               />
                                                 ) : (
                                                     <FontAwesome name="chevron-right" size={14} color="#94A3B8" />
                                                 )}

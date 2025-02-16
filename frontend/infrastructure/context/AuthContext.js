@@ -147,9 +147,27 @@ export const AuthProvider = ({ children }) => {
             throw new Error('Axios instance not initialized');
         }
         try {
-            const response = await instance.put('/api/users/profile', updatedData);
-            setUserData(response.data);
-            await AsyncStorage.setItem('userData', JSON.stringify(response.data));
+            // Ne prendre que les champs qui ont changé
+            const changedFields = {};
+            Object.keys(updatedData).forEach(key => {
+                if (userData[key] !== updatedData[key]) {
+                    changedFields[key] = updatedData[key];
+                }
+            });
+    
+            if (Object.keys(changedFields).length === 0) {
+                return { success: true, message: 'Aucune modification nécessaire.' };
+            }
+    
+            // Ajouter l'ID pour l'identification
+            changedFields._id = userData._id;
+    
+            const response = await instance.put('/api/users/profile', changedFields);
+            
+            // Mettre à jour le state local avec toutes les données
+            setUserData({ ...userData, ...response.data });
+            await AsyncStorage.setItem('userData', JSON.stringify({ ...userData, ...response.data }));
+            
             return { success: true, message: 'Profil mis à jour avec succès.' };
         } catch (error) {
             console.error('Error updating user data:', error);

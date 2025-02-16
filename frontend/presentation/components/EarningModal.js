@@ -9,7 +9,7 @@ const EarningsActionSheet = ({
     isOpen, 
     onClose, 
     userData, 
-    isConfigured = false, 
+    isConfigured, 
     navigation 
 }) => {
     const [transactions, setTransactions] = useState([]);
