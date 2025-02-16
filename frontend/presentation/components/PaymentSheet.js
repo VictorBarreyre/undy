@@ -19,14 +19,20 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
 
 
     const getDisplayPrice = (price) => {
-        // Calculer les frais : 10% pour le vendeur + 15% de frais de plateforme
-        const sellerFee = price * 0.10;
-        const platformFee = (price - sellerFee) * 0.15;
-        const totalPrice = price + platformFee;
+        // 1. Frais de plateforme sur le prix du vendeur (10%)
+        const platformFeeOnSellerPrice = price * 0.10;
+        
+        // 2. Montant net pour le vendeur
+        const sellerNetAmount = price - platformFeeOnSellerPrice;
+        
+        // 3. Frais supplémentaires (15% sur le montant net)
+        const additionalPlatformFee = sellerNetAmount * 0.15;
+        
+        // 4. Prix total pour l'acheteur
+        const totalPrice = price + additionalPlatformFee;
         
         return totalPrice.toFixed(2);
     };
-    
 
     const initializePaymentSheet = async (clientSecret) => {
         try {

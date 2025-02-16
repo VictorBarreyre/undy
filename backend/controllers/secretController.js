@@ -475,9 +475,10 @@ const calculateStripeFees = async (basePrice, sellerId) => {
     );
 
     return {
-        amount: amountInCents, // Montant total payé par l'acheteur
-        application_fee_amount: totalPlatformFeeInCents, // Total des frais de plateforme
-        seller_amount: Math.round(sellerNetAmount * 100), // Montant net pour le vendeur
+        amount: amountInCents,
+        application_fee_amount: totalPlatformFeeInCents,
+        seller_amount: Math.round(sellerNetAmount * 100),
+        buyer_fees: Math.max(0, Math.round(additionalPlatformFee * 100)), // Garantit une valeur non négative
         seller_stripe_account: seller.stripeAccountId
     };
 };
@@ -535,7 +536,7 @@ exports.createPaymentIntent = async (req, res) => {
                 sellerAmount: seller_amount / 100,
                 platformFee: application_fee_amount / 100,
                 totalAmountCharged: amount / 100,
-                buyerMargin: buyer_fees / 100
+                buyerMargin: (buyer_fees || 0) / 100  // Ajout d'une valeur par défaut
             }
         }], { session });
 
