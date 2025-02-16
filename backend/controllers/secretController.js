@@ -512,8 +512,7 @@ exports.createPaymentIntent = async (req, res) => {
                 sellerAmount: seller_amount / 100,
                 platformFee: application_fee_amount / 100
             },
-            // Suppression du paramètre cancellation_reason
-            setup_future_usage: 'one_time'
+        
         });
 
         // Créer l'enregistrement de paiement
