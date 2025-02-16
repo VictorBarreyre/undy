@@ -294,18 +294,23 @@ exports.getUserTransactions = async (req, res) => {
             return res.status(400).json({ message: 'Compte Stripe non configuré' });
         }
 
-        // Récupérer le solde actuel
-        const balance = await stripe.balance.retrieve({
-            stripeAccount: user.stripeAccountId,
-        });
+        // Log pour vérifier l'ID du compte
+        console.log('Stripe Account ID:', user.stripeAccountId);
 
         // Récupérer les transactions
         const transactions = await stripe.balanceTransactions.list({
             stripeAccount: user.stripeAccountId,
+            limit: 100 // Augmentez la limite pour capturer plus de transactions
         });
+
+        // Log pour voir toutes les transactions
+        console.log('Transactions brutes:', JSON.stringify(transactions.data, null, 2));
 
         // Calculer le volume total des ventes
         const totalSalesCalculation = transactions.data.reduce((acc, transaction) => {
+            // Log de chaque transaction pour comprendre son type
+            console.log(`Transaction type: ${transaction.type}, Amount: ${transaction.amount / 100}`);
+
             // Ne prendre que les charges (ventes)
             if (transaction.type === 'charge') {
                 acc.totalGross += transaction.amount / 100;
@@ -317,23 +322,17 @@ exports.getUserTransactions = async (req, res) => {
             totalFees: 0
         });
 
-        // Calculer les autres informations de solde
+        // Log du calcul final
+        console.log('Calcul des ventes totales:', totalSalesCalculation);
+
+        // Récupérer le solde actuel
+        const balance = await stripe.balance.retrieve({
+            stripeAccount: user.stripeAccountId,
+        });
+
+        // Calculer les soldes
         const available = balance.available.reduce((sum, bal) => sum + bal.amount, 0) / 100;
         const pending = balance.pending.reduce((sum, bal) => sum + bal.amount, 0) / 100;
-
-        // Transformer les transactions
-        const formattedTransactions = transactions.data.map(transaction => ({
-            id: transaction.id,
-            grossAmount: transaction.amount ? transaction.amount / 100 : 0,
-            fees: transaction.fee ? transaction.fee / 100 : 0,
-            netAmount: transaction.net ? transaction.net / 100 : 0,
-            date: transaction.created 
-                ? new Date(transaction.created * 1000).toLocaleDateString('fr-FR')
-                : 'Date non disponible',
-            status: transaction.status || 'Statut inconnu',
-            type: transaction.type === 'payout' ? 'transfer' : transaction.type,
-            description: transaction.description
-        }));
 
         // Renvoyer toutes les informations
         res.json({
@@ -342,21 +341,27 @@ exports.getUserTransactions = async (req, res) => {
                 pending,
                 total: available + pending
             },
-            transactions: formattedTransactions,
+            transactions: transactions.data.map(transaction => ({
+                id: transaction.id,
+                type: transaction.type,
+                amount: transaction.amount / 100,
+                fee: transaction.fee / 100,
+                net: transaction.net / 100,
+            })),
             stats: {
-                totalSales: totalSalesCalculation.totalGross, // Volume total des ventes
-                totalFees: totalSalesCalculation.totalFees, // Total des frais
-                totalNetSales: totalSalesCalculation.totalGross - totalSalesCalculation.totalFees, // Revenus nets
+                totalSales: totalSalesCalculation.totalGross, 
+                totalFees: totalSalesCalculation.totalFees, 
                 availableBalance: available,
                 pendingBalance: pending
             }
         });
 
     } catch (error) {
-        console.error('Erreur lors de la récupération des transactions :', error);
+        console.error('Erreur détaillée lors de la récupération des transactions :', error);
         res.status(500).json({ 
             message: 'Erreur lors de la récupération des transactions', 
-            errorDetails: error.message 
+            errorDetails: error.message,
+            fullError: error
         });
     }
 };

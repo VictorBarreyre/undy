@@ -190,36 +190,50 @@ const EarningsActionSheet = ({
 
                                 {/* Résumé des revenus */}
                                 <Box
-                                    mt={4}
-                                    p={4}
-                                    bg="gray.50"
-                                    rounded="lg"
-                                    borderWidth={1}
-                                    borderColor="#94A3B820"
-                                >
-                                    <VStack space={3}>
-                                        <HStack justifyContent="space-between">
-                                            <Text style={styles.caption}>Total gagné</Text>
-                                            <Text fontWeight="bold">
-                                                {(transactionStats.totalEarnings || 0).toFixed(2)} €
-                                            </Text>
-                                        </HStack>
+    mt={4}
+    p={4}
+    bg="gray.50"
+    rounded="lg"
+    borderWidth={1}
+    borderColor="#94A3B820"
+>
+    <VStack space={3}>
+        <HStack justifyContent="space-between">
+            <Text style={styles.caption}>Volume total</Text>
+            <Text fontWeight="bold">
+                {(transactionStats.totalSales || 0).toFixed(2)} €
+            </Text>
+        </HStack>
 
-                                        <HStack justifyContent="space-between">
-                                            <Text style={styles.caption}>Disponible</Text>
-                                            <Text color="#40D861">
-                                                {(transactionStats.availableBalance || 0).toFixed(2)} €
-                                            </Text>
-                                        </HStack>
+        <HStack justifyContent="space-between">
+            <Text style={styles.caption}>Frais</Text>
+            <Text color="#FF78B2">
+                -{(transactionStats.totalFees || 0).toFixed(2)} €
+            </Text>
+        </HStack>
 
-                                        <HStack justifyContent="space-between">
-                                            <Text style={styles.caption}>En attente</Text>
-                                            <Text color="#FF78B2">
-                                                {(transactionStats.pendingBalance || 0).toFixed(2)} €
-                                            </Text>
-                                        </HStack>
-                                    </VStack>
-                                </Box>
+        <HStack justifyContent="space-between">
+            <Text style={styles.caption}>Revenus nets</Text>
+            <Text color="#40D861" fontWeight="bold">
+                {(transactionStats.totalNetSales || 0).toFixed(2)} €
+            </Text>
+        </HStack>
+
+        <HStack justifyContent="space-between">
+            <Text style={styles.caption}>Disponible</Text>
+            <Text color="#40D861">
+                {(transactionStats.availableBalance || 0).toFixed(2)} €
+            </Text>
+        </HStack>
+
+        <HStack justifyContent="space-between">
+            <Text style={styles.caption}>En attente</Text>
+            <Text color="#FF78B2">
+                {(transactionStats.pendingBalance || 0).toFixed(2)} €
+            </Text>
+        </HStack>
+    </VStack>
+</Box>
                                 <Text mt={2} mb={2} style={styles.h4} textAlign="center">
                                     Revenus disponibles : {userData.totalEarnings} €
                                 </Text>
