@@ -473,7 +473,6 @@ const calculateStripeFees = async (basePrice, sellerId) => {
     };
 };
 
-// Modifier createPaymentIntent
 exports.createPaymentIntent = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -498,9 +497,9 @@ exports.createPaymentIntent = async (req, res) => {
             amount,
             currency: 'eur',
             application_fee_amount,
+            transfer_group: `secret_${secret._id}`,
             transfer_data: {
-                destination: seller_stripe_account,
-                amount: seller_amount
+                destination: seller_stripe_account
             },
             automatic_payment_methods: {
                 enabled: true,
@@ -512,7 +511,6 @@ exports.createPaymentIntent = async (req, res) => {
                 sellerAmount: seller_amount / 100,
                 platformFee: application_fee_amount / 100
             },
-        
         });
 
         // Créer l'enregistrement de paiement
@@ -526,7 +524,8 @@ exports.createPaymentIntent = async (req, res) => {
                 originalPrice: secret.price,
                 sellerAmount: seller_amount / 100,
                 platformFee: application_fee_amount / 100,
-                totalAmountCharged: amount / 100
+                totalAmountCharged: amount / 100,
+                buyerMargin: buyer_fees / 100
             }
         }], { session });
 
