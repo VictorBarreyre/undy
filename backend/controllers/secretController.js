@@ -523,6 +523,7 @@ exports.createPaymentIntent = async (req, res) => {
                 platformFee: application_fee_amount / 100
             },
         });
+        
 
         // Créer l'enregistrement de paiement
         const payment = await Payment.create([{
