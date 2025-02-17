@@ -133,22 +133,30 @@ export const AuthProvider = ({ children }) => {
     };
 
     const fetchUserData = async () => {
+        console.log('[AuthProvider] Début fetchUserData');
         const instance = getAxiosInstance();
         if (!instance) {
             throw new Error('Axios instance not initialized');
         }
+        
         try {
             const response = await instance.get('/api/users/profile');
             const cleanedData = cleanUserData(response.data);
             setUserData(cleanedData);
             await AsyncStorage.setItem('userData', JSON.stringify(cleanedData));
+            
             setUserData({
                 ...cleanedData,
-                totalEarnings: response.data.totalEarnings // Ajoutez cette ligne
+                totalEarnings: response.data.totalEarnings
             });
+            
+            console.log('[AuthProvider] Données utilisateur mises à jour avec succès');
         } catch (error) {
-            console.error('Erreur fetchUserData:', error);
-            throw error;
+            console.error('[AuthProvider] Erreur fetchUserData:', error);
+            // Si l'erreur n'est pas liée à l'authentification, on la propage
+            if (!error.response?.data?.shouldRefresh) {
+                throw error;
+            }
         }
     };
 
@@ -225,38 +233,49 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (accessToken, refreshToken) => {
         try {
+            console.log('[AuthProvider] Début de la connexion');
             await AsyncStorage.multiSet([
                 ['accessToken', accessToken],
                 ['refreshToken', refreshToken]
             ]);
+            
+            const instance = getAxiosInstance();
+            if (instance) {
+                instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+            }
+            
             setUserToken(accessToken);
             setIsLoggedIn(true);
+            
             await fetchUserData();
+            console.log('[AuthProvider] Connexion réussie');
         } catch (error) {
-            console.error('Erreur lors de la connexion:', error);
+            console.error('[AuthProvider] Erreur lors de la connexion:', error);
             throw error;
         }
     };
+    
 
     const logout = async () => {
         try {
+            console.log('[AuthProvider] Début de la déconnexion');
             const instance = getAxiosInstance();
             if (instance) {
-                instance.defaults.headers.common['Authorization'] = '';
+                delete instance.defaults.headers.common['Authorization'];
             }
             
             await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
             
-            // Réinitialiser tous les états
             setUserToken(null);
             setIsLoggedIn(false);
             setUserData(null);
-            setIsLoadingUserData(false);  // Ajouter cette ligne
+            setIsLoadingUserData(false);
             
+            console.log('[AuthProvider] Déconnexion réussie');
             return true;
         } catch (error) {
-            console.error('Erreur lors de la déconnexion:', error);
-            setIsLoadingUserData(false);  // Même en cas d'erreur
+            console.error('[AuthProvider] Erreur lors de la déconnexion:', error);
+            setIsLoadingUserData(false);
             throw error;
         }
     };
