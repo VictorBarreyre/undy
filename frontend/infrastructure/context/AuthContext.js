@@ -1,6 +1,9 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
+import { DeviceEventEmitter, Alert } from 'react-native';
+
+
 
 export const AuthContext = createContext();
 
@@ -13,17 +16,49 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const initAxios = async () => {
+            console.log('[AuthProvider] Initialisation...');
             try {
+                console.log('[AuthProvider] Création de l\'instance Axios');
                 await createAxiosInstance();
+                console.log('[AuthProvider] Chargement des données stockées');
                 await loadStoredData();
             } catch (error) {
-                console.error('Erreur d\'initialisation axios:', error);
-                setIsLoadingUserData(false);  // Toujours mettre à false
+                console.error('[AuthProvider] Erreur d\'initialisation:', error);
+                setIsLoadingUserData(false);
             }
         };
-
+    
+        const handleAuthError = async (event) => {
+            console.log('[AuthProvider] Erreur d\'authentification détectée:', event);
+            try {
+                console.log('[AuthProvider] Tentative de déconnexion...');
+                await logout();
+                console.log('[AuthProvider] Déconnexion réussie');
+                
+                Alert.alert(
+                    "Session expirée",
+                    event.message,
+                    [{ 
+                        text: "OK",
+                        onPress: () => console.log('[AuthProvider] Alerte acquittée par l\'utilisateur')
+                    }]
+                );
+            } catch (error) {
+                console.error('[AuthProvider] Erreur lors du traitement de l\'erreur d\'auth:', error);
+            }
+        };
+    
+        console.log('[AuthProvider] Mise en place des event listeners');
+        // Utiliser DeviceEventEmitter au lieu de window.addEventListener
+        const subscription = DeviceEventEmitter.addListener('authError', handleAuthError);
+    
         initAxios();
-    }, []); // Dépendance vide pour n'exécuter qu'une fois
+    
+        return () => {
+            console.log('[AuthProvider] Nettoyage des event listeners');
+            subscription.remove(); // Nettoyer l'écouteur d'événements
+        };
+    }, []);
 
     const cleanProfilePicture = (profilePicture) => {
         if (!profilePicture) return null;
@@ -44,7 +79,10 @@ export const AuthProvider = ({ children }) => {
         };
     };
 
+    
+
     const loadStoredData = async () => {
+        console.log('[AuthProvider] Début du chargement des données stockées');
         try {
             const [accessToken, refreshToken, storedUserData] = await Promise.all([
                 AsyncStorage.getItem('accessToken'),
@@ -52,34 +90,44 @@ export const AuthProvider = ({ children }) => {
                 AsyncStorage.getItem('userData')
             ]);
     
+            console.log('[AuthProvider] Tokens récupérés:', {
+                hasAccessToken: !!accessToken,
+                hasRefreshToken: !!refreshToken,
+                hasStoredData: !!storedUserData
+            });
+    
             if (accessToken) {
-                // Important : définir le token avant de faire des requêtes
                 const instance = getAxiosInstance();
                 if (instance) {
+                    console.log('[AuthProvider] Mise à jour du header Authorization');
                     instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
                 }
-                
+    
                 setUserToken(accessToken);
                 setIsLoggedIn(true);
     
                 if (storedUserData) {
+                    console.log('[AuthProvider] Chargement des données utilisateur stockées');
                     const parsedData = JSON.parse(storedUserData);
                     setUserData(cleanUserData(parsedData));
                 }
     
-                // Ne faire cette requête que si on a aussi un refresh token
                 if (refreshToken) {
+                    console.log('[AuthProvider] Tentative de récupération des données fraîches');
                     try {
                         await fetchUserData();
+                        console.log('[AuthProvider] Données utilisateur mises à jour avec succès');
                     } catch (error) {
-                        console.log('Erreur fetchUserData, tentative de refresh...');
-                        // Ne pas throw l'erreur ici
+                        console.error('[AuthProvider] Erreur fetchUserData:', error);
                     }
                 }
+            } else {
+                console.log('[AuthProvider] Aucun token trouvé');
             }
         } catch (error) {
-            console.error('Erreur loadStoredData:', error);
+            console.error('[AuthProvider] Erreur loadStoredData:', error);
         } finally {
+            console.log('[AuthProvider] Fin du chargement des données');
             setIsLoadingUserData(false);
         }
     };
