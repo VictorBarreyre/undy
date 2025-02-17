@@ -160,6 +160,7 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    
     const handleProfileImageUpdate = async (imageFile) => {
         const instance = getAxiosInstance();
         if (!instance) {
