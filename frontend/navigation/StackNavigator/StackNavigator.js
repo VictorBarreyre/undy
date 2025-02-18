@@ -1,5 +1,5 @@
-import React, { useContext,useEffect, useState } from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import React, { useContext, useEffect, useState } from 'react';
+import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import Inscription from '../../presentation/screens/Inscription';
 import Connexion from '../../presentation/screens/Connexion';
@@ -16,16 +16,40 @@ const StackNavigator = () => {
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 1000);
         return () => clearTimeout(timer);
-      }, []);
-    
-      if (isLoading) {
+    }, []);
+
+    if (isLoading) {
         return <TypewriterLoader />;
-      }
+    }
 
 
     return (
-        <Stack.Navigator>
-            {isLoggedIn  ? (
+        <Stack.Navigator
+        screenOptions={({ route }) => ({
+            headerShown: false,
+            gestureEnabled: true,
+            cardStyleInterpolator: ({ current, layouts, closing }) => {
+                // Si c'est une déconnexion (transition vers l'écran de connexion)
+                if (!isLoggedIn && route.name === 'Connexion') {
+                    return {
+                        cardStyle: {
+                            transform: [
+                                {
+                                    translateX: current.progress.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [-layouts.screen.width, 0],
+                                    }),
+                                },
+                            ],
+                        },
+                    };
+                }
+                // Pour toutes les autres transitions
+                return CardStyleInterpolators.forHorizontalIOS;
+            },
+        })}
+    >
+            {isLoggedIn ? (
                 <Stack.Screen name="MainApp" component={DrawerNavigator} options={{ headerShown: false }} />
             ) : (
                 <>

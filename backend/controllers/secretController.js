@@ -24,22 +24,17 @@ exports.createSecret = async (req, res) => {
             return res.status(404).json({ message: "Utilisateur introuvable." });
         }
 
-        console.log('Création de secret pour utilisateur:', {
-            userId: req.user.id,
-            stripeAccountId: user.stripeAccountId,
-            stripeAccountStatus: user.stripeAccountStatus
-        });
-
         // Définir dynamiquement les URLs de retour
         const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
         const refreshUrl = `${baseReturnUrl}/stripe/refresh`;
         const returnUrl = `${baseReturnUrl}/stripe/return`;
 
+        console.log(baseReturnUrl)
+
         // Si l'utilisateur n'a pas de compte Stripe, en créer un
         if (!user.stripeAccountId) {
             try {
-                console.log('Création nouveau compte Stripe');
-                
+                // Créer le compte Stripe Connect
                 const account = await stripe.accounts.create({
                     type: 'express',
                     country: 'FR',
@@ -50,11 +45,12 @@ exports.createSecret = async (req, res) => {
                     },
                     business_type: 'individual',
                     business_profile: {
-                        mcc: '5734',
+                        mcc: '5734', // Code pour services digitaux
                         url: 'https://hushy.app'
                     }
                 });
 
+                // Créer le lien d'onboarding
                 const accountLink = await stripe.accountLinks.create({
                     account: account.id,
                     refresh_url: refreshUrl,
@@ -62,19 +58,14 @@ exports.createSecret = async (req, res) => {
                     type: 'account_onboarding',
                 });
 
-                console.log('Compte Stripe créé:', {
-                    accountId: account.id,
-                    accountLinkUrl: accountLink.url
-                });
-
-                // Mettre à jour l'utilisateur
+                // Mettre à jour l'utilisateur avec les informations Stripe
                 user.stripeAccountId = account.id;
                 user.stripeAccountStatus = 'pending';
                 user.stripeOnboardingComplete = false;
                 user.lastStripeOnboardingUrl = accountLink.url;
                 await user.save({ session });
 
-                // Créer le secret en attente
+                // Créer le secret
                 const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
                 const secret = await Secret.create([{
                     label,
@@ -82,17 +73,17 @@ exports.createSecret = async (req, res) => {
                     price,
                     user: req.user.id,
                     expiresAt,
-                    status: 'pending'
+                    status: 'pending' // Le secret est en attente de la configuration Stripe
                 }], { session });
 
                 await session.commitTransaction();
 
+                // Retourner les informations nécessaires au frontend
                 return res.status(201).json({
                     message: 'Secret créé. Configuration du compte de paiement requise.',
                     secret: secret[0],
                     stripeOnboardingUrl: accountLink.url,
-                    stripeStatus: 'pending',
-                    requiresStripeSetup: true
+                    stripeStatus: 'pending'
                 });
             } catch (error) {
                 await session.abortTransaction();
@@ -104,10 +95,8 @@ exports.createSecret = async (req, res) => {
             }
         }
 
-        // Vérifier si l'onboarding est complet
+        // Vérifier si l'onboarding est complet pour les utilisateurs ayant déjà un compte Stripe
         if (!user.stripeOnboardingComplete || user.stripeAccountStatus !== 'active') {
-            console.log('Configuration Stripe incomplète, création nouveau lien');
-            
             const accountLink = await stripe.accountLinks.create({
                 account: user.stripeAccountId,
                 refresh_url: refreshUrl,
@@ -115,7 +104,7 @@ exports.createSecret = async (req, res) => {
                 type: 'account_onboarding',
             });
 
-            // Créer le secret en attente
+            // Créer le secret en statut pending
             const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
             const secret = await Secret.create([{
                 label,
@@ -132,14 +121,11 @@ exports.createSecret = async (req, res) => {
                 message: 'Secret créé. Veuillez compléter la configuration de votre compte.',
                 secret: secret[0],
                 stripeOnboardingUrl: accountLink.url,
-                stripeStatus: 'pending',
-                requiresStripeSetup: true
+                stripeStatus: user.stripeAccountStatus
             });
         }
 
-        // Création normale du secret (compte Stripe déjà configuré)
-        console.log('Création de secret avec compte Stripe actif');
-        
+        // Si tout est configuré, créer le secret normalement
         const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
         const secret = await Secret.create([{
             label,
@@ -152,17 +138,16 @@ exports.createSecret = async (req, res) => {
 
         await session.commitTransaction();
 
-        return res.status(201).json({
+        res.status(201).json({
             message: 'Secret créé avec succès',
             secret: secret[0],
-            stripeStatus: 'active',
-            requiresStripeSetup: false
+            stripeStatus: 'active'
         });
 
     } catch (error) {
         await session.abortTransaction();
         console.error('Erreur création secret:', error);
-        return res.status(500).json({
+        res.status(500).json({
             message: 'Erreur serveur.',
             error: error.message
         });
@@ -175,7 +160,7 @@ exports.createSecret = async (req, res) => {
 // Ajouter une route pour gérer le rafraîchissement de l'onboarding si nécessaire
 exports.refreshStripeOnboarding = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).select('+lastStripeOnboardingUrl stripeAccountId stripeAccountStatus');
 
         if (!user.stripeAccountId) {
             return res.status(400).json({
@@ -185,211 +170,55 @@ exports.refreshStripeOnboarding = async (req, res) => {
             });
         }
 
+        // Vérifier le statut du compte Stripe
         const account = await stripe.accounts.retrieve(user.stripeAccountId);
-        
-        // Log pour debug
-        console.log('Stripe Account Status:', {
+
+        // Détails du statut du compte
+        const accountStatus = {
             charges_enabled: account.charges_enabled,
             payouts_enabled: account.payouts_enabled,
             details_submitted: account.details_submitted
-        });
+        };
 
-        const redirectBaseUrl = process.env.FRONTEND_URL;
-        const returnUrl = `${redirectBaseUrl}/redirect-to-app.html?status=success`;
-        const refreshUrl = `${redirectBaseUrl}/redirect-to-app.html?status=pending`;
-
-        // Vérification complète du statut du compte
-        if (account.charges_enabled && account.payouts_enabled && account.details_submitted) {
-            // Mise à jour du statut utilisateur
+        // Si le compte est complètement configuré
+        if (account.charges_enabled && account.payouts_enabled) {
             user.stripeAccountStatus = 'active';
             user.stripeOnboardingComplete = true;
             await user.save();
 
-            // Mise à jour de tous les secrets en attente
-            await Secret.updateMany(
-                { user: req.user.id, status: 'pending' },
-                { status: 'active' }
-            );
-
             return res.status(200).json({
-                success: true,
-                verified: true,
                 status: 'active',
                 message: 'Compte Stripe complètement configuré',
-                returnUrl: 'hushy://stripe-return?status=success'
+                accountStatus
             });
         }
 
-        // Si le compte n'est pas complètement configuré, créer un nouveau lien
+        // Créer un nouveau lien d'onboarding
         const accountLink = await stripe.accountLinks.create({
             account: user.stripeAccountId,
-            refresh_url: refreshUrl,
-            return_url: returnUrl,
+            refresh_url: `${baseReturnUrl}/stripe/refresh`,
+            return_url: `${baseReturnUrl}/stripe/return`,
             type: 'account_onboarding',
         });
 
-        // Mise à jour du statut utilisateur
+        // Mettre à jour l'URL d'onboarding
         user.lastStripeOnboardingUrl = accountLink.url;
         user.stripeAccountStatus = 'pending';
         await user.save();
 
-        return res.status(200).json({
-            success: true,
-            verified: false,
+        return res.status(201).json({
             status: 'pending',
             message: 'Configuration du compte Stripe en cours',
-            stripeOnboardingUrl: accountLink.url,
-            stripeStatus: 'pending'
+            url: accountLink.url,
+            accountStatus
         });
 
     } catch (error) {
         console.error('Erreur refresh onboarding:', error);
-        return res.status(500).json({
-            success: false,
+        res.status(500).json({
             status: 'error',
-            message: error.message
-        });
-    }
-};
-
-exports.checkStripeStatus = async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id);
-        if (!user.stripeAccountId) {
-            return res.status(400).json({
-                status: 'no_account',
-                verified: false
-            });
-        }
-
-        const account = await stripe.accounts.retrieve(user.stripeAccountId);
-        
-        if (account.charges_enabled && account.payouts_enabled && account.details_submitted) {
-            // Mettre à jour le statut utilisateur si nécessaire
-            if (!user.stripeOnboardingComplete) {
-                user.stripeOnboardingComplete = true;
-                user.stripeAccountStatus = 'active';
-                await user.save();
-
-                // Mettre à jour tous les secrets en attente
-                await Secret.updateMany(
-                    { user: req.user.id, status: 'pending' },
-                    { status: 'active' }
-                );
-            }
-
-            return res.status(200).json({
-                status: 'active',
-                verified: true,
-                success: true
-            });
-        }
-
-        return res.status(200).json({
-            status: 'pending',
-            verified: false
-        });
-    } catch (error) {
-        console.error('Erreur vérification status:', error);
-        return res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
-    }
-};
-
-exports.resetStripeStatus = async (req, res) => {
-   
-    try {
-        const user = await User.findById(req.user.id);
-        
-        if (!user) {
-            return res.status(404).json({ message: 'Utilisateur non trouvé' });
-        }
-
-        // Réinitialiser le statut utilisateur
-        user.stripeAccountStatus = 'pending';
-        user.stripeOnboardingComplete = false;
-        user.lastStripeOnboardingUrl = null;
-        await user.save();
-
-        // Réinitialiser les secrets
-        await Secret.updateMany(
-            { user: req.user.id },
-            { status: 'pending' }
-        );
-
-        // Désactiver les capacités sur Stripe
-        if (user.stripeAccountId) {
-            await stripe.accounts.update(user.stripeAccountId, {
-                capabilities: {
-                    card_payments: { requested: false },
-                    transfers: { requested: false }
-                }
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: 'Statut Stripe réinitialisé'
-        });
-    } catch (error) {
-        console.error('Erreur reset status:', error);
-        return res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};
-
-
-
-
-exports.deleteStripeAccount = async (req, res) => {
-
-    console.log('Requête de suppression de compte Stripe reçue');
-    console.log('Utilisateur:', req.user);
-    try {
-        const user = await User.findById(req.user.id);
-        
-        if (!user.stripeAccountId) {
-            return res.status(400).json({ 
-                message: 'Aucun compte Stripe existant' 
-            });
-        }
-
-        // Vérifier s'il y a des soldes ou des transactions en attente
-        const balance = await stripe.balance.retrieve({
-            stripeAccount: user.stripeAccountId
-        });
-
-        if (balance.available.length > 0 || balance.pending.length > 0) {
-            return res.status(400).json({
-                message: 'Impossible de supprimer le compte. Des fonds sont encore disponibles.',
-                availableBalance: balance.available,
-                pendingBalance: balance.pending
-            });
-        }
-
-        // Supprimer le compte Stripe
-        await stripe.accounts.del(user.stripeAccountId);
-
-        // Mettre à jour le modèle utilisateur
-        user.stripeAccountId = undefined;
-        user.stripeAccountStatus = null;
-        user.stripeOnboardingComplete = false;
-        await user.save();
-
-        res.status(200).json({
-            message: 'Compte Stripe supprimé avec succès',
-            status: 'deleted'
-        });
-
-    } catch (error) {
-        console.error('Erreur suppression compte Stripe:', error);
-        res.status(500).json({ 
-            message: 'Erreur lors de la suppression du compte Stripe',
-            error: error.message 
+            message: error.message,
+            stripeStatus: 'error'
         });
     }
 };
@@ -448,41 +277,21 @@ exports.getUnpurchasedSecrets = async (req, res) => {
     }
 };
 
+const calculatePrices = (originalPrice) => {
+    const buyerMargin = 0.15; // 15% de marge pour l'acheteur
+    const sellerMargin = 0.10; // 10% de marge pour le vendeur
 
-const calculateStripeFees = async (basePrice, sellerId) => {
-    // Récupérer le compte Stripe du vendeur
-    const seller = await User.findById(sellerId).select('stripeAccountId');
-    if (!seller || !seller.stripeAccountId) {
-        throw new Error('Compte vendeur non trouvé ou non configuré pour Stripe');
-    }
-
-    // 1. Calculer les frais de plateforme sur le prix du vendeur (10%)
-    const platformFeeOnSellerPrice = basePrice * 0.10;
-    
-    // 2. Calculer le montant net pour le vendeur après la première commission
-    const sellerNetAmount = basePrice - platformFeeOnSellerPrice;
-    
-    // 3. Calculer la commission supplémentaire sur le montant net (15%)
-    const additionalPlatformFee = sellerNetAmount * 0.15;
-    
-    // 4. Calculer le prix total pour l'acheteur
-    const totalAmountForBuyer = basePrice + additionalPlatformFee;
-    
-    // Convertir en centimes pour Stripe
-    const amountInCents = Math.round(totalAmountForBuyer * 100);
-    const totalPlatformFeeInCents = Math.round(
-        (platformFeeOnSellerPrice + additionalPlatformFee) * 100
-    );
+    const buyerTotal = originalPrice * (1 + buyerMargin);
+    const sellerAmount = originalPrice * (1 - sellerMargin);
+    const platformFee = buyerTotal - sellerAmount;
 
     return {
-        amount: amountInCents,
-        application_fee_amount: totalPlatformFeeInCents,
-        seller_amount: Math.round(sellerNetAmount * 100),
-        buyer_fees: Math.max(0, Math.round(additionalPlatformFee * 100)), // Garantit une valeur non négative
-        seller_stripe_account: seller.stripeAccountId
+        buyerTotal: Math.round(buyerTotal * 100), // En centimes pour Stripe
+        sellerAmount: Math.round(sellerAmount * 100),
+        platformFee: Math.round(platformFee * 100),
+        originalPrice: Math.round(originalPrice * 100)
     };
 };
-
 
 exports.createPaymentIntent = async (req, res) => {
     const session = await mongoose.startSession();
@@ -494,50 +303,35 @@ exports.createPaymentIntent = async (req, res) => {
             return res.status(404).json({ message: 'Secret introuvable.' });
         }
 
-        // Calculer les frais
-        const { 
-            amount, 
-            application_fee_amount, 
-            seller_amount, 
-            buyer_fees,
-            seller_stripe_account 
-        } = await calculateStripeFees(secret.price, secret.user);
+        const priceDetails = calculatePrices(secret.price);
 
-        // Créer l'intention de paiement Stripe
+        // Créer l'intention de paiement Stripe avec le montant total pour l'acheteur
         const paymentIntent = await stripe.paymentIntents.create({
-            amount,
+            amount: priceDetails.buyerTotal, // Déjà en centimes
             currency: 'eur',
-            application_fee_amount,
-            transfer_group: `secret_${secret._id}`,
-            transfer_data: {
-                destination: seller_stripe_account
-            },
-            automatic_payment_methods: {
-                enabled: true,
-            },
             metadata: {
                 secretId: secret._id.toString(),
-                buyerId: req.user.id,
+                userId: req.user.id,
                 originalPrice: secret.price.toString(),
-                sellerAmount: seller_amount / 100,
-                platformFee: application_fee_amount / 100
-            },
+                buyerTotal: priceDetails.buyerTotal.toString(),
+                sellerAmount: priceDetails.sellerAmount.toString(),
+                platformFee: priceDetails.platformFee.toString()
+            }
         });
-        
 
-        // Créer l'enregistrement de paiement
+        // Créer un enregistrement de paiement
         const payment = await Payment.create([{
             secret: secret._id,
             user: req.user.id,
-            amount: amount / 100, // Montant total payé
+            amount: priceDetails.buyerTotal / 100, // Convertir en euros pour la DB
             paymentIntentId: paymentIntent.id,
             status: 'pending',
             metadata: {
                 originalPrice: secret.price,
-                sellerAmount: seller_amount / 100,
-                platformFee: application_fee_amount / 100,
-                totalAmountCharged: amount / 100,
-                buyerMargin: (buyer_fees || 0) / 100  // Ajout d'une valeur par défaut
+                sellerAmount: priceDetails.sellerAmount / 100,
+                platformFee: priceDetails.platformFee / 100,
+                buyerMargin: 0.15,
+                sellerMargin: 0.10
             }
         }], { session });
 
@@ -546,10 +340,7 @@ exports.createPaymentIntent = async (req, res) => {
         res.json({
             clientSecret: paymentIntent.client_secret,
             paymentId: paymentIntent.id,
-            amount: amount / 100,
-            sellerAmount: seller_amount / 100,
-            platformFee: application_fee_amount / 100,
-            buyerFees: buyer_fees / 100
+            buyerTotal: priceDetails.buyerTotal / 100
         });
 
     } catch (error) {
@@ -561,7 +352,7 @@ exports.createPaymentIntent = async (req, res) => {
     }
 };
 
-// Modifier purchaseSecret pour s'adapter aux nouveaux frais
+
 exports.purchaseSecret = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -571,18 +362,25 @@ exports.purchaseSecret = async (req, res) => {
         const secretId = req.params.id;
         const userId = req.user.id;
 
-        console.log('Purchase Secret Request:', { secretId, paymentIntentId, userId });
+        // Logs détaillés d'entrée
+        console.log('Purchase Secret Request:', {
+            secretId,
+            paymentIntentId,
+            userId
+        });
 
+        // Vérification des paramètres d'entrée
         if (!paymentIntentId) {
             return res.status(400).json({ message: 'ID de paiement manquant' });
         }
 
+        // Recherche du secret
         const secret = await Secret.findById(secretId);
         if (!secret) {
             return res.status(404).json({ message: 'Secret introuvable.' });
         }
 
-        // Vérifier si déjà acheté
+        // Vérification si le secret est déjà acheté
         if (secret.purchasedBy.includes(userId)) {
             let conversation = await Conversation.findOne({
                 secret: secretId,
@@ -606,46 +404,67 @@ exports.purchaseSecret = async (req, res) => {
             });
         }
 
-        // Vérifier le paiement Stripe
+        // Calcul des prix avec marges
+        const priceDetails = calculatePrices(secret.price);
+
+        // Vérification du statut du paiement Stripe
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-        console.log('Détails du PaymentIntent Stripe:', {
-            id: paymentIntent.id,
+        console.log('Statut PaymentIntent Stripe:', {
             status: paymentIntent.status,
             amount: paymentIntent.amount,
-            seller: paymentIntent.transfer_data.destination,
-            platformFees: paymentIntent.application_fee_amount
+            expectedAmount: priceDetails.buyerTotal,
+            originalPrice: secret.price,
+            calculatedBuyerTotal: priceDetails.buyerTotal / 100
         });
 
+        // Vérifications de sécurité supplémentaires
         if (
             paymentIntent.status !== 'succeeded' ||
+            paymentIntent.amount !== priceDetails.buyerTotal ||
             paymentIntent.metadata.secretId !== secretId ||
-            paymentIntent.metadata.buyerId !== userId
+            paymentIntent.metadata.userId !== userId
         ) {
             await session.abortTransaction();
-            return res.status(400).json({ message: 'Paiement invalide' });
+            return res.status(400).json({
+                message: 'Paiement invalide',
+                details: {
+                    stripeStatus: paymentIntent.status,
+                    amountCheck: paymentIntent.amount === priceDetails.buyerTotal,
+                    secretIdCheck: paymentIntent.metadata.secretId === secretId,
+                    userIdCheck: paymentIntent.metadata.userId === userId
+                }
+            });
         }
 
-        // Mettre à jour le payment dans la DB
+        // Enregistrement du paiement avec les détails des marges
         const payment = await Payment.findOneAndUpdate(
             { paymentIntentId },
-            { status: 'succeeded' },
-            { session, new: true }
+            {
+                secret: secretId,
+                user: userId,
+                amount: priceDetails.buyerTotal / 100,
+                status: 'succeeded',
+                metadata: {
+                    originalPrice: secret.price,
+                    sellerAmount: priceDetails.sellerAmount / 100,
+                    platformFee: priceDetails.platformFee / 100,
+                    buyerMargin: 0.15,
+                    sellerMargin: 0.10
+                }
+            },
+            {
+                upsert: true,
+                new: true,
+                session
+            }
         );
-
-        console.log('Paiement mis à jour en base:', {
-            paymentId: payment._id,
-            status: payment.status,
-            amount: payment.amount,
-            platformFees: payment.metadata.platformFee,
-            sellerEarnings: payment.metadata.sellerAmount
-        });
 
         // Marquer le secret comme acheté
         secret.purchasedBy.push(userId);
         await secret.save({ session });
 
-        // Créer ou mettre à jour la conversation
+        // Gestion de la conversation
         let conversation = await Conversation.findOne({
             secret: secretId
         }).session(session);
@@ -658,9 +477,19 @@ exports.purchaseSecret = async (req, res) => {
                 messages: []
             }], { session });
             conversation = conversation[0];
+        } else if (!conversation.participants.includes(userId)) {
+            conversation.participants.push(userId);
+            await conversation.save({ session });
         }
 
         await session.commitTransaction();
+
+        console.log('Achat du secret réussi', {
+            conversationId: conversation._id,
+            secretId,
+            paymentId: payment._id,
+            finalAmount: priceDetails.buyerTotal / 100
+        });
 
         res.status(200).json({
             message: 'Secret acheté avec succès.',
@@ -670,8 +499,16 @@ exports.purchaseSecret = async (req, res) => {
 
     } catch (error) {
         await session.abortTransaction();
-        console.error('Erreur achat:', error);
-        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+        console.error('Erreur détaillée lors de l\'achat:', {
+            errorMessage: error.message,
+            stack: error.stack,
+            secretId: req.params.id,
+            userId: req.user?.id
+        });
+        res.status(500).json({
+            message: 'Erreur serveur.',
+            error: error.message
+        });
     } finally {
         session.endSession();
     }
@@ -691,8 +528,6 @@ exports.confirmPayment = async (req, res) => {
 
         // Vérifier le statut du paiement avec Stripe
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-
 
         if (paymentIntent.status === 'succeeded') {
             payment.status = 'succeeded';
@@ -749,6 +584,8 @@ exports.getSecretConversation = async (req, res) => {
                 select: 'label content user'
             });
 
+        console.log("Conversation trouvée:", JSON.stringify(conversation, null, 2)); // Debug
+
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
@@ -781,6 +618,8 @@ exports.getConversation = async (req, res) => {
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
+
+        console.log("Conversation messages:", conversation.messages); // Log des messages de la conversation
 
         res.status(200).json({
             messages: conversation.messages,
@@ -835,6 +674,8 @@ exports.getUserConversations = async (req, res) => {
             })
             .sort({ updatedAt: -1 });
 
+        console.log('Conversations avec données complètes:', JSON.stringify(conversations, null, 2));
+
         res.status(200).json(conversations);
     } catch (error) {
         console.error('Erreur détaillée:', error);
@@ -842,20 +683,46 @@ exports.getUserConversations = async (req, res) => {
     }
 };
 
-exports.getUserSecretsWithCount = async (req, res) => {
+exports.getUserById = async (req, res) => {
     try {
-        const secrets = await Secret
-            .find({ user: req.user.id }) // changement de _id à id
-            .select('label content price createdAt expiresAt') // ajout de expiresAt
-            .lean();
+        const userId = req.params.id;
+        const user = await User.findById(userId)
+                             .select('name email profilePicture bio stripeAccountId stripeAccountStatus totalEarnings');
+        
+        if (!user) {
+            return res.status(404).json({ error: 'Utilisateur non trouvé' });
+        }
 
-        return res.status(200).json({
-            secrets,
-            count: secrets.length
+        // Compte les abonnés et abonnements
+        const subscribersCount = await User.countDocuments({ 
+            'subscriptions.creator': user._id 
         });
+
+        const subscriptionsCount = await User.countDocuments({ 
+            '_id': user._id, 
+            'subscriptions': { $exists: true, $not: { $size: 0 } } 
+        });
+
+        const userData = {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            profilePicture: user.profilePicture,
+            bio: user.bio || "", // Biographie de l'utilisateur
+            stripeAccountStatus: user.stripeAccountStatus,
+            totalEarnings: user.totalEarnings || 0,
+            stats: {
+                subscribers: subscribersCount,
+                subscriptions: subscriptionsCount
+            },
+            isSubscriptionAvailable: user.stripeAccountStatus === 'active',
+            subscriptionPrice: 9.99 // Prix fixe ou dynamique selon votre logique
+        };
+
+        res.status(200).json(userData);
     } catch (error) {
-        console.error('Erreur détaillée:', error);
-        return res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+        console.error('Erreur lors de la récupération des données de l\'utilisateur :', error);
+        res.status(500).json({ error: 'Erreur interne du serveur' });
     }
 };
 

@@ -24,11 +24,14 @@ const ProfilTiers = ({ navigation }) => {
    const [userData, setUserData] = useState(null);
    const [isExpanded, setIsExpanded] = useState(false);
    const [isLoading, setIsLoading] = useState(true);
+   const [canSubscribe, setCanSubscribe] = useState(false);
+
 
    useEffect(() => {
     const loadUserData = async () => {
       try {
         const data = await fetchUserDataById(userId, userToken);
+        setCanSubscribe(data.stripeAccountStatus === 'active');
         setUserData(data);
         const { secrets, count } = await fetchUserSecretsWithCount(userToken);
         setSecretCount(count);

@@ -265,12 +265,15 @@ export const AuthProvider = ({ children }) => {
                 delete instance.defaults.headers.common['Authorization'];
             }
             
+            // D'abord, on supprime les données
             await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
             
-            setUserToken(null);
-            setIsLoggedIn(false);
+            // Ensuite, on met à jour les états dans un ordre spécifique
             setUserData(null);
             setIsLoadingUserData(false);
+            setUserToken(null);
+            // On met setIsLoggedIn en dernier car c'est lui qui déclenche la navigation
+            setIsLoggedIn(false);
             
             console.log('[AuthProvider] Déconnexion réussie');
             return true;
@@ -333,6 +336,22 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+
+    const fetchUserDataById = async (userId) => {
+        const instance = getAxiosInstance();
+        if (!instance) {
+            throw new Error('Axios instance not initialized');
+        }
+        try {
+            const response = await instance.get(`/api/users/${userId}`);
+            return cleanUserData(response.data);
+        } catch (error) {
+            console.error('Erreur récupération données utilisateur:', error);
+            throw error;
+        }
+    };
+
+
     return (
         <AuthContext.Provider
             value={{
@@ -341,6 +360,7 @@ export const AuthProvider = ({ children }) => {
                 userData,
                 isLoadingUserData,
                 fetchUserData,
+                fetchUserDataById,
                 login,
                 logout,
                 updateUserData,

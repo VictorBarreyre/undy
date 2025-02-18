@@ -46,7 +46,15 @@ const App = () => {
         <CardDataProvider>
           <NativeBaseProvider theme={lightTheme}>
             <SafeAreaProvider>
-              <NavigationContainer>
+            <NavigationContainer
+              theme={{
+                colors: {
+                  background: 'transparent',
+                  card: 'transparent',
+                  border: 'transparent',
+                },
+              }}
+            >
                 <StackNavigator />
                 <DeepLinkHandler />
               </NavigationContainer>

@@ -3,6 +3,7 @@ import ConversationsList from '../../presentation/screens/ConversationList'
 import ChatScreen from '../../presentation/screens/ChatScreen'
 
 
+
 const Stack = createStackNavigator();
 
 const ConversationStackNavigator = () => (
