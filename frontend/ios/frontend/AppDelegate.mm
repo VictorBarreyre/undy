@@ -2,19 +2,16 @@
 
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTLinkingManager.h>
-#import <UserNotifications/UserNotifications.h>
-#import <RNCPushNotificationIOS.h>
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
   self.moduleName = @"main";
-  self.initialProps = @{};
 
-  // Définir UNUserNotificationCenter
-  UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
-  center.delegate = self;
+  // You can add your custom initial props in the dictionary below.
+  // They will be passed down to the ViewController used by React Native.
+  self.initialProps = @{};
 
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }
@@ -44,32 +41,22 @@
   return [super application:application continueUserActivity:userActivity restorationHandler:restorationHandler] || result;
 }
 
-// Gestion des notifications push
+// Explicitly define remote notification delegates to ensure compatibility with some third-party libraries
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken
 {
- [RNCPushNotificationIOS didRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
+  return [super application:application didRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
 }
 
+// Explicitly define remote notification delegates to ensure compatibility with some third-party libraries
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error
 {
- [RNCPushNotificationIOS didFailToRegisterForRemoteNotificationsWithError:error];
+  return [super application:application didFailToRegisterForRemoteNotificationsWithError:error];
 }
 
+// Explicitly define remote notification delegates to ensure compatibility with some third-party libraries
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
 {
-  [RNCPushNotificationIOS didReceiveRemoteNotification:userInfo fetchCompletionHandler:completionHandler];
-}
-
-// Requis pour les notifications locales
-- (void)application:(UIApplication *)application didReceiveLocalNotification:(UILocalNotification *)notification
-{
- [RNCPushNotificationIOS didReceiveLocalNotification:notification];
-}
-
-// Appelé quand une notification est délivrée à une app en premier plan
-- (void)userNotificationCenter:(UNUserNotificationCenter *)center willPresentNotification:(UNNotification *)notification withCompletionHandler:(void (^)(UNNotificationPresentationOptions options))completionHandler
-{
-  completionHandler(UNNotificationPresentationOptionSound | UNNotificationPresentationOptionAlert | UNNotificationPresentationOptionBadge);
+  return [super application:application didReceiveRemoteNotification:userInfo fetchCompletionHandler:completionHandler];
 }
 
 @end

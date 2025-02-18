@@ -11,25 +11,30 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "plugins": [
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#ffffff",
-          "sounds": ["./assets/notification-sound.wav"]
-        }
-      ]
-    ],
+  "plugins": [
+  [
+    "expo-notifications",
+    {
+      "icon": "./assets/notification-icon.png",
+      "color": "#ffffff"
+    }
+  ]
+],
     "scheme": "hushy",
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.frontend",
-      "associatedDomains": [
-        "applinks:hushy.app",
-        "webcredentials:hushy.app"
-      ]
-    },
+  "ios": {
+  "supportsTablet": true,
+  "bundleIdentifier": "com.anonymous.frontend",
+  "associatedDomains": [
+    "applinks:hushy.app",
+    "webcredentials:hushy.app"
+  ],
+  "scheme": "hushy",
+  "infoPlist": {
+    "CFBundleURLTypes": [{
+      "CFBundleURLSchemes": ["hushy"]
+    }]
+  }
+},
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

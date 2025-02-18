@@ -47,12 +47,13 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
             console.log('Configuration PaymentSheet...');
             const { error } = await initPaymentSheet({
                 paymentIntentClientSecret: clientSecret,
-                merchantDisplayName: 'Undy',
-                returnURL: 'frontend://',
+                merchantDisplayName: 'Hushy',
+                returnURL: `hushy://payment-result`, // Ajoutez un chemin spécifique
                 style: 'alwaysLight',
                 appearance: {
                     colors: {
-                        primary: '#FF78B2', // Couleur principale
+                        primary: '#000000', // Bouton noir
+                        primaryText: '#FFFFFF', // Texte en blanc
                         background: '#ffffff', // Fond blanc
                         componentBackground: '#ffffff', // Fond des boutons en blanc
                         componentDivider: '#94A3B8', // Couleur des traits de séparation
