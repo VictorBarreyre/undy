@@ -393,28 +393,26 @@ exports.getUserById = async (req, res) => {
     try {
         const userId = req.params.id;
         const user = await User.findById(userId)
-                             .select('name email profilePicture bio stripeAccountId stripeAccountStatus totalEarnings');
+                             .select('name email profilePicture bio stripeAccountId stripeAccountStatus totalEarnings subscriptions');
         
         if (!user) {
             return res.status(404).json({ error: 'Utilisateur non trouvé' });
         }
 
-        // Compte les abonnés et abonnements
+        // Compte les abonnés
         const subscribersCount = await User.countDocuments({ 
-            'subscriptions.creator': user._id 
+            'subscriptions.creator': userId 
         });
 
-        const subscriptionsCount = await User.countDocuments({ 
-            '_id': user._id, 
-            'subscriptions': { $exists: true, $not: { $size: 0 } } 
-        });
+        // Compte les abonnements différemment
+        const subscriptionsCount = user.subscriptions ? user.subscriptions.length : 0;
 
         const userData = {
             _id: user._id,
             name: user.name,
             email: user.email,
             profilePicture: user.profilePicture,
-            bio: user.bio || "", // Biographie de l'utilisateur
+            bio: user.bio || "",
             stripeAccountStatus: user.stripeAccountStatus,
             totalEarnings: user.totalEarnings || 0,
             stats: {
@@ -422,7 +420,7 @@ exports.getUserById = async (req, res) => {
                 subscriptions: subscriptionsCount
             },
             isSubscriptionAvailable: user.stripeAccountStatus === 'active',
-            subscriptionPrice: 9.99 // Prix fixe ou dynamique selon votre logique
+            subscriptionPrice: 9.99
         };
 
         res.status(200).json(userData);
