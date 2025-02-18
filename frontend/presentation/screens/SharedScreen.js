@@ -5,8 +5,8 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { Background } from '../../navigation/Background';
 import { useNavigation } from '@react-navigation/native';
 import PaymentSheet from '../components/PaymentSheet';
-import TypewriterSpinner from './TypewriterSpinner';
-import CardHome from '..components/CardHome';
+import TypewriterLoader from '../components/TypewriterLoader';
+import CardHome from '../components/CardHome';
 
 const SharedSecretScreen = ({ route }) => {
     const { secretId } = route.params;
@@ -84,7 +84,7 @@ const SharedSecretScreen = ({ route }) => {
     };
 
     if (loading || isTransitioning) {
-        return <TypewriterSpinner text="Undy..." />;
+        return <TypewriterLoader text="Undy..." />;
     }
 
     return (

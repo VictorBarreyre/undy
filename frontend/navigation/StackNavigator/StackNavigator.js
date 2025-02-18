@@ -5,6 +5,7 @@ import Inscription from '../../presentation/screens/Inscription';
 import Connexion from '../../presentation/screens/Connexion';
 import DrawerNavigator from '../DrawerNavigator';
 import TypewriterLoader from '../../presentation/components/TypewriterLoader';
+import SharedSecretScreen from '../../presentation/screens/SharedScreen';
 
 
 const Stack = createStackNavigator();
@@ -50,7 +51,22 @@ const StackNavigator = () => {
         })}
     >
             {isLoggedIn ? (
-                <Stack.Screen name="MainApp" component={DrawerNavigator} options={{ headerShown: false }} />
+  <>
+  <Stack.Screen 
+      name="MainApp" 
+      component={DrawerNavigator} 
+      options={{ headerShown: false }} 
+  />
+  {/* Ajout de l'écran SharedSecret ici */}
+  <Stack.Screen 
+      name="SharedSecret" 
+      component={SharedSecretScreen}
+      options={{ 
+          headerShown: false,
+          presentation: 'modal'
+      }}
+  />
+</>                
             ) : (
                 <>
                     <Stack.Screen name="Connexion" component={Connexion} options={{ headerShown: false }} />
