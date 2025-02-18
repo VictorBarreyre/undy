@@ -683,46 +683,20 @@ exports.getUserConversations = async (req, res) => {
     }
 };
 
-exports.getUserById = async (req, res) => {
+exports.getUserSecretsWithCount = async (req, res) => {
     try {
-        const userId = req.params.id;
-        const user = await User.findById(userId)
-                             .select('name email profilePicture bio stripeAccountId stripeAccountStatus totalEarnings');
-        
-        if (!user) {
-            return res.status(404).json({ error: 'Utilisateur non trouvé' });
-        }
+        const secrets = await Secret
+            .find({ user: req.user.id }) // changement de _id à id
+            .select('label content price createdAt expiresAt') // ajout de expiresAt
+            .lean();
 
-        // Compte les abonnés et abonnements
-        const subscribersCount = await User.countDocuments({ 
-            'subscriptions.creator': user._id 
+        return res.status(200).json({
+            secrets,
+            count: secrets.length
         });
-
-        const subscriptionsCount = await User.countDocuments({ 
-            '_id': user._id, 
-            'subscriptions': { $exists: true, $not: { $size: 0 } } 
-        });
-
-        const userData = {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            profilePicture: user.profilePicture,
-            bio: user.bio || "", // Biographie de l'utilisateur
-            stripeAccountStatus: user.stripeAccountStatus,
-            totalEarnings: user.totalEarnings || 0,
-            stats: {
-                subscribers: subscribersCount,
-                subscriptions: subscriptionsCount
-            },
-            isSubscriptionAvailable: user.stripeAccountStatus === 'active',
-            subscriptionPrice: 9.99 // Prix fixe ou dynamique selon votre logique
-        };
-
-        res.status(200).json(userData);
     } catch (error) {
-        console.error('Erreur lors de la récupération des données de l\'utilisateur :', error);
-        res.status(500).json({ error: 'Erreur interne du serveur' });
+        console.error('Erreur détaillée:', error);
+        return res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };
 

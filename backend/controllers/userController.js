@@ -392,17 +392,39 @@ exports.createTransferIntent = async (req, res) => {
 exports.getUserById = async (req, res) => {
     try {
         const userId = req.params.id;
-        const user = await User.findById(userId);
+        const user = await User.findById(userId)
+                             .select('name email profilePicture bio stripeAccountId stripeAccountStatus totalEarnings');
+        
         if (!user) {
             return res.status(404).json({ error: 'Utilisateur non trouvé' });
         }
+
+        // Compte les abonnés et abonnements
+        const subscribersCount = await User.countDocuments({ 
+            'subscriptions.creator': user._id 
+        });
+
+        const subscriptionsCount = await User.countDocuments({ 
+            '_id': user._id, 
+            'subscriptions': { $exists: true, $not: { $size: 0 } } 
+        });
+
         const userData = {
-            id: user._id,
+            _id: user._id,
             name: user.name,
             email: user.email,
             profilePicture: user.profilePicture,
-            // Autres propriétés utilisateur
+            bio: user.bio || "", // Biographie de l'utilisateur
+            stripeAccountStatus: user.stripeAccountStatus,
+            totalEarnings: user.totalEarnings || 0,
+            stats: {
+                subscribers: subscribersCount,
+                subscriptions: subscriptionsCount
+            },
+            isSubscriptionAvailable: user.stripeAccountStatus === 'active',
+            subscriptionPrice: 9.99 // Prix fixe ou dynamique selon votre logique
         };
+
         res.status(200).json(userData);
     } catch (error) {
         console.error('Erreur lors de la récupération des données de l\'utilisateur :', error);
