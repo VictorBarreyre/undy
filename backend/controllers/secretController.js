@@ -482,6 +482,19 @@ exports.purchaseSecret = async (req, res) => {
             await conversation.save({ session });
         }
 
+        conversation = await Conversation.findById(conversation._id)
+            .populate('participants', 'name profilePicture')
+            .populate('messages.sender', 'name profilePicture')
+            .populate({
+                path: 'secret',
+                populate: {
+                    path: 'user',
+                    select: 'name profilePicture'
+                },
+                select: 'label content user'
+            })
+            .session(session);
+
         await session.commitTransaction();
 
         console.log('Achat du secret réussi', {

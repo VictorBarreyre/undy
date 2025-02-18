@@ -58,6 +58,54 @@ const SecretCardBlurred = ({ secret, isExpanded }) => {
         return () => clearInterval(timer);
     }, [secret.expiresAt]);
 
+    const handlePaymentSuccess = async (paymentId) => {
+        try {
+            const { conversationId, conversation } = await purchaseAndAccessConversation(
+                secret._id,
+                secret.price,
+                paymentId
+            );
+    
+            // Vérification et log des données
+            console.log('Secret avant navigation:', secret);
+            console.log('Conversation avant navigation:', conversation);
+    
+            // S'assurer que toutes les données nécessaires sont présentes
+            const secretDataForNavigation = {
+                _id: secret._id,
+                label: secret.label,
+                content: secret.content,
+                price: secret.price,
+                user: {
+                    _id: secret.user?._id,
+                    name: secret.user?.name || 'Utilisateur',
+                    profilePicture: secret.user?.profilePicture
+                },
+                createdAt: secret.createdAt,
+                expiresAt: secret.expiresAt
+            };
+    
+            navigation.navigate('ChatTab', {
+                screen: 'Chat',
+                params: {
+                    conversationId,
+                    secretData: secretDataForNavigation,
+                    conversation: {
+                        ...conversation,
+                        participants: conversation.participants?.map(p => ({
+                            _id: p._id,
+                            name: p.name || 'Utilisateur',
+                            profilePicture: p.profilePicture
+                        }))
+                    },
+                    showModalOnMount: true
+                }
+            });
+        } catch (error) {
+            console.error('Erreur lors de l\'achat:', error);
+        }
+    };
+
 
     return (
         <Box
@@ -108,27 +156,7 @@ const SecretCardBlurred = ({ secret, isExpanded }) => {
                     <Text style={styles.caption}>{secret.label}</Text>
                     <PaymentSheet
                         secret={secret}
-                        onPaymentSuccess={async (paymentId) => {
-                            try {
-                                const { conversationId, conversation } = await purchaseAndAccessConversation(
-                                    secret._id,
-                                    secret.price,
-                                    paymentId
-                                );
-
-                                navigation.navigate('ChatTab', {
-                                    screen: 'Chat',
-                                    params: {
-                                        conversationId,
-                                        secretData: secret,
-                                        conversation,
-                                        showModalOnMount: true
-                                    }
-                                });
-                            } catch (error) {
-                                console.error('Erreur lors de l\'achat:', error);
-                            }
-                        }}
+                        onPaymentSuccess={handlePaymentSuccess}
                         onPaymentError={(error) => {
                             console.error('Erreur de paiement:', error);
                         }}

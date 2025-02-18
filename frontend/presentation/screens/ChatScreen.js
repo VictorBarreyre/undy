@@ -301,16 +301,16 @@ const ChatScreen = ({ route }) => {
             </TouchableOpacity>
 
             <HStack flex={1} alignItems="center" space={5}>
-            <Image
-  source={
-    secretData?.user?.profilePicture 
-      ? { uri: secretData.user.profilePicture }
-      : require('../../assets/images/default.png')
-  }
-  alt="Profile"
-  size={12}
-  rounded="full"
-/>
+              <Image
+                source={
+                  secretData?.user?.profilePicture
+                    ? { uri: secretData.user.profilePicture }
+                    : require('../../assets/images/default.png')
+                }
+                alt="Profile"
+                size={12}
+                rounded="full"
+              />
               <VStack space={1} flex={1}>
                 <HStack justifyContent="space-between" alignItems="center">
                   <Text style={styles.h5}>
@@ -456,9 +456,9 @@ const ChatScreen = ({ route }) => {
 
               <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
                 {/* Header */}
-                <HStack space={2} justifyContent="space-between" flexWrap="wrap">
+                <HStack space={2} justifyContent="center">
                   <Text style={styles.h5}>
-                    Posté par {secretData?.user.name}
+                    {secretData && secretData.user ? `Posté par ${secretData.user.name}` : 'Posté par Utilisateur'}
                   </Text>
                 </HStack>
 

@@ -303,21 +303,21 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
                                 });
                               }}
                             >
-                              <Image 
-  source={
-    item.user?.profilePicture 
-      ? { uri: item.user.profilePicture }
-      : require('../../assets/images/default.png')
-  }
-  alt={data[0]?.title || 'Carte'}
-  width={45}
-  height={45}
-  borderRadius="full"
-/>
+                              <Image
+                                source={
+                                  item.user?.profilePicture
+                                    ? { uri: item.user.profilePicture }
+                                    : require('../../assets/images/default.png')
+                                }
+                                alt={data[0]?.title || 'Carte'}
+                                width={42}
+                                height={42}
+                                borderRadius="full"
+                              />
                             </Pressable>
                             <VStack flex={1}>
                               <HStack space={2} justifyContent="space-between" flexWrap="wrap" marginBottom={2}>
-                                <Text style={{ ...styles.h4, color: "#FF78B2", flexShrink: 1 }}>
+                                <Text style={{ ...styles.h5, color: "#FF78B2", flexShrink: 1 }}>
                                   {item.user.name}
                                 </Text>
                                 <Text style={{ ...styles.caption, color: '#94A3B8', fontSize: 14 }}>{getTimeAgo(item.createdAt)}</Text>
