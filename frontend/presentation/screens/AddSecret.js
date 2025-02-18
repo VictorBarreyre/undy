@@ -3,7 +3,7 @@ import { Background } from '../../navigation/Background'; // Assurez-vous que ce
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { Box, Text, HStack, VStack, Image, Select, Input, CheckIcon } from 'native-base';
-import { Alert, Pressable, Dimensions, StyleSheet, Linking, KeyboardAvoidingView, Keyboard, Platform, TouchableWithoutFeedback, FlatList } from 'react-native';
+import { Alert, Pressable, Dimensions, StyleSheet, Linking, KeyboardAvoidingView, Keyboard, Platform, TouchableWithoutFeedback, FlatList, Share } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
 import { FontAwesome } from '@expo/vector-icons'; // Assurez-vous que FontAwesome est disponible
 
@@ -100,7 +100,7 @@ const AddSecret = () => {
         };
     }, [handleStripeReturn]);
 
-    
+
 
     const handlePress = async () => {
         try {

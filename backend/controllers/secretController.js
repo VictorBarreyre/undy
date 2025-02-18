@@ -801,3 +801,54 @@ exports.deleteConversation = async (req, res) => {
         session.endSession();
     }
 };
+
+exports.getSharedSecret = async (req, res) => {
+    try {
+        const { secretId } = req.params;
+        const userId = req.user.id;
+
+        // Chercher le secret et peupler les infos de l'utilisateur
+        const secret = await Secret.findById(secretId)
+            .populate('user', 'name profilePicture')
+            .select('label content price createdAt expiresAt user purchasedBy shareLink');
+
+        if (!secret) {
+            return res.status(404).json({ message: 'Secret introuvable.' });
+        }
+
+        // Vérifier si le secret a expiré
+        if (secret.expiresAt && new Date(secret.expiresAt) < new Date()) {
+            return res.status(400).json({ message: 'Ce secret a expiré.' });
+        }
+
+        // Vérifier si l'utilisateur a déjà acheté ce secret
+        const hasUserPurchased = secret.purchasedBy.includes(userId);
+
+        if (hasUserPurchased) {
+            // Si le secret est déjà acheté, obtenir l'ID de la conversation
+            const conversation = await Conversation.findOne({
+                secret: secretId,
+                participants: userId
+            }).select('_id');
+
+            return res.status(200).json({
+                secret,
+                hasUserPurchased: true,
+                conversation
+            });
+        }
+
+        // Si le secret n'est pas acheté, retourner les infos de base
+        return res.status(200).json({
+            secret,
+            hasUserPurchased: false
+        });
+
+    } catch (error) {
+        console.error('Erreur lors de la récupération du secret partagé:', error);
+        res.status(500).json({
+            message: 'Erreur serveur.',
+            error: error.message
+        });
+    }
+};

@@ -15,6 +15,7 @@ const {
     createPaymentIntent,
     confirmPayment,
     refreshStripeOnboarding,
+    getSharedSecret,
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -47,6 +48,8 @@ router.get('/stripe-refresh', protect, (req, res) => {
 router.get('/unpurchased', protect, getUnpurchasedSecrets);
 router.get('/purchased', protect, getPurchasedSecrets);
 router.get('/user-secrets-with-count', protect, getUserSecretsWithCount);
+router.get('/secrets/shared/:secretId', auth, getSharedSecret);
+
 
 // Routes des conversations
 router.get('/conversations', protect, getUserConversations);
