@@ -24,6 +24,21 @@ exports.createSecret = async (req, res) => {
             return res.status(404).json({ message: "Utilisateur introuvable." });
         }
 
+        const uniqueId = new mongoose.Types.ObjectId().toString();
+        const shareLink = `hushy://secret/${uniqueId}`;
+
+        // Configuration de base du secret
+        const secretData = {
+            label,
+            content,
+            price,
+            user: req.user.id,
+            expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
+            shareLink, // Ajout du lien de partage
+            status: 'pending'
+        };
+
+
         // Définir dynamiquement les URLs de retour
         const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
         const refreshUrl = `${baseReturnUrl}/stripe/refresh`;
@@ -81,7 +96,10 @@ exports.createSecret = async (req, res) => {
                 // Retourner les informations nécessaires au frontend
                 return res.status(201).json({
                     message: 'Secret créé. Configuration du compte de paiement requise.',
-                    secret: secret[0],
+                    secret: {
+                        ...secret[0]._doc,
+                        shareLink // Inclure le lien de partage dans la réponse
+                    },
                     stripeOnboardingUrl: accountLink.url,
                     stripeStatus: 'pending'
                 });
@@ -119,7 +137,10 @@ exports.createSecret = async (req, res) => {
 
             return res.status(201).json({
                 message: 'Secret créé. Veuillez compléter la configuration de votre compte.',
-                secret: secret[0],
+                secret: {
+                    ...secret[0]._doc,
+                    shareLink // Inclure le lien de partage dans la réponse
+                },
                 stripeOnboardingUrl: accountLink.url,
                 stripeStatus: user.stripeAccountStatus
             });
@@ -140,7 +161,10 @@ exports.createSecret = async (req, res) => {
 
         res.status(201).json({
             message: 'Secret créé avec succès',
-            secret: secret[0],
+            secret: {
+                ...secret[0]._doc,
+                shareLink // Inclure le lien de partage dans la réponse
+            },
             stripeStatus: 'active'
         });
 

@@ -65,43 +65,38 @@ export default function CardHome({ cardData }) {
   };
 
   const handleShare = async () => {
-    const secretUrl = `https://myapp.com/secret/${data[0]?.id}`;
-    const appScheme = 'myapp://secret/';
-    const storeUrl =
-      Platform.OS === 'ios'
-        ? 'https://apps.apple.com/app/id123456789' // Remplacez par votre ID App Store
-        : 'https://play.google.com/store/apps/details?id=com.myapp'; // Remplacez par votre package Play Store
-
     try {
-      // Vérifie si l'application est installée
-      const isAppInstalled = await Linking.canOpenURL(appScheme);
-
-      if (isAppInstalled) {
-        // Ouvre l'application avec l'URL du secret
-        Linking.openURL(`${appScheme}${data[0]?.id}`);
-      } else {
-        // Partage le lien ou redirige vers le store
-        const result = await Share.share({
-          message: `Découvrez ce secret : ${secretUrl}`,
-          url: secretUrl, // Partage également l'URL
+        // Appel à l'API pour obtenir/générer le lien de partage
+        const response = await fetch(`${API_URL}/api/secrets/${cardData._id}/share`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${yourAuthToken}`,
+                'Content-Type': 'application/json'
+            }
         });
 
-        if (result.action === Share.dismissedAction) {
-          // Si annulé, propose de rediriger vers le store
-          Alert.alert(
-            'Téléchargez notre application',
-            'Pour profiter pleinement, téléchargez notre application.',
-            [
-              { text: 'Annuler', style: 'cancel' },
-              { text: 'Télécharger', onPress: () => Linking.openURL(storeUrl) },
-            ]
-          );
+        const data = await response.json();
+
+        if (data.shareLink) {
+            const shareMessage = Platform.select({
+                ios: `Découvre ce secret sur Hushy!\n${data.shareLink}`,
+                android: `Découvre ce secret sur Hushy!\n${data.shareLink}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy`
+            });
+
+            const result = await Share.share({
+                message: shareMessage,
+                url: data.shareLink // iOS only
+            });
+
+            if (result.action === Share.sharedAction) {
+                console.log('Secret partagé avec succès');
+            }
         }
-      }
     } catch (error) {
-      console.error('Erreur lors du partage:', error);
+        console.error('Erreur lors du partage:', error);
+        Alert.alert('Erreur', 'Impossible de partager le secret.');
     }
-  };
+};
 
 
   const handleTextLayout = (event) => {

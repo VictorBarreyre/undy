@@ -100,6 +100,7 @@ const AddSecret = () => {
         };
     }, [handleStripeReturn]);
 
+    
 
     const handlePress = async () => {
         try {
@@ -109,7 +110,7 @@ const AddSecret = () => {
                 price,
                 expiresIn
             });
-
+    
             if (result.requiresStripeSetup) {
                 Alert.alert(
                     "Configuration nécessaire",
@@ -120,7 +121,7 @@ const AddSecret = () => {
                             onPress: async () => {
                                 try {
                                     const stripeStatus = await handleStripeOnboardingRefresh();
-
+    
                                     if (stripeStatus.stripeOnboardingUrl) {
                                         await Linking.openURL(stripeStatus.stripeOnboardingUrl);
                                     } else {
@@ -143,7 +144,36 @@ const AddSecret = () => {
                     "Votre secret a été publié avec succès. Il est maintenant disponible à la vente !",
                     [
                         {
-                            text: "Super !",
+                            text: "Partager",
+                            onPress: async () => {
+                                try {
+                                    const shareMessage = Platform.select({
+                                        ios: `Découvre ce secret sur Hushy!\n${result.secret.shareLink}`,
+                                        android: `Découvre ce secret sur Hushy!\n${result.secret.shareLink}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy`
+                                    });
+    
+                                    const shareResult = await Share.share({
+                                        message: shareMessage,
+                                        url: result.secret.shareLink // iOS only
+                                    });
+    
+                                    if (shareResult.action === Share.sharedAction) {
+                                        console.log('Secret partagé avec succès');
+                                    }
+                                } catch (error) {
+                                    console.error('Erreur lors du partage:', error);
+                                    Alert.alert('Erreur', 'Impossible de partager le secret.');
+                                } finally {
+                                    // Reset form fields après le partage
+                                    setSecretText('');
+                                    setSelectedLabel('');
+                                    setPrice('');
+                                    setExpiresIn(7);
+                                }
+                            }
+                        },
+                        {
+                            text: "Terminer",
                             onPress: () => {
                                 // Reset form fields
                                 setSecretText('');
