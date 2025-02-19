@@ -26,47 +26,47 @@ const StackNavigator = () => {
 
     return (
         <Stack.Navigator
-        screenOptions={({ route }) => ({
-            headerShown: false,
-            gestureEnabled: true,
-            cardStyleInterpolator: ({ current, layouts, closing }) => {
-                // Si c'est une déconnexion (transition vers l'écran de connexion)
-                if (!isLoggedIn && route.name === 'Connexion') {
-                    return {
-                        cardStyle: {
-                            transform: [
-                                {
-                                    translateX: current.progress.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [-layouts.screen.width, 0],
-                                    }),
-                                },
-                            ],
-                        },
-                    };
-                }
-                // Pour toutes les autres transitions
-                return CardStyleInterpolators.forHorizontalIOS;
-            },
-        })}
-    >
+            screenOptions={({ route }) => ({
+                headerShown: false,
+                gestureEnabled: true,
+                cardStyleInterpolator: ({ current, layouts, closing }) => {
+                    // Si c'est une déconnexion (transition vers l'écran de connexion)
+                    if (!isLoggedIn && route.name === 'Connexion') {
+                        return {
+                            cardStyle: {
+                                transform: [
+                                    {
+                                        translateX: current.progress.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [-layouts.screen.width, 0],
+                                        }),
+                                    },
+                                ],
+                            },
+                        };
+                    }
+                    // Pour toutes les autres transitions
+                    return CardStyleInterpolators.forHorizontalIOS;
+                },
+            })}
+        >
             {isLoggedIn ? (
-  <>
-  <Stack.Screen 
-      name="MainApp" 
-      component={DrawerNavigator} 
-      options={{ headerShown: false }} 
-  />
-  {/* Ajout de l'écran SharedSecret ici */}
-  <Stack.Screen 
-      name="SharedSecret" 
-      component={SharedSecretScreen}
-      options={{ 
-          headerShown: false,
-          presentation: 'modal'
-      }}
-  />
-</>                
+                <>
+                    <Stack.Screen
+                        name="MainApp"
+                        component={DrawerNavigator}
+                        options={{ headerShown: false }}
+                    />
+                    {/* Ajout de l'écran SharedSecret ici */}
+                    <Stack.Screen
+                        name="SharedSecret"
+                        component={SharedSecretScreen}
+                        options={{
+                            headerShown: false,
+                            presentation: 'modal'
+                        }}
+                    />
+                </>
             ) : (
                 <>
                     <Stack.Screen name="Connexion" component={Connexion} options={{ headerShown: false }} />

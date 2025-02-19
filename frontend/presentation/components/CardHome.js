@@ -6,7 +6,10 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { faPaperPlane } from '@fortawesome/free-solid-svg-icons'; // Importer l'icône "share"
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { View, Platform, Alert, Share, Linking } from 'react-native';
-import BlurredTextComponent from './SelectiveBlurText'
+import BlurredTextComponent from './SelectiveBlurText';
+import ReactNativeHapticFeedback from "react-native-haptic-feedback";
+
+
 
 
 export default function CardHome({ cardData }) {
@@ -15,7 +18,14 @@ export default function CardHome({ cardData }) {
   const [textHeight, setTextHeight] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
 
-  const safeCardData = cardData || {};
+  const safeCardData = {
+    user: cardData.user || {},
+    content: cardData.content || '',
+    label: cardData.label || '',
+    expiresAt: cardData.expiresAt,
+    // autres propriétés nécessaires
+  };
+
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -53,7 +63,7 @@ export default function CardHome({ cardData }) {
   }, [safeCardData.content]);
 
 
-  const profilePictureUrl = cardData.user?.profilePicture
+  const profilePictureUrl = safeCardData.user.profilePicture;
 
 
   if (!data || data.length === 0) {
@@ -66,38 +76,11 @@ export default function CardHome({ cardData }) {
 
   const handleShare = async () => {
     try {
-        // Appel à l'API pour obtenir/générer le lien de partage
-        const response = await fetch(`${API_URL}/api/secrets/${cardData._id}/share`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${yourAuthToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const data = await response.json();
-
-        if (data.shareLink) {
-            const shareMessage = Platform.select({
-                ios: `Découvre ce secret sur Hushy!\n${data.shareLink}`,
-                android: `Découvre ce secret sur Hushy!\n${data.shareLink}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy`
-            });
-
-            const result = await Share.share({
-                message: shareMessage,
-                url: data.shareLink // iOS only
-            });
-
-            if (result.action === Share.sharedAction) {
-                console.log('Secret partagé avec succès');
-            }
-        }
+      await handleShareSecret(cardData);
     } catch (error) {
-        console.error('Erreur lors du partage:', error);
-        Alert.alert('Erreur', 'Impossible de partager le secret.');
+      Alert.alert('Erreur', 'Impossible de partager le secret.');
     }
-};
-
+  };
 
   const handleTextLayout = (event) => {
     setTextHeight(event.nativeEvent.layout.height);
@@ -126,7 +109,7 @@ export default function CardHome({ cardData }) {
           {/* Texte aligné à gauche */}
           <VStack flex={1} mr={2} ml={2} >
             <Text left={2} style={styles.caption}>
-              Posté par {cardData.user?.name || 'Aucune description disponible.'}
+              Posté par {safeCardData.user.name || 'Anonyme'}
             </Text>
             <Text color='#FF78B2' left={2} mt={1} style={styles.littleCaption}>
               Expire dans {timeLeft}
@@ -146,7 +129,7 @@ export default function CardHome({ cardData }) {
 
         {/* Wrapper for the text with blur effect */}
         <Box
-        marginLeft={4}
+          marginLeft={4}
           flex={1} // Ajout
           height="auto"
           position="relative"
@@ -182,6 +165,8 @@ export default function CardHome({ cardData }) {
             color="black"
             size={20}
             onPress={handleShare} // Appeler la fonction de partage
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Zone de toucher étendue
+
           />
         </HStack>
 

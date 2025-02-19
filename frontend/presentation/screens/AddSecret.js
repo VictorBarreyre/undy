@@ -24,10 +24,11 @@ const AddSecret = () => {
     const [buttonMessage, setButtonMessage] = useState('Poster le secret');
     const [boxHeight, setBoxHeight] = useState('70%');
     const [alertStep, setAlertStep] = useState(1);
+    const { handleShareSecret } = useCardData();
 
 
 
-    const MIN_PRICE = 5;
+    const MIN_PRICE = 3;
     const MIN_WORDS = 2;
     const CATEGORIES = [
         "Confession",
@@ -144,27 +145,14 @@ const AddSecret = () => {
                     "Votre secret a été publié avec succès. Il est maintenant disponible à la vente !",
                     [
                         {
-                            text: "Partager",
+                            text: "Partager maintenant 🔐",
                             onPress: async () => {
                                 try {
-                                    const shareMessage = Platform.select({
-                                        ios: `Découvre ce secret sur Hushy!\n${result.secret.shareLink}`,
-                                        android: `Découvre ce secret sur Hushy!\n${result.secret.shareLink}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy`
-                                    });
-    
-                                    const shareResult = await Share.share({
-                                        message: shareMessage,
-                                        url: result.secret.shareLink // iOS only
-                                    });
-    
-                                    if (shareResult.action === Share.sharedAction) {
-                                        console.log('Secret partagé avec succès');
-                                    }
+                                    await handleShareSecret(result.secret);
                                 } catch (error) {
-                                    console.error('Erreur lors du partage:', error);
                                     Alert.alert('Erreur', 'Impossible de partager le secret.');
                                 } finally {
-                                    // Reset form fields après le partage
+                                    // Reset form fields
                                     setSecretText('');
                                     setSelectedLabel('');
                                     setPrice('');
@@ -173,7 +161,8 @@ const AddSecret = () => {
                             }
                         },
                         {
-                            text: "Terminer",
+                            text: "Plus tard",
+                            style: "cancel",
                             onPress: () => {
                                 // Reset form fields
                                 setSecretText('');

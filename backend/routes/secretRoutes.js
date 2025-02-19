@@ -48,7 +48,7 @@ router.get('/stripe-refresh', protect, (req, res) => {
 router.get('/unpurchased', protect, getUnpurchasedSecrets);
 router.get('/purchased', protect, getPurchasedSecrets);
 router.get('/user-secrets-with-count', protect, getUserSecretsWithCount);
-router.get('/secrets/shared/:secretId', protect, getSharedSecret);
+router.get('/shared/:secretId', protect, getSharedSecret);
 
 
 // Routes des conversations

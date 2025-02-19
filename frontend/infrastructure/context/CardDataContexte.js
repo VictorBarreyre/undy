@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 import { AuthContext } from './AuthContext';
+import { Platform, Share } from 'react-native';
 
 const CardDataContext = createContext();
 
@@ -419,6 +420,69 @@ const deleteStripeAccount = async () => {
     }
   };
 
+  const handleShareSecret = async (secret) => {
+    try {
+        if (secret?.shareLink) {
+            const shareMessage = Platform.select({
+                ios: `🔐 Découvre mon secret sur Hushy !\n\n${secret.shareLink}`,
+                android: `🔐 Découvre mon secret sur Hushy !\n\n${secret.shareLink}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy`
+            });
+
+            const shareOptions = {
+                message: shareMessage,
+                url: secret.shareLink,
+                title: "Partager un secret", 
+                subject: "Un secret à partager sur Hushy",
+                activityItemSources: [ // iOS uniquement
+                    {
+                        placeholderItem: { type: 'text/plain', content: shareMessage },
+                        item: {
+                            default: { type: 'text/plain', content: shareMessage }
+                        },
+                        subject: {
+                            default: "Un secret à partager sur Hushy"
+                        },
+                        linkMetadata: {
+                            originalUrl: secret.shareLink,
+                            url: secret.shareLink,
+                            title: "Secret confidentiel 🔐"
+                        }
+                    }
+                ]
+            };
+
+            const shareResult = await Share.share(shareOptions, {
+                dialogTitle: 'Partager ce secret confidentiel',
+                excludedActivityTypes: [
+                    'com.apple.UIKit.activity.Print',
+                    'com.apple.UIKit.activity.AssignToContact'
+                ]
+            });
+
+            return shareResult;
+        } else {
+            throw new Error('Lien de partage non disponible');
+        }
+    } catch (error) {
+        console.error('Erreur lors du partage:', error);
+        throw error;
+    }
+};
+
+const getSharedSecret = async (secretId) => {
+  const instance = getAxiosInstance();
+  if (!instance) {
+      throw new Error('Axios instance not initialized');
+  }
+  try {
+      const response = await instance.get(`/api/secrets/shared/${secretId}`);
+      return response.data;
+  } catch (error) {
+      console.error('Erreur lors de la récupération du secret:', error);
+      throw error;
+  }
+};
+  
   return (
     <CardDataContext.Provider value={{
       data,
@@ -435,7 +499,9 @@ const deleteStripeAccount = async () => {
       isLoadingData,
       handleStripeReturn,
       deleteStripeAccount,
-      resetStripeAccount
+      resetStripeAccount,
+      handleShareSecret,
+      getSharedSecret
     }}>
       {children}
     </CardDataContext.Provider>

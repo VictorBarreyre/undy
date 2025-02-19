@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Animated } from 'react-native';
+import { Animated, Alert } from 'react-native';
 import { Box } from 'native-base';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { Background } from '../../navigation/Background';
@@ -14,26 +14,29 @@ const SharedSecretScreen = ({ route }) => {
     const [loading, setLoading] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const navigation = useNavigation();
-    const { purchaseAndAccessConversation } = useCardData();
+    const { purchaseAndAccessConversation, getSharedSecret } = useCardData();
     const fadeAnim = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
         const fetchSecretData = async () => {
             try {
-                const response = await fetch(`${API_URL}/api/secrets/shared/${secretId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${yourAuthToken}`
-                    }
-                });
-                
-                const data = await response.json();
-                setSecretData(data.secret);
-                
+                const data = await getSharedSecret(secretId);
+
+                // Formater les données de la même manière que SwipeDeck
+                const formattedSecret = {
+                    ...data.secret,
+                    user: data.secret.user,
+                    expiresAt: data.secret.expiresAt,
+                    // Ajouter d'autres champs si nécessaire
+                };
+
+                setSecretData(formattedSecret);
+
                 // Si déjà acheté, rediriger directement vers la conversation
                 if (data.hasUserPurchased) {
                     navigation.replace('ChatScreen', {
                         conversationId: data.conversation._id,
-                        secretData: data.secret,
+                        secretData: formattedSecret,
                         showModalOnMount: true
                     });
                 }
@@ -98,20 +101,25 @@ const SharedSecretScreen = ({ route }) => {
                 >
                     {/* Utilisation de CardHome */}
                     <Box flex={1}>
-                        <CardHome cardData={secretData} />
+                        {secretData ? (
+                            <CardHome cardData={secretData} />
+                        ) : (
+                            <TypewriterLoader text="Chargement..." />
+                        )}
                     </Box>
-
                     {/* PaymentSheet */}
-                    <PaymentSheet
-                        secret={secretData}
-                        onPaymentSuccess={handlePaymentSuccess}
-                        onPaymentError={(error) => {
-                            console.error('Erreur de paiement:', error);
-                            setLoading(false);
-                            setIsTransitioning(false);
-                            fadeAnim.setValue(1);
-                        }}
-                    />
+                    {secretData && (
+                        <PaymentSheet
+                            secret={secretData}
+                            onPaymentSuccess={handlePaymentSuccess}
+                            onPaymentError={(error) => {
+                                console.error('Erreur de paiement:', error);
+                                setLoading(false);
+                                setIsTransitioning(false);
+                                fadeAnim.setValue(1);
+                            }}
+                        />
+                    )}
                 </Box>
             </Animated.View>
         </Background>

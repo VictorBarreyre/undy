@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { NativeBaseProvider } from "native-base";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -12,11 +12,55 @@ import StackNavigator from './navigation/StackNavigator/StackNavigator';
 import { StripeProvider } from "@stripe/stripe-react-native";
 import { STRIPE_PUBLISHABLE_KEY } from '@env';
 import DeepLinkHandler from "./presentation/components/DeepLinkHandler";
+import { Linking } from 'react-native';
+
 
 const Stack = createStackNavigator();
 
 const App = () => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  const linking = {
+    prefixes: ['hushy://', 'https://hushy.app'],
+    config: {
+      screens: {
+        SharedSecret: {
+          path: 'secret/:secretId',
+          parse: {
+            secretId: (secretId) => secretId,
+          },
+        },
+        MainApp: {
+          screens: {
+            ChatTab: {
+              screens: {
+                Chat: 'chat/:conversationId',
+              },
+            },
+          },
+        },
+      },
+    },
+    // Ajout d'un gestionnaire d'erreur pour le debug
+    async getInitialURL() {
+      // Vérifier s'il y a un URL initial
+      const url = await Linking.getInitialURL();
+      if (url != null) {
+        return url;
+      }
+      return null;
+    },
+    subscribe(listener) {
+      const onReceiveURL = ({ url }) => listener(url);
+  
+      // Écouter les événements quand l'app est ouverte
+      const subscription = Linking.addEventListener('url', onReceiveURL);
+  
+      return () => {
+        subscription.remove();
+      };
+    },
+  };
 
   const loadFonts = async () => {
     await Font.loadAsync({
@@ -29,7 +73,9 @@ const App = () => {
 
   React.useEffect(() => {
     loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
-  }, []);
+  }, []);``
+
+
 
   if (!fontsLoaded) {
     return
@@ -47,6 +93,7 @@ const App = () => {
           <NativeBaseProvider theme={lightTheme}>
             <SafeAreaProvider>
             <NavigationContainer
+            linking={linking}
               theme={{
                 colors: {
                   background: 'transparent',
