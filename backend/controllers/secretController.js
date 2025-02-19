@@ -24,9 +24,6 @@ exports.createSecret = async (req, res) => {
             return res.status(404).json({ message: "Utilisateur introuvable." });
         }
 
-        const uniqueId = new mongoose.Types.ObjectId().toString();
-        const shareLink = `hushy://secret/${uniqueId}`;
-
         // Configuration de base du secret
         const secretData = {
             label,
@@ -34,7 +31,6 @@ exports.createSecret = async (req, res) => {
             price,
             user: req.user.id,
             expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
-            shareLink, // Ajout du lien de partage
             status: 'pending'
         };
 
@@ -91,6 +87,10 @@ exports.createSecret = async (req, res) => {
                     status: 'pending' // Le secret est en attente de la configuration Stripe
                 }], { session });
 
+                const shareLink = `hushy://secret/${secret[0]._id}`;
+                await Secret.findByIdAndUpdate(secret[0]._id, { shareLink }, { session });
+
+
                 await session.commitTransaction();
 
                 // Retourner les informations nécessaires au frontend
@@ -133,6 +133,9 @@ exports.createSecret = async (req, res) => {
                 status: 'pending'
             }], { session });
 
+            const shareLink = `hushy://secret/${secret[0]._id}`;
+            await Secret.findByIdAndUpdate(secret[0]._id, { shareLink }, { session });
+
             await session.commitTransaction();
 
             return res.status(201).json({
@@ -156,6 +159,9 @@ exports.createSecret = async (req, res) => {
             expiresAt,
             status: 'active'
         }], { session });
+
+        const shareLink = `hushy://secret/${secret[0]._id}`;
+        await Secret.findByIdAndUpdate(secret[0]._id, { shareLink }, { session });
 
         await session.commitTransaction();
 
@@ -806,6 +812,9 @@ exports.getSharedSecret = async (req, res) => {
     try {
         const { secretId } = req.params;
         const userId = req.user.id;
+
+        console.log("ID du secret recherché:", secretId);
+        console.log("ID de l'utilisateur:", userId);
 
         // Chercher le secret et peupler les infos de l'utilisateur
         const secret = await Secret.findById(secretId)

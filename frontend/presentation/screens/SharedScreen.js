@@ -17,9 +17,13 @@ const SharedSecretScreen = ({ route }) => {
     const { purchaseAndAccessConversation, getSharedSecret } = useCardData();
     const fadeAnim = useRef(new Animated.Value(1)).current;
 
+
+    console.log("SharedSecretScreen - ID reçu:", secretId);
+
     useEffect(() => {
         const fetchSecretData = async () => {
             try {
+                console.log("Tentative de récupération du secret:", secretId);
                 const data = await getSharedSecret(secretId);
 
                 // Formater les données de la même manière que SwipeDeck
