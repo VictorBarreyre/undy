@@ -119,10 +119,12 @@ const SharedSecretScreen = ({ route }) => {
                      <HStack
     width="100%"
     alignItems="center"
-    space={4}
-    justifyContent='space-between'
+    position="relative"
 >
-    <TouchableOpacity onPress={() => navigation.goBack()}>
+    <TouchableOpacity 
+        style={{ position: 'absolute', left: 0 }} 
+        onPress={() => navigation.goBack()}
+    >
         <FontAwesomeIcon
             icon={faChevronLeft}
             size={16}

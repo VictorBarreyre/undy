@@ -28,6 +28,11 @@ const ConversationSchema = new mongoose.Schema({
   expiresAt: {
     type: Date,
     required: true,
+  },   
+  unreadCount: {
+    type: Map,  // Pour suivre les messages non lus par participant
+    of: Number,
+    default: {}
   }
 }, { timestamps: true });
 

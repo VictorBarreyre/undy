@@ -692,6 +692,14 @@ exports.addMessageToConversation = async (req, res) => {
             content
         });
 
+        conversation.participants.forEach(participantId => {
+            if (participantId.toString() !== req.user.id.toString()) {
+              if (!conversation.unreadCount) conversation.unreadCount = new Map();
+              const count = conversation.unreadCount.get(participantId.toString()) || 0;
+              conversation.unreadCount.set(participantId.toString(), count + 1);
+            }
+          });
+
         await conversation.save();
         res.status(201).json(conversation.messages[conversation.messages.length - 1]);
     } catch (error) {
@@ -716,6 +724,14 @@ exports.getUserConversations = async (req, res) => {
                 }
             })
             .sort({ updatedAt: -1 });
+
+            const conversationsWithUnreadCount = conversations.map(conv => {
+                const unreadCount = conv.unreadCount?.get(req.user.id.toString()) || 0;
+                return {
+                  ...conv.toObject(),
+                  unreadCount
+                };
+              });
 
         console.log('Conversations avec données complètes:', JSON.stringify(conversations, null, 2));
 

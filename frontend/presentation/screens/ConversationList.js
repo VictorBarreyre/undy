@@ -131,13 +131,13 @@ const ConversationsList = ({ navigation }) => {
       outputRange: [0, 70],
       extrapolate: 'clamp'
     });
-  
+
     const opacity = dragX.interpolate({
       inputRange: [-70, -60, 0],
       outputRange: [1, 0, 0],
       extrapolate: 'clamp'
     });
-  
+
     return (
       <Animated.View
         style={{
@@ -145,7 +145,7 @@ const ConversationsList = ({ navigation }) => {
           backgroundColor: 'transparent',
           justifyContent: 'center',
           alignItems: 'flex-end',
-        
+
           transform: [{ translateX: trans }],
           opacity: opacity
         }}
@@ -179,6 +179,13 @@ const ConversationsList = ({ navigation }) => {
         prevOpenedRow.close();
       }
       prevOpenedRow = row[index];
+    };
+
+    const truncateText = (text, maxLength = 50) => {
+      if (!text) return 'Sans titre';
+      return text.length > maxLength
+        ? text.substring(0, maxLength) + '...'
+        : text;
     };
 
     return (
@@ -222,12 +229,30 @@ const ConversationsList = ({ navigation }) => {
               />
               <VStack space={2} flex={1}>
                 <HStack justifyContent='space-between' alignItems='center'>
-                  <Text style={styles.h5} >{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
-                  <Text style={styles.littleCaption} color="#94A3B8">
-                    {new Date(item.updatedAt).toLocaleDateString()}
+                  <Text style={styles.h5}>
+                    {truncateText(item.secret?.content, 30)}
                   </Text>
+                  <HStack alignItems="center" space={2}>
+                    <Text style={styles.littleCaption} color="#94A3B8">
+                      {new Date(item.updatedAt).toLocaleDateString()}
+                    </Text>
+                    {item.unreadCount > 0 && (
+                      <Box
+                        backgroundColor="#FF78B2"
+                        borderRadius="full"
+                        width={6}
+                        height={6}
+                        justifyContent="center"
+                        alignItems="center"
+                      >
+                        <Text color="white" fontSize={10} fontWeight="bold">
+                          {item.unreadCount}
+                        </Text>
+                      </Box>
+                    )}
+                  </HStack>
                 </HStack>
-                <Text style={styles.littleCaption} numberOfLines={1} color="#94A3B8">{item.secret?.content || 'Sans titre'}</Text>
+                <Text style={styles.littleCaption} color="#94A3B8">{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
               </VStack>
 
             </HStack>
@@ -257,6 +282,9 @@ const ConversationsList = ({ navigation }) => {
 
             </HStack>
             <FlatList
+         style={{
+          paddingBottom:'20'
+        }}
               data={conversations}
               renderItem={renderConversation}
               keyExtractor={item => item._id}
