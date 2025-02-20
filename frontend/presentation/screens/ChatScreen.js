@@ -15,6 +15,7 @@ import MaskedView from '@react-native-masked-view/masked-view';
 
 
 
+
 const formatMessageTime = (timestamp) => {
   const messageDate = new Date(timestamp);
   const now = new Date();
@@ -67,7 +68,7 @@ const ChatScreen = ({ route }) => {
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
-  const { handleAddMessage, getConversationMessages } = useCardData();
+  const { handleAddMessage, getConversationMessages, markConversationAsRead } = useCardData();
   const { userData } = useContext(AuthContext);
   const navigation = useNavigation();
   const [showTimestamp, setShowTimestamp] = useState(false);
@@ -75,6 +76,20 @@ const ChatScreen = ({ route }) => {
   const [timeLeft, setTimeLeft] = useState('');
   const [isModalVisible, setModalVisible] = useState(showModalOnMount || false);
   const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    const markAsRead = async () => {
+      if (conversationId) {
+        try {
+          await markConversationAsRead(conversationId);
+        } catch (error) {
+          console.error('Erreur lors du marquage comme lu', error);
+        }
+      }
+    };
+
+    markAsRead();
+  }, [conversationId, markConversationAsRead]);
 
 
   useEffect(() => {
@@ -207,7 +222,7 @@ const ChatScreen = ({ route }) => {
                 color="gray.500"
                 ml={2}
               >
-                {conversation.secret.user.name}
+                {conversation.messages.find(msg => msg._id === item.id)?.sender?.name || 'Utilisateur'}
               </Text>
             )}
 

@@ -3,6 +3,9 @@ import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInsta
 import { AuthContext } from './AuthContext';
 import { Platform, Share } from 'react-native';
 
+
+
+
 const CardDataContext = createContext();
 
 export const useCardData = () => {
@@ -486,6 +489,25 @@ export const CardDataProvider = ({ children }) => {
     }
 };
 
+const markConversationAsRead = async (conversationId, userToken) => {
+  const instance = getAxiosInstance();
+  
+  if (!conversationId || !userToken) return;
+
+  try {
+    const response = await instance.patch(
+      `/api/secrets/conversations/${conversationId}/read`,
+      {},
+      { headers: { Authorization: `Bearer ${userToken}` } }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors du marquage comme lu', error);
+    throw error;
+  }
+};
+
+
   return (
     <CardDataContext.Provider value={{
       data,
@@ -504,7 +526,8 @@ export const CardDataProvider = ({ children }) => {
       deleteStripeAccount,
       resetStripeAccount,
       handleShareSecret,
-      getSharedSecret
+      getSharedSecret,
+      markConversationAsRead
     }}>
       {children}
     </CardDataContext.Provider>

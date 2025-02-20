@@ -122,8 +122,12 @@ const SharedSecretScreen = ({ route }) => {
                             position="relative"
                         >
                             <Pressable
-                                style={{ position: 'absolute', left: 0 }}
-                                onPress={() => navigation.navigate('Home')}
+                                style={{ position: 'absolute', left: 0, padding: 10, zIndex: 50 }}
+                                onPress={() => {
+                                 
+                                    navigation.navigate('MainApp');
+                                }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}  // Augmente la zone de touch
                             >
                                 <FontAwesomeIcon
                                     icon={faChevronLeft}
