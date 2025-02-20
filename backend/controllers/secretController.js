@@ -648,7 +648,8 @@ exports.getConversation = async (req, res) => {
         })
             .populate({
                 path: 'messages.sender',
-                select: 'name profilePicture _id' // Ajout de _id et profilePicture
+                model: 'User', // Ajout explicite du modèle
+                select: 'name profilePicture _id'
             })
             .populate({
                 path: 'secret',
@@ -662,19 +663,23 @@ exports.getConversation = async (req, res) => {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
     
-        // Ajout d'un log pour debug
-        console.log("Messages avec sender info:", conversation.messages.map(msg => ({
-            _id: msg._id,
-            content: msg.content,
-            sender: msg.sender
-        })));
+        // Logs de debug
+        console.log("Conversation trouvée:", {
+            id: conversation._id,
+            nbMessages: conversation.messages.length,
+            messages: conversation.messages.map(msg => ({
+                _id: msg._id,
+                content: msg.content,
+                sender: msg.sender
+            }))
+        });
     
         res.status(200).json({
             messages: conversation.messages,
             conversationId: conversation._id
         });
     } catch (error) {
-        console.error('Erreur lors de la récupération des messages de la conversation:', error); // Log d'erreur
+        console.error('Erreur détaillée:', error);
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };
