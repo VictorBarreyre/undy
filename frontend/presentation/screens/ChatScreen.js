@@ -101,53 +101,62 @@ const ChatScreen = ({ route }) => {
   }, [showModalOnMount]);
 
 
-  useEffect(() => {
-    if (conversation?.messages) {
-      const formattedMessages = [];
-      let lastMessageDate = null;
-  
-      conversation.messages.forEach((msg, index) => {
-        const currentMessageDate = new Date(msg.createdAt);
-        
-        // Debug pour vérifier les données du sender
-        console.log("Message data:", {
-          messageId: msg._id,
-          senderId: msg.sender?._id,
-          senderName: msg.sender?.name,
-          currentUserId: userData?._id
-        });
-  
-        // Ajouter séparateur si la date change
-        if (!lastMessageDate ||
-          currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
-          formattedMessages.push({
-            id: `separator-${index}`,
-            type: 'separator',
-            timestamp: msg.createdAt,
-            shouldShowDateSeparator: true
-          });
-        }
-  
-        // Ajouter le message avec toutes les informations du sender
-        formattedMessages.push({
-          id: msg._id,
-          text: msg.content,
-          sender: msg.sender?._id === userData?._id ? 'user' : 'other',
-          timestamp: msg.createdAt,
-          senderInfo: {
-            id: msg.sender?._id,
-            name: msg.sender?.name,
-            profilePicture: msg.sender?.profilePicture
-          }
-        });
-  
-        lastMessageDate = currentMessageDate;
+  // Dans votre useEffect pour la conversation
+useEffect(() => {
+  if (conversation) {
+    console.log("Raw conversation data:", JSON.stringify(conversation, null, 2));
+    console.log("Messages structure:", conversation.messages?.map(msg => ({
+      _id: msg._id,
+      content: msg.content,
+      sender: msg.sender,
+      rawSender: JSON.stringify(msg.sender)
+    })));
+
+    const formattedMessages = [];
+    let lastMessageDate = null;
+
+    conversation.messages?.forEach((msg, index) => {
+      console.log("Processing message:", {
+        _id: msg._id,
+        content: msg.content,
+        sender: msg.sender,
+        fullMessage: msg
       });
-  
-      setMessages(formattedMessages);
-    }
-  }, [conversation, userData?._id]);
-  
+
+      const currentMessageDate = new Date(msg.createdAt);
+
+      // Ajouter séparateur si nécessaire
+      if (!lastMessageDate ||
+        currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
+        formattedMessages.push({
+          id: `separator-${index}`,
+          type: 'separator',
+          timestamp: msg.createdAt,
+          shouldShowDateSeparator: true
+        });
+      }
+
+      // Formatter le message avec vérification explicite de sender
+      const formattedMessage = {
+        id: msg._id,
+        text: msg.content,
+        timestamp: msg.createdAt,
+        sender: msg.sender && msg.sender._id === userData?._id ? 'user' : 'other',
+        senderInfo: msg.sender ? {
+          id: msg.sender._id,
+          name: msg.sender.name || 'Utilisateur',
+          profilePicture: msg.sender.profilePicture
+        } : null
+      };
+
+      console.log("Formatted message:", formattedMessage);
+      formattedMessages.push(formattedMessage);
+      lastMessageDate = currentMessageDate;
+    });
+
+    setMessages(formattedMessages);
+  }
+}, [conversation, userData?._id]);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
