@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Animated, Alert, Dimensions, SafeAreaView, StyleSheet } from 'react-native';
-import { VStack, Box, Text } from 'native-base';
+import { Animated, Alert, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native';
+import { VStack, Box, Text, HStack } from 'native-base';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { Background } from '../../navigation/Background';
 import { useNavigation } from '@react-navigation/native';
@@ -8,6 +8,8 @@ import PaymentSheet from '../components/PaymentSheet';
 import TypewriterLoader from '../components/TypewriterLoader';
 import CardHome from '../components/CardHome';
 import { styles } from '../../infrastructure/theme/styles';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 
 const customStyles = StyleSheet.create({
     shadowBox: {
@@ -101,24 +103,44 @@ const SharedSecretScreen = ({ route }) => {
     return (
         <Background>
             <SafeAreaView style={{ flex: 1 }}>
-                <VStack 
-                    flex={1} 
-                    justifyContent="center" 
-                    alignItems="center" 
-                    paddingX={5} 
-                    paddingY={5} 
+                <VStack
+                    flex={1}
+                    justifyContent="center"
+                    alignItems="center"
+                    paddingX={5}
+                    paddingY={5}
                     space={4}
                 >
-                    <VStack 
-                    justifyContent="center" 
-                    alignItems="center" 
-                    space={2}> 
-                    <Text style={styles.h3}>
-                    Découvrez le hushy 🔐
-                    </Text>
-                    <Text style={styles.h4}>
-                    et accédez à la conversation !
-                    </Text>
+                    <VStack
+                        justifyContent="center"
+                        alignItems="center"
+                        space={2}
+                    >
+                     <HStack
+    width="100%"
+    alignItems="center"
+    space={4}
+    justifyContent='space-between'
+>
+    <TouchableOpacity onPress={() => navigation.goBack()}>
+        <FontAwesomeIcon
+            icon={faChevronLeft}
+            size={16}
+            color="black"
+        />
+    </TouchableOpacity>
+    <VStack 
+        flex={1} 
+        alignItems="center"
+    >
+        <Text style={styles.h3}>
+            Découvrez le hushy 🔐
+        </Text>
+        <Text style={styles.h5}>
+            et accédez à la conversation !
+        </Text>
+    </VStack>
+</HStack>
                     </VStack>
                     <Box
                         width="100%"
@@ -127,14 +149,14 @@ const SharedSecretScreen = ({ route }) => {
                         backgroundColor="white"
                         marginTop={2}
                         paddingTop={1}
-                        paddingBottom={4}
+
                         style={customStyles.shadowBox}
                     >
                         <VStack
                             flex={1}
                             alignItems="center"
                             justifyContent="center"
-                            paddingX={2}
+                            paddingX={1}
                             space={2}
                         >
                             {secretData ? (
@@ -144,7 +166,7 @@ const SharedSecretScreen = ({ route }) => {
                             )}
                         </VStack>
                     </Box>
-    
+
                     {secretData && (
                         <Box width="100%" paddingTop={4} >
                             <PaymentSheet
