@@ -742,6 +742,28 @@ exports.getUserConversations = async (req, res) => {
     }
 };
 
+
+exports.markConversationAsRead = async (req, res) => {
+    try {
+      const conversation = await Conversation.findOne({
+        _id: req.params.conversationId,
+        participants: req.user.id
+      });
+  
+      if (!conversation) {
+        return res.status(404).json({ message: 'Conversation introuvable.' });
+      }
+  
+      // Réinitialiser le nombre de messages non lus pour cet utilisateur
+      conversation.unreadCount.set(req.user.id.toString(), 0);
+      await conversation.save();
+  
+      res.status(200).json({ message: 'Messages marqués comme lus.' });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+    }
+  };
+
 exports.getUserSecretsWithCount = async (req, res) => {
     try {
         const secrets = await Secret

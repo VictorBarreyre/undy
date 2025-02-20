@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Animated, Alert, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native';
-import { VStack, Box, Text, HStack } from 'native-base';
+import { VStack, Box, Text, HStack, Pressable } from 'native-base';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { Background } from '../../navigation/Background';
 import { useNavigation } from '@react-navigation/native';
@@ -116,33 +116,33 @@ const SharedSecretScreen = ({ route }) => {
                         alignItems="center"
                         space={2}
                     >
-                     <HStack
-    width="100%"
-    alignItems="center"
-    position="relative"
->
-    <TouchableOpacity 
-        style={{ position: 'absolute', left: 0 }} 
-        onPress={() => navigation.goBack()}
-    >
-        <FontAwesomeIcon
-            icon={faChevronLeft}
-            size={16}
-            color="black"
-        />
-    </TouchableOpacity>
-    <VStack 
-        flex={1} 
-        alignItems="center"
-    >
-        <Text style={styles.h3}>
-            Découvrez le hushy 🔐
-        </Text>
-        <Text style={styles.h5}>
-            et accédez à la conversation !
-        </Text>
-    </VStack>
-</HStack>
+                        <HStack
+                            width="100%"
+                            alignItems="center"
+                            position="relative"
+                        >
+                            <Pressable
+                                style={{ position: 'absolute', left: 0 }}
+                                onPress={() => navigation.navigate('Home')}
+                            >
+                                <FontAwesomeIcon
+                                    icon={faChevronLeft}
+                                    size={16}
+                                    color="black"
+                                />
+                            </Pressable>
+                            <VStack
+                                flex={1}
+                                alignItems="center"
+                            >
+                                <Text style={styles.h3}>
+                                    Découvrez le hushy 🔐
+                                </Text>
+                                <Text style={styles.h5}>
+                                    et accédez à la conversation !
+                                </Text>
+                            </VStack>
+                        </HStack>
                     </VStack>
                     <Box
                         width="100%"
