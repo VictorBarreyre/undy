@@ -10,7 +10,6 @@ const {
     getSecretConversation,
     addMessageToConversation,
     getUserConversations,
-    getConversation, 
     deleteConversation,
     createPaymentIntent,
     confirmPayment,
@@ -56,7 +55,6 @@ router.get('/shared/:secretId', protect, getSharedSecret);
 router.get('/conversations', protect, getUserConversations);
 router.get('/conversations/secret/:secretId', protect, getSecretConversation);
 router.post('/conversations/:conversationId/messages', protect, addMessageToConversation);
-router.get('/conversations/:conversationId', protect, getConversation);
 router.delete('/conversations/:conversationId', protect, deleteConversation);
 router.patch('/conversations/:conversationId/read', protect, markConversationAsRead);
 

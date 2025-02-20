@@ -102,61 +102,53 @@ const ChatScreen = ({ route }) => {
 
 
   // Dans votre useEffect pour la conversation
-useEffect(() => {
-  if (conversation) {
-    console.log("Raw conversation data:", JSON.stringify(conversation, null, 2));
-    console.log("Messages structure:", conversation.messages?.map(msg => ({
-      _id: msg._id,
-      content: msg.content,
-      sender: msg.sender,
-      rawSender: JSON.stringify(msg.sender)
-    })));
-
-    const formattedMessages = [];
-    let lastMessageDate = null;
-
-    conversation.messages?.forEach((msg, index) => {
-      console.log("Processing message:", {
-        _id: msg._id,
-        content: msg.content,
-        sender: msg.sender,
-        fullMessage: msg
-      });
-
-      const currentMessageDate = new Date(msg.createdAt);
-
-      // Ajouter séparateur si nécessaire
-      if (!lastMessageDate ||
-        currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
-        formattedMessages.push({
-          id: `separator-${index}`,
-          type: 'separator',
+  useEffect(() => {
+    if (conversation?.messages) {
+      console.log("Current user ID:", userData?._id);
+      const formattedMessages = [];
+      let lastMessageDate = null;
+  
+      conversation.messages.forEach((msg, index) => {
+        const currentMessageDate = new Date(msg.createdAt);
+        
+        // Debug complet de chaque message
+        console.log("Message complet:", msg);
+        
+        // Vérifier si le message est de l'utilisateur actuel
+        const isCurrentUser = msg.sender?._id === userData?._id;
+        
+        // Ajouter séparateur si nécessaire
+        if (!lastMessageDate ||
+          currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
+          formattedMessages.push({
+            id: `separator-${index}`,
+            type: 'separator',
+            timestamp: msg.createdAt,
+            shouldShowDateSeparator: true
+          });
+        }
+  
+        // Formatter le message
+        const formattedMessage = {
+          id: msg._id,
+          text: msg.content,
           timestamp: msg.createdAt,
-          shouldShowDateSeparator: true
-        });
-      }
-
-      // Formatter le message avec vérification explicite de sender
-      const formattedMessage = {
-        id: msg._id,
-        text: msg.content,
-        timestamp: msg.createdAt,
-        sender: msg.sender && msg.sender._id === userData?._id ? 'user' : 'other',
-        senderInfo: msg.sender ? {
-          id: msg.sender._id,
-          name: msg.sender.name || 'Utilisateur',
-          profilePicture: msg.sender.profilePicture
-        } : null
-      };
-
-      console.log("Formatted message:", formattedMessage);
-      formattedMessages.push(formattedMessage);
-      lastMessageDate = currentMessageDate;
-    });
-
-    setMessages(formattedMessages);
-  }
-}, [conversation, userData?._id]);
+          sender: isCurrentUser ? 'user' : 'other',
+          senderInfo: {
+            id: msg.sender?._id,
+            name: msg.sender?.name || 'Utilisateur'
+          }
+        };
+  
+        console.log("Message formatté:", formattedMessage);
+        
+        formattedMessages.push(formattedMessage);
+        lastMessageDate = currentMessageDate;
+      });
+  
+      setMessages(formattedMessages);
+    }
+  }, [conversation, userData?._id]);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -186,21 +178,29 @@ useEffect(() => {
   // Pour les nouveaux messages, garder 'user' tel quel
   const sendMessage = async () => {
     if (!message.trim()) return;
-
+  
     try {
       if (!conversationId) {
         throw new Error('ID de conversation manquant');
       }
+      
+      // Envoyer le message
       const newMessage = await handleAddMessage(conversationId, message);
-      setMessage('');
-
-      // Ajout du nouveau message avec le bon ID d'expéditeur
+      console.log("Nouveau message:", newMessage);
+      
+      // Ajouter le message avec les informations correctes
       setMessages(prev => [...prev, {
-        id: Date.now(),
+        id: newMessage._id,
         text: message,
-        sender: 'user', // Force le message à être de l'utilisateur actuel
-        timestamp: new Date().toISOString()
+        sender: 'user',
+        timestamp: new Date().toISOString(),
+        senderInfo: {
+          id: userData?._id,
+          name: userData?.name || 'Moi'
+        }
       }]);
+      
+      setMessage('');
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
     }

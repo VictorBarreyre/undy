@@ -608,7 +608,6 @@ exports.getPurchasedSecrets = async (req, res) => {
     }
 };
 
-
 exports.getSecretConversation = async (req, res) => {
     try {
         const conversation = await Conversation.findOne({
@@ -627,8 +626,6 @@ exports.getSecretConversation = async (req, res) => {
                 select: 'label content user'
             });
 
-        console.log("Conversation trouvée:", JSON.stringify(conversation, null, 2)); // Debug
-
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
@@ -646,34 +643,35 @@ exports.getConversation = async (req, res) => {
             _id: req.params.conversationId,
             participants: req.user.id
         })
-            .populate({
-                path: 'messages.sender',
-                model: 'User', // Ajout explicite du modèle
-                select: 'name profilePicture _id'
-            })
-            .populate({
-                path: 'secret',
-                populate: {
-                    path: 'user',
-                    select: 'name profilePicture'
-                }
-            });
-    
+        .populate({
+            path: 'messages.sender',
+            select: '_id name', // Sélectionner les champs nécessaires
+            model: 'User'
+        })
+        .populate({
+            path: 'secret',
+            populate: {
+                path: 'user',
+                select: 'name'
+            }
+        });
+
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
-    
-        // Logs de debug
-        console.log("Conversation trouvée:", {
-            id: conversation._id,
-            nbMessages: conversation.messages.length,
-            messages: conversation.messages.map(msg => ({
+
+        // Log de debug pour vérifier la structure des messages
+        console.log("Messages avec sender info:", 
+            conversation.messages.map(msg => ({
                 _id: msg._id,
                 content: msg.content,
-                sender: msg.sender
+                sender: {
+                    _id: msg.sender._id,
+                    name: msg.sender.name
+                }
             }))
-        });
-    
+        );
+
         res.status(200).json({
             messages: conversation.messages,
             conversationId: conversation._id
@@ -683,6 +681,7 @@ exports.getConversation = async (req, res) => {
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };
+
 
 
 exports.addMessageToConversation = async (req, res) => {

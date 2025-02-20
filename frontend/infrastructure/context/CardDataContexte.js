@@ -410,11 +410,21 @@ export const CardDataProvider = ({ children }) => {
       const response = await instance.get(
         `/api/secrets/conversations/${conversationId}`
       );
-
-      console.log("Conversation messages response:", response.data);
-
+  
+      // Log pour débug
+      console.log("Messages reçus:", JSON.stringify(response.data, null, 2));
+  
+      // S'assurer que chaque message a les informations du sender
+      const messages = response.data.messages.map(msg => ({
+        ...msg,
+        sender: msg.sender ? {
+          _id: msg.sender._id,
+          name: msg.sender.name
+        } : null
+      }));
+  
       return {
-        messages: response.data.messages || [],
+        messages,
         conversationId: response.data.conversationId
       };
     } catch (error) {
