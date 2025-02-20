@@ -648,7 +648,7 @@ exports.getConversation = async (req, res) => {
         })
             .populate({
                 path: 'messages.sender',
-                select: 'name' 
+                select: 'name profilePicture _id' // Ajout de _id et profilePicture
             })
             .populate({
                 path: 'secret',
@@ -657,15 +657,18 @@ exports.getConversation = async (req, res) => {
                     select: 'name profilePicture'
                 }
             });
-
+    
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
-
-  // Log détaillé des messages
-  console.log("Conversation messages (DÉTAILS):", 
-    JSON.stringify(conversation.messages, null, 2)
-);
+    
+        // Ajout d'un log pour debug
+        console.log("Messages avec sender info:", conversation.messages.map(msg => ({
+            _id: msg._id,
+            content: msg.content,
+            sender: msg.sender
+        })));
+    
         res.status(200).json({
             messages: conversation.messages,
             conversationId: conversation._id

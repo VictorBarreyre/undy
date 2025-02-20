@@ -105,11 +105,19 @@ const ChatScreen = ({ route }) => {
     if (conversation?.messages) {
       const formattedMessages = [];
       let lastMessageDate = null;
-
+  
       conversation.messages.forEach((msg, index) => {
         const currentMessageDate = new Date(msg.createdAt);
-
-        // Ajouter un séparateur si la date change
+        
+        // Debug pour vérifier les données du sender
+        console.log("Message data:", {
+          messageId: msg._id,
+          senderId: msg.sender?._id,
+          senderName: msg.sender?.name,
+          currentUserId: userData?._id
+        });
+  
+        // Ajouter séparateur si la date change
         if (!lastMessageDate ||
           currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
           formattedMessages.push({
@@ -119,21 +127,27 @@ const ChatScreen = ({ route }) => {
             shouldShowDateSeparator: true
           });
         }
-
-        // Ajouter le message
+  
+        // Ajouter le message avec toutes les informations du sender
         formattedMessages.push({
           id: msg._id,
           text: msg.content,
-          sender: msg.sender === userData?._id ? 'user' : 'other',
-          timestamp: msg.createdAt
+          sender: msg.sender?._id === userData?._id ? 'user' : 'other',
+          timestamp: msg.createdAt,
+          senderInfo: {
+            id: msg.sender?._id,
+            name: msg.sender?.name,
+            profilePicture: msg.sender?.profilePicture
+          }
         });
-
+  
         lastMessageDate = currentMessageDate;
       });
-
+  
       setMessages(formattedMessages);
     }
-  }, [conversation]);
+  }, [conversation, userData?._id]);
+  
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -186,16 +200,12 @@ const ChatScreen = ({ route }) => {
   const renderMessage = ({ item }) => {
     if (item.type === 'separator') {
       return (
-        <Text
-          textAlign="center"
-          color="gray.500"
-          my={2}
-        >
+        <Text textAlign="center" color="gray.500" my={2}>
           {formatMessageTime(item.timestamp)}
         </Text>
       );
     }
-
+  
     return (
       <VStack>
         <HStack
@@ -206,8 +216,8 @@ const ChatScreen = ({ route }) => {
           {item.sender !== 'user' && (
             <Image
               source={
-                conversation.secret.user.profilePicture
-                  ? { uri: conversation.secret.user.profilePicture }
+                item.senderInfo?.profilePicture
+                  ? { uri: item.senderInfo.profilePicture }
                   : require('../../assets/images/default.png')
               }
               alt="Profile"
@@ -222,20 +232,18 @@ const ChatScreen = ({ route }) => {
                 color="gray.500"
                 ml={2}
               >
-                {conversation.messages.find(msg => msg._id === item.id)?.sender?.name || 'Utilisateur'}
+                {item.senderInfo?.name || 'Utilisateur'}
               </Text>
             )}
-
-            <Pressable
-              onPress={() => setIsTimestampVisible(!isTimestampVisible)}
-            >
+  
+            <Pressable onPress={() => setIsTimestampVisible(!isTimestampVisible)}>
               <Box
                 p={3}
                 borderRadius={20}
                 style={{
                   marginVertical: 4,
                   marginHorizontal: 8,
-                  overflow: 'hidden', // Important for gradient to clip correctly
+                  overflow: 'hidden'
                 }}
               >
                 {item.sender === 'user' ? (
@@ -269,7 +277,7 @@ const ChatScreen = ({ route }) => {
                 >
                   {item.text}
                 </Text>
-
+  
                 {isTimestampVisible && (
                   <Text
                     style={styles.littleCaption}
@@ -284,7 +292,7 @@ const ChatScreen = ({ route }) => {
               </Box>
             </Pressable>
           </VStack>
-
+  
           {item.sender === 'user' && (
             <Image
               source={
