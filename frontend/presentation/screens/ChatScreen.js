@@ -104,24 +104,28 @@ const ChatScreen = ({ route }) => {
   // Dans votre useEffect pour la conversation
   useEffect(() => {
     if (conversation?.messages) {
-      console.log("Messages reçus:", conversation.messages);
-      
+      console.log("Traitement des messages avec userData:", {
+        userDataId: userData?._id,
+        messages: conversation.messages
+      });
+  
       const formattedMessages = [];
       let lastMessageDate = null;
   
       conversation.messages.forEach((msg, index) => {
         const currentMessageDate = new Date(msg.createdAt);
-        const isCurrentUser = msg.sender._id === userData?._id;
+        // msg.sender est directement l'ID, pas un objet
+        const isCurrentUser = msg.sender === userData?._id;
   
-        console.log("Traitement message:", {
-          id: msg._id,
+        console.log("Traitement message individuel:", {
+          messageId: msg._id,
           content: msg.content,
-          senderId: msg.sender._id,
+          sender: msg.sender,
           currentUserId: userData?._id,
           isCurrentUser: isCurrentUser
         });
   
-        // Séparateur de date si nécessaire
+        // Ajouter séparateur si nécessaire
         if (!lastMessageDate ||
           currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
           formattedMessages.push({
@@ -132,15 +136,15 @@ const ChatScreen = ({ route }) => {
           });
         }
   
-        // Message formaté
+        // Formater le message
         formattedMessages.push({
           id: msg._id,
           text: msg.content,
           sender: isCurrentUser ? 'user' : 'other',
           timestamp: msg.createdAt,
           senderInfo: {
-            id: msg.sender._id,
-            name: msg.sender.name
+            id: msg.sender, // Utiliser directement l'ID du sender
+            name: msg.sender === userData?._id ? userData?.name : 'Autre utilisateur'
           }
         });
   
