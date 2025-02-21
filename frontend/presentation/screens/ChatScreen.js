@@ -104,20 +104,24 @@ const ChatScreen = ({ route }) => {
   // Dans votre useEffect pour la conversation
   useEffect(() => {
     if (conversation?.messages) {
-      console.log("Current user ID:", userData?._id);
+      console.log("Messages reçus:", conversation.messages);
+      
       const formattedMessages = [];
       let lastMessageDate = null;
   
       conversation.messages.forEach((msg, index) => {
         const currentMessageDate = new Date(msg.createdAt);
-        
-        // Debug complet de chaque message
-        console.log("Message complet:", msg);
-        
-        // Vérifier si le message est de l'utilisateur actuel
-        const isCurrentUser = msg.sender?._id === userData?._id;
-        
-        // Ajouter séparateur si nécessaire
+        const isCurrentUser = msg.sender._id === userData?._id;
+  
+        console.log("Traitement message:", {
+          id: msg._id,
+          content: msg.content,
+          senderId: msg.sender._id,
+          currentUserId: userData?._id,
+          isCurrentUser: isCurrentUser
+        });
+  
+        // Séparateur de date si nécessaire
         if (!lastMessageDate ||
           currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
           formattedMessages.push({
@@ -128,27 +132,26 @@ const ChatScreen = ({ route }) => {
           });
         }
   
-        // Formatter le message
-        const formattedMessage = {
+        // Message formaté
+        formattedMessages.push({
           id: msg._id,
           text: msg.content,
-          timestamp: msg.createdAt,
           sender: isCurrentUser ? 'user' : 'other',
+          timestamp: msg.createdAt,
           senderInfo: {
-            id: msg.sender?._id,
-            name: msg.sender?.name || 'Utilisateur'
+            id: msg.sender._id,
+            name: msg.sender.name
           }
-        };
+        });
   
-        console.log("Message formatté:", formattedMessage);
-        
-        formattedMessages.push(formattedMessage);
         lastMessageDate = currentMessageDate;
       });
   
+      console.log("Messages formatés:", formattedMessages);
       setMessages(formattedMessages);
     }
   }, [conversation, userData?._id]);
+  
 
   useEffect(() => {
     const calculateTimeLeft = () => {
