@@ -16,6 +16,16 @@ const MessageSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+
+  image: {
+    type: String,  // URL de l'image
+    required: false
+  },
+  messageType: {
+    type: String,
+    enum: ['text', 'image'],
+    default: 'text'
+  }
   // Si besoin d'autres infos sender utiles
   // senderPicture: String,
 }, { timestamps: true });

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faPaperPlane, faChevronLeft } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane, faChevronLeft, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
 import { TouchableOpacity } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { BlurView } from '@react-native-community/blur';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 
 
@@ -76,6 +77,8 @@ const ChatScreen = ({ route }) => {
   const [timeLeft, setTimeLeft] = useState('');
   const [isModalVisible, setModalVisible] = useState(showModalOnMount || false);
   const isInitialMount = useRef(true);
+  const [selectedImage, setSelectedImage] = useState(null);
+
 
   useEffect(() => {
     const markAsRead = async () => {
@@ -104,59 +107,59 @@ const ChatScreen = ({ route }) => {
   // Dans votre useEffect pour la conversation
   useEffect(() => {
     if (conversation?.messages) {
-      console.log("Conversation complète:", JSON.stringify(conversation, null, 2));
-    
-    // Log des messages bruts
-    console.log("Messages bruts reçus:", JSON.stringify(conversation.messages, null, 2));
+      // Créer un mapping des IDs vers les noms
+      const userMapping = {};
+      if (conversation.participants) {
+        conversation.participants.forEach(participant => {
+          userMapping[participant._id] = participant.name;
+        });
+      }
 
-  
+      console.log("Mapping des utilisateurs:", userMapping);
+
       const formattedMessages = [];
       let lastMessageDate = null;
-  
+
       conversation.messages.forEach((msg, index) => {
         const currentMessageDate = new Date(msg.createdAt);
-        // msg.sender est directement l'ID, pas un objet
         const isCurrentUser = msg.sender === userData?._id;
-  
-        console.log("Traitement message individuel:", {
+
+        console.log("Traitement message:", {
           messageId: msg._id,
           content: msg.content,
-          sender: msg.sender,
-          currentUserId: userData?._id,
-          isCurrentUser: isCurrentUser
+          senderId: msg.sender,
+          senderName: userMapping[msg.sender] || 'Utilisateur',
+          isCurrentUser
         });
-  
-        // Ajouter séparateur si nécessaire
+
+        // Séparateur de date si nécessaire
         if (!lastMessageDate ||
           currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
           formattedMessages.push({
             id: `separator-${index}`,
             type: 'separator',
-            timestamp: msg.createdAt,
-            shouldShowDateSeparator: true
+            timestamp: msg.createdAt
           });
         }
-  
-        // Formater le message
+
+        // Message avec le nom de l'expéditeur depuis le mapping
         formattedMessages.push({
           id: msg._id,
           text: msg.content,
           sender: isCurrentUser ? 'user' : 'other',
           timestamp: msg.createdAt,
           senderInfo: {
-            id: msg.sender, // Utiliser directement l'ID du sender
-            name: msg.sender === userData?._id ? userData?.name : 'Autre utilisateur'
+            id: msg.sender,
+            name: userMapping[msg.sender] || 'Utilisateur'
           }
         });
-  
+
         lastMessageDate = currentMessageDate;
       });
-  
-      console.log("Messages formatés:", formattedMessages);
+
       setMessages(formattedMessages);
     }
   }, [conversation, userData?._id]);
-  
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -186,16 +189,16 @@ const ChatScreen = ({ route }) => {
   // Pour les nouveaux messages, garder 'user' tel quel
   const sendMessage = async () => {
     if (!message.trim()) return;
-  
+
     try {
       if (!conversationId) {
         throw new Error('ID de conversation manquant');
       }
-  
+
       // Envoyer le message
       const newMessage = await handleAddMessage(conversationId, message);
       console.log("Nouveau message reçu du serveur:", newMessage);
-  
+
       // Ajouter le message immédiatement avec les bonnes informations
       const messageToAdd = {
         id: newMessage._id,
@@ -207,14 +210,39 @@ const ChatScreen = ({ route }) => {
           name: userData.name
         }
       };
-  
+
       setMessages(prev => [...prev, messageToAdd]);
       setMessage('');
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
     }
   };
-  
+
+  const handleImagePick = async () => {
+    try {
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.8,
+        includeBase64: true,
+      });
+
+      if (result.assets && result.assets[0]) {
+        // Log pour vérifier la structure
+        console.log("Image sélectionnée:", {
+          uri: result.assets[0].uri,
+          type: result.assets[0].type,
+          fileName: result.assets[0].fileName,
+          fileSize: result.assets[0].fileSize
+        });
+
+        // Traitement de l'image...
+        // À implémenter selon vos besoins
+      }
+    } catch (error) {
+      console.error('Erreur sélection image:', error);
+    }
+  };
+
   const renderMessage = ({ item }) => {
     if (item.type === 'separator') {
       return (
@@ -223,7 +251,7 @@ const ChatScreen = ({ route }) => {
         </Text>
       );
     }
-  
+
     return (
       <VStack>
         <HStack
@@ -253,7 +281,7 @@ const ChatScreen = ({ route }) => {
                 {item.senderInfo?.name || 'Utilisateur'}
               </Text>
             )}
-  
+
             <Pressable onPress={() => setIsTimestampVisible(!isTimestampVisible)}>
               <Box
                 p={3}
@@ -295,7 +323,7 @@ const ChatScreen = ({ route }) => {
                 >
                   {item.text}
                 </Text>
-  
+
                 {isTimestampVisible && (
                   <Text
                     style={styles.littleCaption}
@@ -310,7 +338,7 @@ const ChatScreen = ({ route }) => {
               </Box>
             </Pressable>
           </VStack>
-  
+
           {item.sender === 'user' && (
             <Image
               source={
@@ -404,6 +432,46 @@ const ChatScreen = ({ route }) => {
                 paddingVertical: 10,
               }}
             >
+              <TouchableOpacity
+                onPress={handleImagePick}
+                style={{
+                  width: 32,
+                  height: 32,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'white',
+                  borderRadius: 16,
+                  elevation: 2,
+                  shadowColor: 'violet',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 2,
+                }}
+              >
+                <MaskedView
+                  maskElement={
+                    <View style={{ backgroundColor: 'transparent' }}>
+                      <FontAwesomeIcon
+                        icon={faPlus}  // Assurez-vous d'importer faPlus
+                        color="black"
+                        size={14}
+                      />
+                    </View>
+                  }
+                >
+                  <LinearGradient
+                    colors={['#FF587E', '#CC4B8D']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      width: 14,
+                      height: 14,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  />
+                </MaskedView>
+              </TouchableOpacity>
               <Input
                 flex={1}
                 value={message}
