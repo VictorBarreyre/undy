@@ -5,12 +5,19 @@ const MessageSchema = new mongoose.Schema({
   sender: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    required: true
   },
   content: {
     type: String,
-    required: true,
-  }
+    required: true
+  },
+  // Pour faciliter le front
+  senderName: {
+    type: String,
+    required: true
+  },
+  // Si besoin d'autres infos sender utiles
+  // senderPicture: String,
 }, { timestamps: true });
 
 const ConversationSchema = new mongoose.Schema({

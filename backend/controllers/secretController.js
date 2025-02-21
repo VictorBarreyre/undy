@@ -701,6 +701,7 @@ exports.addMessageToConversation = async (req, res) => {
         const newMessage = {
             sender: req.user.id,
             content,
+            senderName: req.user.name, 
             createdAt: new Date()
         };
 

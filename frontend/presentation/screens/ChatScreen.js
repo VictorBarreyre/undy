@@ -546,7 +546,7 @@ const ChatScreen = ({ route }) => {
 
               <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
                 {/* Header */}
-                <HStack space={2} justifyContent="center">
+                <HStack space={2} justifyContent="start">
                   <Text style={styles.h5}>
                     {secretData && secretData.user ? `Posté par ${secretData.user.name}` : 'Posté par Utilisateur'}
                   </Text>
