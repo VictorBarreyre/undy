@@ -104,10 +104,11 @@ const ChatScreen = ({ route }) => {
   // Dans votre useEffect pour la conversation
   useEffect(() => {
     if (conversation?.messages) {
-      console.log("Traitement des messages avec userData:", {
-        userDataId: userData?._id,
-        messages: conversation.messages
-      });
+      console.log("Conversation complète:", JSON.stringify(conversation, null, 2));
+    
+    // Log des messages bruts
+    console.log("Messages bruts reçus:", JSON.stringify(conversation.messages, null, 2));
+
   
       const formattedMessages = [];
       let lastMessageDate = null;
@@ -214,56 +215,6 @@ const ChatScreen = ({ route }) => {
     }
   };
   
-  // Dans le useEffect qui gère les messages
-  useEffect(() => {
-    if (conversation?.messages) {
-      const formattedMessages = [];
-      let lastMessageDate = null;
-  
-      conversation.messages.forEach((msg, index) => {
-        console.log("Traitement du message:", {
-          messageId: msg._id,
-          content: msg.content,
-          senderId: msg.sender,
-          currentUserId: userData?._id
-        });
-  
-        // Vérifier si c'est un message de l'utilisateur actuel
-        const isUserMessage = msg.sender === userData?._id || 
-                            msg.sender?._id === userData?._id;
-  
-        const currentMessageDate = new Date(msg.createdAt);
-  
-        // Ajouter le séparateur de date si nécessaire
-        if (!lastMessageDate ||
-          currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
-          formattedMessages.push({
-            id: `separator-${index}`,
-            type: 'separator',
-            timestamp: msg.createdAt,
-            shouldShowDateSeparator: true
-          });
-        }
-  
-        // Formater le message
-        formattedMessages.push({
-          id: msg._id,
-          text: msg.content,
-          sender: isUserMessage ? 'user' : 'other',
-          timestamp: msg.createdAt,
-          senderInfo: {
-            id: msg.sender?._id || msg.sender,
-            name: msg.sender?.name || 'Utilisateur'
-          }
-        });
-  
-        lastMessageDate = currentMessageDate;
-      });
-  
-      setMessages(formattedMessages);
-    }
-  }, [conversation, userData?._id]);
-
   const renderMessage = ({ item }) => {
     if (item.type === 'separator') {
       return (
