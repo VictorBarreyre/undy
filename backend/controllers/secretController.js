@@ -687,6 +687,8 @@ exports.getConversation = async (req, res) => {
 exports.addMessageToConversation = async (req, res) => {
     try {
         const { content } = req.body;
+        
+        // Trouver la conversation et peupler le sender directement
         const conversation = await Conversation.findOne({
             _id: req.params.conversationId,
             participants: req.user.id
@@ -696,22 +698,47 @@ exports.addMessageToConversation = async (req, res) => {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
 
-        conversation.messages.push({
+        // Créer le nouveau message
+        const newMessage = {
             sender: req.user.id,
-            content
-        });
+            content,
+            createdAt: new Date()
+        };
 
+        conversation.messages.push(newMessage);
+
+        // Gérer les compteurs de messages non lus
         conversation.participants.forEach(participantId => {
             if (participantId.toString() !== req.user.id.toString()) {
-              if (!conversation.unreadCount) conversation.unreadCount = new Map();
-              const count = conversation.unreadCount.get(participantId.toString()) || 0;
-              conversation.unreadCount.set(participantId.toString(), count + 1);
+                if (!conversation.unreadCount) conversation.unreadCount = new Map();
+                const count = conversation.unreadCount.get(participantId.toString()) || 0;
+                conversation.unreadCount.set(participantId.toString(), count + 1);
             }
-          });
+        });
 
         await conversation.save();
-        res.status(201).json(conversation.messages[conversation.messages.length - 1]);
+
+        // Peupler le message avant de le renvoyer
+        const populatedConversation = await Conversation.findById(conversation._id)
+            .populate({
+                path: 'messages.sender',
+                select: '_id name',
+                model: 'User'
+            });
+
+        // Récupérer le dernier message avec les infos du sender
+        const lastMessage = populatedConversation.messages[populatedConversation.messages.length - 1];
+
+        // Log pour debug
+        console.log("Message envoyé:", {
+            _id: lastMessage._id,
+            content: lastMessage.content,
+            sender: lastMessage.sender
+        });
+
+        res.status(201).json(lastMessage);
     } catch (error) {
+        console.error('Erreur lors de l\'ajout du message:', error);
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };

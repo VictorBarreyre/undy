@@ -183,28 +183,79 @@ const ChatScreen = ({ route }) => {
       if (!conversationId) {
         throw new Error('ID de conversation manquant');
       }
-      
+  
       // Envoyer le message
       const newMessage = await handleAddMessage(conversationId, message);
-      console.log("Nouveau message:", newMessage);
-      
-      // Ajouter le message avec les informations correctes
-      setMessages(prev => [...prev, {
+      console.log("Nouveau message reçu du serveur:", newMessage);
+  
+      // Ajouter le message immédiatement avec les bonnes informations
+      const messageToAdd = {
         id: newMessage._id,
         text: message,
-        sender: 'user',
-        timestamp: new Date().toISOString(),
+        sender: 'user', // Forcer 'user' pour l'expéditeur actuel
+        timestamp: newMessage.createdAt || new Date().toISOString(),
         senderInfo: {
-          id: userData?._id,
-          name: userData?.name || 'Moi'
+          id: userData._id,
+          name: userData.name
         }
-      }]);
-      
+      };
+  
+      setMessages(prev => [...prev, messageToAdd]);
       setMessage('');
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
     }
   };
+  
+  // Dans le useEffect qui gère les messages
+  useEffect(() => {
+    if (conversation?.messages) {
+      const formattedMessages = [];
+      let lastMessageDate = null;
+  
+      conversation.messages.forEach((msg, index) => {
+        console.log("Traitement du message:", {
+          messageId: msg._id,
+          content: msg.content,
+          senderId: msg.sender,
+          currentUserId: userData?._id
+        });
+  
+        // Vérifier si c'est un message de l'utilisateur actuel
+        const isUserMessage = msg.sender === userData?._id || 
+                            msg.sender?._id === userData?._id;
+  
+        const currentMessageDate = new Date(msg.createdAt);
+  
+        // Ajouter le séparateur de date si nécessaire
+        if (!lastMessageDate ||
+          currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
+          formattedMessages.push({
+            id: `separator-${index}`,
+            type: 'separator',
+            timestamp: msg.createdAt,
+            shouldShowDateSeparator: true
+          });
+        }
+  
+        // Formater le message
+        formattedMessages.push({
+          id: msg._id,
+          text: msg.content,
+          sender: isUserMessage ? 'user' : 'other',
+          timestamp: msg.createdAt,
+          senderInfo: {
+            id: msg.sender?._id || msg.sender,
+            name: msg.sender?.name || 'Utilisateur'
+          }
+        });
+  
+        lastMessageDate = currentMessageDate;
+      });
+  
+      setMessages(formattedMessages);
+    }
+  }, [conversation, userData?._id]);
 
   const renderMessage = ({ item }) => {
     if (item.type === 'separator') {
