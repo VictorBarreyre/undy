@@ -639,13 +639,18 @@ exports.getSecretConversation = async (req, res) => {
 
 exports.getConversation = async (req, res) => {
     try {
+        console.log("Paramètres de la requête:", {
+            conversationId: req.params.conversationId,
+            userId: req.user.id
+        });
+
         const conversation = await Conversation.findOne({
             _id: req.params.conversationId,
             participants: req.user.id
         })
         .populate({
             path: 'messages.sender',
-            select: '_id name', // Sélectionner les champs nécessaires
+            select: '_id name',
             model: 'User'
         })
         .populate({
@@ -660,15 +665,22 @@ exports.getConversation = async (req, res) => {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
 
-        // Log de debug pour vérifier la structure des messages
-        console.log("Messages avec sender info:", 
+        // Log des infos de base
+        console.log("Info conversation:", {
+            conversationId: conversation._id,
+            nombreMessages: conversation.messages.length
+        });
+
+        // Log détaillé des messages
+        console.log("Messages:", 
             conversation.messages.map(msg => ({
-                _id: msg._id,
+                messageId: msg._id,
                 content: msg.content,
                 sender: {
-                    _id: msg.sender._id,
+                    id: msg.sender._id,
                     name: msg.sender.name
-                }
+                },
+                createdAt: msg.createdAt
             }))
         );
 
