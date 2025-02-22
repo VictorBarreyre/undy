@@ -196,14 +196,20 @@ const ChatScreen = ({ route }) => {
       if (!conversationId) {
         throw new Error('ID de conversation manquant');
       }
-
+  
+      // Vérifier si on a du texte ou une image
       if (!message.trim() && !selectedImage) return;
-
+  
+      // S'assurer que userData.name existe
+      if (!userData?.name) {
+        throw new Error('Informations utilisateur manquantes');
+      }
+  
       let messageContent = {
         content: message.trim(),
-        messageType: 'text'
+        senderName: userData.name // Ajouter le nom de l'expéditeur
       };
-
+  
       if (selectedImage) {
         const formData = new FormData();
         formData.append('image', {
@@ -211,16 +217,16 @@ const ChatScreen = ({ route }) => {
           type: selectedImage.type || 'image/jpeg',
           name: selectedImage.fileName || 'image.jpg'
         });
-
+  
         messageContent = {
           ...messageContent,
           image: formData,
           messageType: 'image'
         };
       }
-
+  
       const newMessage = await handleAddMessage(conversationId, messageContent);
-
+  
       // Ajouter le message à la liste
       setMessages(prev => [...prev, {
         id: newMessage._id,
@@ -234,11 +240,11 @@ const ChatScreen = ({ route }) => {
           name: userData.name
         }
       }]);
-
+  
       // Réinitialiser les champs
       setMessage('');
       setSelectedImage(null);
-
+  
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
     }

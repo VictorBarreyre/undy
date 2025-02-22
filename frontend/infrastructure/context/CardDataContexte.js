@@ -382,16 +382,19 @@ export const CardDataProvider = ({ children }) => {
     if (!instance) {
       throw new Error('Axios instance not initialized');
     }
-    if (!conversationId || !content.trim()) {
-      throw new Error('ConversationId et contenu sont requis');
-    }
-
+  
+    // Si content est un string, on l'envoie directement
+    // Si c'est un objet (cas d'une image), on l'envoie tel quel
+    const messageData = typeof content === 'string' 
+      ? { content } 
+      : content;
+  
     try {
       const response = await instance.post(
         `/api/secrets/conversations/${conversationId}/messages`,
-        { content }
+        messageData
       );
-
+  
       if (response.data) {
         return response.data;
       }

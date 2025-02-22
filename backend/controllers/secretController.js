@@ -697,7 +697,7 @@ exports.getConversation = async (req, res) => {
 
 exports.addMessageToConversation = async (req, res) => {
     try {
-        const { content, messageType = 'text' } = req.body;
+        const { content, messageType = 'text', senderName } = req.body;
         
         const conversation = await Conversation.findOne({
             _id: req.params.conversationId,
@@ -712,10 +712,11 @@ exports.addMessageToConversation = async (req, res) => {
         const newMessage = {
             sender: req.user.id,
             content,
-            senderName: req.user.name,
+            senderName,  // Utiliser le senderName fourni
             messageType,
             createdAt: new Date()
         };
+
 
         // Si c'est une image, ajouter l'URL
         if (messageType === 'image' && req.files?.image) {
