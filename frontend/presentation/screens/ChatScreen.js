@@ -455,41 +455,44 @@ const ChatScreen = ({ route }) => {
               bottom: 0,
             }}
           >
-          
-              <Animated.View
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: inputContainerHeight,
-                  justifyContent: 'center', // Centre verticalement tout le contenu
-    backgroundColor:'transparent'
-                }}
-              >
-                {selectedImage && (
+            <View
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: inputContainerHeight,
+                justifyContent: 'center',
+                backgroundColor: 'transparent'
+              }}
+            >
+              {selectedImage && (
+                <Box
+                  ref={imageContainerRef}
+                  p={2}
+                  width="100%"  // Change to full width
+                  alignItems="center"  // Center the image container
+                >
                   <Box
-                    ref={imageContainerRef}
-                    p={2}
-                    width='auto'
-                    backgroundColor='transparent'
+                    width="85%"  // Match the width of the input field
+                    backgroundColor='white'
+                    borderRadius={12}
+                    position="relative"
                   >
                     <Image
                       source={{ uri: selectedImage.uri }}
                       style={{
-                        width: '100%',
+                        width: 'auto',
                         height: 150,
                         borderRadius: 12,
-             
-
                       }}
                       resizeMode="contain"
-                      onLayout={() => setInputContainerHeight(230)} // 60 (base) + 150 (image) + padding
+                      onLayout={() => setInputContainerHeight(230)}
                     />
                     <TouchableOpacity
                       onPress={() => {
                         setSelectedImage(null);
-                        setInputContainerHeight(60); // Retour à la hauteur de base
+                        setInputContainerHeight(60);
                       }}
                       style={{
                         position: 'absolute',
@@ -506,123 +509,123 @@ const ChatScreen = ({ route }) => {
                       <FontAwesomeIcon icon={faTimes} size={16} color="white" />
                     </TouchableOpacity>
                   </Box>
-                )}
+                </Box>
+              )}
 
-                <HStack
-                  space={2}
-                  alignItems="center"
+              <HStack
+                space={2}
+                alignItems="center"
+                style={{
+                  paddingHorizontal: 15,
+                  minHeight: 40
+                }}
+              >
+                <TouchableOpacity
+                  onPress={handleImagePick}
                   style={{
-                    paddingHorizontal: 15, // Même padding que l'image
-                    minHeight: 40
+                    width: 32,
+                    height: 32,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: 'white',
+                    borderRadius: 16,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 1,
+                    elevation: 1
                   }}
                 >
-                  <TouchableOpacity
-                    onPress={handleImagePick}
-                    style={{
-                      width: 32,
-                      height: 32,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      backgroundColor: 'white',
-                      borderRadius: 16,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 1,
-                      elevation: 1
-                    }}
+                  <MaskedView
+                    maskElement={
+                      <View style={{ backgroundColor: 'transparent' }}>
+                        <FontAwesomeIcon
+                          icon={faPlus}
+                          color="black"
+                          size={14}
+                        />
+                      </View>
+                    }
                   >
-                    <MaskedView
-                      maskElement={
-                        <View style={{ backgroundColor: 'transparent' }}>
-                          <FontAwesomeIcon
-                            icon={faPlus}
-                            color="black"
-                            size={14}
-                          />
-                        </View>
-                      }
-                    >
-                      <LinearGradient
-                        colors={['#FF587E', '#CC4B8D']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={{
-                          width: 14,
-                          height: 14,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        }}
-                      />
-                    </MaskedView>
-                  </TouchableOpacity>
-
-                  <Box
-                    flex={1}
-                    bg="white"
-                    borderRadius="full"
-                    style={{
-                      minHeight: selectedImage ? 50 : 40,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 1,
-                      elevation: 1
-                    }}
-                  >
-                    <Input
-                      flex={1}
-                      value={message}
-                      onChangeText={setMessage}
-                      placeholder="Message..."
-                      borderRadius="full"
-                      height={selectedImage ? "50px" : "40px"}
-                      paddingX={4}
-                      fontSize="16px"
+                    <LinearGradient
+                      colors={['#FF587E', '#CC4B8D']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
                       style={{
-                        borderWidth: 0
+                        width: 14,
+                        height: 14,
+                        justifyContent: 'center',
+                        alignItems: 'center',
                       }}
-                      multiline={selectedImage ? true : false}
-                      textAlignVertical="center"
                     />
-                  </Box>
+                  </MaskedView>
+                </TouchableOpacity>
 
-                  <TouchableOpacity
-                    onPress={sendMessage}
+                <Box
+                  flex={1}
+                  bg="white"
+                  borderRadius="full"
+                  style={{
+                    minHeight: selectedImage ? 50 : 40,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 1,
+                    elevation: 1
+                  }}
+                >
+                  <Input
+                    flex={1}
+                    value={message}
+                    onChangeText={setMessage}
+                    placeholder="Message..."
+                    borderRadius="full"
+                    height={selectedImage ? "50px" : "40px"}
+                    paddingX={4}
+                    fontSize="16px"
                     style={{
-                      width: 32,
-                      height: 32,
-                      justifyContent: 'center',
-                      alignItems: 'center'
+                      borderWidth: 0
                     }}
+                    multiline={selectedImage ? true : false}
+                    textAlignVertical="center"
+                  />
+                </Box>
+
+                <TouchableOpacity
+                  onPress={sendMessage}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }}
+                >
+                  <MaskedView
+                    maskElement={
+                      <View style={{ backgroundColor: 'transparent' }}>
+                        <FontAwesomeIcon
+                          icon={faPaperPlane}
+                          color="black"
+                          size={20}
+                        />
+                      </View>
+                    }
                   >
-                    <MaskedView
-                      maskElement={
-                        <View style={{ backgroundColor: 'transparent' }}>
-                          <FontAwesomeIcon
-                            icon={faPaperPlane}
-                            color="black"
-                            size={20}
-                          />
-                        </View>
-                      }
-                    >
-                      <LinearGradient
-                        colors={['#FF587E', '#CC4B8D']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={{
-                          width: 22,
-                          height: 22,
-                          justifyContent: 'center',
-                          alignItems: 'center'
-                        }}
-                      />
-                    </MaskedView>
-                  </TouchableOpacity>
-                </HStack>
-              </Animated.View>
-       
+                    <LinearGradient
+                      colors={['#FF587E', '#CC4B8D']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        width: 22,
+                        height: 22,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                      }}
+                    />
+                  </MaskedView>
+                </TouchableOpacity>
+              </HStack>
+            </View>
           </KeyboardAvoidingView>
         </Box>
       </SafeAreaView>

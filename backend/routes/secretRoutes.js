@@ -58,11 +58,7 @@ router.get('/conversations/secret/:secretId', protect, getSecretConversation);
 router.post('/conversations/:conversationId/messages', protect, addMessageToConversation);
 router.delete('/conversations/:conversationId', protect, deleteConversation);
 router.patch('/conversations/:conversationId/read', protect, markConversationAsRead);
-router.post('/conversations/:conversationId/messages', 
-    protect, 
-    upload.single('image'), 
-    addMessageToConversation
-);
+
 
 
 module.exports = router;
