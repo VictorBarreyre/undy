@@ -697,59 +697,33 @@ exports.getConversation = async (req, res) => {
 
 exports.addMessageToConversation = async (req, res) => {
     try {
-        const { content, messageType = 'text', senderName } = req.body;
+        const { content } = req.body;
         
-        const conversation = await Conversation.findOne({
-            _id: req.params.conversationId,
-            participants: req.user.id
-        });
+        const conversation = await Conversation.findOneAndUpdate(
+            {
+                _id: req.params.conversationId,
+                participants: req.user.id
+            },
+            {
+                $push: {
+                    messages: {
+                        sender: req.user.id,
+                        content: content,
+                        senderName: req.user.name
+                    }
+                }
+            },
+            { new: true }
+        ).populate('messages.sender', '_id name');
 
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
 
-        // Structure du nouveau message
-        const newMessage = {
-            sender: req.user.id,
-            content,
-            senderName,  // Utiliser le senderName fourni
-            messageType,
-            createdAt: new Date()
-        };
-
-
-        // Si c'est une image, ajouter l'URL
-        if (messageType === 'image' && req.files?.image) {
-            // Gérer l'upload d'image ici (par exemple avec AWS S3)
-            // const imageUrl = await uploadToS3(req.files.image);
-            // newMessage.image = imageUrl;
-            newMessage.image = req.files.image.path; // temporaire
-        }
-
-        conversation.messages.push(newMessage);
-
-        // Gestion des messages non lus
-        conversation.participants.forEach(participantId => {
-            if (participantId.toString() !== req.user.id.toString()) {
-                if (!conversation.unreadCount) conversation.unreadCount = new Map();
-                const count = conversation.unreadCount.get(participantId.toString()) || 0;
-                conversation.unreadCount.set(participantId.toString(), count + 1);
-            }
-        });
-
-        await conversation.save();
-
-        // Peupler le message avant de le renvoyer
-        const populatedConversation = await Conversation.findById(conversation._id)
-            .populate({
-                path: 'messages.sender',
-                select: '_id name',
-                model: 'User'
-            });
-
-        const lastMessage = populatedConversation.messages[populatedConversation.messages.length - 1];
-
+        // Retourner le dernier message
+        const lastMessage = conversation.messages[conversation.messages.length - 1];
         res.status(201).json(lastMessage);
+
     } catch (error) {
         console.error('Erreur lors de l\'ajout du message:', error);
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
