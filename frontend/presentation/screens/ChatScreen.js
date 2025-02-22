@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faPaperPlane, faChevronLeft, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane, faChevronLeft, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
 import { TouchableOpacity } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
@@ -78,6 +78,10 @@ const ChatScreen = ({ route }) => {
   const [isModalVisible, setModalVisible] = useState(showModalOnMount || false);
   const isInitialMount = useRef(true);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [inputContainerHeight, setInputContainerHeight] = useState(60);
+  const imageContainerRef = useRef(null);
+
+
 
 
   useEffect(() => {
@@ -188,35 +192,60 @@ const ChatScreen = ({ route }) => {
 
   // Pour les nouveaux messages, garder 'user' tel quel
   const sendMessage = async () => {
-    if (!message.trim()) return;
-
     try {
       if (!conversationId) {
         throw new Error('ID de conversation manquant');
       }
 
-      // Envoyer le message
-      const newMessage = await handleAddMessage(conversationId, message);
-      console.log("Nouveau message reçu du serveur:", newMessage);
+      if (!message.trim() && !selectedImage) return;
 
-      // Ajouter le message immédiatement avec les bonnes informations
-      const messageToAdd = {
+      let messageContent = {
+        content: message.trim(),
+        messageType: 'text'
+      };
+
+      if (selectedImage) {
+        const formData = new FormData();
+        formData.append('image', {
+          uri: selectedImage.uri,
+          type: selectedImage.type || 'image/jpeg',
+          name: selectedImage.fileName || 'image.jpg'
+        });
+
+        messageContent = {
+          ...messageContent,
+          image: formData,
+          messageType: 'image'
+        };
+      }
+
+      const newMessage = await handleAddMessage(conversationId, messageContent);
+
+      // Ajouter le message à la liste
+      setMessages(prev => [...prev, {
         id: newMessage._id,
         text: message,
-        sender: 'user', // Forcer 'user' pour l'expéditeur actuel
-        timestamp: newMessage.createdAt || new Date().toISOString(),
+        image: selectedImage?.uri,
+        messageType: selectedImage ? 'image' : 'text',
+        sender: 'user',
+        timestamp: new Date().toISOString(),
         senderInfo: {
           id: userData._id,
           name: userData.name
         }
-      };
+      }]);
 
-      setMessages(prev => [...prev, messageToAdd]);
+      // Réinitialiser les champs
       setMessage('');
+      setSelectedImage(null);
+
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
     }
   };
+
+  console.log("État initial selectedImage:", selectedImage);
+
 
   const handleImagePick = async () => {
     try {
@@ -227,21 +256,23 @@ const ChatScreen = ({ route }) => {
       });
 
       if (result.assets && result.assets[0]) {
-        // Log pour vérifier la structure
-        console.log("Image sélectionnée:", {
-          uri: result.assets[0].uri,
-          type: result.assets[0].type,
-          fileName: result.assets[0].fileName,
-          fileSize: result.assets[0].fileSize
-        });
+        // D'abord on met à jour la hauteur
+        setInputContainerHeight(230); // hauteur de base + hauteur image + padding
 
-        // Traitement de l'image...
-        // À implémenter selon vos besoins
+        // Ensuite on met à jour l'image avec un petit délai
+        setTimeout(() => {
+          setSelectedImage(result.assets[0]);
+        }, 50);
       }
     } catch (error) {
-      console.error('Erreur sélection image:', error);
+      console.error('Erreur lors de la sélection:', error);
     }
   };
+
+  // Ajouter un useEffect pour surveiller selectedImage
+  useEffect(() => {
+    console.log("selectedImage a changé:", selectedImage);
+  }, [selectedImage]);
 
   const renderMessage = ({ item }) => {
     if (item.type === 'separator') {
@@ -403,7 +434,7 @@ const ChatScreen = ({ route }) => {
               </VStack>
             </HStack>
           </HStack>
-          <Box style={{ flex: 1, marginBottom: 60 }}>
+          <Box style={{ flex: 1, marginBottom: inputContainerHeight }}>
             <FlatList
               data={messages}
               renderItem={renderMessage}
@@ -424,103 +455,174 @@ const ChatScreen = ({ route }) => {
               bottom: 0,
             }}
           >
-            <HStack
-              space={2}
-              alignItems="center"
-              style={{
-                paddingHorizontal: 15,
-                paddingVertical: 10,
-              }}
-            >
-              <TouchableOpacity
-                onPress={handleImagePick}
+          
+              <Animated.View
                 style={{
-                  width: 32,
-                  height: 32,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  backgroundColor: 'white',
-                  borderRadius: 16,
-                  elevation: 2,
-                  shadowColor: 'violet',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 2,
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: inputContainerHeight,
+                  justifyContent: 'center', // Centre verticalement tout le contenu
+    backgroundColor:'transparent'
                 }}
               >
-                <MaskedView
-                  maskElement={
-                    <View style={{ backgroundColor: 'transparent' }}>
-                      <FontAwesomeIcon
-                        icon={faPlus}  // Assurez-vous d'importer faPlus
-                        color="black"
-                        size={14}
-                      />
-                    </View>
-                  }
+                {selectedImage && (
+                  <Box
+                    ref={imageContainerRef}
+                    p={2}
+                    width='auto'
+                    backgroundColor='transparent'
+                  >
+                    <Image
+                      source={{ uri: selectedImage.uri }}
+                      style={{
+                        width: '100%',
+                        height: 150,
+                        borderRadius: 12,
+             
+
+                      }}
+                      resizeMode="contain"
+                      onLayout={() => setInputContainerHeight(230)} // 60 (base) + 150 (image) + padding
+                    />
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedImage(null);
+                        setInputContainerHeight(60); // Retour à la hauteur de base
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        borderRadius: 15,
+                        width: 30,
+                        height: 30,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faTimes} size={16} color="white" />
+                    </TouchableOpacity>
+                  </Box>
+                )}
+
+                <HStack
+                  space={2}
+                  alignItems="center"
+                  style={{
+                    paddingHorizontal: 15, // Même padding que l'image
+                    minHeight: 40
+                  }}
                 >
-                  <LinearGradient
-                    colors={['#FF587E', '#CC4B8D']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                  <TouchableOpacity
+                    onPress={handleImagePick}
                     style={{
-                      width: 14,
-                      height: 14,
+                      width: 32,
+                      height: 32,
                       justifyContent: 'center',
                       alignItems: 'center',
+                      backgroundColor: 'white',
+                      borderRadius: 16,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 1,
+                      elevation: 1
                     }}
-                  />
-                </MaskedView>
-              </TouchableOpacity>
-              <Input
-                flex={1}
-                value={message}
-                onChangeText={setMessage}
-                placeholder="Message..."
-                borderRadius="full"
-                backgroundColor="white"
-                height="40px"
-                paddingX={4}
-                fontSize="16px"
-                style={{
-                  borderWidth: 0
-                }}
-              />
-              <TouchableOpacity
-                onPress={sendMessage}
-                style={{
-                  width: 32,
-                  height: 32,
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}
-              >
-                <MaskedView
-                  maskElement={
-                    <View style={{ backgroundColor: 'transparent' }}>
-                      <FontAwesomeIcon
-                        icon={faPaperPlane}
-                        color="black"
-                        size={20}
+                  >
+                    <MaskedView
+                      maskElement={
+                        <View style={{ backgroundColor: 'transparent' }}>
+                          <FontAwesomeIcon
+                            icon={faPlus}
+                            color="black"
+                            size={14}
+                          />
+                        </View>
+                      }
+                    >
+                      <LinearGradient
+                        colors={['#FF587E', '#CC4B8D']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={{
+                          width: 14,
+                          height: 14,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
                       />
-                    </View>
-                  }
-                >
-                  <LinearGradient
-                    colors={['#FF587E', '#CC4B8D']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                    </MaskedView>
+                  </TouchableOpacity>
+
+                  <Box
+                    flex={1}
+                    bg="white"
+                    borderRadius="full"
                     style={{
-                      width: 22,
-                      height: 22,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      alignContent: 'center'
+                      minHeight: selectedImage ? 50 : 40,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 1,
+                      elevation: 1
                     }}
-                  />
-                </MaskedView>
-              </TouchableOpacity>
-            </HStack>
+                  >
+                    <Input
+                      flex={1}
+                      value={message}
+                      onChangeText={setMessage}
+                      placeholder="Message..."
+                      borderRadius="full"
+                      height={selectedImage ? "50px" : "40px"}
+                      paddingX={4}
+                      fontSize="16px"
+                      style={{
+                        borderWidth: 0
+                      }}
+                      multiline={selectedImage ? true : false}
+                      textAlignVertical="center"
+                    />
+                  </Box>
+
+                  <TouchableOpacity
+                    onPress={sendMessage}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <MaskedView
+                      maskElement={
+                        <View style={{ backgroundColor: 'transparent' }}>
+                          <FontAwesomeIcon
+                            icon={faPaperPlane}
+                            color="black"
+                            size={20}
+                          />
+                        </View>
+                      }
+                    >
+                      <LinearGradient
+                        colors={['#FF587E', '#CC4B8D']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={{
+                          width: 22,
+                          height: 22,
+                          justifyContent: 'center',
+                          alignItems: 'center'
+                        }}
+                      />
+                    </MaskedView>
+                  </TouchableOpacity>
+                </HStack>
+              </Animated.View>
+       
           </KeyboardAvoidingView>
         </Box>
       </SafeAreaView>

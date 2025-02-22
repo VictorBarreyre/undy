@@ -4,7 +4,7 @@ import { styles } from "../../infrastructure/theme/styles";
 import { Background } from "../../navigation/Background";
 
 const TypewriterLoader = () => {
-  const text = "Undy...";
+  const text = "hushy...";
   const [displayedText, setDisplayedText] = useState("");
   const [index, setIndex] = useState(0);
   const [showCursor, setShowCursor] = useState(true);

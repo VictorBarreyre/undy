@@ -697,9 +697,8 @@ exports.getConversation = async (req, res) => {
 
 exports.addMessageToConversation = async (req, res) => {
     try {
-        const { content } = req.body;
+        const { content, messageType = 'text' } = req.body;
         
-        // Trouver la conversation et peupler le sender directement
         const conversation = await Conversation.findOne({
             _id: req.params.conversationId,
             participants: req.user.id
@@ -709,17 +708,26 @@ exports.addMessageToConversation = async (req, res) => {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
 
-        // Créer le nouveau message
+        // Structure du nouveau message
         const newMessage = {
             sender: req.user.id,
             content,
-            senderName: req.user.name, 
+            senderName: req.user.name,
+            messageType,
             createdAt: new Date()
         };
 
+        // Si c'est une image, ajouter l'URL
+        if (messageType === 'image' && req.files?.image) {
+            // Gérer l'upload d'image ici (par exemple avec AWS S3)
+            // const imageUrl = await uploadToS3(req.files.image);
+            // newMessage.image = imageUrl;
+            newMessage.image = req.files.image.path; // temporaire
+        }
+
         conversation.messages.push(newMessage);
 
-        // Gérer les compteurs de messages non lus
+        // Gestion des messages non lus
         conversation.participants.forEach(participantId => {
             if (participantId.toString() !== req.user.id.toString()) {
                 if (!conversation.unreadCount) conversation.unreadCount = new Map();
@@ -738,15 +746,7 @@ exports.addMessageToConversation = async (req, res) => {
                 model: 'User'
             });
 
-        // Récupérer le dernier message avec les infos du sender
         const lastMessage = populatedConversation.messages[populatedConversation.messages.length - 1];
-
-        // Log pour debug
-        console.log("Message envoyé:", {
-            _id: lastMessage._id,
-            content: lastMessage.content,
-            sender: lastMessage.sender
-        });
 
         res.status(201).json(lastMessage);
     } catch (error) {
@@ -754,6 +754,7 @@ exports.addMessageToConversation = async (req, res) => {
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };
+
 
 exports.getUserConversations = async (req, res) => {
     try {

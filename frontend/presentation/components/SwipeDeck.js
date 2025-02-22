@@ -268,11 +268,11 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   };
 
   if (isLoading) {
-    return <TypewriterSpinner text="Undy..." />;
+    return <TypewriterSpinner text="hushy..." />;
   }
 
   if (isTransitioning) {
-    return <TypewriterSpinner text="Undy..." />;
+    return <TypewriterSpinner text="hushy..." />;
   }
 
 
