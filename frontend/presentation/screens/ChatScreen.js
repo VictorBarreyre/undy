@@ -115,7 +115,10 @@ const ChatScreen = ({ route }) => {
       const userMapping = {};
       if (conversation.participants) {
         conversation.participants.forEach(participant => {
-          userMapping[participant._id] = participant.name;
+          userMapping[participant._id] = {
+            name: participant.name,
+            profilePicture: participant.profilePicture
+          };
         });
       }
 
@@ -132,7 +135,8 @@ const ChatScreen = ({ route }) => {
           messageId: msg._id,
           content: msg.content,
           senderId: msg.sender,
-          senderName: userMapping[msg.sender] || 'Utilisateur',
+          senderName: userMapping[msg.sender]?.name || 'Utilisateur',
+          senderPicture: userMapping[msg.sender]?.profilePicture || null,
           isCurrentUser
         });
 
@@ -154,13 +158,14 @@ const ChatScreen = ({ route }) => {
           timestamp: msg.createdAt,
           senderInfo: {
             id: msg.sender,
-            name: userMapping[msg.sender] || 'Utilisateur'
+            name: userMapping[msg.sender]?.name || 'Utilisateur',
+            profilePicture: userMapping[msg.sender]?.profilePicture || null
           }
         });
-
+  
         lastMessageDate = currentMessageDate;
       });
-
+  
       setMessages(formattedMessages);
     }
   }, [conversation, userData?._id]);
