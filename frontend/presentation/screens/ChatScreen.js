@@ -14,9 +14,6 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { launchImageLibrary } from 'react-native-image-picker';
 
-
-
-
 const formatMessageTime = (timestamp) => {
   const messageDate = new Date(timestamp);
   const now = new Date();
@@ -85,124 +82,11 @@ const ChatScreen = ({ route }) => {
   const [listContentHeight, setListContentHeight] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
 
-
   const updateInputAreaHeight = (imageVisible) => {
     // Hauteur de base + hauteur image si présente
     const newHeight = imageVisible ? 280 : 60; // 60 pour l'input, ~220 pour l'image
     setInputContainerHeight(newHeight);
   };
-
-
-  useEffect(() => {
-    const markAsRead = async () => {
-      if (conversationId) {
-        try {
-          await markConversationAsRead(conversationId);
-        } catch (error) {
-          console.error('Erreur lors du marquage comme lu', error);
-        }
-      }
-    };
-
-    markAsRead();
-  }, [conversationId, markConversationAsRead]);
-
-
-  useEffect(() => {
-    // Ne montrer la modale que lors du montage initial si showModalOnMount est true
-    if (isInitialMount.current && showModalOnMount) {
-      setModalVisible(true);
-      isInitialMount.current = false;
-    }
-  }, [showModalOnMount]);
-
-
-  // Dans votre useEffect pour la conversation
-  useEffect(() => {
-    if (conversation?.messages) {
-      // Créer un mapping des IDs vers les noms
-      const userMapping = {};
-      if (conversation.participants) {
-        conversation.participants.forEach(participant => {
-          userMapping[participant._id] = {
-            name: participant.name,
-            profilePicture: participant.profilePicture
-          };
-        });
-      }
-
-      console.log("Mapping des utilisateurs:", userMapping);
-
-      const formattedMessages = [];
-      let lastMessageDate = null;
-
-      conversation.messages.forEach((msg, index) => {
-        const currentMessageDate = new Date(msg.createdAt);
-        const isCurrentUser = msg.sender === userData?._id;
-
-        console.log("Traitement message:", {
-          messageId: msg._id,
-          content: msg.content,
-          senderId: msg.sender,
-          senderName: userMapping[msg.sender]?.name || 'Utilisateur',
-          senderPicture: userMapping[msg.sender]?.profilePicture || null,
-          isCurrentUser
-        });
-
-        // Séparateur de date si nécessaire
-        if (!lastMessageDate ||
-          currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
-          formattedMessages.push({
-            id: `separator-${index}`,
-            type: 'separator',
-            timestamp: msg.createdAt
-          });
-        }
-
-        // Message avec le nom de l'expéditeur depuis le mapping
-        formattedMessages.push({
-          id: msg._id,
-          text: msg.content,
-          sender: isCurrentUser ? 'user' : 'other',
-          timestamp: msg.createdAt,
-          senderInfo: {
-            id: msg.sender,
-            name: userMapping[msg.sender]?.name || 'Utilisateur',
-            profilePicture: userMapping[msg.sender]?.profilePicture || null
-          }
-        });
-
-        lastMessageDate = currentMessageDate;
-      });
-
-      setMessages(formattedMessages);
-    }
-  }, [conversation, userData?._id]);
-
-  useEffect(() => {
-    const calculateTimeLeft = () => {
-      const expirationDate = new Date(conversation.expiresAt);
-      const now = new Date();
-      const difference = expirationDate - now;
-
-      if (difference <= 0) {
-        return 'Expiré';
-      }
-
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((difference / 1000 / 60) % 60);
-
-      return `${days}j ${hours}h ${minutes}m`;
-    };
-
-    setTimeLeft(calculateTimeLeft());
-    const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 60000); // Mise à jour chaque minute
-
-    return () => clearInterval(timer);
-  }, [conversation.expiresAt]);
 
   // Pour les nouveaux messages, garder 'user' tel quel
   const sendMessage = async () => {
@@ -258,14 +142,19 @@ const ChatScreen = ({ route }) => {
       // Réinitialiser les champs
       setMessage('');
       setSelectedImage(null);
+      updateInputAreaHeight(false);
+      
+      // Défiler vers le bas après l'ajout du message, avec requestAnimationFrame
+      requestAnimationFrame(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({ animated: true });
+        }
+      });
 
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
     }
   };
-
-  console.log("État initial selectedImage:", selectedImage);
-
 
   const handleImagePick = async () => {
     try {
@@ -280,19 +169,17 @@ const ChatScreen = ({ route }) => {
         // Mettre à jour la hauteur immédiatement
         updateInputAreaHeight(true);
 
-        // Attendre que le rendu soit terminé et faire défiler la liste vers le bas
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+        // Utiliser requestAnimationFrame au lieu de setTimeout
+        requestAnimationFrame(() => {
+          if (flatListRef.current) {
+            flatListRef.current.scrollToEnd({ animated: true });
+          }
+        });
       }
     } catch (error) {
       console.error('Erreur lors de la sélection:', error);
     }
   };
-
-  useEffect(() => {
-    updateInputAreaHeight(!!selectedImage);
-  }, [selectedImage]);
 
   const calculateBorderRadius = (height) => {
     // Une ligne: hauteur d'environ 36-40px
@@ -306,10 +193,123 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-
-  // Ajouter un useEffect pour surveiller selectedImage
+  // 1. Marquer la conversation comme lue
   useEffect(() => {
-    console.log("selectedImage a changé:", selectedImage);
+    const markAsRead = async () => {
+      if (conversationId) {
+        try {
+          await markConversationAsRead(conversationId);
+        } catch (error) {
+          console.error('Erreur lors du marquage comme lu', error);
+        }
+      }
+    };
+    
+    markAsRead();
+    
+    // Gestion de la modale au montage
+    if (isInitialMount.current && showModalOnMount) {
+      setModalVisible(true);
+      isInitialMount.current = false;
+    }
+  }, [conversationId, markConversationAsRead, showModalOnMount]);
+
+  // 2. Formatage des messages et défilement
+  useEffect(() => {
+    if (conversation?.messages) {
+      // Créer un mapping des IDs vers les infos utilisateurs
+      const userMapping = {};
+      if (conversation.participants) {
+        conversation.participants.forEach(participant => {
+          userMapping[participant._id] = {
+            name: participant.name,
+            profilePicture: participant.profilePicture
+          };
+        });
+      }
+
+      const formattedMessages = [];
+      let lastMessageDate = null;
+
+      conversation.messages.forEach((msg, index) => {
+        const currentMessageDate = new Date(msg.createdAt);
+        const isCurrentUser = msg.sender === userData?._id;
+
+        // Séparateur de date si nécessaire
+        if (!lastMessageDate ||
+          currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
+          formattedMessages.push({
+            id: `separator-${index}`,
+            type: 'separator',
+            timestamp: msg.createdAt
+          });
+        }
+
+        // Message avec le nom de l'expéditeur depuis le mapping
+        formattedMessages.push({
+          id: msg._id,
+          text: msg.content,
+          sender: isCurrentUser ? 'user' : 'other',
+          timestamp: msg.createdAt,
+          senderInfo: {
+            id: msg.sender,
+            name: userMapping[msg.sender]?.name || 'Utilisateur',
+            profilePicture: userMapping[msg.sender]?.profilePicture || null
+          }
+        });
+
+        lastMessageDate = currentMessageDate;
+      });
+
+      setMessages(formattedMessages);
+      
+      // Défilement automatique quand les messages sont chargés
+      // Utiliser requestAnimationFrame pour s'assurer que le défilement se produit après le rendu
+      requestAnimationFrame(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({ animated: false });
+        }
+      });
+    }
+  }, [conversation, userData?._id]);
+
+  // 3. Gestion du temps restant avant expiration
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const expirationDate = new Date(conversation.expiresAt);
+      const now = new Date();
+      const difference = expirationDate - now;
+
+      if (difference <= 0) {
+        return 'Expiré';
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+
+      return `${days}j ${hours}h ${minutes}m`;
+    };
+
+    setTimeLeft(calculateTimeLeft());
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 60000); // Mise à jour chaque minute
+
+    return () => clearInterval(timer);
+  }, [conversation.expiresAt]);
+
+  // 4. Gestion de l'image sélectionnée
+  useEffect(() => {
+    // Mettre à jour la hauteur du conteneur
+    updateInputAreaHeight(!!selectedImage);
+    
+    // Défilement automatique quand une image est ajoutée
+    if (selectedImage && flatListRef.current) {
+      requestAnimationFrame(() => {
+        flatListRef.current.scrollToEnd({ animated: true });
+      });
+    }
   }, [selectedImage]);
 
   const renderMessage = ({ item }) => {
@@ -472,6 +472,7 @@ const ChatScreen = ({ route }) => {
               </VStack>
             </HStack>
           </HStack>
+          
           <Box style={{ flex: 1, marginBottom: inputContainerHeight }}>
             <FlatList
               ref={flatListRef}
@@ -481,21 +482,31 @@ const ChatScreen = ({ route }) => {
               contentContainerStyle={{
                 flexGrow: 1,
                 marginTop: 20,
-                paddingBottom: 60 // Augmenter l'espace en bas quand il y a une image
+                paddingBottom: 20,
+                paddingHorizontal: 10
               }}
               onContentSizeChange={(contentWidth, contentHeight) => {
                 setListContentHeight(contentHeight);
-                // Défiler vers le bas seulement si selectedImage change
-                if (selectedImage) {
-                  flatListRef.current?.scrollToEnd({ animated: true });
+                // Défiler automatiquement vers le bas à chaque changement de taille du contenu
+                if (flatListRef.current) {
+                  flatListRef.current.scrollToEnd({ animated: false });
                 }
               }}
               onLayout={(event) => {
                 const { height } = event.nativeEvent.layout;
                 setContainerHeight(height);
+                // Défiler automatiquement après le premier rendu
+                if (flatListRef.current && messages.length > 0) {
+                  flatListRef.current.scrollToEnd({ animated: false });
+                }
+              }}
+              maintainVisibleContentPosition={{
+                minIndexForVisible: 0,
+                autoscrollToTopThreshold: 10
               }}
             />
           </Box>
+          
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 0}
@@ -524,14 +535,12 @@ const ChatScreen = ({ route }) => {
                     overflow: 'hidden',
                     position: 'relative',
                     backgroundColor: 'transparent',
-
                   }}
                 >
                   <Image
                     alt='img-chat'
                     source={{ uri: selectedImage.uri }}
                     style={{
-                      width: '100%',
                       height: 200,
                       borderRadius: 15,
                     }}
@@ -573,7 +582,6 @@ const ChatScreen = ({ route }) => {
                     width: 36,
                     height: 36,
                     borderRadius: 18,
-
                     justifyContent: 'center',
                     alignItems: 'center',
                     overflow: 'hidden'
@@ -676,7 +684,6 @@ const ChatScreen = ({ route }) => {
           </KeyboardAvoidingView>
         </Box>
       </SafeAreaView>
-
 
       <Modal isOpen={isModalVisible} onClose={() => setModalVisible(false)}>
         <View width='100%' style={{ flex: 1 }}>
