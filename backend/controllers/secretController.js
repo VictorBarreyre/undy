@@ -695,13 +695,17 @@ exports.getConversation = async (req, res) => {
 };
 
 
+// Mise à jour de la fonction addMessageToConversation dans secretController.js
+
 exports.addMessageToConversation = async (req, res) => {
     try {
-        // Extraire tous les champs nécessaires de la requête
+        console.log("Données reçues:", JSON.stringify(req.body, null, 2)); // Debug pour voir ce qui est reçu
+        
+        // Extraire les données de la requête
         const { content, messageType = 'text', image = null } = req.body;
         
-        // Validations de base
-        if (messageType === 'text' && !content) {
+        // Validation adaptée
+        if (messageType === 'text' && !content?.trim()) {
             return res.status(400).json({ message: 'Le contenu est requis pour les messages texte.' });
         }
         
@@ -712,17 +716,29 @@ exports.addMessageToConversation = async (req, res) => {
         // Construire l'objet message
         const messageData = {
             sender: req.user.id,
-            content: content || "",
+            content: content?.trim() || " ", // Un espace par défaut (requis par le modèle)
             senderName: req.user.name
         };
         
-        // Ajouter les propriétés spécifiques aux images si nécessaire
+        // Ajouter les propriétés spécifiques aux images
         if (messageType === 'image') {
             messageData.messageType = 'image';
-            messageData.image = image;
+            
+            // Si l'image est un objet FormData, extraire l'URL de l'image
+            if (typeof image === 'object' && image._parts && image._parts.length > 0) {
+                // Récupérer l'URL de l'image depuis FormData
+                // Normalement on utiliserait un service de stockage comme S3 ici
+                // Pour simplifier, vous pouvez juste utiliser une valeur par défaut
+                messageData.image = "placeholder_image_url"; 
+            } else {
+                // Sinon, utiliser la valeur directement (URL ou base64)
+                messageData.image = image;
+            }
         }
         
-        // Trouver la conversation et mettre à jour les compteurs de messages non lus
+        console.log("Message formaté:", messageData); // Debug pour voir le message qui sera enregistré
+        
+        // Trouver et mettre à jour la conversation
         const conversation = await Conversation.findOne({
             _id: req.params.conversationId,
             participants: req.user.id
@@ -732,7 +748,7 @@ exports.addMessageToConversation = async (req, res) => {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
         
-        // Incrémenter le compteur pour tous les participants sauf l'expéditeur
+        // Incrémenter les compteurs de messages non lus
         conversation.participants.forEach(participantId => {
             const participantIdStr = participantId.toString();
             if (participantIdStr !== req.user.id.toString()) {
@@ -745,7 +761,7 @@ exports.addMessageToConversation = async (req, res) => {
         conversation.messages.push(messageData);
         await conversation.save();
         
-        // Récupérer le message avec les informations complètes de l'expéditeur
+        // Récupérer le message avec les infos de l'expéditeur
         const updatedConversation = await Conversation.findById(req.params.conversationId)
             .populate('messages.sender', '_id name profilePicture');
         

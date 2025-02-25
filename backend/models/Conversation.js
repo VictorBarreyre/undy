@@ -9,17 +9,23 @@ const MessageSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: true
+    required: function() {
+      // Le contenu est requis uniquement pour les messages texte
+      return this.messageType === 'text' || !this.messageType;
+    },
+    default: ""
   },
   // Pour faciliter le front
   senderName: {
     type: String,
     required: true
-  },
-
+  }, 
   image: {
     type: String,  // URL de l'image
-    required: false
+    required: function() {
+      // L'image est requise uniquement pour les messages image
+      return this.messageType === 'image';
+    }
   },
   messageType: {
     type: String,

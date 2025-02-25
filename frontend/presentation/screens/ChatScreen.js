@@ -104,38 +104,34 @@ const ChatScreen = ({ route }) => {
       }
   
       let messageContent = {
-        content: message.trim(),
+        content: message.trim() || " ", // Ajouter un espace si vide pour satisfaire la validation required
         senderName: userData.name,
-        messageType: selectedImage ? 'image' : 'text' // Ajouter explicitement le type
+        messageType: 'text'
       };
   
-      let imageUri = null;
-  
+      // Si une image est sélectionnée
       if (selectedImage) {
-        imageUri = selectedImage.uri; // Sauvegarde de l'URI pour l'affichage local
+        messageContent.messageType = 'image';
         
-        const formData = new FormData();
-        formData.append('image', {
-          uri: selectedImage.uri,
-          type: selectedImage.type || 'image/jpeg',
-          name: selectedImage.fileName || 'image.jpg'
-        });
-  
-        messageContent = {
-          ...messageContent,
-          image: formData,
-          messageType: 'image'
-        };
+        // Utiliser directement l'URI ou le base64 de l'image au lieu de FormData
+        if (selectedImage.base64) {
+          // Si on a le base64, l'utiliser directement
+          messageContent.image = `data:${selectedImage.type};base64,${selectedImage.base64}`;
+        } else {
+          // Sinon utiliser l'URI
+          messageContent.image = selectedImage.uri;
+        }
       }
   
+      // Envoyer le message avec les bonnes données
       const newMessage = await handleAddMessage(conversationId, messageContent);
   
-      // Ajouter le message à la liste avec tous les champs nécessaires
+      // Ajouter le message à la liste locale
       setMessages(prev => [...prev, {
-        id: newMessage._id || `local-${Date.now()}`, // Fallback pour ID local si nécessaire
+        id: newMessage._id || `local-${Date.now()}`,
         text: message,
         messageType: selectedImage ? 'image' : 'text',
-        image: imageUri, // Utiliser l'URI sauvegardé
+        image: messageContent.image, // Utiliser la même URL/base64 que celle envoyée
         sender: 'user',
         timestamp: new Date().toISOString(),
         senderInfo: {
@@ -149,7 +145,7 @@ const ChatScreen = ({ route }) => {
       setSelectedImage(null);
       updateInputAreaHeight(false);
       
-      // Défiler vers le bas après l'ajout du message
+      // Défiler vers le bas
       requestAnimationFrame(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: true });
