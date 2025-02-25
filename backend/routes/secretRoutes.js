@@ -15,7 +15,8 @@ const {
     confirmPayment,
     refreshStripeOnboarding,
     getSharedSecret,
-    markConversationAsRead
+    markConversationAsRead,
+    uploadImage,
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -58,6 +59,8 @@ router.get('/conversations/secret/:secretId', protect, getSecretConversation);
 router.post('/conversations/:conversationId/messages', protect, addMessageToConversation);
 router.delete('/conversations/:conversationId', protect, deleteConversation);
 router.patch('/conversations/:conversationId/read', protect, markConversationAsRead);
+router.post('/upload-image', protect, uploadImage);
+
 
 
 

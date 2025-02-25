@@ -697,33 +697,61 @@ exports.getConversation = async (req, res) => {
 
 exports.addMessageToConversation = async (req, res) => {
     try {
-        const { content } = req.body;
+        // Extraire tous les champs nécessaires de la requête
+        const { content, messageType = 'text', image = null } = req.body;
         
-        const conversation = await Conversation.findOneAndUpdate(
-            {
-                _id: req.params.conversationId,
-                participants: req.user.id
-            },
-            {
-                $push: {
-                    messages: {
-                        sender: req.user.id,
-                        content: content,
-                        senderName: req.user.name
-                    }
-                }
-            },
-            { new: true }
-        ).populate('messages.sender', '_id name');
-
+        // Validations de base
+        if (messageType === 'text' && !content) {
+            return res.status(400).json({ message: 'Le contenu est requis pour les messages texte.' });
+        }
+        
+        if (messageType === 'image' && !image) {
+            return res.status(400).json({ message: 'L\'URL de l\'image est requise pour les messages image.' });
+        }
+        
+        // Construire l'objet message
+        const messageData = {
+            sender: req.user.id,
+            content: content || "",
+            senderName: req.user.name
+        };
+        
+        // Ajouter les propriétés spécifiques aux images si nécessaire
+        if (messageType === 'image') {
+            messageData.messageType = 'image';
+            messageData.image = image;
+        }
+        
+        // Trouver la conversation et mettre à jour les compteurs de messages non lus
+        const conversation = await Conversation.findOne({
+            _id: req.params.conversationId,
+            participants: req.user.id
+        });
+        
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
         }
-
-        // Retourner le dernier message
-        const lastMessage = conversation.messages[conversation.messages.length - 1];
+        
+        // Incrémenter le compteur pour tous les participants sauf l'expéditeur
+        conversation.participants.forEach(participantId => {
+            const participantIdStr = participantId.toString();
+            if (participantIdStr !== req.user.id.toString()) {
+                const currentCount = conversation.unreadCount.get(participantIdStr) || 0;
+                conversation.unreadCount.set(participantIdStr, currentCount + 1);
+            }
+        });
+        
+        // Ajouter le message
+        conversation.messages.push(messageData);
+        await conversation.save();
+        
+        // Récupérer le message avec les informations complètes de l'expéditeur
+        const updatedConversation = await Conversation.findById(req.params.conversationId)
+            .populate('messages.sender', '_id name profilePicture');
+        
+        const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1];
+        
         res.status(201).json(lastMessage);
-
     } catch (error) {
         console.error('Erreur lors de l\'ajout du message:', error);
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
@@ -731,35 +759,82 @@ exports.addMessageToConversation = async (req, res) => {
 };
 
 
-exports.getUserConversations = async (req, res) => {
+exports.uploadImage = async (req, res) => {
     try {
-        const conversations = await Conversation.find({
+        const { image } = req.body; // L'image en base64 ou un URL temporaire
+        
+        if (!image) {
+            return res.status(400).json({ message: 'Aucune image fournie' });
+        }
+        
+        // Dans une implémentation réelle, vous stockeriez l'image dans un service cloud comme S3
+        // Pour cette démonstration, nous renvoyons simplement l'image telle quelle
+        
+        // 1. Exemple simple retournant l'image reçue (pour tests uniquement)
+        const imageUrl = image;
+        
+        // 2. Alternative : pour une implémentation plus complète, vous pourriez :
+        // - Valider le type/format de l'image
+        // - La redimensionner si nécessaire
+        // - La télécharger vers un service de stockage
+        // - Retourner l'URL permanente
+        
+        res.status(200).json({
+            url: imageUrl,
+            message: 'Image téléchargée avec succès'
+        });
+    } catch (error) {
+        console.error('Erreur lors du téléchargement de l\'image:', error);
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+    }
+};
+
+
+
+exports.getConversation = async (req, res) => {
+    try {
+        const conversation = await Conversation.findOne({
+            _id: req.params.conversationId,
             participants: req.user.id
         })
-            .populate('participants', 'name profilePicture')
-            .populate({
-                path: 'secret',
-                select: 'label content user', // Assurez-vous d'inclure user dans select
-                model: 'Secret',
-                populate: {
-                    path: 'user', // Faites référence au champ user du modèle Secret
-                    model: 'User',
-                    select: 'name profilePicture'
-                }
-            })
-            .sort({ updatedAt: -1 });
+        .populate({
+            path: 'messages.sender',
+            select: '_id name profilePicture',
+            model: 'User'
+        })
+        .populate({
+            path: 'secret',
+            populate: {
+                path: 'user',
+                select: 'name profilePicture'
+            }
+        });
 
-            const conversationsWithUnreadCount = conversations.map(conv => {
-                const unreadCount = conv.unreadCount?.get(req.user.id.toString()) || 0;
-                return {
-                  ...conv.toObject(),
-                  unreadCount
-                };
-              });
+        if (!conversation) {
+            return res.status(404).json({ message: 'Conversation introuvable.' });
+        }
 
-        console.log('Conversations avec données complètes:', JSON.stringify(conversations, null, 2));
+        // S'assurer que tous les champs nécessaires sont présents dans la réponse
+        const messages = conversation.messages.map(msg => ({
+            _id: msg._id,
+            content: msg.content,
+            messageType: msg.messageType || 'text', // Valeur par défaut pour la compatibilité
+            image: msg.image,
+            sender: {
+                _id: msg.sender._id,
+                name: msg.sender.name,
+                profilePicture: msg.sender.profilePicture
+            },
+            createdAt: msg.createdAt
+        }));
 
-        res.status(200).json(conversations);
+        res.status(200).json({
+            messages,
+            conversationId: conversation._id,
+            secret: conversation.secret,
+            participants: conversation.participants,
+            expiresAt: conversation.expiresAt
+        });
     } catch (error) {
         console.error('Erreur détaillée:', error);
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });

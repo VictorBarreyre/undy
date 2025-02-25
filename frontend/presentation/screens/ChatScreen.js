@@ -94,43 +94,48 @@ const ChatScreen = ({ route }) => {
       if (!conversationId) {
         throw new Error('ID de conversation manquant');
       }
-
+  
       // Vérifier si on a du texte ou une image
       if (!message.trim() && !selectedImage) return;
-
+  
       // S'assurer que userData.name existe
       if (!userData?.name) {
         throw new Error('Informations utilisateur manquantes');
       }
-
+  
       let messageContent = {
         content: message.trim(),
-        senderName: userData.name // Ajouter le nom de l'expéditeur
+        senderName: userData.name,
+        messageType: selectedImage ? 'image' : 'text' // Ajouter explicitement le type
       };
-
+  
+      let imageUri = null;
+  
       if (selectedImage) {
+        imageUri = selectedImage.uri; // Sauvegarde de l'URI pour l'affichage local
+        
         const formData = new FormData();
         formData.append('image', {
           uri: selectedImage.uri,
           type: selectedImage.type || 'image/jpeg',
           name: selectedImage.fileName || 'image.jpg'
         });
-
+  
         messageContent = {
           ...messageContent,
           image: formData,
           messageType: 'image'
         };
       }
-
+  
       const newMessage = await handleAddMessage(conversationId, messageContent);
-
-      // Ajouter le message à la liste
+  
+      // Ajouter le message à la liste avec tous les champs nécessaires
       setMessages(prev => [...prev, {
-        id: newMessage._id,
+        id: newMessage._id || `local-${Date.now()}`, // Fallback pour ID local si nécessaire
         text: message,
-        image: selectedImage?.uri,
         messageType: selectedImage ? 'image' : 'text',
+        image: imageUri, // Utiliser l'URI sauvegardé
         sender: 'user',
         timestamp: new Date().toISOString(),
         senderInfo: {
@@ -138,19 +143,19 @@ const ChatScreen = ({ route }) => {
           name: userData.name
         }
       }]);
-
+  
       // Réinitialiser les champs
       setMessage('');
       setSelectedImage(null);
       updateInputAreaHeight(false);
       
-      // Défiler vers le bas après l'ajout du message, avec requestAnimationFrame
+      // Défiler vers le bas après l'ajout du message
       requestAnimationFrame(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: true });
         }
       });
-
+  
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
     }
@@ -227,14 +232,14 @@ const ChatScreen = ({ route }) => {
           };
         });
       }
-
+  
       const formattedMessages = [];
       let lastMessageDate = null;
-
+  
       conversation.messages.forEach((msg, index) => {
         const currentMessageDate = new Date(msg.createdAt);
         const isCurrentUser = msg.sender === userData?._id;
-
+  
         // Séparateur de date si nécessaire
         if (!lastMessageDate ||
           currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
@@ -244,27 +249,31 @@ const ChatScreen = ({ route }) => {
             timestamp: msg.createdAt
           });
         }
-
+  
+        // Vérifier si c'est un message image
+        const isImageMessage = msg.messageType === 'image' || msg.image;
+  
         // Message avec le nom de l'expéditeur depuis le mapping
         formattedMessages.push({
           id: msg._id,
           text: msg.content,
           sender: isCurrentUser ? 'user' : 'other',
           timestamp: msg.createdAt,
+          messageType: isImageMessage ? 'image' : 'text',
+          image: msg.image, // S'assurer que l'URL de l'image est incluse
           senderInfo: {
             id: msg.sender,
             name: userMapping[msg.sender]?.name || 'Utilisateur',
             profilePicture: userMapping[msg.sender]?.profilePicture || null
           }
         });
-
+  
         lastMessageDate = currentMessageDate;
       });
-
+  
       setMessages(formattedMessages);
       
       // Défilement automatique quand les messages sont chargés
-      // Utiliser requestAnimationFrame pour s'assurer que le défilement se produit après le rendu
       requestAnimationFrame(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: false });
@@ -320,7 +329,7 @@ const ChatScreen = ({ route }) => {
         </Text>
       );
     }
-
+  
     return (
       <VStack>
         <HStack
@@ -350,7 +359,7 @@ const ChatScreen = ({ route }) => {
                 {item.senderInfo?.name || 'Utilisateur'}
               </Text>
             )}
-
+  
             <Pressable onPress={() => setIsTimestampVisible(!isTimestampVisible)}>
               <Box
                 p={3}
@@ -386,13 +395,28 @@ const ChatScreen = ({ route }) => {
                     }}
                   />
                 )}
-                <Text
-                  color={item.sender === 'user' ? 'white' : 'black'}
-                  style={styles.caption}
-                >
-                  {item.text}
-                </Text>
-
+                
+                {/* Vérifier si c'est un message image */}
+                {item.messageType === 'image' || item.image ? (
+                  <Image
+                    alt="Message image"
+                    source={{ uri: item.image }}
+                    style={{
+                      width: 200, 
+                      height: 200,
+                      borderRadius: 10
+                    }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text
+                    color={item.sender === 'user' ? 'white' : 'black'}
+                    style={styles.caption}
+                  >
+                    {item.text}
+                  </Text>
+                )}
+  
                 {isTimestampVisible && (
                   <Text
                     style={styles.littleCaption}
@@ -407,7 +431,7 @@ const ChatScreen = ({ route }) => {
               </Box>
             </Pressable>
           </VStack>
-
+  
           {item.sender === 'user' && (
             <Image
               source={
