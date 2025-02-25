@@ -16,7 +16,7 @@ const {
     refreshStripeOnboarding,
     getSharedSecret,
     markConversationAsRead,
-    uploadImage,
+    uploadImage
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');

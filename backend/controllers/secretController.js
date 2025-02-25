@@ -791,50 +791,35 @@ exports.uploadImage = async (req, res) => {
 
 
 
-exports.getConversation = async (req, res) => {
+exports.getUserConversations = async (req, res) => {
     try {
-        const conversation = await Conversation.findOne({
-            _id: req.params.conversationId,
+        const conversations = await Conversation.find({
             participants: req.user.id
         })
-        .populate({
-            path: 'messages.sender',
-            select: '_id name profilePicture',
-            model: 'User'
-        })
-        .populate({
-            path: 'secret',
-            populate: {
-                path: 'user',
-                select: 'name profilePicture'
-            }
-        });
+            .populate('participants', 'name profilePicture')
+            .populate({
+                path: 'secret',
+                select: 'label content user', // Assurez-vous d'inclure user dans select
+                model: 'Secret',
+                populate: {
+                    path: 'user', // Faites référence au champ user du modèle Secret
+                    model: 'User',
+                    select: 'name profilePicture'
+                }
+            })
+            .sort({ updatedAt: -1 });
 
-        if (!conversation) {
-            return res.status(404).json({ message: 'Conversation introuvable.' });
-        }
+            const conversationsWithUnreadCount = conversations.map(conv => {
+                const unreadCount = conv.unreadCount?.get(req.user.id.toString()) || 0;
+                return {
+                  ...conv.toObject(),
+                  unreadCount
+                };
+              });
 
-        // S'assurer que tous les champs nécessaires sont présents dans la réponse
-        const messages = conversation.messages.map(msg => ({
-            _id: msg._id,
-            content: msg.content,
-            messageType: msg.messageType || 'text', // Valeur par défaut pour la compatibilité
-            image: msg.image,
-            sender: {
-                _id: msg.sender._id,
-                name: msg.sender.name,
-                profilePicture: msg.sender.profilePicture
-            },
-            createdAt: msg.createdAt
-        }));
+        console.log('Conversations avec données complètes:', JSON.stringify(conversations, null, 2));
 
-        res.status(200).json({
-            messages,
-            conversationId: conversation._id,
-            secret: conversation.secret,
-            participants: conversation.participants,
-            expiresAt: conversation.expiresAt
-        });
+        res.status(200).json(conversations);
     } catch (error) {
         console.error('Erreur détaillée:', error);
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
