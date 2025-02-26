@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Easing } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faPaperPlane, faChevronLeft, faPlus, faTimes, faArrowUp } from '@fortawesome/free-solid-svg-icons';
@@ -70,7 +70,7 @@ const ChatScreen = ({ route }) => {
   const { handleAddMessage, getConversationMessages, markConversationAsRead, uploadImage } = useCardData();
   const { userData } = useContext(AuthContext);
   const navigation = useNavigation();
-  const [showTimestamps, setShowTimestamps] = useState(false); 
+  const [showTimestamps, setShowTimestamps] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   const [isModalVisible, setModalVisible] = useState(showModalOnMount || false);
   const isInitialMount = useRef(true);
@@ -82,6 +82,8 @@ const ChatScreen = ({ route }) => {
   const [listContentHeight, setListContentHeight] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const timestampAnimation = useRef(new Animated.Value(0)).current;
+
 
 
 
@@ -97,19 +99,19 @@ const ChatScreen = ({ route }) => {
       if (!conversationId) {
         throw new Error('ID de conversation manquant');
       }
-  
+
       if (!message.trim() && !selectedImage) return;
-  
+
       if (!userData?.name) {
         throw new Error('Informations utilisateur manquantes');
       }
-  
+
       let messageContent = {
         content: message.trim() || " ",
         senderName: userData.name,
         messageType: 'text'
       };
-  
+
       // Si une image est sélectionnée
       if (selectedImage) {
         try {
@@ -120,10 +122,10 @@ const ChatScreen = ({ route }) => {
           } else if (selectedImage.uri) {
             imageData = selectedImage.uri;
           }
-          
+
           // Utiliser la fonction de votre contexte au lieu de api.post
           const uploadResult = await uploadImage(imageData);
-          
+
           // Construire le message avec l'URL de l'image
           messageContent = {
             content: message.trim() || " ",
@@ -136,9 +138,9 @@ const ChatScreen = ({ route }) => {
           throw new Error('Échec de l\'upload de l\'image');
         }
       }
-  
+
       const newMessage = await handleAddMessage(conversationId, messageContent);
-  
+
       // Mise à jour de l'UI avec le nouveau message
       setMessages(prev => [...prev, {
         id: newMessage._id || `local-${Date.now()}`,
@@ -152,18 +154,18 @@ const ChatScreen = ({ route }) => {
           name: userData.name
         }
       }]);
-  
+
       // Réinitialiser les champs
       setMessage('');
       setSelectedImage(null);
       updateInputAreaHeight(false);
-      
+
       requestAnimationFrame(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: true });
         }
       });
-  
+
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
     }
@@ -218,9 +220,9 @@ const ChatScreen = ({ route }) => {
         }
       }
     };
-    
+
     markAsRead();
-    
+
     // Gestion de la modale au montage
     if (isInitialMount.current && showModalOnMount) {
       setModalVisible(true);
@@ -241,14 +243,14 @@ const ChatScreen = ({ route }) => {
           };
         });
       }
-  
+
       const formattedMessages = [];
       let lastMessageDate = null;
-  
+
       conversation.messages.forEach((msg, index) => {
         const currentMessageDate = new Date(msg.createdAt);
         const isCurrentUser = msg.sender === userData?._id;
-  
+
         // Séparateur de date si nécessaire
         if (!lastMessageDate ||
           currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
@@ -258,10 +260,10 @@ const ChatScreen = ({ route }) => {
             timestamp: msg.createdAt
           });
         }
-  
+
         // Vérifier si c'est un message image
         const isImageMessage = msg.messageType === 'image' || msg.image;
-  
+
         // Message avec le nom de l'expéditeur depuis le mapping
         formattedMessages.push({
           id: msg._id,
@@ -276,12 +278,12 @@ const ChatScreen = ({ route }) => {
             profilePicture: userMapping[msg.sender]?.profilePicture || null
           }
         });
-  
+
         lastMessageDate = currentMessageDate;
       });
-  
+
       setMessages(formattedMessages);
-      
+
       // Défilement automatique quand les messages sont chargés
       requestAnimationFrame(() => {
         if (flatListRef.current) {
@@ -321,7 +323,7 @@ const ChatScreen = ({ route }) => {
   useEffect(() => {
     // Mettre à jour la hauteur du conteneur
     updateInputAreaHeight(!!selectedImage);
-    
+
     // Défilement automatique quand une image est ajoutée
     if (selectedImage && flatListRef.current) {
       requestAnimationFrame(() => {
@@ -329,6 +331,8 @@ const ChatScreen = ({ route }) => {
       });
     }
   }, [selectedImage]);
+
+
 
   const panResponder = useRef(
     PanResponder.create({
@@ -344,12 +348,12 @@ const ChatScreen = ({ route }) => {
         // If swiped left significantly, show timestamps
         if (gestureState.dx < -100) {
           setShowTimestamps(true);
-        } 
+        }
         // If swiped right significantly, hide timestamps
         else if (gestureState.dx > 100) {
           setShowTimestamps(false);
         }
-        
+
         // Animate back to original position
         Animated.spring(new Animated.Value(gestureState.dx), {
           toValue: 0,
@@ -361,6 +365,15 @@ const ChatScreen = ({ route }) => {
     })
   ).current;
 
+  useEffect(() => {
+    Animated.timing(timestampAnimation, {
+      toValue: showTimestamps ? 1 : 0,
+      duration: 250, // Slightly shorter duration
+      easing: Easing.bezier(0.4, 0, 0.2, 1), // Material design easing
+      useNativeDriver: false
+    }).start();
+  }, [showTimestamps]);
+
   const renderMessage = ({ item }) => {
     if (item.type === 'separator') {
       return (
@@ -370,19 +383,33 @@ const ChatScreen = ({ route }) => {
       );
     }
     
+    const timestampWidth = timestampAnimation.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 35],
+      extrapolate: 'clamp'
+    });
+  
+    const timestampOpacity = timestampAnimation.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 1],
+      extrapolate: 'clamp'
+    });
+  
+    
     return (
-      <HStack 
-        width="100%" 
+      <HStack
+        width="100%"
         justifyContent="space-between"
         alignItems="flex-end"
         my={1}
         px={2}
       >
-        <HStack 
-          flex={1} 
+        <HStack
+          flex={1}
           justifyContent={item.sender === 'user' ? 'flex-end' : 'flex-start'}
           alignItems="flex-end"
           space={2}
+          
         >
           {/* Profile picture for received messages */}
           {item.sender !== 'user' && (
@@ -397,9 +424,9 @@ const ChatScreen = ({ route }) => {
               rounded="full"
             />
           )}
-    
-          <VStack 
-            maxWidth="80%" 
+
+          <VStack
+            maxWidth="80%"
             alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}
           >
             {item.sender !== 'user' && (
@@ -412,7 +439,7 @@ const ChatScreen = ({ route }) => {
                 {item.senderInfo?.name || 'Utilisateur'}
               </Text>
             )}
-    
+
             {(item.messageType === 'image' || item.image) ? (
               <Box
                 style={{
@@ -466,7 +493,7 @@ const ChatScreen = ({ route }) => {
                     }}
                   />
                 )}
-                
+
                 <Text
                   color={item.sender === 'user' ? 'white' : 'black'}
                   style={styles.caption}
@@ -476,7 +503,7 @@ const ChatScreen = ({ route }) => {
               </Box>
             )}
           </VStack>
-    
+
           {/* Profile picture for sent messages */}
           {item.sender === 'user' && (
             <Image
@@ -491,14 +518,20 @@ const ChatScreen = ({ route }) => {
             />
           )}
         </HStack>
-  
+
         {showTimestamps && (
-          <Box width={35} alignItems="flex-end">
+          <Animated.View
+            style={{
+              width: timestampWidth,
+              opacity: timestampOpacity,
+              alignItems: 'flex-end'
+            }}
+          >
             <Text
               style={[
-                styles.littleCaption, 
-                { 
-                  color: '#94A3B8', 
+                styles.littleCaption,
+                {
+                  color: '#94A3B8',
                   fontSize: 10,
                   marginBottom: 6
                 }
@@ -506,7 +539,7 @@ const ChatScreen = ({ route }) => {
             >
               {formatMessageTime(item.timestamp)}
             </Text>
-          </Box>
+          </Animated.View >
         )}
       </HStack>
     );
@@ -516,7 +549,7 @@ const ChatScreen = ({ route }) => {
   return (
     <Background>
       <SafeAreaView style={{ flex: 1 }}
-         {...panResponder.panHandlers}
+        {...panResponder.panHandlers}
       >
         <Box style={{ flex: 1 }}>
           <HStack
@@ -562,7 +595,7 @@ const ChatScreen = ({ route }) => {
               </VStack>
             </HStack>
           </HStack>
-          
+
           <Box style={{ flex: 1, marginBottom: inputContainerHeight }}>
             <FlatList
               ref={flatListRef}
@@ -596,7 +629,7 @@ const ChatScreen = ({ route }) => {
               }}
             />
           </Box>
-          
+
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 0}
