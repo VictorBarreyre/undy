@@ -13,6 +13,8 @@ import { BlurView } from '@react-native-community/blur';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
+
 
 const formatMessageTime = (timestamp) => {
   const messageDate = new Date(timestamp);
@@ -81,6 +83,9 @@ const ChatScreen = ({ route }) => {
   const flatListRef = useRef(null);
   const [listContentHeight, setListContentHeight] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+
+
 
   const updateInputAreaHeight = (imageVisible) => {
     // Hauteur de base + hauteur image si présente
@@ -114,31 +119,10 @@ const ChatScreen = ({ route }) => {
           let imageData;
           if (selectedImage.base64) {
             imageData = `data:${selectedImage.type};base64,${selectedImage.base64}`;
-            
-            // Calculer la taille approximative de l'image en base64
-            const base64Size = selectedImage.base64.length * 0.75; // 4 caractères base64 = 3 bytes
-            const imageSizeInMB = base64Size / (1024 * 1024);
-            
-            console.log(`Taille de l'image: ${imageSizeInMB.toFixed(2)} MB`);
-            console.log(`Limite serveur: 5 MB`);
-            
-            if (imageSizeInMB > 5) {
-              console.log("⚠️ AVERTISSEMENT: L'image dépasse la limite serveur!");
-            }
           } else if (selectedImage.uri) {
             imageData = selectedImage.uri;
-            
-            // Si fileSize est disponible dans selectedImage
-            if (selectedImage.fileSize) {
-              const fileSizeInMB = selectedImage.fileSize / (1024 * 1024);
-              console.log(`Taille du fichier: ${fileSizeInMB.toFixed(2)} MB`);
-              console.log(`Limite serveur: 5 MB`);
-              
-              if (fileSizeInMB > 5) {
-                console.log("⚠️ AVERTISSEMENT: L'image dépasse la limite serveur!");
-              }
-            }
           }
+          
           // Utiliser la fonction de votre contexte au lieu de api.post
           const uploadResult = await uploadImage(imageData);
           
@@ -388,74 +372,83 @@ const ChatScreen = ({ route }) => {
             )}
   
             <Pressable onPress={() => setIsTimestampVisible(!isTimestampVisible)}>
-              <Box
-                p={3}
-                borderRadius={20}
-                style={{
-                  marginVertical: 4,
-                  marginHorizontal: 8,
-                  overflow: 'hidden'
-                }}
-              >
-                {item.sender === 'user' ? (
-                  <LinearGradient
-                    colors={['#FF587E', '#CC4B8D']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                    }}
-                  />
-                ) : (
-                  <Box
-                    bg='#FFFFFF'
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                    }}
-                  />
-                )}
-                
-                {/* Vérifier si c'est un message image */}
-                {item.messageType === 'image' || item.image ? (
+              {(item.messageType === 'image' || item.image) ? (
+                <Box
+                  style={{
+                    backgroundColor: 'transparent',
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                    marginLeft: item.sender !== 'user' ? 8 : 0,
+                    marginRight: item.sender === 'user' ? 8 : 0
+                  }}
+                >
                   <Image
                     alt="Message image"
                     source={{ uri: item.image }}
                     style={{
-                      width: 200, 
-                      height: 200,
+                      width: 150,
+                      height: 150,
                       borderRadius: 10
                     }}
                     resizeMode="cover"
                   />
-                ) : (
+                </Box>
+              ) : (
+                <Box
+                  p={3}
+                  borderRadius={20}
+                  style={{
+                    marginVertical: 4,
+                    marginHorizontal: 8,
+                    overflow: 'hidden'
+                  }}
+                >
+                  {item.sender === 'user' ? (
+                    <LinearGradient
+                      colors={['#FF587E', '#CC4B8D']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                      }}
+                    />
+                  ) : (
+                    <Box
+                      bg='#FFFFFF'
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                      }}
+                    />
+                  )}
+                  
                   <Text
                     color={item.sender === 'user' ? 'white' : 'black'}
                     style={styles.caption}
                   >
                     {item.text}
                   </Text>
-                )}
   
-                {isTimestampVisible && (
-                  <Text
-                    style={styles.littleCaption}
-                    color={item.sender === 'user' ? 'white' : 'gray.500'}
-                    textAlign={item.sender === 'user' ? 'right' : 'left'}
-                    mr={item.sender === 'user' ? 2 : 0}
-                    ml={item.sender === 'user' ? 0 : 2}
-                  >
-                    {formatMessageTime(item.timestamp)}
-                  </Text>
-                )}
-              </Box>
+                  {isTimestampVisible && (
+                    <Text
+                      style={styles.littleCaption}
+                      color={item.sender === 'user' ? 'white' : 'gray.500'}
+                      textAlign={item.sender === 'user' ? 'right' : 'left'}
+                      mr={item.sender === 'user' ? 2 : 0}
+                      ml={item.sender === 'user' ? 0 : 2}
+                    >
+                      {formatMessageTime(item.timestamp)}
+                    </Text>
+                  )}
+                </Box>
+              )}
             </Pressable>
           </VStack>
   
@@ -475,6 +468,50 @@ const ChatScreen = ({ route }) => {
       </VStack>
     );
   };
+  
+  // In the KeyboardAvoidingView section, update the selected image display
+  {selectedImage && (
+    <View
+      style={{
+        marginBottom: 10,
+        borderRadius: 15,
+        overflow: 'hidden',
+        position: 'relative',
+        backgroundColor: 'transparent',
+      }}
+    >
+      <Image
+        alt='img-chat'
+        source={{ uri: selectedImage.uri }}
+        style={{
+          height: 150,  // Réduit de 200 à 150
+          borderRadius: 15,
+        }}
+        resizeMode="cover"
+      />
+  
+      {/* Bouton de fermeture dans un cercle gris translucide */}
+      <TouchableOpacity
+        onPress={() => {
+          setSelectedImage(null);
+          updateInputAreaHeight(false);
+        }}
+        style={{
+          position: 'absolute',
+          top: 10,
+          right: 10,
+          backgroundColor: '#94A3B833',
+          borderRadius: 15,
+          width: 30,
+          height: 30,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <FontAwesomeIcon icon={faTimes} size={16} color="white" />
+      </TouchableOpacity>
+    </View>
+  )}
 
   return (
     <Background>
