@@ -66,7 +66,7 @@ const ChatScreen = ({ route }) => {
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
-  const { handleAddMessage, getConversationMessages, markConversationAsRead } = useCardData();
+  const { handleAddMessage, getConversationMessages, markConversationAsRead, uploadImage } = useCardData();
   const { userData } = useContext(AuthContext);
   const navigation = useNavigation();
   const [showTimestamp, setShowTimestamp] = useState(false);
@@ -115,20 +115,19 @@ const ChatScreen = ({ route }) => {
           if (selectedImage.base64) {
             imageData = `data:${selectedImage.type};base64,${selectedImage.base64}`;
           } else {
-            // Si pas de base64, vous auriez besoin de convertir l'URI
-            // Ceci est simplifié - vous pourriez avoir besoin d'une bibliothèque comme react-native-fs
+            // Si pas de base64, utiliser l'URI
             imageData = selectedImage.uri;
           }
   
-          // Upload de l'image à Cloudinary
-          const response = await api.post('/api/upload', { image: imageData });
+          // Utiliser la fonction de votre contexte au lieu de api.post
+          const uploadResult = await handleUploadImage(imageData);
           
           // Construire le message avec l'URL de l'image
           messageContent = {
             content: message.trim() || " ",
             senderName: userData.name,
             messageType: 'image',
-            image: response.data.url // URL Cloudinary
+            image: uploadResult.url // URL de l'image uploadée
           };
         } catch (uploadError) {
           console.error('Erreur lors de l\'upload de l\'image:', uploadError);
@@ -143,7 +142,7 @@ const ChatScreen = ({ route }) => {
         id: newMessage._id || `local-${Date.now()}`,
         text: message,
         messageType: selectedImage ? 'image' : 'text',
-        image: messageContent.image, // URL de Cloudinary
+        image: messageContent.image,
         sender: 'user',
         timestamp: new Date().toISOString(),
         senderInfo: {
@@ -168,7 +167,7 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-  
+
   const handleImagePick = async () => {
     try {
       const result = await launchImageLibrary({

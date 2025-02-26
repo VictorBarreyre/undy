@@ -520,6 +520,21 @@ const markConversationAsRead = async (conversationId, userToken) => {
   }
 };
 
+const uploadImage = async (imageData) => {
+  const instance = getAxiosInstance();
+  if (!instance) {
+    throw new Error('Axios instance not initialized');
+  }
+  
+  try {
+    const response = await instance.post('/api/upload', { image: imageData });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de l\'upload de l\'image:', error);
+    throw error;
+  }
+};
+
 
   return (
     <CardDataContext.Provider value={{
@@ -540,7 +555,8 @@ const markConversationAsRead = async (conversationId, userToken) => {
       resetStripeAccount,
       handleShareSecret,
       getSharedSecret,
-      markConversationAsRead
+      markConversationAsRead,
+      uploadImage
     }}>
       {children}
     </CardDataContext.Provider>
