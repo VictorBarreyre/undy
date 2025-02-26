@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const userRoutes = require('./routes/userRoutes');
 const secretRoutes = require('./routes/secretRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 const path = require('path');
 const helmet = require('helmet');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -76,6 +77,7 @@ if (process.env.NODE_ENV === 'development') {
 
 app.use('/api/users', userRoutes);
 app.use('/api/secrets', secretRoutes);
+app.use('/api/upload', uploadRoutes);
 
 
 // Route de vérification du serveur

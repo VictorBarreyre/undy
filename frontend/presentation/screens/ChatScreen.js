@@ -95,43 +95,55 @@ const ChatScreen = ({ route }) => {
         throw new Error('ID de conversation manquant');
       }
   
-      // Vérifier si on a du texte ou une image
       if (!message.trim() && !selectedImage) return;
   
-      // S'assurer que userData.name existe
       if (!userData?.name) {
         throw new Error('Informations utilisateur manquantes');
       }
   
       let messageContent = {
-        content: message.trim() || " ", // Ajouter un espace si vide pour satisfaire la validation required
+        content: message.trim() || " ",
         senderName: userData.name,
         messageType: 'text'
       };
   
       // Si une image est sélectionnée
       if (selectedImage) {
-        messageContent.messageType = 'image';
-        
-        // Utiliser directement l'URI ou le base64 de l'image au lieu de FormData
-        if (selectedImage.base64) {
-          // Si on a le base64, l'utiliser directement
-          messageContent.image = `data:${selectedImage.type};base64,${selectedImage.base64}`;
-        } else {
-          // Sinon utiliser l'URI
-          messageContent.image = selectedImage.uri;
+        try {
+          // Préparer l'image pour l'upload
+          let imageData;
+          if (selectedImage.base64) {
+            imageData = `data:${selectedImage.type};base64,${selectedImage.base64}`;
+          } else {
+            // Si pas de base64, vous auriez besoin de convertir l'URI
+            // Ceci est simplifié - vous pourriez avoir besoin d'une bibliothèque comme react-native-fs
+            imageData = selectedImage.uri;
+          }
+  
+          // Upload de l'image à Cloudinary
+          const response = await api.post('/api/upload', { image: imageData });
+          
+          // Construire le message avec l'URL de l'image
+          messageContent = {
+            content: message.trim() || " ",
+            senderName: userData.name,
+            messageType: 'image',
+            image: response.data.url // URL Cloudinary
+          };
+        } catch (uploadError) {
+          console.error('Erreur lors de l\'upload de l\'image:', uploadError);
+          throw new Error('Échec de l\'upload de l\'image');
         }
       }
   
-      // Envoyer le message avec les bonnes données
       const newMessage = await handleAddMessage(conversationId, messageContent);
   
-      // Ajouter le message à la liste locale
+      // Mise à jour de l'UI avec le nouveau message
       setMessages(prev => [...prev, {
         id: newMessage._id || `local-${Date.now()}`,
         text: message,
         messageType: selectedImage ? 'image' : 'text',
-        image: messageContent.image, // Utiliser la même URL/base64 que celle envoyée
+        image: messageContent.image, // URL de Cloudinary
         sender: 'user',
         timestamp: new Date().toISOString(),
         senderInfo: {
@@ -145,7 +157,6 @@ const ChatScreen = ({ route }) => {
       setSelectedImage(null);
       updateInputAreaHeight(false);
       
-      // Défiler vers le bas
       requestAnimationFrame(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: true });
@@ -157,6 +168,7 @@ const ChatScreen = ({ route }) => {
     }
   };
 
+  
   const handleImagePick = async () => {
     try {
       const result = await launchImageLibrary({
