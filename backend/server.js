@@ -23,8 +23,9 @@ const PORT = process.env.PORT || 5000;
 
 app.use(helmet());
 
-// Middleware pour analyser les requêtes JSON
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
 
 // Activer "trust proxy" pour gérer les redirections HTTPS (nécessaire pour Heroku ou tout proxy)
 app.set('trust proxy', 1);
@@ -72,9 +73,6 @@ if (process.env.NODE_ENV === 'development') {
         })
     );
 }
-
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 
 app.use('/api/users', userRoutes);

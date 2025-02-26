@@ -114,11 +114,31 @@ const ChatScreen = ({ route }) => {
           let imageData;
           if (selectedImage.base64) {
             imageData = `data:${selectedImage.type};base64,${selectedImage.base64}`;
-          } else {
-            // Si pas de base64, utiliser l'URI
+            
+            // Calculer la taille approximative de l'image en base64
+            const base64Size = selectedImage.base64.length * 0.75; // 4 caractères base64 = 3 bytes
+            const imageSizeInMB = base64Size / (1024 * 1024);
+            
+            console.log(`Taille de l'image: ${imageSizeInMB.toFixed(2)} MB`);
+            console.log(`Limite serveur: 5 MB`);
+            
+            if (imageSizeInMB > 5) {
+              console.log("⚠️ AVERTISSEMENT: L'image dépasse la limite serveur!");
+            }
+          } else if (selectedImage.uri) {
             imageData = selectedImage.uri;
+            
+            // Si fileSize est disponible dans selectedImage
+            if (selectedImage.fileSize) {
+              const fileSizeInMB = selectedImage.fileSize / (1024 * 1024);
+              console.log(`Taille du fichier: ${fileSizeInMB.toFixed(2)} MB`);
+              console.log(`Limite serveur: 5 MB`);
+              
+              if (fileSizeInMB > 5) {
+                console.log("⚠️ AVERTISSEMENT: L'image dépasse la limite serveur!");
+              }
+            }
           }
-  
           // Utiliser la fonction de votre contexte au lieu de api.post
           const uploadResult = await uploadImage(imageData);
           
