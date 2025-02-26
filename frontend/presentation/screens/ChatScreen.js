@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faPaperPlane, faChevronLeft, faPlus, faTimes, faArrowUp } from '@fortawesome/free-solid-svg-icons';
@@ -13,7 +13,6 @@ import { BlurView } from '@react-native-community/blur';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { useFocusEffect } from '@react-navigation/native';
 
 
 const formatMessageTime = (timestamp) => {
@@ -71,8 +70,7 @@ const ChatScreen = ({ route }) => {
   const { handleAddMessage, getConversationMessages, markConversationAsRead, uploadImage } = useCardData();
   const { userData } = useContext(AuthContext);
   const navigation = useNavigation();
-  const [showTimestamp, setShowTimestamp] = useState(false);
-  const [isTimestampVisible, setIsTimestampVisible] = useState(false);
+  const [showTimestamps, setShowTimestamps] = useState(false); 
   const [timeLeft, setTimeLeft] = useState('');
   const [isModalVisible, setModalVisible] = useState(showModalOnMount || false);
   const isInitialMount = useRef(true);
@@ -332,6 +330,37 @@ const ChatScreen = ({ route }) => {
     }
   }, [selectedImage]);
 
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Respond to horizontal swipes with more than 10 pixel movement
+        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: new Animated.Value(0) }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: (evt, gestureState) => {
+        // If swiped left significantly, show timestamps
+        if (gestureState.dx < -100) {
+          setShowTimestamps(true);
+        } 
+        // If swiped right significantly, hide timestamps
+        else if (gestureState.dx > 100) {
+          setShowTimestamps(false);
+        }
+        
+        // Animate back to original position
+        Animated.spring(new Animated.Value(gestureState.dx), {
+          toValue: 0,
+          friction: 5,
+          tension: 40,
+          useNativeDriver: false
+        }).start();
+      }
+    })
+  ).current;
+
   const renderMessage = ({ item }) => {
     if (item.type === 'separator') {
       return (
@@ -340,14 +369,22 @@ const ChatScreen = ({ route }) => {
         </Text>
       );
     }
-  
+    
     return (
-      <VStack>
-        <HStack
-          space={1}
-          alignSelf={item.sender === 'user' ? 'flex-end' : 'flex-start'}
-          m={2}
+      <HStack 
+        width="100%" 
+        justifyContent="space-between"
+        alignItems="flex-end"
+        my={1}
+        px={2}
+      >
+        <HStack 
+          flex={1} 
+          justifyContent={item.sender === 'user' ? 'flex-end' : 'flex-start'}
+          alignItems="flex-end"
+          space={2}
         >
+          {/* Profile picture for received messages */}
           {item.sender !== 'user' && (
             <Image
               source={
@@ -360,98 +397,87 @@ const ChatScreen = ({ route }) => {
               rounded="full"
             />
           )}
-          <VStack maxW="80%">
+    
+          <VStack 
+            maxWidth="80%" 
+            alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}
+          >
             {item.sender !== 'user' && (
               <Text
                 style={styles.littleCaption}
                 color="#94A3B8"
                 ml={2}
+                mb={1}
               >
                 {item.senderInfo?.name || 'Utilisateur'}
               </Text>
             )}
-  
-            <Pressable onPress={() => setIsTimestampVisible(!isTimestampVisible)}>
-              {(item.messageType === 'image' || item.image) ? (
-                <Box
+    
+            {(item.messageType === 'image' || item.image) ? (
+              <Box
+                style={{
+                  backgroundColor: 'transparent',
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                }}
+              >
+                <Image
+                  alt="Message image"
+                  source={{ uri: item.image }}
                   style={{
-                    backgroundColor: 'transparent',
-                    borderRadius: 10,
-                    overflow: 'hidden',
-                    marginLeft: item.sender !== 'user' ? 8 : 0,
-                    marginRight: item.sender === 'user' ? 8 : 0
+                    width: 150,
+                    height: 150,
+                    borderRadius: 10
                   }}
-                >
-                  <Image
-                    alt="Message image"
-                    source={{ uri: item.image }}
+                  resizeMode="cover"
+                />
+              </Box>
+            ) : (
+              <Box
+                p={3}
+                borderRadius={20}
+                style={{
+                  marginVertical: 4,
+                  overflow: 'hidden'
+                }}
+              >
+                {item.sender === 'user' ? (
+                  <LinearGradient
+                    colors={['#FF587E', '#CC4B8D']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
                     style={{
-                      width: 150,
-                      height: 150,
-                      borderRadius: 10
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
                     }}
-                    resizeMode="cover"
                   />
-                </Box>
-              ) : (
-                <Box
-                  p={3}
-                  borderRadius={20}
-                  style={{
-                    marginVertical: 4,
-                    marginHorizontal: 8,
-                    overflow: 'hidden'
-                  }}
+                ) : (
+                  <Box
+                    bg='#FFFFFF'
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                    }}
+                  />
+                )}
+                
+                <Text
+                  color={item.sender === 'user' ? 'white' : 'black'}
+                  style={styles.caption}
                 >
-                  {item.sender === 'user' ? (
-                    <LinearGradient
-                      colors={['#FF587E', '#CC4B8D']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                      }}
-                    />
-                  ) : (
-                    <Box
-                      bg='#FFFFFF'
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                      }}
-                    />
-                  )}
-                  
-                  <Text
-                    color={item.sender === 'user' ? 'white' : 'black'}
-                    style={styles.caption}
-                  >
-                    {item.text}
-                  </Text>
-  
-                  {isTimestampVisible && (
-                    <Text
-                      style={styles.littleCaption}
-                      color={item.sender === 'user' ? 'white' : 'gray.500'}
-                      textAlign={item.sender === 'user' ? 'right' : 'left'}
-                      mr={item.sender === 'user' ? 2 : 0}
-                      ml={item.sender === 'user' ? 0 : 2}
-                    >
-                      {formatMessageTime(item.timestamp)}
-                    </Text>
-                  )}
-                </Box>
-              )}
-            </Pressable>
+                  {item.text}
+                </Text>
+              </Box>
+            )}
           </VStack>
-  
+    
+          {/* Profile picture for sent messages */}
           {item.sender === 'user' && (
             <Image
               source={
@@ -465,57 +491,33 @@ const ChatScreen = ({ route }) => {
             />
           )}
         </HStack>
-      </VStack>
+  
+        {showTimestamps && (
+          <Box width={35} alignItems="flex-end">
+            <Text
+              style={[
+                styles.littleCaption, 
+                { 
+                  color: '#94A3B8', 
+                  fontSize: 10,
+                  marginBottom: 6
+                }
+              ]}
+            >
+              {formatMessageTime(item.timestamp)}
+            </Text>
+          </Box>
+        )}
+      </HStack>
     );
   };
-  
-  // In the KeyboardAvoidingView section, update the selected image display
-  {selectedImage && (
-    <View
-      style={{
-        marginBottom: 10,
-        borderRadius: 15,
-        overflow: 'hidden',
-        position: 'relative',
-        backgroundColor: 'transparent',
-      }}
-    >
-      <Image
-        alt='img-chat'
-        source={{ uri: selectedImage.uri }}
-        style={{
-          height: 150,  // Réduit de 200 à 150
-          borderRadius: 15,
-        }}
-        resizeMode="cover"
-      />
-  
-      {/* Bouton de fermeture dans un cercle gris translucide */}
-      <TouchableOpacity
-        onPress={() => {
-          setSelectedImage(null);
-          updateInputAreaHeight(false);
-        }}
-        style={{
-          position: 'absolute',
-          top: 10,
-          right: 10,
-          backgroundColor: '#94A3B833',
-          borderRadius: 15,
-          width: 30,
-          height: 30,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <FontAwesomeIcon icon={faTimes} size={16} color="white" />
-      </TouchableOpacity>
-    </View>
-  )}
+
 
   return (
     <Background>
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }}
+         {...panResponder.panHandlers}
+      >
         <Box style={{ flex: 1 }}>
           <HStack
             alignItems="center"
