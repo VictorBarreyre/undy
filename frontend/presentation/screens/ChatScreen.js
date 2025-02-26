@@ -82,7 +82,6 @@ const ChatScreen = ({ route }) => {
   const [listContentHeight, setListContentHeight] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const timestampAnimation = useRef(new Animated.Value(0)).current;
 
 
 
@@ -365,12 +364,14 @@ const ChatScreen = ({ route }) => {
     })
   ).current;
 
+  const timestampAnimation = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     Animated.timing(timestampAnimation, {
       toValue: showTimestamps ? 1 : 0,
-      duration: 250, // Slightly shorter duration
-      easing: Easing.bezier(0.4, 0, 0.2, 1), // Material design easing
-      useNativeDriver: false
+      duration: 250,
+      easing: Easing.bezier(0.4, 0, 0.2, 1),
+      useNativeDriver: true
     }).start();
   }, [showTimestamps]);
 
@@ -382,10 +383,10 @@ const ChatScreen = ({ route }) => {
         </Text>
       );
     }
-    
+  
     const timestampWidth = timestampAnimation.interpolate({
       inputRange: [0, 1],
-      outputRange: [0, 35],
+      outputRange: [0, 10],
       extrapolate: 'clamp'
     });
   
@@ -395,7 +396,6 @@ const ChatScreen = ({ route }) => {
       extrapolate: 'clamp'
     });
   
-    
     return (
       <HStack
         width="100%"
@@ -409,7 +409,6 @@ const ChatScreen = ({ route }) => {
           justifyContent={item.sender === 'user' ? 'flex-end' : 'flex-start'}
           alignItems="flex-end"
           space={2}
-          
         >
           {/* Profile picture for received messages */}
           {item.sender !== 'user' && (
@@ -424,7 +423,7 @@ const ChatScreen = ({ route }) => {
               rounded="full"
             />
           )}
-
+  
           <VStack
             maxWidth="80%"
             alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}
@@ -439,7 +438,7 @@ const ChatScreen = ({ route }) => {
                 {item.senderInfo?.name || 'Utilisateur'}
               </Text>
             )}
-
+  
             {(item.messageType === 'image' || item.image) ? (
               <Box
                 style={{
@@ -493,7 +492,7 @@ const ChatScreen = ({ route }) => {
                     }}
                   />
                 )}
-
+  
                 <Text
                   color={item.sender === 'user' ? 'white' : 'black'}
                   style={styles.caption}
@@ -503,7 +502,7 @@ const ChatScreen = ({ route }) => {
               </Box>
             )}
           </VStack>
-
+  
           {/* Profile picture for sent messages */}
           {item.sender === 'user' && (
             <Image
@@ -518,28 +517,28 @@ const ChatScreen = ({ route }) => {
             />
           )}
         </HStack>
-
+  
         {showTimestamps && (
-          <Animated.View
+          <Animated.View 
             style={{
-              width: timestampWidth,
               opacity: timestampOpacity,
-              alignItems: 'flex-end'
+              alignItems: 'flex-end'  
             }}
           >
-            <Text
+            <Animated.Text 
               style={[
-                styles.littleCaption,
+                styles.littleCaption, 
                 {
                   color: '#94A3B8',
                   fontSize: 10,
-                  marginBottom: 6
+                  marginBottom: 6,
+                  transform: [{ translateX: timestampWidth }]
                 }
               ]}
             >
               {formatMessageTime(item.timestamp)}
-            </Text>
-          </Animated.View >
+            </Animated.Text>
+          </Animated.View>
         )}
       </HStack>
     );
