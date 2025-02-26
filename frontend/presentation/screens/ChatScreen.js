@@ -120,7 +120,7 @@ const ChatScreen = ({ route }) => {
           }
   
           // Utiliser la fonction de votre contexte au lieu de api.post
-          const uploadResult = await handleUploadImage(imageData);
+          const uploadResult = await uploadImage(imageData);
           
           // Construire le message avec l'URL de l'image
           messageContent = {

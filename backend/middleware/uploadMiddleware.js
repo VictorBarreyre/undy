@@ -4,11 +4,11 @@ const multer = require('multer');
 // Configuration du storage
 const storage = multer.memoryStorage();
 
-// Configuration de Multer
+// Configuration de Multer pour les fichiers physiques
 const uploadMiddleware = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB
+        fileSize: 10 * 1024 * 1024 // Augmenter à 10MB
     },
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
@@ -18,6 +18,21 @@ const uploadMiddleware = multer({
         }
     }
 });
+
+// Middleware pour gérer les images en Base64
+const handleBase64Upload = (req, res, next) => {
+    // Si la requête contient une image en Base64
+    if (req.body && req.body.image && typeof req.body.image === 'string' && req.body.image.startsWith('data:image/')) {
+        // On laisse passer, car ce n'est pas traité par multer
+        next();
+    } else if (req.body && req.body.image) {
+        // Si c'est un autre format d'image, on le traite avec multer
+        uploadMiddleware.single('image')(req, res, next);
+    } else {
+        // Pas d'image, on passe au middleware suivant
+        next();
+    }
+};
 
 // Middleware de gestion d'erreur pour Multer
 const handleMulterError = (error, req, res, next) => {
@@ -39,5 +54,6 @@ const handleMulterError = (error, req, res, next) => {
 
 module.exports = {
     uploadMiddleware,
+    handleBase64Upload,
     handleMulterError
 };
