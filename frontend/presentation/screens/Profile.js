@@ -144,48 +144,44 @@ export default function Profile({ navigation }) {
 
     const handleImageSelection = async () => {
         try {
-            setIsUploadingImage(true);
-
-            const result = await launchImageLibrary({
-                mediaType: 'photo',
-                maxWidth: 300,
-                maxHeight: 300,
-                quality: 1,
-                includeBase64: false,
-            });
-
-            if (result.didCancel) {
-                console.log('Upload annulé par l\'utilisateur');
-                return;
-            }
-
-            if (!result.assets || !result.assets[0]) {
-                throw new Error('Aucune image sélectionnée');
-            }
-
-            const imageAsset = result.assets[0];
-            const updatedProfile = await handleProfileImageUpdate(imageAsset);
-
-            if (updatedProfile?.profilePicture) {
-                // Utiliser directement l'URL sans prefetch
-                if (setUserData) {
-                    setUserData(prev => ({
-                        ...prev,
-                        profilePicture: updatedProfile.profilePicture
-                    }));
-                }
-            }
-
+          setIsUploadingImage(true);
+          
+          const result = await launchImageLibrary({
+            mediaType: 'photo',
+            maxWidth: 800,  // Limiter la taille pour optimiser l'upload
+            maxHeight: 800,
+            quality: 0.8,   // Réduire légèrement la qualité
+            includeBase64: true,
+          });
+          
+          if (result.didCancel) {
+            console.log('Upload annulé par l\'utilisateur');
+            return;
+          }
+          
+          if (!result.assets || !result.assets[0]) {
+            throw new Error('Aucune image sélectionnée');
+          }
+          
+          const imageAsset = result.assets[0];
+          
+          // Uploader et mettre à jour le profil
+          const updatedUser = await handleProfileImageUpdate(imageAsset);
+          
+          if (updatedUser?.profilePicture) {
+            // Animer pour indiquer le succès
+            animateProfilePhoto();
+          }
         } catch (error) {
-            console.error('Erreur complète:', error);
-            Alert.alert(
-                "Erreur",
-                error.message || "Impossible de changer la photo de profil"
-            );
+          console.error('Erreur complète:', error);
+          Alert.alert(
+            "Erreur",
+            error.message || "Impossible de changer la photo de profil"
+          );
         } finally {
-            setIsUploadingImage(false);
+          setIsUploadingImage(false);
         }
-    };
+      };
 
 
     const content = "Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l'imprimerie depuis les années 1500, quand un imprimeur anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n'a pas fait que survivre cinq siècles, mais s'est aussi adapté à la bureautique informatique, sans que son contenu n'en soit modifié"

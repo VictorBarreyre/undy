@@ -164,39 +164,55 @@ export const AuthProvider = ({ children }) => {
     const handleProfileImageUpdate = async (imageFile) => {
         const instance = getAxiosInstance();
         if (!instance) {
-            throw new Error('Axios instance not initialized');
+          throw new Error('Axios instance not initialized');
         }
+        
         try {
-            const formData = new FormData();
-            const fileToUpload = {
-                uri: imageFile.uri,
-                type: imageFile.type || 'image/jpeg',
-                name: imageFile.fileName || 'profile.jpg',
-            };
-            formData.append('profilePicture', fileToUpload);
-
-            const response = await instance.put('/api/users/profile-picture', formData, {
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'multipart/form-data',
-                }
+          // Préparer l'image pour Cloudinary
+          let imageData;
+          if (imageFile.base64) {
+            imageData = `data:${imageFile.type};base64,${imageFile.base64}`;
+          } else if (imageFile.uri) {
+            // Si pas de base64, on peut soit:
+            // 1. Convertir l'URI en base64 (comme montré dans mon code précédent)
+            // 2. Ou, pour simplifier ici, utiliser une librairie comme FileSystem d'Expo
+            const response = await fetch(imageFile.uri);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            
+            // Créer une promesse pour la lecture asynchrone
+            const base64 = await new Promise((resolve, reject) => {
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
             });
-
-            if (response?.data?.profilePicture) {
-                const updatedUserData = cleanUserData({
-                    ...userData,
-                    profilePicture: response.data.profilePicture
-                });
-                setUserData(updatedUserData);
-                await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
-                return response.data;
-            }
-            throw new Error('Réponse invalide du serveur');
+            
+            imageData = base64;
+          }
+          
+          // Envoyer l'image au point d'API de mise à jour de profil
+          const response = await instance.post('/api/users/profile-picture', {
+            image: imageData
+          });
+          
+          if (response?.data?.profilePicture) {
+            // Mettre à jour l'état utilisateur localement
+            const updatedUserData = {
+              ...userData,
+              profilePicture: response.data.profilePicture
+            };
+            
+            setUserData(updatedUserData);
+            await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
+            return updatedUserData;
+          }
+          
+          throw new Error('URL d\'image non reçue du serveur');
         } catch (error) {
-            console.error('Erreur Upload:', error);
-            throw error;
+          console.error('Erreur Upload:', error);
+          throw error;
         }
-    };
+      };
 
     const updateUserData = async (updatedData) => {
         const instance = getAxiosInstance();

@@ -41,25 +41,45 @@ router.get('/transactions', protect, getUserTransactions);
 
 router.post('/create-transfer-intent', protect, createTransferIntent);
 
+const { uploadImage } = require('../controllers/uploadController');
 
 // Route pour télécharger une photo de profil
-router.put(
-    '/profile-picture',
-    protect,
-    (req, res, next) => {
-        uploadMiddleware.single('profilePicture')(req, res, (err) => {
-            if (err) {
-                console.error('Upload error:', err);
-                return res.status(400).json({
-                    message: 'Erreur lors du téléchargement',
-                    error: err.message
-                });
-            }
-            next();
-        });
-    },
-    uploadProfilePicture
-);
+router.post('/profile-picture', protect, async (req, res) => {
+    try {
+      const { image } = req.body;
+      
+      if (!image) {
+        return res.status(400).json({ message: 'Aucune image fournie' });
+      }
+      
+      // Utiliser le contrôleur uploadImage existant mais avec un dossier spécifique
+      const cloudinaryOptions = {
+        folder: 'profile_images',
+        resource_type: 'image',
+      };
+      
+      // Uploader l'image vers Cloudinary
+      const uploadResult = await cloudinary.uploader.upload(image, cloudinaryOptions);
+      
+      // Mettre à jour le profil utilisateur avec l'URL retournée
+      await User.findByIdAndUpdate(
+        req.user.id,
+        { profilePicture: uploadResult.secure_url }
+      );
+      
+      // Renvoyer la réponse
+      res.status(200).json({
+        profilePicture: uploadResult.secure_url,
+        message: 'Photo de profil mise à jour avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la photo de profil:', error);
+      res.status(500).json({ 
+        message: 'Erreur serveur lors de la mise à jour du profil', 
+        error: error.message 
+      });
+    }
+  });
 
 router.post(
     '/verify-stripe-identity', 
