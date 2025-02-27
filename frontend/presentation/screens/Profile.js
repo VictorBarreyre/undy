@@ -28,6 +28,8 @@ export default function Profile({ navigation }) {
     const [isUploadingImage, setIsUploadingImage] = useState(false);
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const photoUpdateAnim = useRef(new Animated.Value(1)).current;
+
 
     const startAnimation = () => {
         // Reset la valeur
@@ -141,6 +143,28 @@ export default function Profile({ navigation }) {
             ? text.slice(0, maxLength) + '... '
             : text;
     };
+
+    const animateProfilePhoto = () => {
+        // Séquence d'animation: rétrécir puis grandir
+        Animated.sequence([
+          Animated.timing(photoUpdateAnim, {
+            toValue: 0.92,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(photoUpdateAnim, {
+            toValue: 1.05,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(photoUpdateAnim, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          })
+        ]).start();
+      };
+
 
     const handleImageSelection = async () => {
         try {
