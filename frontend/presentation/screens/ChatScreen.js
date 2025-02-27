@@ -123,20 +123,30 @@ const ChatScreen = ({ route }) => {
       if (!conversationId) {
         throw new Error('ID de conversation manquant');
       }
-
+  
+      // Vérifier s'il y a du contenu à envoyer (texte ou image)
       if (!message.trim() && !selectedImage) return;
-
+  
       if (!userData?.name) {
         throw new Error('Informations utilisateur manquantes');
       }
-
+  
+      // Déterminer le type de message en fonction du contenu
+      let messageType = 'text';
+      if (selectedImage && message.trim()) {
+        messageType = 'mixed';  // Texte + image
+      } else if (selectedImage) {
+        messageType = 'image';  // Image uniquement
+      }
+  
+      // Créer l'objet de base pour le message
       let messageContent = {
-        content: message.trim() || " ",
+        content: message.trim() || " ",  // Utiliser un espace si pas de texte
         senderName: userData.name,
-        messageType: 'text'
+        messageType: messageType
       };
-
-      // Si une image est sélectionnée
+  
+      // Si une image est sélectionnée, l'uploader et ajouter son URL
       if (selectedImage) {
         try {
           // Préparer l'image pour l'upload
@@ -146,30 +156,26 @@ const ChatScreen = ({ route }) => {
           } else if (selectedImage.uri) {
             imageData = selectedImage.uri;
           }
-
-          // Utiliser la fonction de votre contexte au lieu de api.post
+  
+          // Utiliser la fonction de votre contexte pour l'upload
           const uploadResult = await uploadImage(imageData);
-
-          // Construire le message avec l'URL de l'image
-          messageContent = {
-            content: message.trim() || " ",
-            senderName: userData.name,
-            messageType: 'image',
-            image: uploadResult.url // URL de l'image uploadée
-          };
+  
+          // Ajouter l'URL de l'image au message
+          messageContent.image = uploadResult.url;
         } catch (uploadError) {
           console.error('Erreur lors de l\'upload de l\'image:', uploadError);
           throw new Error('Échec de l\'upload de l\'image');
         }
       }
-
+  
+      // Envoyer le message et récupérer la réponse
       const newMessage = await handleAddMessage(conversationId, messageContent);
-
+  
       // Mise à jour de l'UI avec le nouveau message
       setMessages(prev => [...prev, {
         id: newMessage._id || `local-${Date.now()}`,
         text: message,
-        messageType: selectedImage ? 'image' : 'text',
+        messageType: messageContent.messageType,
         image: messageContent.image,
         sender: 'user',
         timestamp: new Date().toISOString(),
@@ -178,18 +184,19 @@ const ChatScreen = ({ route }) => {
           name: userData.name
         }
       }]);
-
+  
       // Réinitialiser les champs
       setMessage('');
       setSelectedImage(null);
       updateInputAreaHeight(false);
-
+  
+      // Défiler vers le bas pour voir le nouveau message
       requestAnimationFrame(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: true });
         }
       });
-
+  
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
     }
@@ -421,6 +428,12 @@ const ChatScreen = ({ route }) => {
       extrapolate: 'clamp'
     });
   
+    // Vérifier si le message a du texte significatif (pas juste des espaces)
+    const hasRealText = item.text && item.text.trim().length > 0;
+    
+    // Vérifier si le message a une image
+    const hasImage = item.messageType === 'image' || item.image;
+  
     return (
       <HStack
         width="100%"
@@ -435,7 +448,7 @@ const ChatScreen = ({ route }) => {
           alignItems="flex-end"
           space={2}
         >
-          {/* Profile picture for received messages */}
+          {/* Photo de profil pour les messages reçus */}
           {item.sender !== 'user' && (
             <Image
               source={
@@ -453,6 +466,7 @@ const ChatScreen = ({ route }) => {
             maxWidth="80%"
             alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}
           >
+            {/* Nom de l'expéditeur pour les messages reçus */}
             {item.sender !== 'user' && (
               <Text
                 style={styles.littleCaption}
@@ -464,7 +478,73 @@ const ChatScreen = ({ route }) => {
               </Text>
             )}
   
-            {(item.messageType === 'image' || item.image) ? (
+            {/* Gestion des différents types de messages */}
+            {hasImage && hasRealText ? (
+              // Message mixte (image + texte)
+              <VStack space={2} alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
+                {/* L'image en premier */}
+                <Box
+                  style={{
+                    backgroundColor: 'transparent',
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Image
+                    alt="Message image"
+                    source={{ uri: item.image }}
+                    style={{
+                      width: 150,
+                      height: 150,
+                      borderRadius: 10
+                    }}
+                    resizeMode="cover"
+                  />
+                </Box>
+                
+                {/* Ensuite le texte */}
+                <Box
+                  p={3}
+                  borderRadius={20}
+                  style={{
+                    overflow: 'hidden'
+                  }}
+                >
+                  {item.sender === 'user' ? (
+                    <LinearGradient
+                      colors={['#FF587E', '#CC4B8D']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                      }}
+                    />
+                  ) : (
+                    <Box
+                      bg='#FFFFFF'
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                      }}
+                    />
+                  )}
+                  <Text
+                    color={item.sender === 'user' ? 'white' : 'black'}
+                    style={styles.caption}
+                  >
+                    {item.text}
+                  </Text>
+                </Box>
+              </VStack>
+            ) : hasImage ? (
+              // Message avec image uniquement - pas de bulle de texte
               <Box
                 style={{
                   backgroundColor: 'transparent',
@@ -484,6 +564,7 @@ const ChatScreen = ({ route }) => {
                 />
               </Box>
             ) : (
+              // Message avec texte uniquement
               <Box
                 p={3}
                 borderRadius={20}
@@ -528,7 +609,7 @@ const ChatScreen = ({ route }) => {
             )}
           </VStack>
   
-          {/* Profile picture for sent messages */}
+          {/* Photo de profil pour les messages envoyés */}
           {item.sender === 'user' && (
             <Image
               source={
@@ -543,6 +624,7 @@ const ChatScreen = ({ route }) => {
           )}
         </HStack>
   
+        {/* Horodatage des messages */}
         {showTimestamps && (
           <Animated.View 
             style={{
