@@ -20,6 +20,7 @@ const { uploadMiddleware, handleMulterError } = require('../middleware/uploadMid
 const router = express.Router();
 const multer = require('multer');
 const cloudinary = require('../config/cloudinary');
+const User = require('../models/User');
 
 
 // Route pour l'inscription
