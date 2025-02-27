@@ -13,6 +13,8 @@ import { BlurView } from '@react-native-community/blur';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { launchImageLibrary } from 'react-native-image-picker';
+import * as RN from 'react-native'; // Import alternatif pour accéder à Keyboard
+
 
 
 const formatMessageTime = (timestamp) => {
@@ -79,12 +81,35 @@ const ChatScreen = ({ route }) => {
   const [inputHeight, setInputHeight] = useState(36); // hauteur par défaut
   const [borderRadius, setBorderRadius] = useState(18); // rayon par défaut
   const flatListRef = useRef(null);
-  const [listContentHeight, setListContentHeight] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [keyboardOffset, setKeyboardOffset] = useState(Platform.OS === 'ios' ? 60 : 0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
 
 
+  useEffect(() => {
+    // Utiliser RN.Keyboard au lieu de Keyboard
+    const keyboardDidShowListener = Platform.OS === 'ios' 
+      ? RN.Keyboard.addListener('keyboardWillShow', (e) => {
+          const offset = e.endCoordinates.height;
+          setKeyboardOffset(offset);
+        })
+      : null;
+
+    const keyboardDidHideListener = Platform.OS === 'ios'
+      ? RN.Keyboard.addListener('keyboardWillHide', () => {
+          setKeyboardOffset(95);
+        })
+      : null;
+
+    return () => {
+      if (keyboardDidShowListener) {
+        keyboardDidShowListener.remove();
+      }
+      if (keyboardDidHideListener) {
+        keyboardDidHideListener.remove();
+      }
+    };
+  }, []);
 
   const updateInputAreaHeight = (imageVisible) => {
     // Hauteur de base + hauteur image si présente
@@ -547,10 +572,13 @@ const ChatScreen = ({ route }) => {
 
   return (
     <Background>
-      <SafeAreaView style={{ flex: 1 }}
-        {...panResponder.panHandlers}
-      >
-        <Box style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1 }} {...panResponder.panHandlers}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+        >
+          {/* En-tête avec informations de conversation */}
           <HStack
             alignItems="center"
             space={3}
@@ -595,7 +623,8 @@ const ChatScreen = ({ route }) => {
             </HStack>
           </HStack>
 
-          <Box style={{ flex: 1, marginBottom: inputContainerHeight }}>
+          {/* Liste des messages */}
+          <Box flex={1} pb={selectedImage ? 220 : 0}>
             <FlatList
               ref={flatListRef}
               data={messages}
@@ -603,273 +632,247 @@ const ChatScreen = ({ route }) => {
               keyExtractor={item => item.id.toString()}
               contentContainerStyle={{
                 flexGrow: 1,
-                marginTop: 20,
                 paddingBottom: 20,
                 paddingHorizontal: 10
               }}
-              onContentSizeChange={(contentWidth, contentHeight) => {
-                setListContentHeight(contentHeight);
-                // Défiler automatiquement vers le bas à chaque changement de taille du contenu
+              onContentSizeChange={() => {
                 if (flatListRef.current) {
                   flatListRef.current.scrollToEnd({ animated: false });
                 }
               }}
               onLayout={(event) => {
-                const { height } = event.nativeEvent.layout;
-                setContainerHeight(height);
-                // Défiler automatiquement après le premier rendu
                 if (flatListRef.current && messages.length > 0) {
                   flatListRef.current.scrollToEnd({ animated: false });
                 }
               }}
-              maintainVisibleContentPosition={{
-                minIndexForVisible: 0,
-                autoscrollToTopThreshold: 10
-              }}
             />
           </Box>
 
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 65 : 0}
+          {/* Zone d'input */}
+          <View
             style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
+              padding: 10,
+              backgroundColor: 'white',
+              borderTopLeftRadius: selectedImage ? 25 : 0,
+              borderTopRightRadius: selectedImage ? 25 : 0,
+            
             }}
           >
-            {/* Conteneur principal avec fond sombre comme iMessage */}
-            <View
-              style={{
-                padding: 10,
-                backgroundColor: 'white',
-                borderTopLeftRadius: selectedImage ? 25 : 0,
-                borderTopRightRadius: selectedImage ? 25 : 0,
-              }}
-            >
-              {/* Affichage de l'image sélectionnée */}
-              {selectedImage && (
-                <View
+            {/* Affichage de l'image sélectionnée */}
+            {selectedImage && (
+              <View
+                style={{
+                  marginBottom: 10,
+                  borderRadius: 15,
+                  overflow: 'hidden',
+                  position: 'relative',
+                  backgroundColor: 'transparent',
+                }}
+              >
+                <Image
+                  alt='img-chat'
+                  source={{ uri: selectedImage.uri }}
                   style={{
-                    marginBottom: 10,
+                    height: 200,
                     borderRadius: 15,
-                    overflow: 'hidden',
-                    position: 'relative',
-                    backgroundColor: 'transparent',
+                  }}
+                  resizeMode="cover"
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedImage(null);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    backgroundColor: '#94A3B833',
+                    borderRadius: 15,
+                    width: 30,
+                    height: 30,
+                    justifyContent: 'center',
+                    alignItems: 'center',
                   }}
                 >
-                  <Image
-                    alt='img-chat'
-                    source={{ uri: selectedImage.uri }}
-                    style={{
-                      height: 200,
-                      borderRadius: 15,
-                    }}
-                    resizeMode="cover"
-                  />
+                  <FontAwesomeIcon icon={faTimes} size={16} color="white" />
+                </TouchableOpacity>
+              </View>
+            )}
 
-                  {/* Bouton de fermeture dans un cercle gris translucide */}
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSelectedImage(null);
-                      updateInputAreaHeight(false);
-                    }}
+            {/* Champ de saisie et boutons */}
+            <HStack space={2} alignItems="center">
+              {/* Bouton d'ajout */}
+              <TouchableOpacity
+                onPress={handleImagePick}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  overflow: 'hidden'
+                }}
+              >
+                <MaskedView
+                  maskElement={
+                    <View style={{ backgroundColor: 'transparent' }}>
+                      <FontAwesomeIcon
+                        icon={faPlus}
+                        color="white"
+                        size={22}
+                      />
+                    </View>
+                  }
+                >
+                  <LinearGradient
+                    colors={['#FF587E', '#CC4B8D']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
                     style={{
-                      position: 'absolute',
-                      top: 10,
-                      right: 10,
-                      backgroundColor: '#94A3B833',
-                      borderRadius: 15,
-                      width: 30,
-                      height: 30,
+                      width: 22,
+                      height: 22,
                       justifyContent: 'center',
                       alignItems: 'center',
                     }}
-                  >
-                    <FontAwesomeIcon icon={faTimes} size={16} color="white" />
-                  </TouchableOpacity>
-                </View>
-              )}
+                  />
+                </MaskedView>
+              </TouchableOpacity>
 
-              {/* Champ de saisie et boutons */}
-              <HStack
-                space={2}
-                alignItems="center"
+              {/* Champ de saisie */}
+              <Box
+                flex={1}
+                borderRadius={borderRadius}
+                overflow="hidden"
+                position="relative"
               >
-                {/* Bouton d'ajout (plus) */}
-                <TouchableOpacity
-                  onPress={handleImagePick}
+                <Input
+                  value={message}
+                  onChangeText={setMessage}
+                  placeholder={selectedImage ? "Envoyer" : "Message"}
+                  placeholderTextColor="#8E8E93"
+                  color="#8E8E93"
+                  fontSize="16px"
+                  paddingX={4}
+                  paddingY={2}
+                  paddingRight={12}
+                  borderWidth={1}
+                  borderColor='#94A3B833'
                   style={{
-                    width: 36,
-                    height: 36,
+                    minHeight: 36,
+                    maxHeight: 100,
+                  }}
+                  multiline
+                  onContentSizeChange={(event) => {
+                    const height = event.nativeEvent.contentSize.height;
+                    setInputHeight(height);
+                    setBorderRadius(calculateBorderRadius(height));
+                  }}
+                />
+
+                {/* Bouton d'envoi */}
+                <TouchableOpacity
+                  onPress={sendMessage}
+                  disabled={!message.trim() && !selectedImage}
+                  style={{
+                    position: 'absolute',
+                    right: 4,
+                    top: '55%',
+                    transform: [{ translateY: -18 }],
+                    width: 32,
+                    height: 32,
                     borderRadius: 18,
-                    justifyContent: 'center',
-                    alignItems: 'center',
                     overflow: 'hidden'
                   }}
                 >
-                  <MaskedView
-                    maskElement={
-                      <View style={{ backgroundColor: 'transparent' }}>
-                        <FontAwesomeIcon
-                          icon={faPlus}
-                          color="white"
-                          size={22}
-                        />
-                      </View>
-                    }
-                  >
+                  <View style={{
+                    width: '100%',
+                    height: '100%',
+                    opacity: (!message.trim() && !selectedImage) ? 0.5 : 1
+                  }}>
                     <LinearGradient
                       colors={['#FF587E', '#CC4B8D']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={{
-                        width: 22,
-                        height: 22,
+                        width: '100%',
+                        height: '100%',
                         justifyContent: 'center',
-                        alignItems: 'center',
+                        alignItems: 'center'
                       }}
-                    />
-                  </MaskedView>
+                    >
+                      <FontAwesomeIcon icon={faArrowUp} size={16} color="white" />
+                    </LinearGradient>
+                  </View>
                 </TouchableOpacity>
-
-                {/* Champ de saisie avec style iMessage */}
-                <Box
-                  flex={1}
-                  borderRadius={borderRadius}
-                  overflow="hidden"
-                  position="relative" // Important pour le positionnement absolu du bouton
-                >
-                  <Input
-                    value={message}
-                    onChangeText={setMessage}
-                    placeholder={selectedImage ? "Envoyer" : "Message"}
-                    placeholderTextColor="#8E8E93"
-                    color="#8E8E93"
-                    fontSize="16px"
-                    paddingX={4}
-                    paddingY={2}
-                    paddingRight={12} // Ajouter plus d'espace à droite pour le bouton
-                    borderWidth={1}
-                    borderColor='#94A3B833'
-                    style={{
-                      minHeight: 36,
-                      maxHeight: 100,
-                    }}
-                    multiline
-                    onContentSizeChange={(event) => {
-                      const height = event.nativeEvent.contentSize.height;
-                      setInputHeight(height);
-                      setBorderRadius(calculateBorderRadius(height));
-                    }}
-                  />
-
-                  {/* Bouton d'envoi positionné à l'intérieur de l'input */}
-                  <TouchableOpacity
-                    onPress={sendMessage}
-                    disabled={!message.trim() && !selectedImage}
-                    style={{
-                      position: 'absolute',
-                      right: 4,
-                      top: '55%',
-                      transform: [{ translateY: -18 }], // Moitié de la hauteur du bouton pour le centrer
-                      width: 32,
-                      height: 32,
-                      borderRadius: 18,
-                      overflow: 'hidden'
-                    }}
-                  >
-                    <View style={{
-                      width: '100%',
-                      height: '100%',
-                      opacity: (!message.trim() && !selectedImage) ? 0.5 : 1
-                    }}>
-                      <LinearGradient
-                        colors={['#FF587E', '#CC4B8D']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          justifyContent: 'center',
-                          alignItems: 'center'
-                        }}
-                      >
-                        <FontAwesomeIcon icon={faArrowUp} size={16} color="white" />
-                      </LinearGradient>
-                    </View>
-                  </TouchableOpacity>
-                </Box>
-              </HStack>
-            </View>
-          </KeyboardAvoidingView>
-        </Box>
+              </Box>
+            </HStack>
+          </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
 
-      <Modal isOpen={isModalVisible} onClose={() => setModalVisible(false)}>
-        <View width='100%' style={{ flex: 1 }}>
-          <BlurView
-            style={[
-              styles.blurBackground,
-              {
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                flex: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }
-            ]}
-            blurType="light"
-            blurAmount={8}
-            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+    {/* Modal reste inchangé */}
+    <Modal isOpen={isModalVisible} onClose={() => setModalVisible(false)}>
+      <View width='100%' style={{ flex: 1 }}>
+        <BlurView
+          style={[
+            styles.blurBackground,
+            {
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }
+          ]}
+          blurType="light"
+          blurAmount={8}
+          reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+        >
+          <Modal.Content
+            width="90%"
+            style={{
+              ...styles.shadowBox,
+              shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
+              shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
+              shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
+              shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
+              elevation: 5,
+              backgroundColor: 'white',
+              borderRadius: 8,
+              padding: 16
+            }}
           >
-            <Modal.Content
-              width="90%"
-              style={{
-                ...styles.shadowBox,
-                shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
-                shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
-                shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
-                shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
-                elevation: 5,
-                backgroundColor: 'white',
-                borderRadius: 8,
-                padding: 16
+            <Modal.CloseButton
+              _icon={{
+                color: "#94A3B8",
+                size: "sm"
               }}
-            >
-              <Modal.CloseButton
-                _icon={{
-                  color: "#94A3B8",  // La même couleur que votre icône ellipsis
-                  size: "sm"
-                }}
-              />
+            />
 
-              <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
-                {/* Header */}
-                <HStack space={2} justifyContent="start">
-                  <Text style={styles.h5}>
-                    {secretData && secretData.user ? `Posté par ${secretData.user.name}` : 'Posté par Utilisateur'}
-                  </Text>
-                </HStack>
-
-                <Text paddingVertical={100} style={styles.h3}>
-                  "{secretData?.content}"
+            <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
+              {/* Header */}
+              <HStack space={2} justifyContent="start">
+                <Text style={styles.h5}>
+                  {secretData && secretData.user ? `Posté par ${secretData.user.name}` : 'Posté par Utilisateur'}
                 </Text>
+              </HStack>
 
-                {/* Footer */}
-                <HStack justifyContent='space-between' mt={4}>
-                  <Text style={styles.caption}>{secretData?.label}</Text>
-                  <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
-                    Expire dans {timeLeft}
-                  </Text>
-                </HStack>
-              </VStack>
+              <Text paddingVertical={100} style={styles.h3}>
+                "{secretData?.content}"
+              </Text>
 
-            </Modal.Content>
-          </BlurView>
-        </View>
-      </Modal>
-    </Background>
+              {/* Footer */}
+              <HStack justifyContent='space-between' mt={4}>
+                <Text style={styles.caption}>{secretData?.label}</Text>
+                <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
+                  Expire dans {timeLeft}
+                </Text>
+              </HStack>
+            </VStack>
+          </Modal.Content>
+        </BlurView>
+      </View>
+    </Modal>
+  </Background>
   );
 };
 

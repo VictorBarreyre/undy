@@ -230,7 +230,7 @@ const ConversationsList = ({ navigation }) => {
               <VStack space={2} flex={1}>
                 <HStack justifyContent='space-between' alignItems='center'>
                   <Text style={styles.h5}>
-                    {truncateText(item.secret?.content, 30)}
+                    {truncateText(item.secret?.content, 25)}
                   </Text>
                   <HStack alignItems="center" space={2}>
                     <Text style={styles.littleCaption} color="#94A3B8">
