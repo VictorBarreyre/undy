@@ -708,7 +708,7 @@ const ChatScreen = ({ route }) => {
           </HStack>
 
           {/* Liste des messages */}
-          <Box flex={1} pb={selectedImage ? 220 : 0}>
+          <Box flex={1} pb={5}>
             <FlatList
               ref={flatListRef}
               data={messages}
@@ -835,6 +835,10 @@ const ChatScreen = ({ route }) => {
                   placeholder={selectedImage ? "Envoyer" : "Message"}
                   placeholderTextColor="#8E8E93"
                   color="#8E8E93"
+                  _focus={{ 
+                    color: "#8E8E93",
+                    borderColor: '#94A3B866'  // Un peu plus visible en focus
+                  }}
                   fontSize="16px"
                   paddingX={4}
                   paddingY={2}
