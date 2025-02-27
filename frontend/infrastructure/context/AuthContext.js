@@ -62,12 +62,25 @@ export const AuthProvider = ({ children }) => {
 
     const cleanProfilePicture = (profilePicture) => {
         if (!profilePicture) return null;
-        if (profilePicture.includes('herokuapp.com') && profilePicture.includes('data:image')) {
-            return profilePicture.split('herokuapp.com').pop();
+        
+        // Pour les images Cloudinary
+        if (profilePicture.includes('cloudinary.com')) {
+            return profilePicture; // Retourner l'URL complète
         }
+        
+        // Pour les anciennes images en base64
         if (profilePicture.startsWith('data:image')) {
             return profilePicture;
         }
+        
+        // Pour les anciennes images stockées sur votre serveur
+        if (profilePicture.includes('herokuapp.com')) {
+            if (profilePicture.includes('data:image')) {
+                return profilePicture.split('herokuapp.com').pop();
+            }
+            return profilePicture;
+        }
+        
         return null;
     };
 
@@ -193,19 +206,19 @@ export const AuthProvider = ({ children }) => {
           // Envoyer l'image au point d'API de mise à jour de profil
           const response = await instance.post('/api/users/profile-picture', {
             image: imageData
-          });
-          
-          if (response?.data?.profilePicture) {
-            // Mettre à jour l'état utilisateur localement
+        });
+        
+        if (response?.data?.profilePicture) {
             const updatedUserData = {
-              ...userData,
-              profilePicture: response.data.profilePicture
+                ...userData,
+                // Utiliser directement l'URL Cloudinary retournée par le serveur
+                profilePicture: response.data.profilePicture
             };
             
             setUserData(updatedUserData);
             await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
             return updatedUserData;
-          }
+        }
           
           throw new Error('URL d\'image non reçue du serveur');
         } catch (error) {

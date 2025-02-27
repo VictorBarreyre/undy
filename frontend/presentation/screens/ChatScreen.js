@@ -416,6 +416,8 @@ const ChatScreen = ({ route }) => {
       );
     }
   
+    const messageMargin = item.sender === 'user' ? 0.3 : 1; // Marge plus petite pour les messages de l'utilisateur
+
     const timestampWidth = timestampAnimation.interpolate({
       inputRange: [0, 1],
       outputRange: [0, 10],
@@ -439,14 +441,14 @@ const ChatScreen = ({ route }) => {
         width="100%"
         justifyContent="space-between"
         alignItems="flex-end"
-        my={1}
+        my={messageMargin}
         px={2}
       >
         <HStack
           flex={1}
           justifyContent={item.sender === 'user' ? 'flex-end' : 'flex-start'}
           alignItems="flex-end"
-          space={2}
+          space={1}
         >
           {/* Photo de profil pour les messages reçus */}
           {item.sender !== 'user' && (
@@ -481,7 +483,7 @@ const ChatScreen = ({ route }) => {
             {/* Gestion des différents types de messages */}
             {hasImage && hasRealText ? (
               // Message mixte (image + texte)
-              <VStack space={2} alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
+              <VStack space={0} alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
                 {/* L'image en premier */}
                 <Box
                   style={{

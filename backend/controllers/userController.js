@@ -261,7 +261,7 @@ exports.getUserProfile = async (req, res) => {
             _id: user._id,
             name: user.name,
             email: user.email,
-            profilePicture: user.profilePicture ? `${baseUrl}${user.profilePicture}` : null,
+            profilePicture: user.profilePicture || null,
             birthdate: user.birthdate,
             totalEarnings: user.totalEarnings, // Ajoutez cette ligne
             phone: user.phone,
