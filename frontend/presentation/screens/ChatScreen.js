@@ -19,47 +19,9 @@ import * as RN from 'react-native'; // Import alternatif pour accéder à Keyboa
 
 const formatMessageTime = (timestamp) => {
   const messageDate = new Date(timestamp);
-  const now = new Date();
-
-  // Différence en heures
-  const hoursDiff = (now - messageDate) / (1000 * 60 * 60);
-
-  // Si moins de 24h
-  if (hoursDiff < 24) {
-    // Aujourd'hui
-    if (messageDate.toDateString() === now.toDateString()) {
-      return messageDate.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
-    // Hier
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    if (messageDate.toDateString() === yesterday.toDateString()) {
-      return 'Hier';
-    }
-  }
-
-  // Si moins de 6 heures
-  if (hoursDiff < 6) {
-    return 'Il y a quelques heures';
-  }
-
-  // Si moins de 12 heures
-  if (hoursDiff < 12) {
-    return 'Ce matin';
-  }
-
-  // Si moins de 24 heures
-  if (hoursDiff < 24) {
-    return "Aujourd'hui";
-  }
-
-  // Au-delà de 24h, afficher la date complète
-  return messageDate.toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
+  
+  // Retourner uniquement l'heure et les minutes
+  return messageDate.toLocaleTimeString('fr-FR', {
     hour: '2-digit',
     minute: '2-digit'
   });
@@ -88,17 +50,17 @@ const ChatScreen = ({ route }) => {
 
   useEffect(() => {
     // Utiliser RN.Keyboard au lieu de Keyboard
-    const keyboardDidShowListener = Platform.OS === 'ios' 
+    const keyboardDidShowListener = Platform.OS === 'ios'
       ? RN.Keyboard.addListener('keyboardWillShow', (e) => {
-          const offset = e.endCoordinates.height;
-          setKeyboardOffset(offset);
-        })
+        const offset = e.endCoordinates.height;
+        setKeyboardOffset(offset);
+      })
       : null;
 
     const keyboardDidHideListener = Platform.OS === 'ios'
       ? RN.Keyboard.addListener('keyboardWillHide', () => {
-          setKeyboardOffset(95);
-        })
+        setKeyboardOffset(95);
+      })
       : null;
 
     return () => {
@@ -123,14 +85,14 @@ const ChatScreen = ({ route }) => {
       if (!conversationId) {
         throw new Error('ID de conversation manquant');
       }
-  
+
       // Vérifier s'il y a du contenu à envoyer (texte ou image)
       if (!message.trim() && !selectedImage) return;
-  
+
       if (!userData?.name) {
         throw new Error('Informations utilisateur manquantes');
       }
-  
+
       // Déterminer le type de message en fonction du contenu
       let messageType = 'text';
       if (selectedImage && message.trim()) {
@@ -138,14 +100,14 @@ const ChatScreen = ({ route }) => {
       } else if (selectedImage) {
         messageType = 'image';  // Image uniquement
       }
-  
+
       // Créer l'objet de base pour le message
       let messageContent = {
         content: message.trim() || " ",  // Utiliser un espace si pas de texte
         senderName: userData.name,
         messageType: messageType
       };
-  
+
       // Si une image est sélectionnée, l'uploader et ajouter son URL
       if (selectedImage) {
         try {
@@ -156,10 +118,10 @@ const ChatScreen = ({ route }) => {
           } else if (selectedImage.uri) {
             imageData = selectedImage.uri;
           }
-  
+
           // Utiliser la fonction de votre contexte pour l'upload
           const uploadResult = await uploadImage(imageData);
-  
+
           // Ajouter l'URL de l'image au message
           messageContent.image = uploadResult.url;
         } catch (uploadError) {
@@ -167,10 +129,10 @@ const ChatScreen = ({ route }) => {
           throw new Error('Échec de l\'upload de l\'image');
         }
       }
-  
+
       // Envoyer le message et récupérer la réponse
       const newMessage = await handleAddMessage(conversationId, messageContent);
-  
+
       // Mise à jour de l'UI avec le nouveau message
       setMessages(prev => [...prev, {
         id: newMessage._id || `local-${Date.now()}`,
@@ -184,19 +146,19 @@ const ChatScreen = ({ route }) => {
           name: userData.name
         }
       }]);
-  
+
       // Réinitialiser les champs
       setMessage('');
       setSelectedImage(null);
       updateInputAreaHeight(false);
-  
+
       // Défiler vers le bas pour voir le nouveau message
       requestAnimationFrame(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: true });
         }
       });
-  
+
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
     }
@@ -407,7 +369,7 @@ const ChatScreen = ({ route }) => {
     }).start();
   }, [showTimestamps]);
 
-  const renderMessage = ({ item }) => {
+  const renderMessage = ({ item, index }) => {
     if (item.type === 'separator') {
       return (
         <Text textAlign="center" color="#94A3B8" my={2}>
@@ -415,27 +377,122 @@ const ChatScreen = ({ route }) => {
         </Text>
       );
     }
-  
-    const messageMargin = item.sender === 'user' ? 0.3 : 1; // Marge plus petite pour les messages de l'utilisateur
 
+    // Vérifier si ce message fait partie d'une séquence
+    const isPreviousSameSender = index > 0 &&
+      messages[index - 1].sender === item.sender &&
+      messages[index - 1].type !== 'separator';
+
+    const isNextSameSender = index < messages.length - 1 &&
+      messages[index + 1].sender === item.sender &&
+      messages[index + 1].type !== 'separator';
+
+    // Déterminer la position dans la séquence
+    let position = 'single'; // Message isolé
+    if (isPreviousSameSender && isNextSameSender) {
+      position = 'middle'; // Au milieu d'une séquence
+    } else if (isPreviousSameSender) {
+      position = 'last';   // Dernier d'une séquence
+    } else if (isNextSameSender) {
+      position = 'first';  // Premier d'une séquence
+    }
+
+    // Définir si on doit afficher l'avatar
+    const showAvatar = position === 'single' || position === 'last';
+
+    // Ajuster le style de la bulle en fonction de la position et du sender
+    const getBubbleStyle = (isTextMessage = true) => {
+      // Style de base pour les bulles de texte
+      const baseTextStyle = {
+        borderRadius: 10,
+        overflow: 'hidden',
+        marginVertical: 1,
+      };
+
+      // Style de base pour les images
+      const baseImageStyle = {
+        borderRadius: 10,
+        overflow: 'hidden',
+        backgroundColor: 'transparent',
+      };
+
+      const baseStyle = isTextMessage ? baseTextStyle : baseImageStyle;
+
+      if (item.sender === 'user') {
+        // Messages de l'utilisateur (à droite)
+        switch (position) {
+          case 'first':
+            return {
+              ...baseStyle,
+              borderBottomRightRadius: isTextMessage ? 3 : 10,
+              marginBottom: 1,
+            };
+          case 'middle':
+            return {
+              ...baseStyle,
+              borderTopRightRadius: isTextMessage ? 3 : 10,
+              borderBottomRightRadius: isTextMessage ? 3 : 10,
+              marginVertical: 1,
+            };
+          case 'last':
+            return {
+              ...baseStyle,
+              borderTopRightRadius: isTextMessage ? 3 : 10,
+              marginTop: 1,
+            };
+          default:
+            return baseStyle;
+        }
+      } else {
+        // Messages des autres (à gauche)
+        switch (position) {
+          case 'first':
+            return {
+              ...baseStyle,
+              borderBottomLeftRadius: isTextMessage ? 3 : 10,
+              marginBottom: 1,
+            };
+          case 'middle':
+            return {
+              ...baseStyle,
+              borderTopLeftRadius: isTextMessage ? 3 : 10,
+              borderBottomLeftRadius: isTextMessage ? 3 : 10,
+              marginVertical: 1,
+            };
+          case 'last':
+            return {
+              ...baseStyle,
+              borderTopLeftRadius: isTextMessage ? 3 : 10,
+              marginTop: 1,
+            };
+          default:
+            return baseStyle;
+        }
+      }
+    };
+
+    // Vérifier si le message a du texte significatif (pas juste des espaces)
+    const hasRealText = item.text && item.text.trim().length > 0 && item.text.toLowerCase() !== 'mixed';
+
+    // Vérifier si le message a une image
+    const hasImage = item.messageType === 'image' || item.image;
+
+    // Animations pour les timestamps
     const timestampWidth = timestampAnimation.interpolate({
       inputRange: [0, 1],
       outputRange: [0, 10],
       extrapolate: 'clamp'
     });
-  
+
     const timestampOpacity = timestampAnimation.interpolate({
       inputRange: [0, 1],
       outputRange: [0, 1],
       extrapolate: 'clamp'
     });
-  
-    // Vérifier si le message a du texte significatif (pas juste des espaces)
-    const hasRealText = item.text && item.text.trim().length > 0;
-    
-    // Vérifier si le message a une image
-    const hasImage = item.messageType === 'image' || item.image;
-  
+
+    // Marges en fonction du type d'expéditeur
+    const messageMargin = 0.3;
+
     return (
       <HStack
         width="100%"
@@ -452,24 +509,30 @@ const ChatScreen = ({ route }) => {
         >
           {/* Photo de profil pour les messages reçus */}
           {item.sender !== 'user' && (
-            <Image
-              source={
-                item.senderInfo?.profilePicture
-                  ? { uri: item.senderInfo.profilePicture }
-                  : require('../../assets/images/default.png')
-              }
-              alt="Profile"
-              size={8}
-              rounded="full"
-            />
+            <>
+              {showAvatar ? (
+                <Image
+                  source={
+                    item.senderInfo?.profilePicture
+                      ? { uri: item.senderInfo.profilePicture }
+                      : require('../../assets/images/default.png')
+                  }
+                  alt="Profile"
+                  size={8}
+                  rounded="full"
+                />
+              ) : (
+                <Box size={8} opacity={0} /> // Espace vide invisible pour garder l'alignement
+              )}
+            </>
           )}
-  
+
           <VStack
             maxWidth="80%"
             alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}
           >
-            {/* Nom de l'expéditeur pour les messages reçus */}
-            {item.sender !== 'user' && (
+            {/* Nom de l'expéditeur uniquement pour le premier message d'une séquence */}
+            {item.sender !== 'user' && (position === 'first' || position === 'single') && (
               <Text
                 style={styles.littleCaption}
                 color="#94A3B8"
@@ -479,19 +542,16 @@ const ChatScreen = ({ route }) => {
                 {item.senderInfo?.name || 'Utilisateur'}
               </Text>
             )}
-  
+
             {/* Gestion des différents types de messages */}
             {hasImage && hasRealText ? (
               // Message mixte (image + texte)
-              <VStack space={0} alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
+              <VStack space={1} alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
                 {/* L'image en premier */}
-                <Box
-                  style={{
-                    backgroundColor: 'transparent',
-                    borderRadius: 10,
-                    overflow: 'hidden',
-                  }}
-                >
+                <Box style={{
+                  ...getBubbleStyle(false),
+                  marginVertical: 10, // Marge verticale uniforme pour les images
+                }}>
                   <Image
                     alt="Message image"
                     source={{ uri: item.image }}
@@ -503,14 +563,11 @@ const ChatScreen = ({ route }) => {
                     resizeMode="cover"
                   />
                 </Box>
-                
+
                 {/* Ensuite le texte */}
                 <Box
                   p={3}
-                  borderRadius={20}
-                  style={{
-                    overflow: 'hidden'
-                  }}
+                  style={getBubbleStyle(true)}
                 >
                   {item.sender === 'user' ? (
                     <LinearGradient
@@ -547,13 +604,7 @@ const ChatScreen = ({ route }) => {
               </VStack>
             ) : hasImage ? (
               // Message avec image uniquement - pas de bulle de texte
-              <Box
-                style={{
-                  backgroundColor: 'transparent',
-                  borderRadius: 10,
-                  overflow: 'hidden',
-                }}
-              >
+              <Box style={getBubbleStyle(false)}>
                 <Image
                   alt="Message image"
                   source={{ uri: item.image }}
@@ -569,11 +620,7 @@ const ChatScreen = ({ route }) => {
               // Message avec texte uniquement
               <Box
                 p={3}
-                borderRadius={20}
-                style={{
-                  marginVertical: 4,
-                  overflow: 'hidden'
-                }}
+                style={getBubbleStyle(true)}
               >
                 {item.sender === 'user' ? (
                   <LinearGradient
@@ -600,7 +647,7 @@ const ChatScreen = ({ route }) => {
                     }}
                   />
                 )}
-  
+
                 <Text
                   color={item.sender === 'user' ? 'white' : 'black'}
                   style={styles.caption}
@@ -610,37 +657,44 @@ const ChatScreen = ({ route }) => {
               </Box>
             )}
           </VStack>
-  
+
           {/* Photo de profil pour les messages envoyés */}
           {item.sender === 'user' && (
-            <Image
-              source={
-                userData?.profilePicture
-                  ? { uri: userData.profilePicture }
-                  : require('../../assets/images/default.png')
-              }
-              alt="Profile"
-              size={8}
-              rounded="full"
-            />
+            <>
+              {showAvatar ? (
+                <Image
+                  source={
+                    userData?.profilePicture
+                      ? { uri: userData.profilePicture }
+                      : require('../../assets/images/default.png')
+                  }
+                  alt="Profile"
+                  size={8}
+                  rounded="full"
+                />
+              ) : (
+                <Box size={8} opacity={0} /> // Espace vide invisible pour garder l'alignement
+              )}
+            </>
           )}
         </HStack>
-  
-        {/* Horodatage des messages */}
+
+        {/* Horodatage des messages - uniquement pour le dernier message d'une séquence */}
         {showTimestamps && (
-          <Animated.View 
+          <Animated.View
             style={{
               opacity: timestampOpacity,
-              alignItems: 'flex-end'  
+              alignItems: 'flex-end'
             }}
           >
-            <Animated.Text 
+            <Animated.Text
               style={[
-                styles.littleCaption, 
+                styles.littleCaption,
                 {
                   color: '#94A3B8',
                   fontSize: 10,
                   marginBottom: 6,
+                  marginRight:10,
                   transform: [{ translateX: timestampWidth }]
                 }
               ]}
@@ -656,7 +710,7 @@ const ChatScreen = ({ route }) => {
 
   return (
     <Background>
-    <SafeAreaView style={{ flex: 1 }} {...panResponder.panHandlers}>
+      <SafeAreaView style={{ flex: 1 }} {...panResponder.panHandlers}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
@@ -717,7 +771,7 @@ const ChatScreen = ({ route }) => {
               contentContainerStyle={{
                 flexGrow: 1,
                 paddingBottom: 20,
-                paddingHorizontal: 10
+
               }}
               onContentSizeChange={() => {
                 if (flatListRef.current) {
@@ -739,7 +793,7 @@ const ChatScreen = ({ route }) => {
               backgroundColor: 'white',
               borderTopLeftRadius: selectedImage ? 25 : 0,
               borderTopRightRadius: selectedImage ? 25 : 0,
-            
+
             }}
           >
             {/* Affichage de l'image sélectionnée */}
@@ -835,7 +889,7 @@ const ChatScreen = ({ route }) => {
                   placeholder={selectedImage ? "Envoyer" : "Message"}
                   placeholderTextColor="#8E8E93"
                   color="#8E8E93"
-                  _focus={{ 
+                  _focus={{
                     color: "#8E8E93",
                     borderColor: '#94A3B866'  // Un peu plus visible en focus
                   }}
@@ -898,69 +952,69 @@ const ChatScreen = ({ route }) => {
         </KeyboardAvoidingView>
       </SafeAreaView>
 
-    {/* Modal reste inchangé */}
-    <Modal isOpen={isModalVisible} onClose={() => setModalVisible(false)}>
-      <View width='100%' style={{ flex: 1 }}>
-        <BlurView
-          style={[
-            styles.blurBackground,
-            {
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }
-          ]}
-          blurType="light"
-          blurAmount={8}
-          reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
-        >
-          <Modal.Content
-            width="90%"
-            style={{
-              ...styles.shadowBox,
-              shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
-              shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
-              shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
-              shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
-              elevation: 5,
-              backgroundColor: 'white',
-              borderRadius: 8,
-              padding: 16
-            }}
+      {/* Modal reste inchangé */}
+      <Modal isOpen={isModalVisible} onClose={() => setModalVisible(false)}>
+        <View width='100%' style={{ flex: 1 }}>
+          <BlurView
+            style={[
+              styles.blurBackground,
+              {
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }
+            ]}
+            blurType="light"
+            blurAmount={8}
+            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
           >
-            <Modal.CloseButton
-              _icon={{
-                color: "#94A3B8",
-                size: "sm"
+            <Modal.Content
+              width="90%"
+              style={{
+                ...styles.shadowBox,
+                shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
+                shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
+                shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
+                shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
+                elevation: 5,
+                backgroundColor: 'white',
+                borderRadius: 8,
+                padding: 16
               }}
-            />
+            >
+              <Modal.CloseButton
+                _icon={{
+                  color: "#94A3B8",
+                  size: "sm"
+                }}
+              />
 
-            <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
-              {/* Header */}
-              <HStack space={2} justifyContent="start">
-                <Text style={styles.h5}>
-                  {secretData && secretData.user ? `Posté par ${secretData.user.name}` : 'Posté par Utilisateur'}
+              <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
+                {/* Header */}
+                <HStack space={2} justifyContent="start">
+                  <Text style={styles.h5}>
+                    {secretData && secretData.user ? `Posté par ${secretData.user.name}` : 'Posté par Utilisateur'}
+                  </Text>
+                </HStack>
+
+                <Text paddingVertical={100} style={styles.h3}>
+                  "{secretData?.content}"
                 </Text>
-              </HStack>
 
-              <Text paddingVertical={100} style={styles.h3}>
-                "{secretData?.content}"
-              </Text>
-
-              {/* Footer */}
-              <HStack justifyContent='space-between' mt={4}>
-                <Text style={styles.caption}>{secretData?.label}</Text>
-                <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
-                  Expire dans {timeLeft}
-                </Text>
-              </HStack>
-            </VStack>
-          </Modal.Content>
-        </BlurView>
-      </View>
-    </Modal>
-  </Background>
+                {/* Footer */}
+                <HStack justifyContent='space-between' mt={4}>
+                  <Text style={styles.caption}>{secretData?.label}</Text>
+                  <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
+                    Expire dans {timeLeft}
+                  </Text>
+                </HStack>
+              </VStack>
+            </Modal.Content>
+          </BlurView>
+        </View>
+      </Modal>
+    </Background>
   );
 };
 
