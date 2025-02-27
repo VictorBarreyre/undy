@@ -19,6 +19,7 @@ const protect = require('../middleware/authMiddleware'); // Importation du middl
 const { uploadMiddleware, handleMulterError } = require('../middleware/uploadMiddleware');
 const router = express.Router();
 const multer = require('multer');
+const cloudinary = require('../config/cloudinary');
 
 
 // Route pour l'inscription
