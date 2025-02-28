@@ -17,15 +17,54 @@ import * as RN from 'react-native'; // Import alternatif pour accéder à Keyboa
 
 
 
-const formatMessageTime = (timestamp) => {
+const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false) => {
   const messageDate = new Date(timestamp);
-  
-  // Retourner uniquement l'heure et les minutes
-  return messageDate.toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (showTimeOnly) {
+    return messageDate.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  if (showFullDate) {
+    if (messageDate.toDateString() === today.toDateString()) {
+      return `Aujourd'hui, ${messageDate.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`;
+    } else if (messageDate.toDateString() === yesterday.toDateString()) {
+      return `Hier, ${messageDate.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`;
+    } else {
+      return messageDate.toLocaleString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  }
+
+  if (messageDate.toDateString() === today.toDateString()) {
+    return 'Aujourd\'hui';
+  } else if (messageDate.toDateString() === yesterday.toDateString()) {
+    return 'Hier';
+  } else {
+    return messageDate.toLocaleString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    });
+  }
 };
+
 
 const ChatScreen = ({ route }) => {
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
@@ -373,53 +412,46 @@ const ChatScreen = ({ route }) => {
     if (item.type === 'separator') {
       return (
         <Text textAlign="center" color="#94A3B8" my={2}>
-          {formatMessageTime(item.timestamp)}
+          {formatMessageTime(item.timestamp, true)}
         </Text>
       );
     }
-
-    // Vérifier si ce message fait partie d'une séquence
+  
     const isPreviousSameSender = index > 0 &&
       messages[index - 1].sender === item.sender &&
       messages[index - 1].type !== 'separator';
-
+  
     const isNextSameSender = index < messages.length - 1 &&
       messages[index + 1].sender === item.sender &&
       messages[index + 1].type !== 'separator';
-
-    // Déterminer la position dans la séquence
-    let position = 'single'; // Message isolé
+  
+    let position = 'single';
     if (isPreviousSameSender && isNextSameSender) {
-      position = 'middle'; // Au milieu d'une séquence
+      position = 'middle';
     } else if (isPreviousSameSender) {
-      position = 'last';   // Dernier d'une séquence
+      position = 'last';
     } else if (isNextSameSender) {
-      position = 'first';  // Premier d'une séquence
+      position = 'first';
     }
-
-    // Définir si on doit afficher l'avatar
+  
     const showAvatar = position === 'single' || position === 'last';
-
-    // Ajuster le style de la bulle en fonction de la position et du sender
+  
     const getBubbleStyle = (isTextMessage = true) => {
-      // Style de base pour les bulles de texte
       const baseTextStyle = {
         borderRadius: 10,
         overflow: 'hidden',
         marginVertical: 1,
       };
-
-      // Style de base pour les images
+  
       const baseImageStyle = {
         borderRadius: 10,
         overflow: 'hidden',
         backgroundColor: 'transparent',
       };
-
+  
       const baseStyle = isTextMessage ? baseTextStyle : baseImageStyle;
-
+  
       if (item.sender === 'user') {
-        // Messages de l'utilisateur (à droite)
         switch (position) {
           case 'first':
             return {
@@ -444,7 +476,6 @@ const ChatScreen = ({ route }) => {
             return baseStyle;
         }
       } else {
-        // Messages des autres (à gauche)
         switch (position) {
           case 'first':
             return {
@@ -470,29 +501,24 @@ const ChatScreen = ({ route }) => {
         }
       }
     };
-
-    // Vérifier si le message a du texte significatif (pas juste des espaces)
+  
     const hasRealText = item.text && item.text.trim().length > 0 && item.text.toLowerCase() !== 'mixed';
-
-    // Vérifier si le message a une image
     const hasImage = item.messageType === 'image' || item.image;
-
-    // Animations pour les timestamps
+  
     const timestampWidth = timestampAnimation.interpolate({
       inputRange: [0, 1],
       outputRange: [0, 10],
       extrapolate: 'clamp'
     });
-
+  
     const timestampOpacity = timestampAnimation.interpolate({
       inputRange: [0, 1],
       outputRange: [0, 1],
       extrapolate: 'clamp'
     });
-
-    // Marges en fonction du type d'expéditeur
+  
     const messageMargin = 0.3;
-
+  
     return (
       <HStack
         width="100%"
@@ -507,7 +533,6 @@ const ChatScreen = ({ route }) => {
           alignItems="flex-end"
           space={1}
         >
-          {/* Photo de profil pour les messages reçus */}
           {item.sender !== 'user' && (
             <>
               {showAvatar ? (
@@ -522,16 +547,15 @@ const ChatScreen = ({ route }) => {
                   rounded="full"
                 />
               ) : (
-                <Box size={8} opacity={0} /> // Espace vide invisible pour garder l'alignement
+                <Box size={8} opacity={0} />
               )}
             </>
           )}
-
+  
           <VStack
             maxWidth="80%"
             alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}
           >
-            {/* Nom de l'expéditeur uniquement pour le premier message d'une séquence */}
             {item.sender !== 'user' && (position === 'first' || position === 'single') && (
               <Text
                 style={styles.littleCaption}
@@ -542,15 +566,12 @@ const ChatScreen = ({ route }) => {
                 {item.senderInfo?.name || 'Utilisateur'}
               </Text>
             )}
-
-            {/* Gestion des différents types de messages */}
+  
             {hasImage && hasRealText ? (
-              // Message mixte (image + texte)
               <VStack space={1} alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
-                {/* L'image en premier */}
                 <Box style={{
                   ...getBubbleStyle(false),
-                  marginVertical: 10, // Marge verticale uniforme pour les images
+                  marginVertical: 10,
                 }}>
                   <Image
                     alt="Message image"
@@ -563,8 +584,7 @@ const ChatScreen = ({ route }) => {
                     resizeMode="cover"
                   />
                 </Box>
-
-                {/* Ensuite le texte */}
+  
                 <Box
                   p={3}
                   style={getBubbleStyle(true)}
@@ -603,7 +623,6 @@ const ChatScreen = ({ route }) => {
                 </Box>
               </VStack>
             ) : hasImage ? (
-              // Message avec image uniquement - pas de bulle de texte
               <Box style={getBubbleStyle(false)}>
                 <Image
                   alt="Message image"
@@ -617,7 +636,6 @@ const ChatScreen = ({ route }) => {
                 />
               </Box>
             ) : (
-              // Message avec texte uniquement
               <Box
                 p={3}
                 style={getBubbleStyle(true)}
@@ -647,7 +665,7 @@ const ChatScreen = ({ route }) => {
                     }}
                   />
                 )}
-
+  
                 <Text
                   color={item.sender === 'user' ? 'white' : 'black'}
                   style={styles.caption}
@@ -657,8 +675,7 @@ const ChatScreen = ({ route }) => {
               </Box>
             )}
           </VStack>
-
-          {/* Photo de profil pour les messages envoyés */}
+  
           {item.sender === 'user' && (
             <>
               {showAvatar ? (
@@ -673,13 +690,12 @@ const ChatScreen = ({ route }) => {
                   rounded="full"
                 />
               ) : (
-                <Box size={8} opacity={0} /> // Espace vide invisible pour garder l'alignement
+                <Box size={8} opacity={0} />
               )}
             </>
           )}
         </HStack>
-
-        {/* Horodatage des messages - uniquement pour le dernier message d'une séquence */}
+  
         {showTimestamps && (
           <Animated.View
             style={{
@@ -694,18 +710,19 @@ const ChatScreen = ({ route }) => {
                   color: '#94A3B8',
                   fontSize: 10,
                   marginBottom: 6,
-                  marginRight:10,
+                  marginRight: 10,
                   transform: [{ translateX: timestampWidth }]
                 }
               ]}
             >
-              {formatMessageTime(item.timestamp)}
+              {formatMessageTime(item.timestamp, false, true)}
             </Animated.Text>
           </Animated.View>
         )}
       </HStack>
     );
   };
+  
 
 
   return (
