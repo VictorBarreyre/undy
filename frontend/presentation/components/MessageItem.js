@@ -107,7 +107,7 @@ const MessageItem = ({
   // Styles de bulle en fonction de la position dans la séquence
   const getBubbleStyle = (isTextMessage = true) => {
     const baseTextStyle = {
-      borderRadius: 10,
+      borderRadius: 20,
       overflow: 'hidden',
       marginVertical: 1,
     };
