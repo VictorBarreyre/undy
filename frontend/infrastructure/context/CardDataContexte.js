@@ -404,37 +404,40 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
-  const getConversationMessages = async (conversationId) => {
-    const instance = getAxiosInstance();
-    if (!instance) {
-      throw new Error('Axios instance not initialized');
-    }
-    try {
-      const response = await instance.get(
-        `/api/secrets/conversations/${conversationId}`
-      );
+// Fonction corrigée - À remplacer dans votre fichier CardDataContext.js
+
+const getConversationMessages = async (conversationId) => {
+  const instance = getAxiosInstance();
+  if (!instance) {
+    throw new Error('Axios instance not initialized');
+  }
+  try {
+    // URL CORRIGÉE: l'API attend /messages à la fin
+    const response = await instance.get(
+      `/api/secrets/conversations/${conversationId}/messages`
+    );
   
-      // Log pour débug
-      console.log("Messages reçus:", JSON.stringify(response.data, null, 2));
+    // Log pour débug
+    console.log("Messages reçus:", JSON.stringify(response.data, null, 2));
   
-      // S'assurer que chaque message a les informations du sender
-      const messages = response.data.messages.map(msg => ({
-        ...msg,
-        sender: msg.sender ? {
-          _id: msg.sender._id,
-          name: msg.sender.name
-        } : null
-      }));
+    // S'assurer que chaque message a les informations du sender
+    const messages = response.data.messages.map(msg => ({
+      ...msg,
+      sender: msg.sender ? {
+        _id: msg.sender._id,
+        name: msg.sender.name
+      } : null
+    }));
   
-      return {
-        messages,
-        conversationId: response.data.conversationId
-      };
-    } catch (error) {
-      console.error('Erreur lors de la récupération des messages:', error);
-      throw error;
-    }
-  };
+    return {
+      messages,
+      conversationId: response.data.conversationId
+    };
+  } catch (error) {
+    console.error('Erreur lors de la récupération des messages:', error);
+    throw error;
+  }
+};
 
   const handleShareSecret = async (secret) => {
     try {

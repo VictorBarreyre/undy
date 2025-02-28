@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Easing } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faChevronLeft, faPlus, faTimes, faArrowUp } from '@fortawesome/free-solid-svg-icons';
@@ -13,10 +13,12 @@ import { BlurView } from '@react-native-community/blur';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { launchImageLibrary } from 'react-native-image-picker';
-import * as RN from 'react-native'; // Import alternatif pour accéder à Keyboard
-import MessageItem from '../components/MessageItem'; // Import du nouveau composant
+import * as RN from 'react-native';
+import MessageItem from '../components/MessageItem';
+import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 
-// Fonction formatage de temps (toujours utile pour les séparateurs de date dans le ChatScreen)
+
+// Fonction formatage de temps
 const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false) => {
   const messageDate = new Date(timestamp);
   const today = new Date();
@@ -69,7 +71,7 @@ const ChatScreen = ({ route }) => {
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
-  const { handleAddMessage, getConversationMessages, markConversationAsRead, uploadImage } = useCardData();
+  const { handleAddMessage, markConversationAsRead, uploadImage } = useCardData();
   const { userData } = useContext(AuthContext);
   const navigation = useNavigation();
   const [showTimestamps, setShowTimestamps] = useState(false);
@@ -78,14 +80,50 @@ const ChatScreen = ({ route }) => {
   const isInitialMount = useRef(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [inputContainerHeight, setInputContainerHeight] = useState(60);
-  const [inputHeight, setInputHeight] = useState(36); // hauteur par défaut
-  const [borderRadius, setBorderRadius] = useState(18); // rayon par défaut
+  const [inputHeight, setInputHeight] = useState(36);
+  const [borderRadius, setBorderRadius] = useState(18);
   const flatListRef = useRef(null);
   const [keyboardOffset, setKeyboardOffset] = useState(Platform.OS === 'ios' ? 60 : 0);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
+
+  // Ajouter cet effet dans le ChatScreen
+useEffect(() => {
+  // Gestionnaire d'événement pour le focus sur l'écran
+  const unsubscribe = navigation.addListener('focus', async () => {
+    if (conversationId) {
+      try {
+        // Créer une fonction pour rafraîchir la conversation complète
+        const fetchConversationData = async () => {
+          const instance = getAxiosInstance();
+          if (!instance) return;
+          
+          // Récupérer la conversation complète (pas seulement les messages)
+          const response = await instance.get(`/api/secrets/conversations/secret/${conversation.secret._id}`);
+          
+          // Mettre à jour le state local ou les paramètres de navigation
+          if (response.data) {
+            // Option 1: Mettre à jour directement les paramètres de route
+            navigation.setParams({ conversation: response.data });
+            
+            // Option 2: Ou mettre à jour un état local si vous préférez
+            // setConversationData(response.data);
+          }
+        };
+        
+        // Exécuter la fonction de récupération
+        await fetchConversationData();
+      } catch (error) {
+        console.error('Erreur lors du rechargement de la conversation:', error);
+      }
+    }
+  });
+
+  // Nettoyer l'abonnement lorsque le composant est démonté
+  return unsubscribe;
+}, [navigation, conversationId, conversation?.secret?._id]);
+
+  // Gestion du clavier
   useEffect(() => {
-    // Utiliser RN.Keyboard au lieu de Keyboard
     const keyboardDidShowListener = Platform.OS === 'ios'
       ? RN.Keyboard.addListener('keyboardWillShow', (e) => {
         const offset = e.endCoordinates.height;
@@ -109,147 +147,21 @@ const ChatScreen = ({ route }) => {
     };
   }, []);
 
-  const updateInputAreaHeight = (imageVisible) => {
-    // Hauteur de base + hauteur image si présente
-    const newHeight = imageVisible ? 280 : 60; // 60 pour l'input, ~220 pour l'image
-    setInputContainerHeight(newHeight);
-  };
-
-  // Pour les nouveaux messages, garder 'user' tel quel
-  const sendMessage = async () => {
-    try {
-      if (!conversationId) {
-        throw new Error('ID de conversation manquant');
-      }
-
-      // Vérifier s'il y a du contenu à envoyer (texte ou image)
-      if (!message.trim() && !selectedImage) return;
-
-      if (!userData?.name) {
-        throw new Error('Informations utilisateur manquantes');
-      }
-
-      // Déterminer le type de message en fonction du contenu
-      let messageType = 'text';
-      if (selectedImage && message.trim()) {
-        messageType = 'mixed';  // Texte + image
-      } else if (selectedImage) {
-        messageType = 'image';  // Image uniquement
-      }
-
-      // Créer l'objet de base pour le message
-      let messageContent = {
-        content: message.trim() || " ",  // Utiliser un espace si pas de texte
-        senderName: userData.name,
-        messageType: messageType
-      };
-
-      // Si une image est sélectionnée, l'uploader et ajouter son URL
-      if (selectedImage) {
-        try {
-          // Préparer l'image pour l'upload
-          let imageData;
-          if (selectedImage.base64) {
-            imageData = `data:${selectedImage.type};base64,${selectedImage.base64}`;
-          } else if (selectedImage.uri) {
-            imageData = selectedImage.uri;
-          }
-
-          // Utiliser la fonction de votre contexte pour l'upload
-          const uploadResult = await uploadImage(imageData);
-
-          // Ajouter l'URL de l'image au message
-          messageContent.image = uploadResult.url;
-        } catch (uploadError) {
-          console.error('Erreur lors de l\'upload de l\'image:', uploadError);
-          throw new Error('Échec de l\'upload de l\'image');
-        }
-      }
-
-      // Envoyer le message et récupérer la réponse
-      const newMessage = await handleAddMessage(conversationId, messageContent);
-
-      // Mise à jour de l'UI avec le nouveau message
-      setMessages(prev => [...prev, {
-        id: newMessage._id || `local-${Date.now()}`,
-        text: message,
-        messageType: messageContent.messageType,
-        image: messageContent.image,
-        sender: 'user',
-        timestamp: new Date().toISOString(),
-        senderInfo: {
-          id: userData._id,
-          name: userData.name
-        }
-      }]);
-
-      // Réinitialiser les champs
-      setMessage('');
-      setSelectedImage(null);
-      updateInputAreaHeight(false);
-
-      // Défiler vers le bas pour voir le nouveau message
-      requestAnimationFrame(() => {
-        if (flatListRef.current) {
-          flatListRef.current.scrollToEnd({ animated: true });
-        }
-      });
-
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi:', error);
-    }
-  };
-
-  const handleImagePick = async () => {
-    try {
-      const result = await launchImageLibrary({
-        mediaType: 'photo',
-        quality: 0.8,
-        includeBase64: true,
-      });
-
-      if (result.assets && result.assets[0]) {
-        setSelectedImage(result.assets[0]);
-        // Mettre à jour la hauteur immédiatement
-        updateInputAreaHeight(true);
-
-        // Utiliser requestAnimationFrame au lieu de setTimeout
-        requestAnimationFrame(() => {
-          if (flatListRef.current) {
-            flatListRef.current.scrollToEnd({ animated: true });
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Erreur lors de la sélection:', error);
-    }
-  };
-
-  const calculateBorderRadius = (height) => {
-    // Une ligne: hauteur d'environ 36-40px
-    // Plus la hauteur augmente, plus on réduit le border radius
-    if (height <= 40) {
-      return 18; // Complètement rond pour une ligne
-    } else if (height <= 60) {
-      return 15; // Légèrement moins arrondi pour deux lignes
-    } else {
-      return 10; // Encore moins arrondi pour trois lignes ou plus
-    }
-  };
-
-  // 1. Marquer la conversation comme lue
+  // Initialisation et marquage comme lu
   useEffect(() => {
-    const markAsRead = async () => {
+    const initialize = async () => {
       if (conversationId) {
         try {
+          // Marquer comme lu
           await markConversationAsRead(conversationId);
+          console.log("Conversation marquée comme lue");
         } catch (error) {
-          console.error('Erreur lors du marquage comme lu', error);
+          console.error('Erreur lors du marquage comme lu:', error);
         }
       }
     };
 
-    markAsRead();
+    initialize();
 
     // Gestion de la modale au montage
     if (isInitialMount.current && showModalOnMount) {
@@ -258,9 +170,12 @@ const ChatScreen = ({ route }) => {
     }
   }, [conversationId, markConversationAsRead, showModalOnMount]);
 
-  // 2. Formatage des messages et défilement
+  // Formatage des messages
   useEffect(() => {
     if (conversation?.messages) {
+      console.log("Formatage des messages :", conversation.messages.length);
+      console.log("userData :", userData?._id);
+      
       // Créer un mapping des IDs vers les infos utilisateurs
       const userMapping = {};
       if (conversation.participants) {
@@ -271,14 +186,37 @@ const ChatScreen = ({ route }) => {
           };
         });
       }
-
+  
       const formattedMessages = [];
       let lastMessageDate = null;
-
-      conversation.messages.forEach((msg, index) => {
+  
+      // Trier les messages par date
+      const sortedMessages = [...conversation.messages].sort((a, b) => 
+        new Date(a.createdAt) - new Date(b.createdAt)
+      );
+  
+      sortedMessages.forEach((msg, index) => {
+        if (!msg.createdAt) {
+          console.warn("Message sans createdAt:", msg);
+          return; // Ignorer les messages sans horodatage
+        }
+        
         const currentMessageDate = new Date(msg.createdAt);
-        const isCurrentUser = msg.sender === userData?._id;
-
+        
+        // Détecter correctement si le message provient de l'utilisateur actuel
+        let isCurrentUser = false;
+        
+        // Vérifier l'ID du sender de différentes façons possibles
+        if (msg.sender && typeof msg.sender === 'object' && msg.sender._id) {
+          // Si le sender est un objet complet
+          isCurrentUser = msg.sender._id === userData?._id;
+          console.log(`Message ${index} - Sender is object, isCurrentUser: ${isCurrentUser}`);
+        } else if (msg.sender && typeof msg.sender === 'string') {
+          // Si le sender est juste un ID en string
+          isCurrentUser = msg.sender === userData?._id;
+          console.log(`Message ${index} - Sender is string, isCurrentUser: ${isCurrentUser}`);
+        }
+  
         // Séparateur de date si nécessaire
         if (!lastMessageDate ||
           currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
@@ -288,31 +226,45 @@ const ChatScreen = ({ route }) => {
             timestamp: msg.createdAt
           });
         }
-
+  
         // Vérifier si c'est un message image
         const isImageMessage = msg.messageType === 'image' || msg.image;
-
+  
         // Message avec le nom de l'expéditeur depuis le mapping
+        const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
+        
         formattedMessages.push({
-          id: msg._id,
+          id: msg._id || `msg-${index}`,
           text: msg.content,
+          // Explicitement 'user' ou 'other' 
           sender: isCurrentUser ? 'user' : 'other',
           timestamp: msg.createdAt,
           messageType: isImageMessage ? 'image' : 'text',
-          image: msg.image, // S'assurer que l'URL de l'image est incluse
+          image: msg.image,
           senderInfo: {
-            id: msg.sender,
-            name: userMapping[msg.sender]?.name || 'Utilisateur',
-            profilePicture: userMapping[msg.sender]?.profilePicture || null
+            id: messageSenderId,
+            name: userMapping[messageSenderId]?.name || msg.senderName || 'Utilisateur',
+            profilePicture: userMapping[messageSenderId]?.profilePicture || null
           }
         });
-
+  
         lastMessageDate = currentMessageDate;
       });
-
+  
+      console.log("Messages formatés :", formattedMessages.length);
+      // Log du premier message non-séparateur pour vérifier
+      const sampleMessage = formattedMessages.find(m => m.type !== 'separator');
+      if (sampleMessage) {
+        console.log("Exemple de message formaté :", {
+          id: sampleMessage.id,
+          sender: sampleMessage.sender,
+          senderInfo: sampleMessage.senderInfo
+        });
+      }
+  
       setMessages(formattedMessages);
-
-      // Défilement automatique quand les messages sont chargés
+  
+      // Défilement automatique
       requestAnimationFrame(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: false });
@@ -321,7 +273,7 @@ const ChatScreen = ({ route }) => {
     }
   }, [conversation, userData?._id]);
 
-  // 3. Gestion du temps restant avant expiration
+  // Calcul du temps restant
   useEffect(() => {
     const calculateTimeLeft = () => {
       const expirationDate = new Date(conversation.expiresAt);
@@ -342,17 +294,15 @@ const ChatScreen = ({ route }) => {
     setTimeLeft(calculateTimeLeft());
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
-    }, 60000); // Mise à jour chaque minute
+    }, 60000);
 
     return () => clearInterval(timer);
   }, [conversation.expiresAt]);
 
-  // 4. Gestion de l'image sélectionnée
+  // Gestion de l'image sélectionnée
   useEffect(() => {
-    // Mettre à jour la hauteur du conteneur
     updateInputAreaHeight(!!selectedImage);
 
-    // Défilement automatique quand une image est ajoutée
     if (selectedImage && flatListRef.current) {
       requestAnimationFrame(() => {
         flatListRef.current.scrollToEnd({ animated: true });
@@ -360,11 +310,133 @@ const ChatScreen = ({ route }) => {
     }
   }, [selectedImage]);
 
-  // Configuration du détecteur de geste pour afficher/masquer les horodatages
+  // Mise à jour de la hauteur de la zone d'input
+  const updateInputAreaHeight = (imageVisible) => {
+    const newHeight = imageVisible ? 280 : 60;
+    setInputContainerHeight(newHeight);
+  };
+
+  // Envoi de message
+  const sendMessage = async () => {
+    try {
+      if (!conversationId) {
+        throw new Error('ID de conversation manquant');
+      }
+
+      // Vérifier s'il y a du contenu à envoyer
+      if (!message.trim() && !selectedImage) return;
+
+      if (!userData?.name) {
+        throw new Error('Informations utilisateur manquantes');
+      }
+
+      // Déterminer le type de message
+      let messageType = 'text';
+      if (selectedImage && message.trim()) {
+        messageType = 'mixed';
+      } else if (selectedImage) {
+        messageType = 'image';
+      }
+
+      // Créer l'objet du message
+      let messageContent = {
+        content: message.trim() || " ",
+        senderName: userData.name,
+        messageType: messageType
+      };
+
+      // Si une image est sélectionnée, l'uploader
+      if (selectedImage) {
+        try {
+          let imageData;
+          if (selectedImage.base64) {
+            imageData = `data:${selectedImage.type};base64,${selectedImage.base64}`;
+          } else if (selectedImage.uri) {
+            imageData = selectedImage.uri;
+          }
+
+          const uploadResult = await uploadImage(imageData);
+          messageContent.image = uploadResult.url;
+        } catch (uploadError) {
+          console.error('Erreur lors de l\'upload de l\'image:', uploadError);
+          throw new Error('Échec de l\'upload de l\'image');
+        }
+      }
+
+      // Envoyer le message
+      const newMessage = await handleAddMessage(conversationId, messageContent);
+      console.log("Message envoyé avec succès:", newMessage);
+
+      // Mise à jour de l'UI
+      setMessages(prev => [...prev, {
+        id: newMessage._id || `local-${Date.now()}`,
+        text: message,
+        messageType: messageContent.messageType,
+        image: messageContent.image,
+        sender: 'user',
+        timestamp: new Date().toISOString(),
+        senderInfo: {
+          id: userData._id,
+          name: userData.name
+        }
+      }]);
+
+      // Réinitialiser
+      setMessage('');
+      setSelectedImage(null);
+      updateInputAreaHeight(false);
+
+      // Défiler vers le bas
+      requestAnimationFrame(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({ animated: true });
+        }
+      });
+
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi du message:', error);
+    }
+  };
+
+  // Sélection d'image
+  const handleImagePick = async () => {
+    try {
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.8,
+        includeBase64: true,
+      });
+
+      if (result.assets && result.assets[0]) {
+        setSelectedImage(result.assets[0]);
+        updateInputAreaHeight(true);
+
+        requestAnimationFrame(() => {
+          if (flatListRef.current) {
+            flatListRef.current.scrollToEnd({ animated: true });
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sélection d\'image:', error);
+    }
+  };
+
+  // Calcul du border radius en fonction de la hauteur
+  const calculateBorderRadius = (height) => {
+    if (height <= 40) {
+      return 18;
+    } else if (height <= 60) {
+      return 15;
+    } else {
+      return 10;
+    }
+  };
+
+  // Configuration du détecteur de geste pour les timestamps
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        // Respond to horizontal swipes with more than 10 pixel movement
         return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       },
       onPanResponderMove: Animated.event(
@@ -372,16 +444,12 @@ const ChatScreen = ({ route }) => {
         { useNativeDriver: false }
       ),
       onPanResponderRelease: (evt, gestureState) => {
-        // If swiped left significantly, show timestamps
         if (gestureState.dx < -100) {
           setShowTimestamps(true);
-        }
-        // If swiped right significantly, hide timestamps
-        else if (gestureState.dx > 100) {
+        } else if (gestureState.dx > 100) {
           setShowTimestamps(false);
         }
 
-        // Animate back to original position
         Animated.spring(new Animated.Value(gestureState.dx), {
           toValue: 0,
           friction: 5,
@@ -392,10 +460,11 @@ const ChatScreen = ({ route }) => {
     })
   ).current;
 
-  // Fonction pour rendre les messages - maintenant déléguée au nouveau composant
+  // Fonction de rendu des messages
   const renderMessage = ({ item, index }) => {
     return (
       <MessageItem
+        key={item.id}
         item={item}
         index={index}
         messages={messages}
@@ -586,7 +655,7 @@ const ChatScreen = ({ route }) => {
                   color="#8E8E93"
                   _focus={{
                     color: "#8E8E93",
-                    borderColor: '#94A3B866'  // Un peu plus visible en focus
+                    borderColor: '#94A3B866'
                   }}
                   fontSize="16px"
                   paddingX={4}
