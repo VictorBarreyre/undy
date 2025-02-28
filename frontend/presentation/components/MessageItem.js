@@ -1,17 +1,64 @@
-// MessageItem.js
-import React from 'react';
-import { Animated } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { Animated, Easing } from 'react-native';
 import { Box, Text, HStack, Image, VStack } from 'native-base';
 import LinearGradient from 'react-native-linear-gradient';
-import { styles } from '../../infrastructure/theme/styles'; // Adaptez le chemin selon votre structure
+import { styles } from '../../infrastructure/theme/styles';
 
-const formatMessageTime = (timestamp) => {
+// Fonction formatage de temps importée du ChatScreen
+const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false) => {
   const messageDate = new Date(timestamp);
-  
-  return messageDate.toLocaleTimeString('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (showTimeOnly) {
+    return messageDate.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  if (showFullDate) {
+    if (messageDate.toDateString() === today.toDateString()) {
+      return `Aujourd'hui, ${messageDate.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`;
+    } else if (messageDate.toDateString() === yesterday.toDateString()) {
+      return `Hier, ${messageDate.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`;
+    } else {
+      return messageDate.toLocaleString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  }
+
+  if (messageDate.toDateString() === today.toDateString()) {
+    return 'Aujourd\'hui';
+  } else if (messageDate.toDateString() === yesterday.toDateString()) {
+    return 'Hier';
+  } else {
+    return messageDate.toLocaleString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    });
+  }
+};
+
+const DateSeparator = ({ timestamp }) => {
+  return (
+    <Text textAlign="center" color="#94A3B8" my={2}>
+      {formatMessageTime(timestamp, true)}
+    </Text>
+  );
 };
 
 const MessageItem = ({ 
@@ -19,22 +66,25 @@ const MessageItem = ({
   index, 
   messages, 
   userData, 
-  showTimestamps, 
-  timestampAnimation 
+  showTimestamps 
 }) => {
-  // Si c'est un séparateur, retourner directement l'en-tête de date
+  const timestampAnimation = useRef(new Animated.Value(showTimestamps ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(timestampAnimation, {
+      toValue: showTimestamps ? 1 : 0,
+      duration: 250,
+      easing: Easing.bezier(0.4, 0, 0.2, 1),
+      useNativeDriver: true
+    }).start();
+  }, [showTimestamps]);
+
+  // Si c'est un séparateur de date, on affiche uniquement la date
   if (item.type === 'separator') {
-    return (
-      <Text textAlign="center" color="#94A3B8" my={2}>
-        {formatMessageTime(item.timestamp)}
-      </Text>
-    );
-    
+    return <DateSeparator timestamp={item.timestamp} />;
   }
 
-
-
-  // Vérifier si ce message fait partie d'une séquence
+  // Déterminer la position du message dans une séquence de messages du même expéditeur
   const isPreviousSameSender = index > 0 &&
     messages[index - 1].sender === item.sender &&
     messages[index - 1].type !== 'separator';
@@ -43,29 +93,25 @@ const MessageItem = ({
     messages[index + 1].sender === item.sender &&
     messages[index + 1].type !== 'separator';
 
-  // Déterminer la position dans la séquence
-  let position = 'single'; // Message isolé
+  let position = 'single';
   if (isPreviousSameSender && isNextSameSender) {
-    position = 'middle'; // Au milieu d'une séquence
+    position = 'middle';
   } else if (isPreviousSameSender) {
-    position = 'last';   // Dernier d'une séquence
+    position = 'last';
   } else if (isNextSameSender) {
-    position = 'first';  // Premier d'une séquence
+    position = 'first';
   }
 
-  // Définir si on doit afficher l'avatar
   const showAvatar = position === 'single' || position === 'last';
 
-  // Ajuster le style de la bulle en fonction de la position et du sender
+  // Styles de bulle en fonction de la position dans la séquence
   const getBubbleStyle = (isTextMessage = true) => {
-    // Style de base pour les bulles de texte
     const baseTextStyle = {
       borderRadius: 10,
       overflow: 'hidden',
       marginVertical: 1,
     };
 
-    // Style de base pour les images
     const baseImageStyle = {
       borderRadius: 10,
       overflow: 'hidden',
@@ -75,8 +121,6 @@ const MessageItem = ({
     const baseStyle = isTextMessage ? baseTextStyle : baseImageStyle;
 
     if (item.sender === 'user') {
-
-      // Messages de l'utilisateur (à droite)
       switch (position) {
         case 'first':
           return {
@@ -101,7 +145,6 @@ const MessageItem = ({
           return baseStyle;
       }
     } else {
-      // Messages des autres (à gauche)
       switch (position) {
         case 'first':
           return {
@@ -128,13 +171,11 @@ const MessageItem = ({
     }
   };
 
-  // Vérifier si le message a du texte significatif (pas juste des espaces)
+  // Vérifier si le message a du texte et/ou une image
   const hasRealText = item.text && item.text.trim().length > 0 && item.text.toLowerCase() !== 'mixed';
-
-  // Vérifier si le message a une image
   const hasImage = item.messageType === 'image' || item.image;
 
-  // Animations pour les timestamps
+  // Animation pour les horodatages
   const timestampWidth = timestampAnimation.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 10],
@@ -147,8 +188,132 @@ const MessageItem = ({
     extrapolate: 'clamp'
   });
 
-  // Marges en fonction du type d'expéditeur
   const messageMargin = 0.3;
+
+  // Rendu du contenu du message
+  const renderMessageContent = () => {
+    if (hasImage && hasRealText) {
+      return (
+        <VStack space={1} alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
+          <Box style={{
+            ...getBubbleStyle(false),
+            marginVertical: 10,
+          }}>
+            <Image
+              alt="Message image"
+              source={{ uri: item.image }}
+              style={{
+                width: 150,
+                height: 150,
+                borderRadius: 10
+              }}
+              resizeMode="cover"
+            />
+          </Box>
+
+          <Box p={3} style={getBubbleStyle(true)}>
+            {item.sender === 'user' ? (
+              <LinearGradient
+                colors={['#FF587E', '#CC4B8D']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                }}
+              />
+            ) : (
+              <Box
+                bg='#FFFFFF'
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                }}
+              />
+            )}
+            <Text color={item.sender === 'user' ? 'white' : 'black'} style={styles.caption}>
+              {item.text}
+            </Text>
+          </Box>
+        </VStack>
+      );
+    } else if (hasImage) {
+      return (
+        <Box style={getBubbleStyle(false)}>
+          <Image
+            alt="Message image"
+            source={{ uri: item.image }}
+            style={{
+              width: 150,
+              height: 150,
+              borderRadius: 10
+            }}
+            resizeMode="cover"
+          />
+        </Box>
+      );
+    } else {
+      return (
+        <Box p={3} style={getBubbleStyle(true)}>
+          {item.sender === 'user' ? (
+            <LinearGradient
+              colors={['#FF587E', '#CC4B8D']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+              }}
+            />
+          ) : (
+            <Box
+              bg='#FFFFFF'
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+              }}
+            />
+          )}
+
+          <Text color={item.sender === 'user' ? 'white' : 'black'} style={styles.caption}>
+            {item.text}
+          </Text>
+        </Box>
+      );
+    }
+  };
+
+  // Rendu de l'avatar
+  const renderAvatar = () => {
+    if (!showAvatar) {
+      return <Box size={8} opacity={0} />;
+    }
+
+    const imageSource = item.sender === 'user'
+      ? (userData?.profilePicture ? { uri: userData.profilePicture } : require('../../assets/images/default.png'))
+      : (item.senderInfo?.profilePicture ? { uri: item.senderInfo.profilePicture } : require('../../assets/images/default.png'));
+
+    return (
+      <Image
+        source={imageSource}
+        alt="Profile"
+        size={8}
+        rounded="full"
+      />
+    );
+  };
 
   return (
     <HStack
@@ -164,31 +329,12 @@ const MessageItem = ({
         alignItems="flex-end"
         space={1}
       >
-        {/* Photo de profil pour les messages reçus */}
-        {item.sender !== 'user' && (
-          <>
-            {showAvatar ? (
-              <Image
-                source={
-                  item.senderInfo?.profilePicture
-                    ? { uri: item.senderInfo.profilePicture }
-                    : require('../../assets/images/default.png')
-                }
-                alt="Profile"
-                size={8}
-                rounded="full"
-              />
-            ) : (
-              <Box size={8} opacity={0} /> // Espace vide invisible pour garder l'alignement
-            )}
-          </>
-        )}
+        {item.sender !== 'user' && renderAvatar()}
 
         <VStack
           maxWidth="80%"
           alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}
         >
-          {/* Nom de l'expéditeur uniquement pour le premier message d'une séquence */}
           {item.sender !== 'user' && (position === 'first' || position === 'single') && (
             <Text
               style={styles.littleCaption}
@@ -200,143 +346,12 @@ const MessageItem = ({
             </Text>
           )}
 
-          {/* Gestion des différents types de messages */}
-          {hasImage && hasRealText ? (
-            // Message mixte (image + texte)
-            <VStack space={1} alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
-              {/* L'image en premier */}
-              <Box style={{
-                ...getBubbleStyle(false),
-                marginVertical: 10, // Marge verticale uniforme pour les images
-              }}>
-                <Image
-                  alt="Message image"
-                  source={{ uri: item.image }}
-                  style={{
-                    width: 150,
-                    height: 150,
-                    borderRadius: 10
-                  }}
-                  resizeMode="cover"
-                />
-              </Box>
-
-              {/* Ensuite le texte */}
-              <Box
-                p={3}
-                style={getBubbleStyle(true)}
-              >
-                {item.sender === 'user' ? (
-                  <LinearGradient
-                    colors={['#FF587E', '#CC4B8D']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                    }}
-                  />
-                ) : (
-                  <Box
-                    bg='#FFFFFF'
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                    }}
-                  />
-                )}
-                <Text
-                  color={item.sender === 'user' ? 'white' : 'black'}
-                  style={styles.caption}
-                >
-                  {item.text}
-                </Text>
-              </Box>
-            </VStack>
-          ) : hasImage ? (
-            // Message avec image uniquement - pas de bulle de texte
-            <Box style={getBubbleStyle(false)}>
-              <Image
-                alt="Message image"
-                source={{ uri: item.image }}
-                style={{
-                  width: 150,
-                  height: 150,
-                  borderRadius: 10
-                }}
-                resizeMode="cover"
-              />
-            </Box>
-          ) : (
-            // Message avec texte uniquement
-            <Box
-              p={3}
-              style={getBubbleStyle(true)}
-            >
-              {item.sender === 'user' ? (
-                <LinearGradient
-                  colors={['#FF587E', '#CC4B8D']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                  }}
-                />
-              ) : (
-                <Box
-                  bg='#FFFFFF'
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                  }}
-                />
-              )}
-
-              <Text
-                color={item.sender === 'user' ? 'white' : 'black'}
-                style={styles.caption}
-              >
-                {item.text}
-              </Text>
-            </Box>
-          )}
+          {renderMessageContent()}
         </VStack>
 
-        {/* Photo de profil pour les messages envoyés */}
-        {item.sender === 'user' && (
-          <>
-            {showAvatar ? (
-              <Image
-                source={
-                  userData?.profilePicture
-                    ? { uri: userData.profilePicture }
-                    : require('../../assets/images/default.png')
-                }
-                alt="Profile"
-                size={8}
-                rounded="full"
-              />
-            ) : (
-              <Box size={8} opacity={0} /> // Espace vide invisible pour garder l'alignement
-            )}
-          </>
-        )}
+        {item.sender === 'user' && renderAvatar()}
       </HStack>
 
-      {/* Horodatage des messages - uniquement pour le dernier message d'une séquence */}
       {showTimestamps && (
         <Animated.View
           style={{
@@ -356,7 +371,7 @@ const MessageItem = ({
               }
             ]}
           >
-            {formatMessageTime(item.timestamp)}
+            {formatMessageTime(item.timestamp, false, true)}
           </Animated.Text>
         </Animated.View>
       )}

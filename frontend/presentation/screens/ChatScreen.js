@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Easing } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faPaperPlane, faChevronLeft, faPlus, faTimes, faArrowUp } from '@fortawesome/free-solid-svg-icons';
+import { faChevronLeft, faPlus, faTimes, faArrowUp } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
 import { TouchableOpacity } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
@@ -14,9 +14,9 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { launchImageLibrary } from 'react-native-image-picker';
 import * as RN from 'react-native'; // Import alternatif pour accéder à Keyboard
+import MessageItem from '../components/MessageItem'; // Import du nouveau composant
 
-
-
+// Fonction formatage de temps (toujours utile pour les séparateurs de date dans le ChatScreen)
 const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false) => {
   const messageDate = new Date(timestamp);
   const today = new Date();
@@ -65,7 +65,6 @@ const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false
   }
 };
 
-
 const ChatScreen = ({ route }) => {
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
   const [message, setMessage] = useState('');
@@ -84,8 +83,6 @@ const ChatScreen = ({ route }) => {
   const flatListRef = useRef(null);
   const [keyboardOffset, setKeyboardOffset] = useState(Platform.OS === 'ios' ? 60 : 0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-
-
 
   useEffect(() => {
     // Utiliser RN.Keyboard au lieu de Keyboard
@@ -202,7 +199,6 @@ const ChatScreen = ({ route }) => {
       console.error('Erreur lors de l\'envoi:', error);
     }
   };
-
 
   const handleImagePick = async () => {
     try {
@@ -364,8 +360,7 @@ const ChatScreen = ({ route }) => {
     }
   }, [selectedImage]);
 
-
-
+  // Configuration du détecteur de geste pour afficher/masquer les horodatages
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -397,333 +392,18 @@ const ChatScreen = ({ route }) => {
     })
   ).current;
 
-  const timestampAnimation = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(timestampAnimation, {
-      toValue: showTimestamps ? 1 : 0,
-      duration: 250,
-      easing: Easing.bezier(0.4, 0, 0.2, 1),
-      useNativeDriver: true
-    }).start();
-  }, [showTimestamps]);
-
+  // Fonction pour rendre les messages - maintenant déléguée au nouveau composant
   const renderMessage = ({ item, index }) => {
-    if (item.type === 'separator') {
-      return (
-        <Text textAlign="center" color="#94A3B8" my={2}>
-          {formatMessageTime(item.timestamp, true)}
-        </Text>
-      );
-    }
-  
-    const isPreviousSameSender = index > 0 &&
-      messages[index - 1].sender === item.sender &&
-      messages[index - 1].type !== 'separator';
-  
-    const isNextSameSender = index < messages.length - 1 &&
-      messages[index + 1].sender === item.sender &&
-      messages[index + 1].type !== 'separator';
-  
-    let position = 'single';
-    if (isPreviousSameSender && isNextSameSender) {
-      position = 'middle';
-    } else if (isPreviousSameSender) {
-      position = 'last';
-    } else if (isNextSameSender) {
-      position = 'first';
-    }
-  
-    const showAvatar = position === 'single' || position === 'last';
-  
-    const getBubbleStyle = (isTextMessage = true) => {
-      const baseTextStyle = {
-        borderRadius: 10,
-        overflow: 'hidden',
-        marginVertical: 1,
-      };
-  
-      const baseImageStyle = {
-        borderRadius: 10,
-        overflow: 'hidden',
-        backgroundColor: 'transparent',
-      };
-  
-      const baseStyle = isTextMessage ? baseTextStyle : baseImageStyle;
-  
-      if (item.sender === 'user') {
-        switch (position) {
-          case 'first':
-            return {
-              ...baseStyle,
-              borderBottomRightRadius: isTextMessage ? 3 : 10,
-              marginBottom: 1,
-            };
-          case 'middle':
-            return {
-              ...baseStyle,
-              borderTopRightRadius: isTextMessage ? 3 : 10,
-              borderBottomRightRadius: isTextMessage ? 3 : 10,
-              marginVertical: 1,
-            };
-          case 'last':
-            return {
-              ...baseStyle,
-              borderTopRightRadius: isTextMessage ? 3 : 10,
-              marginTop: 1,
-            };
-          default:
-            return baseStyle;
-        }
-      } else {
-        switch (position) {
-          case 'first':
-            return {
-              ...baseStyle,
-              borderBottomLeftRadius: isTextMessage ? 3 : 10,
-              marginBottom: 1,
-            };
-          case 'middle':
-            return {
-              ...baseStyle,
-              borderTopLeftRadius: isTextMessage ? 3 : 10,
-              borderBottomLeftRadius: isTextMessage ? 3 : 10,
-              marginVertical: 1,
-            };
-          case 'last':
-            return {
-              ...baseStyle,
-              borderTopLeftRadius: isTextMessage ? 3 : 10,
-              marginTop: 1,
-            };
-          default:
-            return baseStyle;
-        }
-      }
-    };
-  
-    const hasRealText = item.text && item.text.trim().length > 0 && item.text.toLowerCase() !== 'mixed';
-    const hasImage = item.messageType === 'image' || item.image;
-  
-    const timestampWidth = timestampAnimation.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 10],
-      extrapolate: 'clamp'
-    });
-  
-    const timestampOpacity = timestampAnimation.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 1],
-      extrapolate: 'clamp'
-    });
-  
-    const messageMargin = 0.3;
-  
     return (
-      <HStack
-        width="100%"
-        justifyContent="space-between"
-        alignItems="flex-end"
-        my={messageMargin}
-        px={2}
-      >
-        <HStack
-          flex={1}
-          justifyContent={item.sender === 'user' ? 'flex-end' : 'flex-start'}
-          alignItems="flex-end"
-          space={1}
-        >
-          {item.sender !== 'user' && (
-            <>
-              {showAvatar ? (
-                <Image
-                  source={
-                    item.senderInfo?.profilePicture
-                      ? { uri: item.senderInfo.profilePicture }
-                      : require('../../assets/images/default.png')
-                  }
-                  alt="Profile"
-                  size={8}
-                  rounded="full"
-                />
-              ) : (
-                <Box size={8} opacity={0} />
-              )}
-            </>
-          )}
-  
-          <VStack
-            maxWidth="80%"
-            alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}
-          >
-            {item.sender !== 'user' && (position === 'first' || position === 'single') && (
-              <Text
-                style={styles.littleCaption}
-                color="#94A3B8"
-                ml={2}
-                mb={1}
-              >
-                {item.senderInfo?.name || 'Utilisateur'}
-              </Text>
-            )}
-  
-            {hasImage && hasRealText ? (
-              <VStack space={1} alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
-                <Box style={{
-                  ...getBubbleStyle(false),
-                  marginVertical: 10,
-                }}>
-                  <Image
-                    alt="Message image"
-                    source={{ uri: item.image }}
-                    style={{
-                      width: 150,
-                      height: 150,
-                      borderRadius: 10
-                    }}
-                    resizeMode="cover"
-                  />
-                </Box>
-  
-                <Box
-                  p={3}
-                  style={getBubbleStyle(true)}
-                >
-                  {item.sender === 'user' ? (
-                    <LinearGradient
-                      colors={['#FF587E', '#CC4B8D']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                      }}
-                    />
-                  ) : (
-                    <Box
-                      bg='#FFFFFF'
-                      style={{
-                        position: 'absolute',
-                        left: 0,
-                        right: 0,
-                        top: 0,
-                        bottom: 0,
-                      }}
-                    />
-                  )}
-                  <Text
-                    color={item.sender === 'user' ? 'white' : 'black'}
-                    style={styles.caption}
-                  >
-                    {item.text}
-                  </Text>
-                </Box>
-              </VStack>
-            ) : hasImage ? (
-              <Box style={getBubbleStyle(false)}>
-                <Image
-                  alt="Message image"
-                  source={{ uri: item.image }}
-                  style={{
-                    width: 150,
-                    height: 150,
-                    borderRadius: 10
-                  }}
-                  resizeMode="cover"
-                />
-              </Box>
-            ) : (
-              <Box
-                p={3}
-                style={getBubbleStyle(true)}
-              >
-                {item.sender === 'user' ? (
-                  <LinearGradient
-                    colors={['#FF587E', '#CC4B8D']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                    }}
-                  />
-                ) : (
-                  <Box
-                    bg='#FFFFFF'
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                    }}
-                  />
-                )}
-  
-                <Text
-                  color={item.sender === 'user' ? 'white' : 'black'}
-                  style={styles.caption}
-                >
-                  {item.text}
-                </Text>
-              </Box>
-            )}
-          </VStack>
-  
-          {item.sender === 'user' && (
-            <>
-              {showAvatar ? (
-                <Image
-                  source={
-                    userData?.profilePicture
-                      ? { uri: userData.profilePicture }
-                      : require('../../assets/images/default.png')
-                  }
-                  alt="Profile"
-                  size={8}
-                  rounded="full"
-                />
-              ) : (
-                <Box size={8} opacity={0} />
-              )}
-            </>
-          )}
-        </HStack>
-  
-        {showTimestamps && (
-          <Animated.View
-            style={{
-              opacity: timestampOpacity,
-              alignItems: 'flex-end'
-            }}
-          >
-            <Animated.Text
-              style={[
-                styles.littleCaption,
-                {
-                  color: '#94A3B8',
-                  fontSize: 10,
-                  marginBottom: 6,
-                  marginRight: 10,
-                  transform: [{ translateX: timestampWidth }]
-                }
-              ]}
-            >
-              {formatMessageTime(item.timestamp, false, true)}
-            </Animated.Text>
-          </Animated.View>
-        )}
-      </HStack>
+      <MessageItem
+        item={item}
+        index={index}
+        messages={messages}
+        userData={userData}
+        showTimestamps={showTimestamps}
+      />
     );
   };
-  
-
 
   return (
     <Background>
@@ -788,7 +468,6 @@ const ChatScreen = ({ route }) => {
               contentContainerStyle={{
                 flexGrow: 1,
                 paddingBottom: 20,
-
               }}
               onContentSizeChange={() => {
                 if (flatListRef.current) {
@@ -810,7 +489,6 @@ const ChatScreen = ({ route }) => {
               backgroundColor: 'white',
               borderTopLeftRadius: selectedImage ? 25 : 0,
               borderTopRightRadius: selectedImage ? 25 : 0,
-
             }}
           >
             {/* Affichage de l'image sélectionnée */}
@@ -969,7 +647,7 @@ const ChatScreen = ({ route }) => {
         </KeyboardAvoidingView>
       </SafeAreaView>
 
-      {/* Modal reste inchangé */}
+      {/* Modal pour afficher le secret complet */}
       <Modal isOpen={isModalVisible} onClose={() => setModalVisible(false)}>
         <View width='100%' style={{ flex: 1 }}>
           <BlurView
