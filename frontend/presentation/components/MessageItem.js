@@ -105,64 +105,76 @@ const MessageItem = ({
   const showAvatar = position === 'single' || position === 'last';
 
   // Styles de bulle en fonction de la position dans la séquence
-  const getBubbleStyle = (isTextMessage = true) => {
+ // Styles de bulle en fonction de la position dans la séquence
+const getBubbleStyle = (isTextMessage = true) => {
+    // Style de base pour tous les messages
     const baseTextStyle = {
       borderRadius: 20,
       overflow: 'hidden',
       marginVertical: 1,
     };
-
+  
+    // Style de base pour les images - mettre un borderRadius similaire à celui du texte
     const baseImageStyle = {
-      borderRadius: 10,
+      borderRadius: 10, // Même rayon que pour le texte
       overflow: 'hidden',
       backgroundColor: 'transparent',
     };
-
+  
     const baseStyle = isTextMessage ? baseTextStyle : baseImageStyle;
-
+  
+    // Pour les messages de l'utilisateur (à droite)
     if (item.sender === 'user') {
       switch (position) {
         case 'first':
+          // Premier message: arrondi partout sauf en bas à droite
           return {
             ...baseStyle,
-            borderBottomRightRadius: isTextMessage ? 3 : 10,
+            borderBottomRightRadius: 3, // Même valeur que pour le texte
             marginBottom: 1,
           };
         case 'middle':
+          // Message intermédiaire: coins arrondis sauf à droite
           return {
             ...baseStyle,
-            borderTopRightRadius: isTextMessage ? 3 : 10,
-            borderBottomRightRadius: isTextMessage ? 3 : 10,
+            borderTopRightRadius: 3, // Même valeur que pour le texte
+            borderBottomRightRadius: 3, // Même valeur que pour le texte
             marginVertical: 1,
           };
         case 'last':
+          // Dernier message: arrondi partout sauf en haut à droite
           return {
             ...baseStyle,
-            borderTopRightRadius: isTextMessage ? 3 : 10,
+            borderTopRightRadius: 3, // Même valeur que pour le texte
             marginTop: 1,
           };
         default:
           return baseStyle;
       }
-    } else {
+    } 
+    // Pour les messages des autres (à gauche)
+    else {
       switch (position) {
         case 'first':
+          // Premier message: arrondi partout sauf en bas à gauche
           return {
             ...baseStyle,
-            borderBottomLeftRadius: isTextMessage ? 3 : 10,
+            borderBottomLeftRadius: 3, // Même valeur que pour le texte
             marginBottom: 1,
           };
         case 'middle':
+          // Message intermédiaire: coins arrondis sauf à gauche
           return {
             ...baseStyle,
-            borderTopLeftRadius: isTextMessage ? 3 : 10,
-            borderBottomLeftRadius: isTextMessage ? 3 : 10,
+            borderTopLeftRadius: 3, // Même valeur que pour le texte
+            borderBottomLeftRadius: 3, // Même valeur que pour le texte
             marginVertical: 1,
           };
         case 'last':
+          // Dernier message: arrondi partout sauf en haut à gauche
           return {
             ...baseStyle,
-            borderTopLeftRadius: isTextMessage ? 3 : 10,
+            borderTopLeftRadius: 3, // Même valeur que pour le texte
             marginTop: 1,
           };
         default:
