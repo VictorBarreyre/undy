@@ -1,8 +1,9 @@
-import React, { useRef, useEffect } from 'react';
-import { Animated, Easing } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { Animated, Easing, TouchableOpacity } from 'react-native';
 import { Box, Text, HStack, Image, VStack } from 'native-base';
 import LinearGradient from 'react-native-linear-gradient';
 import { styles } from '../../infrastructure/theme/styles';
+import ImageView from 'react-native-image-viewing'; 
 
 // Fonction formatage de temps importée du ChatScreen
 const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false) => {
@@ -69,6 +70,9 @@ const MessageItem = ({
   showTimestamps 
 }) => {
   const timestampAnimation = useRef(new Animated.Value(showTimestamps ? 1 : 0)).current;
+
+  const [isImageViewVisible, setIsImageViewVisible] = useState(false);
+
 
   useEffect(() => {
     Animated.timing(timestampAnimation, {
@@ -207,21 +211,26 @@ const getBubbleStyle = (isTextMessage = true) => {
     if (hasImage && hasRealText) {
       return (
         <VStack space={1} alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
-          <Box style={{
-            ...getBubbleStyle(false),
-            marginVertical: 10,
-          }}>
-            <Image
-              alt="Message image"
-              source={{ uri: item.image }}
-              style={{
-                width: 150,
-                height: 150,
-                borderRadius: 10
-              }}
-              resizeMode="cover"
-            />
-          </Box>
+            <TouchableOpacity 
+            activeOpacity={0.9}
+            onPress={() => setIsImageViewVisible(true)}
+          >
+            <Box style={{
+              ...getBubbleStyle(false),
+              marginVertical: 10,
+            }}>
+              <Image
+                alt="Message image"
+                source={{ uri: item.image }}
+                style={{
+                  width: 150,
+                  height: 150,
+                  borderRadius: 10
+                }}
+                resizeMode="cover"
+              />
+            </Box>
+          </TouchableOpacity>
 
           <Box p={3} style={getBubbleStyle(true)}>
             {item.sender === 'user' ? (
@@ -257,6 +266,10 @@ const getBubbleStyle = (isTextMessage = true) => {
       );
     } else if (hasImage) {
       return (
+        <TouchableOpacity 
+        activeOpacity={0.9}
+        onPress={() => setIsImageViewVisible(true)}
+      >
         <Box style={getBubbleStyle(false)}>
           <Image
             alt="Message image"
@@ -269,6 +282,7 @@ const getBubbleStyle = (isTextMessage = true) => {
             resizeMode="cover"
           />
         </Box>
+      </TouchableOpacity>
       );
     } else {
       return (
@@ -363,6 +377,18 @@ const getBubbleStyle = (isTextMessage = true) => {
 
         {item.sender === 'user' && renderAvatar()}
       </HStack>
+      
+      {hasImage && (
+        <ImageView
+          images={[{ uri: item.image }]}
+          imageIndex={0}
+          visible={isImageViewVisible}
+          onRequestClose={() => setIsImageViewVisible(false)}
+          swipeToCloseEnabled={true}
+          doubleTapToZoomEnabled={true}
+        />
+      )}
+
 
       {showTimestamps && (
         <Animated.View
