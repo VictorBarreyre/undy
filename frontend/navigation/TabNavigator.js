@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Image, View } from 'react-native';
+import { Image, View, Text } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUser, faHome, faPlus, faComments } from '@fortawesome/free-solid-svg-icons';

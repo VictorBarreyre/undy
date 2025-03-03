@@ -439,6 +439,21 @@ const getConversationMessages = async (conversationId) => {
   }
 };
 
+
+const getUserConversations = async () => {
+  const instance = getAxiosInstance();
+  if (!instance) {
+    throw new Error('Axios instance not initialized');
+  }
+  try {
+    const response = await instance.get('/api/secrets/conversations');
+    return response.data || []; // Retourne un tableau vide si pas de données
+  } catch (error) {
+    console.error('Erreur lors de la récupération des conversations:', error);
+    return []; // Retourne un tableau vide en cas d'erreur
+  }
+};
+
   const handleShareSecret = async (secret) => {
     try {
       if (secret?.shareLink) {
@@ -559,7 +574,8 @@ const uploadImage = async (imageData) => {
       handleShareSecret,
       getSharedSecret,
       markConversationAsRead,
-      uploadImage
+      uploadImage, 
+      getUserConversations
     }}>
       {children}
     </CardDataContext.Provider>
