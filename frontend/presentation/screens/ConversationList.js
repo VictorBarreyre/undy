@@ -11,6 +11,8 @@ import { useFocusEffect } from '@react-navigation/native'; // Ajoutez cet import
 import { GestureHandlerRootView, Swipeable, RectButton } from 'react-native-gesture-handler';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 import { FontAwesome5 } from '@expo/vector-icons';
+import LinearGradient from 'react-native-linear-gradient';
+
 
 
 
@@ -236,26 +238,30 @@ const ConversationsList = ({ navigation }) => {
                     <Text style={styles.littleCaption} color="#94A3B8">
                       {new Date(item.updatedAt).toLocaleDateString()}
                     </Text>
-              
+
                   </HStack>
                 </HStack>
-                <HStack justifyContent='space-between' alignContent='center'> 
-                <Text style={styles.littleCaption} color="#94A3B8">{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
-                {item.unreadCount > 0 && (
-                      <Box
-                        backgroundColor="#FF78B2"
-                        borderRadius='6'
-                        width={6}
-                        height={6}
-                        justifyContent="center"
-                        alignItems="center"
-                      >
-                        <Text color="white" fontSize={10} fontWeight="bold">
-                          {item.unreadCount}
-                        </Text>
-                      </Box>
-                    )}
-              </HStack>
+                <HStack justifyContent='space-between' alignContent='center'>
+                  <Text style={styles.littleCaption} color="#94A3B8">{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
+                  {item.unreadCount > 0 && (
+                    <LinearGradient
+                    colors={['#FF587E', '#CC4B8D']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      borderRadius: 6,
+                      width: 24,
+                      height: 24,
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <Text color="white" fontSize={10} fontWeight="bold">
+                      {item.unreadCount}
+                    </Text>
+                  </LinearGradient>
+                  )}
+                </HStack>
               </VStack>
 
             </HStack>
@@ -285,9 +291,9 @@ const ConversationsList = ({ navigation }) => {
 
             </HStack>
             <FlatList
-         style={{
-          paddingBottom:'20'
-        }}
+              style={{
+                paddingBottom: '20'
+              }}
               data={conversations}
               renderItem={renderConversation}
               keyExtractor={item => item._id}
