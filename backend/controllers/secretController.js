@@ -699,80 +699,78 @@ exports.getConversation = async (req, res) => {
 
 exports.addMessageToConversation = async (req, res) => {
     try {
-        console.log("Données reçues:", JSON.stringify(req.body, null, 2)); // Debug pour voir ce qui est reçu
-        
-        // Extraire les données de la requête
-        const { content, messageType = 'text', image = null } = req.body;
-        
-        // Validation adaptée
-        if (messageType === 'text' && !content?.trim()) {
-            return res.status(400).json({ message: 'Le contenu est requis pour les messages texte.' });
+      console.log("Données reçues:", JSON.stringify(req.body, null, 2));
+      
+      // Extraire les données de la requête
+      const { content, messageType = 'text', image = null } = req.body;
+      
+      // Validation adaptée pour tous les types de messages
+      if ((messageType === 'text' || messageType === 'mixed') && !content?.trim()) {
+        return res.status(400).json({ message: 'Le contenu est requis pour les messages texte ou mixtes.' });
+      }
+      
+      if ((messageType === 'image' || messageType === 'mixed') && !image) {
+        return res.status(400).json({ message: 'L\'URL de l\'image est requise pour les messages image ou mixtes.' });
+      }
+      
+      // Construire l'objet message
+      const messageData = {
+        sender: req.user.id,
+        content: content?.trim() || " ", // Un espace par défaut (requis par le modèle)
+        senderName: req.user.name,
+        messageType: messageType // Conserver explicitement le type de message
+      };
+      
+      // Ajouter l'image si présente (pour les types 'image' ou 'mixed')
+      if (messageType === 'image' || messageType === 'mixed') {
+        // Si l'image est un objet FormData, extraire l'URL de l'image
+        if (typeof image === 'object' && image._parts && image._parts.length > 0) {
+          // Récupérer l'URL de l'image depuis FormData
+          // Normalement on utiliserait un service de stockage comme S3 ici
+          messageData.image = "placeholder_image_url"; 
+        } else {
+          // Sinon, utiliser la valeur directement (URL ou base64)
+          messageData.image = image;
         }
-        
-        if (messageType === 'image' && !image) {
-            return res.status(400).json({ message: 'L\'URL de l\'image est requise pour les messages image.' });
+      }
+      
+      console.log("Message formaté:", messageData);
+      
+      // Trouver et mettre à jour la conversation
+      const conversation = await Conversation.findOne({
+        _id: req.params.conversationId,
+        participants: req.user.id
+      });
+      
+      if (!conversation) {
+        return res.status(404).json({ message: 'Conversation introuvable.' });
+      }
+      
+      // Incrémenter les compteurs de messages non lus
+      conversation.participants.forEach(participantId => {
+        const participantIdStr = participantId.toString();
+        if (participantIdStr !== req.user.id.toString()) {
+          const currentCount = conversation.unreadCount.get(participantIdStr) || 0;
+          conversation.unreadCount.set(participantIdStr, currentCount + 1);
         }
-        
-        // Construire l'objet message
-        const messageData = {
-            sender: req.user.id,
-            content: content?.trim() || " ", // Un espace par défaut (requis par le modèle)
-            senderName: req.user.name
-        };
-        
-        // Ajouter les propriétés spécifiques aux images
-        if (messageType === 'image') {
-            messageData.messageType = 'image';
-            
-            // Si l'image est un objet FormData, extraire l'URL de l'image
-            if (typeof image === 'object' && image._parts && image._parts.length > 0) {
-                // Récupérer l'URL de l'image depuis FormData
-                // Normalement on utiliserait un service de stockage comme S3 ici
-                // Pour simplifier, vous pouvez juste utiliser une valeur par défaut
-                messageData.image = "placeholder_image_url"; 
-            } else {
-                // Sinon, utiliser la valeur directement (URL ou base64)
-                messageData.image = image;
-            }
-        }
-        
-        console.log("Message formaté:", messageData); // Debug pour voir le message qui sera enregistré
-        
-        // Trouver et mettre à jour la conversation
-        const conversation = await Conversation.findOne({
-            _id: req.params.conversationId,
-            participants: req.user.id
-        });
-        
-        if (!conversation) {
-            return res.status(404).json({ message: 'Conversation introuvable.' });
-        }
-        
-        // Incrémenter les compteurs de messages non lus
-        conversation.participants.forEach(participantId => {
-            const participantIdStr = participantId.toString();
-            if (participantIdStr !== req.user.id.toString()) {
-                const currentCount = conversation.unreadCount.get(participantIdStr) || 0;
-                conversation.unreadCount.set(participantIdStr, currentCount + 1);
-            }
-        });
-        
-        // Ajouter le message
-        conversation.messages.push(messageData);
-        await conversation.save();
-        
-        // Récupérer le message avec les infos de l'expéditeur
-        const updatedConversation = await Conversation.findById(req.params.conversationId)
-            .populate('messages.sender', '_id name profilePicture');
-        
-        const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1];
-        
-        res.status(201).json(lastMessage);
+      });
+      
+      // Ajouter le message
+      conversation.messages.push(messageData);
+      await conversation.save();
+      
+      // Récupérer le message avec les infos de l'expéditeur
+      const updatedConversation = await Conversation.findById(req.params.conversationId)
+        .populate('messages.sender', '_id name profilePicture');
+      
+      const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1];
+      
+      res.status(201).json(lastMessage);
     } catch (error) {
-        console.error('Erreur lors de l\'ajout du message:', error);
-        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+      console.error('Erreur lors de l\'ajout du message:', error);
+      res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
-};
+  };
 
 
 exports.uploadImage = async (req, res) => {

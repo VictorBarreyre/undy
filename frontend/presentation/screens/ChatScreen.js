@@ -221,8 +221,8 @@ const ChatScreen = ({ route }) => {
           text: msg.content,
           sender: isCurrentUser ? 'user' : 'other',
           timestamp: msg.createdAt,
-          messageType: isImageMessage ? 'image' : 'text',
-          image: msg.image,
+          messageType: msg.messageType, // Garder le type exact
+          image: msg.image,  // Toujours inclure l'image si elle existe
           senderInfo: {
             id: messageSenderId,
             name: userMapping[messageSenderId]?.name || msg.senderName || 'Utilisateur',
