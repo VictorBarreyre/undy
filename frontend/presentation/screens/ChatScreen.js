@@ -23,7 +23,7 @@ const ChatScreen = ({ route }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const { handleAddMessage, markConversationAsRead, uploadImage } = useCardData();
-  const { userData } = useContext(AuthContext);
+  const { userData, userToken } = useContext(AuthContext);
   const navigation = useNavigation();
   const [showTimestamps, setShowTimestamps] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
@@ -41,44 +41,69 @@ const ChatScreen = ({ route }) => {
   const [firstUnreadMessageIndex, setFirstUnreadMessageIndex] = useState(-1);
 
 
+  // Remplacez votre useEffect qui traite conversation.unreadCount par celui-ci
   useEffect(() => {
-    if (conversation?.messages && conversation.unreadCount && userData?._id) {
+    if (conversation) {
+      console.log('Conversation object structure:', {
+        id: conversation._id,
+        hasUnreadCount: !!conversation.unreadCount,
+        unreadCountType: conversation.unreadCount ? typeof conversation.unreadCount : 'none',
+        rawUnreadCount: conversation.unreadCount
+      });
+      
       // Récupérer le nombre de messages non lus
       let currentUnreadCount = 0;
+      let userIdStr = userData?._id?.toString() || '';
       
-      // Vérifier le type de unreadCount (Map ou objet)
-      if (conversation.unreadCount instanceof Map) {
-        currentUnreadCount = conversation.unreadCount.get(userData._id.toString()) || 0;
-      } else if (typeof conversation.unreadCount === 'object') {
-        currentUnreadCount = conversation.unreadCount[userData._id] || 0;
+      // Si unreadCount est un nombre, utilisez-le directement
+      if (typeof conversation.unreadCount === 'number') {
+        currentUnreadCount = conversation.unreadCount;
+      } 
+      // Sinon, essayez de l'accéder comme un objet/map (votre logique actuelle)
+      else if (conversation.unreadCount && userData?._id) {
+        if (conversation.unreadCount instanceof Map) {
+          currentUnreadCount = conversation.unreadCount.get(userIdStr) || 0;
+        } else if (typeof conversation.unreadCount === 'object') {
+          currentUnreadCount = conversation.unreadCount[userIdStr] || 0;
+        }
       }
-
-      // Trouver l'index du premier message non lu
-      const unreadStartIndex = Math.max(0, messages.length - currentUnreadCount);
-      const unreadIndex = messages.findIndex(
-        (msg, index) => index >= unreadStartIndex && msg.type !== 'separator'
-      );
-
-      console.log('Unread Count:', currentUnreadCount);
-      console.log('Unread Start Index:', unreadStartIndex);
-      console.log('First Unread Message Index:', unreadIndex);
-
+      
+      console.log('Extracted unreadCount:', currentUnreadCount, 'for user:', userIdStr);
+      
+      // Définir les états nécessaires
       setUnreadCount(currentUnreadCount);
-      setFirstUnreadMessageIndex(unreadIndex);
+      
+      // Si il y a des messages non lus, on s'assure que hasScrolledToBottom est false
+      if (currentUnreadCount > 0) {
+        setHasScrolledToBottom(false);
+      }
+      
+      // Trouver l'index du premier message non lu
+      if (messages.length > 0 && currentUnreadCount > 0) {
+        const unreadStartIndex = Math.max(0, messages.length - currentUnreadCount);
+        const unreadIndex = messages.findIndex(
+          (msg, index) => index >= unreadStartIndex && msg.type !== 'separator'
+        );
+        
+        console.log('Unread Start Index:', unreadStartIndex);
+        console.log('First Unread Message Index:', unreadIndex);
+        
+        setFirstUnreadMessageIndex(unreadIndex > -1 ? unreadIndex : messages.length - 1);
+      }
     }
   }, [conversation, messages, userData?._id]);
 
 
-
   const handleScroll = (event) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    
+
     // Vérifier si l'utilisateur a atteint le bas de la liste
-    const isBottomReached = 
+    const isBottomReached =
       layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
 
     // Si on a atteint le bas ET qu'il y a des messages non lus
     if (isBottomReached && unreadCount > 0) {
+      console.log('Marking as read with token:', userToken); // Ajoutez ce log
       markConversationAsRead(conversationId, userToken);
       setUnreadCount(0);
       setHasScrolledToBottom(true);
@@ -86,32 +111,38 @@ const ChatScreen = ({ route }) => {
   };
 
 
-
   // Ajouter cet effet dans le ChatScreen
+  // Modifiez l'effet de focus de navigation
   useEffect(() => {
-    // Gestionnaire d'événement pour le focus sur l'écran
     const unsubscribe = navigation.addListener('focus', async () => {
       if (conversationId) {
         try {
-          // Créer une fonction pour rafraîchir la conversation complète
           const fetchConversationData = async () => {
             const instance = getAxiosInstance();
             if (!instance) return;
 
+            console.log('Fetching conversation data for secret:', conversation.secret._id);
+
             // Récupérer la conversation complète (pas seulement les messages)
             const response = await instance.get(`/api/secrets/conversations/secret/${conversation.secret._id}`);
 
-            // Mettre à jour le state local ou les paramètres de navigation
-            if (response.data) {
-              // Option 1: Mettre à jour directement les paramètres de route
-              navigation.setParams({ conversation: response.data });
+            // Log détaillé de la réponse
+            console.log('Conversation API response details:', {
+              hasUnreadCount: !!response.data.unreadCount,
+              unreadCountType: response.data.unreadCount ? typeof response.data.unreadCount : 'none',
+              unreadCountData: response.data.unreadCount
+            });
 
-              // Option 2: Ou mettre à jour un état local si vous préférez
-              // setConversationData(response.data);
+            // Mettre à jour les paramètres de route sans effacer les messages non lus
+            if (response.data) {
+              navigation.setParams({
+                conversation: response.data,
+                // Ne pas marquer automatiquement comme lu
+                doNotMarkAsRead: true
+              });
             }
           };
 
-          // Exécuter la fonction de récupération
           await fetchConversationData();
         } catch (error) {
           console.error('Erreur lors du rechargement de la conversation:', error);
@@ -119,7 +150,6 @@ const ChatScreen = ({ route }) => {
       }
     });
 
-    // Nettoyer l'abonnement lorsque le composant est démonté
     return unsubscribe;
   }, [navigation, conversationId, conversation?.secret?._id]);
 
@@ -148,28 +178,18 @@ const ChatScreen = ({ route }) => {
     };
   }, []);
 
-  // Initialisation et marquage comme lu
   useEffect(() => {
     const initialize = async () => {
-      if (conversationId) {
-        try {
-          // Marquer comme lu
-          await markConversationAsRead(conversationId);
-          console.log("Conversation marquée comme lue");
-        } catch (error) {
-          console.error('Erreur lors du marquage comme lu:', error);
-        }
-      }
+      // Autres initialisations mais PAS de marquage comme lu
     };
-
     initialize();
+    // ...
+  }, [conversationId, showModalOnMount]);
 
-    // Gestion de la modale au montage
-    if (isInitialMount.current && showModalOnMount) {
-      setModalVisible(true);
-      isInitialMount.current = false;
-    }
-  }, [conversationId, markConversationAsRead, showModalOnMount]);
+  useEffect(() => {
+    console.log('Conditions bouton:', { unreadCount, hasScrolledToBottom });
+  }, [unreadCount, hasScrolledToBottom]);
+
 
   useEffect(() => {
     if (conversation?.messages) {
@@ -197,12 +217,12 @@ const ChatScreen = ({ route }) => {
         const currentMessageDate = new Date(msg.createdAt);
 
         // Détecter si le message provient de l'utilisateur actuel
-        const isCurrentUser = 
+        const isCurrentUser =
           (msg.sender && typeof msg.sender === 'object' ? msg.sender._id : msg.sender) === userData._id;
 
         // Séparateur de date si nécessaire
-        if (!lastMessageDate || 
-            currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
+        if (!lastMessageDate ||
+          currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
           formattedMessages.push({
             id: `separator-${index}`,
             type: 'separator',
@@ -445,7 +465,7 @@ const ChatScreen = ({ route }) => {
         index: firstUnreadMessageIndex,
         animated: true,
       });
-  
+
       // Marquer la conversation comme lue
       markConversationAsRead(conversationId);
       setUnreadCount(0);
@@ -508,18 +528,20 @@ const ChatScreen = ({ route }) => {
 
           {/* Liste des messages */}
           <Box flex={1}>
-         
-              <FlatList
-                ref={flatListRef}
-                data={messages}
-                renderItem={renderMessage}
-                keyExtractor={item => item.id.toString()}
-                contentContainerStyle={{
-                  flexGrow: 1,
-                  paddingBottom: 20,
-                }}
-              />
-  
+
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              renderItem={renderMessage}
+              keyExtractor={item => item.id.toString()}
+              contentContainerStyle={{
+                flexGrow: 1,
+                paddingBottom: 20,
+              }}
+              onScroll={handleScroll} // Ajoutez cette ligne
+              scrollEventThrottle={16}
+            />
+
           </Box>
 
           {/* Zone d'input */}
@@ -687,28 +709,41 @@ const ChatScreen = ({ route }) => {
         </KeyboardAvoidingView>
       </SafeAreaView>
 
-     {/* Badge de messages non lus */}
-     {!hasScrolledToBottom && unreadCount > 0 && (
-        <TouchableOpacity 
+      {/* Badge de messages non lus */}
+      {unreadCount > 0 && (
+        <TouchableOpacity
           onPress={scrollToUnreadMessages}
           style={{
             position: 'absolute',
             bottom: 80,
             right: 20,
-            backgroundColor: '#FF78B2',
             borderRadius: 25,
             width: 50,
             height: 50,
             justifyContent: 'center',
             alignItems: 'center',
+            overflow: 'hidden',
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.25,
             shadowRadius: 3.84,
             elevation: 5,
+            zIndex: 999, // Assurer que c'est au-dessus de tout
           }}
         >
-          <Text style={{ color: 'white', fontWeight: 'bold' }}>
+          <LinearGradient
+            colors={['#FF587E', '#CC4B8D']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: 0,
+              bottom: 0
+            }}
+          />
+          <Text style={{ color: 'white', fontWeight: 'bold', zIndex: 1 }}>
             {unreadCount}
           </Text>
         </TouchableOpacity>
