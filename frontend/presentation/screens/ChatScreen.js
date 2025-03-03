@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, ActivityIndicator } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faChevronLeft, faPlus, faTimes, faArrowUp } from '@fortawesome/free-solid-svg-icons';
+import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
 import { TouchableOpacity } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
@@ -746,6 +746,11 @@ const ChatScreen = ({ route }) => {
           <Text style={{ color: 'white', fontWeight: 'bold', zIndex: 1 }}>
             {unreadCount}
           </Text>
+          <FontAwesomeIcon 
+              icon={faChevronDown} 
+              size={12} 
+              color="white" 
+            />
         </TouchableOpacity>
       )}
 
