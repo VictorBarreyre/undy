@@ -56,7 +56,7 @@ const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false
 
 const DateSeparator = ({ timestamp }) => {
   return (
-    <Text textAlign="center" color="#94A3B8" my={2}>
+    <Text style={styles.littleCaption} textAlign="center" color="#94A3B8" mb={4} mt={10}>
       {formatMessageTime(timestamp, true)}
     </Text>
   );
@@ -225,7 +225,6 @@ const getBubbleStyle = (isTextMessage = true) => {
                 style={{
                   width: 150,
                   height: 150,
-                  borderRadius: 10
                 }}
                 resizeMode="cover"
               />
@@ -277,7 +276,6 @@ const getBubbleStyle = (isTextMessage = true) => {
             style={{
               width: 150,
               height: 150,
-              borderRadius: 10
             }}
             resizeMode="cover"
           />
@@ -298,6 +296,7 @@ const getBubbleStyle = (isTextMessage = true) => {
                 right: 0,
                 top: 0,
                 bottom: 0,
+                
               }}
             />
           ) : (
@@ -309,6 +308,7 @@ const getBubbleStyle = (isTextMessage = true) => {
                 right: 0,
                 top: 0,
                 bottom: 0,
+                
               }}
             />
           )}

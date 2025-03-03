@@ -18,55 +18,6 @@ import MessageItem from '../components/MessageItem';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 
 
-// Fonction formatage de temps
-const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false) => {
-  const messageDate = new Date(timestamp);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (showTimeOnly) {
-    return messageDate.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  if (showFullDate) {
-    if (messageDate.toDateString() === today.toDateString()) {
-      return `Aujourd'hui, ${messageDate.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })}`;
-    } else if (messageDate.toDateString() === yesterday.toDateString()) {
-      return `Hier, ${messageDate.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })}`;
-    } else {
-      return messageDate.toLocaleString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
-  }
-
-  if (messageDate.toDateString() === today.toDateString()) {
-    return 'Aujourd\'hui';
-  } else if (messageDate.toDateString() === yesterday.toDateString()) {
-    return 'Hier';
-  } else {
-    return messageDate.toLocaleString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long'
-    });
-  }
-};
-
 const ChatScreen = ({ route }) => {
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
   const [message, setMessage] = useState('');
@@ -528,7 +479,7 @@ useEffect(() => {
           </HStack>
 
           {/* Liste des messages */}
-          <Box flex={1} pb={5}>
+          <Box flex={1} >
             <FlatList
               ref={flatListRef}
               data={messages}
