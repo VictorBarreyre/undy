@@ -97,20 +97,28 @@ const TabNavigator = () => {
               return <GradientIcon icon={faPlus} size={size} focused={focused} />;
               case 'ChatTab':
                 return (
-                  <View style={{ position: 'relative' }}>
-                    <GradientIcon icon={faComments} size={size} focused={focused} />
-                    {totalUnreadCount > 0 && (
-                      <View style={{
-                        position: 'absolute',
-                        top: -5,
-                        right: -5,
-                        backgroundColor: '#FF78B2',
-                        borderRadius: 10,
-                        width: 20,
-                        height: 20,
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                      }}>
+                 <View style={{ position: 'relative' }}>
+                  <GradientIcon icon={faComments} size={size} focused={focused} />
+                  {totalUnreadCount > 0 && (
+                    <View style={{
+                      position: 'absolute',
+                      top: -5,
+                      right: -5,
+                      overflow: 'hidden',
+                      borderRadius: 10
+                    }}>
+                      <LinearGradient
+                        colors={['#FF587E', '#CC4B8D']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: 10,
+                          justifyContent: 'center',
+                          alignItems: 'center'
+                        }}
+                      >
                         <Text style={{ 
                           color: 'white', 
                           fontSize: 10, 
@@ -118,9 +126,10 @@ const TabNavigator = () => {
                         }}>
                           {totalUnreadCount}
                         </Text>
-                      </View>
-                    )}
-                  </View>
+                      </LinearGradient>
+                    </View>
+                  )}
+                </View>
                 );
             }
           },
