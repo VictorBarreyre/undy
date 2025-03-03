@@ -210,14 +210,14 @@ const getBubbleStyle = (isTextMessage = true) => {
   const renderMessageContent = () => {
     if (hasImage && hasRealText) {
       return (
-        <VStack space={1} alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
+        <VStack alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
             <TouchableOpacity 
             activeOpacity={0.9}
             onPress={() => setIsImageViewVisible(true)}
           >
             <Box style={{
               ...getBubbleStyle(false),
-              marginVertical: 10,
+  
             }}>
               <Image
                 alt="Message image"

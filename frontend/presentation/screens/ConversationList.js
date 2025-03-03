@@ -236,10 +236,15 @@ const ConversationsList = ({ navigation }) => {
                     <Text style={styles.littleCaption} color="#94A3B8">
                       {new Date(item.updatedAt).toLocaleDateString()}
                     </Text>
-                    {item.unreadCount > 0 && (
+              
+                  </HStack>
+                </HStack>
+                <HStack justifyContent='space-between' alignContent='center'> 
+                <Text style={styles.littleCaption} color="#94A3B8">{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
+                {item.unreadCount > 0 && (
                       <Box
                         backgroundColor="#FF78B2"
-                        borderRadius="full"
+                        borderRadius='6'
                         width={6}
                         height={6}
                         justifyContent="center"
@@ -250,9 +255,7 @@ const ConversationsList = ({ navigation }) => {
                         </Text>
                       </Box>
                     )}
-                  </HStack>
-                </HStack>
-                <Text style={styles.littleCaption} color="#94A3B8">{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
+              </HStack>
               </VStack>
 
             </HStack>

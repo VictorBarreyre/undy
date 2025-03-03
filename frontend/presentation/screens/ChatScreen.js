@@ -518,11 +518,6 @@ const ChatScreen = ({ route }) => {
                   flexGrow: 1,
                   paddingBottom: 20,
                 }}
-                onContentSizeChange={() => {
-                  if (flatListRef.current) {
-                    flatListRef.current.scrollToEnd({ animated: false });
-                  }
-                }}
               />
   
           </Box>
