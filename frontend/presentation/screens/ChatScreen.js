@@ -59,7 +59,7 @@ const ChatScreen = ({ route }) => {
       if (typeof conversation.unreadCount === 'number') {
         currentUnreadCount = conversation.unreadCount;
       } 
-      // Sinon, essayez de l'accéder comme un objet/map (votre logique actuelle)
+      // Sinon, essayez de l'accéder comme un objet/map
       else if (conversation.unreadCount && userData?._id) {
         if (conversation.unreadCount instanceof Map) {
           currentUnreadCount = conversation.unreadCount.get(userIdStr) || 0;
@@ -70,17 +70,25 @@ const ChatScreen = ({ route }) => {
       
       console.log('Extracted unreadCount:', currentUnreadCount, 'for user:', userIdStr);
       
-      // Définir les états nécessaires
-      setUnreadCount(currentUnreadCount);
-      
-      // Si il y a des messages non lus, on s'assure que hasScrolledToBottom est false
-      if (currentUnreadCount > 0) {
-        setHasScrolledToBottom(false);
+      // IMPORTANT : Ne pas mettre à jour unreadCount à 0 si la valeur existante est positive
+      // et que la nouvelle valeur est 0 - cela pourrait être une erreur API
+      if (!(unreadCount > 0 && currentUnreadCount === 0 && !hasScrolledToBottom)) {
+        setUnreadCount(currentUnreadCount);
+        
+        // Si il y a des messages non lus, on s'assure que hasScrolledToBottom est false
+        if (currentUnreadCount > 0) {
+          setHasScrolledToBottom(false);
+        }
+      } else {
+        console.log('Conservation de unreadCount existant:', unreadCount, 'car nouvelle valeur est 0');
       }
       
-      // Trouver l'index du premier message non lu
-      if (messages.length > 0 && currentUnreadCount > 0) {
-        const unreadStartIndex = Math.max(0, messages.length - currentUnreadCount);
+      // Trouver l'index du premier message non lu seulement si nous avons des messages non lus
+      if (messages.length > 0 && (currentUnreadCount > 0 || unreadCount > 0)) {
+        // Utiliser la valeur la plus élevée entre currentUnreadCount et unreadCount existant
+        const effectiveUnreadCount = Math.max(currentUnreadCount, unreadCount);
+        const unreadStartIndex = Math.max(0, messages.length - effectiveUnreadCount);
+        
         const unreadIndex = messages.findIndex(
           (msg, index) => index >= unreadStartIndex && msg.type !== 'separator'
         );
@@ -88,7 +96,11 @@ const ChatScreen = ({ route }) => {
         console.log('Unread Start Index:', unreadStartIndex);
         console.log('First Unread Message Index:', unreadIndex);
         
-        setFirstUnreadMessageIndex(unreadIndex > -1 ? unreadIndex : messages.length - 1);
+        if (unreadIndex > -1) {
+          setFirstUnreadMessageIndex(unreadIndex);
+        } else {
+          setFirstUnreadMessageIndex(messages.length - 1);
+        }
       }
     }
   }, [conversation, messages, userData?._id]);
@@ -103,13 +115,11 @@ const ChatScreen = ({ route }) => {
       setUnreadCount(0);
       setHasScrolledToBottom(true);
       
-      // Rafraîchir les compteurs globaux
+      // Assurez-vous que cette ligne est présente
       refreshUnreadCounts();
     }
   };
 
-  // Ajouter cet effet dans le ChatScreen
-  // Modifiez l'effet de focus de navigation
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', async () => {
       if (conversationId) {
@@ -117,36 +127,48 @@ const ChatScreen = ({ route }) => {
           const fetchConversationData = async () => {
             const instance = getAxiosInstance();
             if (!instance) return;
-
+  
             console.log('Fetching conversation data for secret:', conversation.secret._id);
-
-            // Récupérer la conversation complète (pas seulement les messages)
+  
+            // Récupérer la conversation complète
             const response = await instance.get(`/api/secrets/conversations/secret/${conversation.secret._id}`);
-
+  
             // Log détaillé de la réponse
             console.log('Conversation API response details:', {
               hasUnreadCount: !!response.data.unreadCount,
               unreadCountType: response.data.unreadCount ? typeof response.data.unreadCount : 'none',
               unreadCountData: response.data.unreadCount
             });
-
-            // Mettre à jour les paramètres de route sans effacer les messages non lus
+  
+            // IMPORTANT : Préserver les informations de unreadCount
             if (response.data) {
+              // Conserver le unreadCount actuel si la réponse n'en a pas
+              const updatedConversation = { 
+                ...response.data,
+                // Si la réponse n'a pas d'unreadCount mais que notre état local en a, conserver l'état local
+                unreadCount: response.data.unreadCount || (conversation && conversation.unreadCount) || 0
+              };
+              
+              console.log('MISE À JOUR - Conversation avec unreadCount préservé:', {
+                original: conversation?.unreadCount,
+                fromResponse: response.data.unreadCount,
+                preserved: updatedConversation.unreadCount
+              });
+  
               navigation.setParams({
-                conversation: response.data,
-                // Ne pas marquer automatiquement comme lu
+                conversation: updatedConversation,
                 doNotMarkAsRead: true
               });
             }
           };
-
+  
           await fetchConversationData();
         } catch (error) {
           console.error('Erreur lors du rechargement de la conversation:', error);
         }
       }
     });
-
+  
     return unsubscribe;
   }, [navigation, conversationId, conversation?.secret?._id]);
 
@@ -441,6 +463,15 @@ const ChatScreen = ({ route }) => {
       }
     })
   ).current;
+
+
+  useEffect(() => {
+    if (unreadCount === 0 && hasScrolledToBottom) {
+      console.log("ChatScreen: Tous les messages marqués comme lus");
+      refreshUnreadCounts();
+    }
+  }, [unreadCount, hasScrolledToBottom]);
+
 
   // Fonction de rendu des messages
   const renderMessage = ({ item, index }) => {

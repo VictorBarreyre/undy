@@ -52,7 +52,7 @@ const TabNavigator = () => {
 
   useEffect(() => {
     refreshUnreadCounts();
-    
+    console.log("TabNavigator - totalUnreadCount:", totalUnreadCount);
     // Rafraîchir toutes les 30 secondes
     const interval = setInterval(refreshUnreadCounts, 30000);
     

@@ -32,6 +32,8 @@ export const CardDataProvider = ({ children }) => {
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
   const [unreadCountsMap, setUnreadCountsMap] = useState({});
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+  const { userData } = useContext(AuthContext);
+
 
   useEffect(() => {
     const initAxios = async () => {
@@ -454,22 +456,18 @@ export const CardDataProvider = ({ children }) => {
       const normalizedConversations = (response.data || []).map(conv => {
         // Création d'un objet conversation normalisé
         const normalizedConv = { ...conv };
+        
+        // Obtenir l'ID utilisateur correctement
+        const userIdStr = userData?._id?.toString() || '';
 
         // Déterminer unreadCount selon le format retourné par l'API
         if (typeof conv.unreadCount === 'number') {
-          // Si c'est un nombre simple, le garder tel quel
           normalizedConv.unreadCount = conv.unreadCount;
         } else if (conv.unreadCount instanceof Map || typeof conv.unreadCount === 'object') {
-          // Si c'est une Map ou un objet, extraire la valeur pour l'utilisateur actuel
-          const userIdStr = conv.participants?.find(p =>
-            p._id === getUserId() // Fonction hypothétique pour obtenir l'ID utilisateur
-          )?._id?.toString() || '';
-
           normalizedConv.unreadCount = (conv.unreadCount instanceof Map)
             ? (conv.unreadCount.get(userIdStr) || 0)
             : (conv.unreadCount?.[userIdStr] || 0);
         } else {
-          // Par défaut, aucun message non lu
           normalizedConv.unreadCount = 0;
         }
 
@@ -573,21 +571,13 @@ export const CardDataProvider = ({ children }) => {
       let total = 0;
 
       conversations.forEach(conv => {
-        let count = 0;
-
-        // Déterminer le compte non lu selon le format
-        if (typeof conv.unreadCount === 'number') {
-          count = conv.unreadCount;
-        } else if (conv.unreadCount instanceof Map || typeof conv.unreadCount === 'object') {
-          const userIdStr = userData?._id?.toString() || '';
-          count = (conv.unreadCount instanceof Map)
-            ? (conv.unreadCount.get(userIdStr) || 0)
-            : (conv.unreadCount?.[userIdStr] || 0);
-        }
-
+        // Utiliser directement unreadCount normalisé
+        const count = conv.unreadCount || 0;
         countsMap[conv._id] = count;
         total += count;
       });
+
+      console.log("Mise à jour des compteurs:", { countsMap, total });
 
       setUnreadCountsMap(countsMap);
       setTotalUnreadCount(total);

@@ -28,17 +28,6 @@ const ConversationsList = ({ navigation }) => {
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  useFocusEffect(
-    React.useCallback(() => {
-      refreshUnreadCounts();
-
-      const now = Date.now();
-      if (!lastUpdate || now - lastUpdate > 5 * 60 * 1000) {
-        fetchConversations();
-        setLastUpdate(now);
-      }
-    }, [lastUpdate])
-  );
 
 
   const startAnimation = () => {
@@ -97,18 +86,20 @@ const ConversationsList = ({ navigation }) => {
     }
   };
 
-
-
-  useFocusEffect(
-    React.useCallback(() => {
-      const now = Date.now();
-      // Ne recharge que si plus de 5 minutes se sont écoulées depuis le dernier chargement
-      if (!lastUpdate || now - lastUpdate > 5 * 60 * 1000) {
-        fetchConversations();
-        setLastUpdate(now);
-      }
-    }, [userToken, lastUpdate])
-  );
+// Supprimer un des deux useFocusEffect
+useFocusEffect(
+  React.useCallback(() => {
+    // Rafraîchir les compteurs de messages non lus
+    refreshUnreadCounts();
+    
+    const now = Date.now();
+    // Ne recharge que si plus de 5 minutes se sont écoulées depuis le dernier chargement
+    if (!lastUpdate || now - lastUpdate > 5 * 60 * 1000) {
+      fetchConversations();
+      setLastUpdate(now);
+    }
+  }, [userToken, lastUpdate])
+);
 
   if (isLoading) {
     return (
@@ -188,7 +179,7 @@ const ConversationsList = ({ navigation }) => {
   const renderConversation = ({ item }) => {
 
     const unreadCount = unreadCountsMap[item._id] || 0;
-
+    console.log(`Conversation ${item._id} - unreadCount:`, unreadCount);
 
 
     let row = [];
