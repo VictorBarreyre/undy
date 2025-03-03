@@ -36,35 +36,56 @@ const ChatScreen = ({ route }) => {
   const flatListRef = useRef(null);
   const [keyboardOffset, setKeyboardOffset] = useState(Platform.OS === 'ios' ? 60 : 0);
   const [isScrolling, setIsScrolling] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(conversation.unreadCount || 0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [firstUnreadMessageIndex, setFirstUnreadMessageIndex] = useState(-1);
+
 
   useEffect(() => {
-    // Quand les messages changent, mettre à jour le compteur
-    const currentUnreadCount = conversation.unreadCount || 0;
-    setUnreadCount(currentUnreadCount);
-  }, [conversation.messages]);
+    if (conversation?.messages && conversation.unreadCount && userData?._id) {
+      // Récupérer le nombre de messages non lus
+      let currentUnreadCount = 0;
+      
+      // Vérifier le type de unreadCount (Map ou objet)
+      if (conversation.unreadCount instanceof Map) {
+        currentUnreadCount = conversation.unreadCount.get(userData._id.toString()) || 0;
+      } else if (typeof conversation.unreadCount === 'object') {
+        currentUnreadCount = conversation.unreadCount[userData._id] || 0;
+      }
 
-  // Nouvelle fonction pour scroller et marquer comme lu
-  const scrollToUnreadMessages = () => {
-    if (flatListRef.current) {
       // Trouver l'index du premier message non lu
+      const unreadStartIndex = Math.max(0, messages.length - currentUnreadCount);
       const unreadIndex = messages.findIndex(
-        msg => !msg.read && msg.type !== 'separator'
+        (msg, index) => index >= unreadStartIndex && msg.type !== 'separator'
       );
 
-      if (unreadIndex !== -1) {
-        // Scroller jusqu'au premier message non lu
-        flatListRef.current.scrollToIndex({ 
-          index: unreadIndex, 
-          animated: true 
-        });
+      console.log('Unread Count:', currentUnreadCount);
+      console.log('Unread Start Index:', unreadStartIndex);
+      console.log('First Unread Message Index:', unreadIndex);
 
-        // Marquer tous les messages comme lus
-        markConversationAsRead(conversationId);
-        setUnreadCount(0);
-      }
+      setUnreadCount(currentUnreadCount);
+      setFirstUnreadMessageIndex(unreadIndex);
+    }
+  }, [conversation, messages, userData?._id]);
+
+
+
+  const handleScroll = (event) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    
+    // Vérifier si l'utilisateur a atteint le bas de la liste
+    const isBottomReached = 
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
+
+    // Si on a atteint le bas ET qu'il y a des messages non lus
+    if (isBottomReached && unreadCount > 0) {
+      markConversationAsRead(conversationId, userToken);
+      setUnreadCount(0);
+      setHasScrolledToBottom(true);
     }
   };
+
+
 
   // Ajouter cet effet dans le ChatScreen
   useEffect(() => {
@@ -150,27 +171,19 @@ const ChatScreen = ({ route }) => {
     }
   }, [conversationId, markConversationAsRead, showModalOnMount]);
 
-  // Formatage des messages
   useEffect(() => {
     if (conversation?.messages) {
-      console.log("Formatage des messages :", conversation.messages.length);
-      console.log("userData :", userData?._id);
-
-      // Créer un mapping des IDs vers les infos utilisateurs
       const userMapping = {};
-      if (conversation.participants) {
-        conversation.participants.forEach(participant => {
-          userMapping[participant._id] = {
-            name: participant.name,
-            profilePicture: participant.profilePicture
-          };
-        });
-      }
+      conversation.participants?.forEach(participant => {
+        userMapping[participant._id] = {
+          name: participant.name,
+          profilePicture: participant.profilePicture
+        };
+      });
 
       const formattedMessages = [];
       let lastMessageDate = null;
 
-      // Trier les messages par date
       const sortedMessages = [...conversation.messages].sort((a, b) =>
         new Date(a.createdAt) - new Date(b.createdAt)
       );
@@ -178,28 +191,18 @@ const ChatScreen = ({ route }) => {
       sortedMessages.forEach((msg, index) => {
         if (!msg.createdAt) {
           console.warn("Message sans createdAt:", msg);
-          return; // Ignorer les messages sans horodatage
+          return;
         }
 
         const currentMessageDate = new Date(msg.createdAt);
 
-        // Détecter correctement si le message provient de l'utilisateur actuel
-        let isCurrentUser = false;
-
-        // Vérifier l'ID du sender de différentes façons possibles
-        if (msg.sender && typeof msg.sender === 'object' && msg.sender._id) {
-          // Si le sender est un objet complet
-          isCurrentUser = msg.sender._id === userData?._id;
-          console.log(`Message ${index} - Sender is object, isCurrentUser: ${isCurrentUser}`);
-        } else if (msg.sender && typeof msg.sender === 'string') {
-          // Si le sender est juste un ID en string
-          isCurrentUser = msg.sender === userData?._id;
-          console.log(`Message ${index} - Sender is string, isCurrentUser: ${isCurrentUser}`);
-        }
+        // Détecter si le message provient de l'utilisateur actuel
+        const isCurrentUser = 
+          (msg.sender && typeof msg.sender === 'object' ? msg.sender._id : msg.sender) === userData._id;
 
         // Séparateur de date si nécessaire
-        if (!lastMessageDate ||
-          currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
+        if (!lastMessageDate || 
+            currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
           formattedMessages.push({
             id: `separator-${index}`,
             type: 'separator',
@@ -210,13 +213,12 @@ const ChatScreen = ({ route }) => {
         // Vérifier si c'est un message image
         const isImageMessage = msg.messageType === 'image' || msg.image;
 
-        // Message avec le nom de l'expéditeur depuis le mapping
+        // Message avec le nom de l'expéditeur
         const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
 
         formattedMessages.push({
           id: msg._id || `msg-${index}`,
           text: msg.content,
-          // Explicitement 'user' ou 'other' 
           sender: isCurrentUser ? 'user' : 'other',
           timestamp: msg.createdAt,
           messageType: isImageMessage ? 'image' : 'text',
@@ -231,44 +233,10 @@ const ChatScreen = ({ route }) => {
         lastMessageDate = currentMessageDate;
       });
 
-      console.log("Messages formatés :", formattedMessages.length);
-      // Log du premier message non-séparateur pour vérifier
-      const sampleMessage = formattedMessages.find(m => m.type !== 'separator');
-      if (sampleMessage) {
-        console.log("Exemple de message formaté :", {
-          id: sampleMessage.id,
-          sender: sampleMessage.sender,
-          senderInfo: sampleMessage.senderInfo
-        });
-      }
-
       setMessages(formattedMessages);
-
-      setTimeout(() => {
-        if (flatListRef.current) {
-          // Ajoutez un délai supplémentaire si nécessaire
-          requestAnimationFrame(() => {
-            try {
-              flatListRef.current.scrollToEnd({ 
-                animated: false
-              });
-              
-              // Mettez à jour l'état de défilement après un court délai
-              setTimeout(() => {
-                setIsScrolling(false);
-              }, 100);
-            } catch (error) {
-              console.error('Erreur lors du défilement :', error);
-              setIsScrolling(false);
-            }
-          });
-        } else {
-          // Au cas où la ref n'est pas disponible
-          setIsScrolling(false);
-        }
-      }, 100);
     }
-  }, [conversation, userData?._id]);
+  }, [conversation, userData._id]);
+
 
   // Calcul du temps restant
   useEffect(() => {
@@ -471,6 +439,20 @@ const ChatScreen = ({ route }) => {
     );
   };
 
+  const scrollToUnreadMessages = () => {
+    if (firstUnreadMessageIndex !== -1 && flatListRef.current) {
+      flatListRef.current.scrollToIndex({
+        index: firstUnreadMessageIndex,
+        animated: true,
+      });
+  
+      // Marquer la conversation comme lue
+      markConversationAsRead(conversationId);
+      setUnreadCount(0);
+      setHasScrolledToBottom(true);
+    }
+  };
+
   return (
     <Background>
       <SafeAreaView style={{ flex: 1 }} {...panResponder.panHandlers}>
@@ -526,20 +508,7 @@ const ChatScreen = ({ route }) => {
 
           {/* Liste des messages */}
           <Box flex={1}>
-            {isScrolling ? (
-              <View
-                style={{
-                  flex: 1,
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}
-              >
-                <ActivityIndicator
-                  size="large"
-                  color="#FF78B2"
-                />
-              </View>
-            ) : (
+         
               <FlatList
                 ref={flatListRef}
                 data={messages}
@@ -554,13 +523,8 @@ const ChatScreen = ({ route }) => {
                     flatListRef.current.scrollToEnd({ animated: false });
                   }
                 }}
-                onLayout={(event) => {
-                  if (flatListRef.current && messages.length > 0) {
-                    flatListRef.current.scrollToEnd({ animated: false });
-                  }
-                }}
               />
-            )}
+  
           </Box>
 
           {/* Zone d'input */}
@@ -728,12 +692,13 @@ const ChatScreen = ({ route }) => {
         </KeyboardAvoidingView>
       </SafeAreaView>
 
-      {unreadCount > 0 && (
+     {/* Badge de messages non lus */}
+     {!hasScrolledToBottom && unreadCount > 0 && (
         <TouchableOpacity 
           onPress={scrollToUnreadMessages}
           style={{
             position: 'absolute',
-            bottom: 80, // Ajustez selon votre mise en page
+            bottom: 80,
             right: 20,
             backgroundColor: '#FF78B2',
             borderRadius: 25,

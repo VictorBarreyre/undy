@@ -815,27 +815,36 @@ exports.getUserConversations = async (req, res) => {
             .populate('participants', 'name profilePicture')
             .populate({
                 path: 'secret',
-                select: 'label content user', // Assurez-vous d'inclure user dans select
+                select: 'label content user',
                 model: 'Secret',
                 populate: {
-                    path: 'user', // Faites référence au champ user du modèle Secret
+                    path: 'user',
                     model: 'User',
                     select: 'name profilePicture'
                 }
             })
             .sort({ updatedAt: -1 });
 
-            const conversationsWithUnreadCount = conversations.map(conv => {
-                const unreadCount = conv.unreadCount?.get(req.user.id.toString()) || 0;
-                return {
-                  ...conv.toObject(),
-                  unreadCount
-                };
-              });
+        // Log détaillé du nombre de messages non lus
+        const conversationsWithUnreadCount = conversations.map(conv => {
+            const userIdStr = req.user.id.toString();
+            const unreadCount = conv.unreadCount?.get(userIdStr) || 0;
+            
+            console.log('Conversation Details:', {
+                conversationId: conv._id,
+                unreadCountMap: conv.unreadCount,
+                userIdStr: userIdStr,
+                calculatedUnreadCount: unreadCount,
+                totalMessages: conv.messages.length
+            });
 
-        console.log('Conversations avec données complètes:', JSON.stringify(conversations, null, 2));
+            return {
+              ...conv.toObject(),
+              unreadCount
+            };
+        });
 
-        res.status(200).json(conversations);
+        res.status(200).json(conversationsWithUnreadCount);
     } catch (error) {
         console.error('Erreur détaillée:', error);
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
