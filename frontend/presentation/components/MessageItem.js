@@ -188,8 +188,8 @@ const getBubbleStyle = (isTextMessage = true) => {
   };
 
   // Vérifier si le message a du texte et/ou une image
-  const hasRealText = item.text && item.text.trim().length > 0 && item.text.toLowerCase() !== 'mixed';
-  const hasImage = item.messageType === 'image' || item.image;
+  const hasRealText = item.text && item.text.trim().length > 0 && item.text.trim() !== " ";
+  const hasImage = item.messageType === 'image' || item.messageType === 'mixed' || item.image;
 
   // Animation pour les horodatages
   const timestampWidth = timestampAnimation.interpolate({

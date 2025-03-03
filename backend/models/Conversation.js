@@ -29,7 +29,7 @@ const MessageSchema = new mongoose.Schema({
   },
   messageType: {
     type: String,
-    enum: ['text', 'image'],
+    enum: ['text', 'image', 'mixed'], // Ajoutez 'mixed' ici
     default: 'text'
   }
   // Si besoin d'autres infos sender utiles

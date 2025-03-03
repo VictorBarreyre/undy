@@ -211,7 +211,7 @@ const ChatScreen = ({ route }) => {
         }
 
         // Vérifier si c'est un message image
-        const isImageMessage = msg.messageType === 'image' || msg.image;
+        const isImageMessage = msg.messageType === 'image' || msg.messageType === 'mixed' || msg.image;
 
         // Message avec le nom de l'expéditeur
         const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
@@ -221,7 +221,7 @@ const ChatScreen = ({ route }) => {
           text: msg.content,
           sender: isCurrentUser ? 'user' : 'other',
           timestamp: msg.createdAt,
-          messageType: msg.messageType, // Garder le type exact
+          messageType: msg.messageType, // Important : préserver le type exact
           image: msg.image,  // Toujours inclure l'image si elle existe
           senderInfo: {
             id: messageSenderId,
