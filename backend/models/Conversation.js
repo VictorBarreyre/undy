@@ -59,6 +59,12 @@ const ConversationSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+ConversationSchema.methods.markAsRead = function(userId) {
+  const userIdStr = userId.toString();
+  this.unreadCount.set(userIdStr, 0);
+  return this.save();
+};
+
 // Index TTL pour la suppression automatique
 ConversationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 

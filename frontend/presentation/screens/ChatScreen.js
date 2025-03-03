@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, ActivityIndicator } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faChevronLeft, faPlus, faTimes, faArrowUp } from '@fortawesome/free-solid-svg-icons';
@@ -35,43 +35,72 @@ const ChatScreen = ({ route }) => {
   const [borderRadius, setBorderRadius] = useState(18);
   const flatListRef = useRef(null);
   const [keyboardOffset, setKeyboardOffset] = useState(Platform.OS === 'ios' ? 60 : 0);
+  const [isScrolling, setIsScrolling] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(conversation.unreadCount || 0);
 
+  useEffect(() => {
+    // Quand les messages changent, mettre à jour le compteur
+    const currentUnreadCount = conversation.unreadCount || 0;
+    setUnreadCount(currentUnreadCount);
+  }, [conversation.messages]);
 
-  // Ajouter cet effet dans le ChatScreen
-useEffect(() => {
-  // Gestionnaire d'événement pour le focus sur l'écran
-  const unsubscribe = navigation.addListener('focus', async () => {
-    if (conversationId) {
-      try {
-        // Créer une fonction pour rafraîchir la conversation complète
-        const fetchConversationData = async () => {
-          const instance = getAxiosInstance();
-          if (!instance) return;
-          
-          // Récupérer la conversation complète (pas seulement les messages)
-          const response = await instance.get(`/api/secrets/conversations/secret/${conversation.secret._id}`);
-          
-          // Mettre à jour le state local ou les paramètres de navigation
-          if (response.data) {
-            // Option 1: Mettre à jour directement les paramètres de route
-            navigation.setParams({ conversation: response.data });
-            
-            // Option 2: Ou mettre à jour un état local si vous préférez
-            // setConversationData(response.data);
-          }
-        };
-        
-        // Exécuter la fonction de récupération
-        await fetchConversationData();
-      } catch (error) {
-        console.error('Erreur lors du rechargement de la conversation:', error);
+  // Nouvelle fonction pour scroller et marquer comme lu
+  const scrollToUnreadMessages = () => {
+    if (flatListRef.current) {
+      // Trouver l'index du premier message non lu
+      const unreadIndex = messages.findIndex(
+        msg => !msg.read && msg.type !== 'separator'
+      );
+
+      if (unreadIndex !== -1) {
+        // Scroller jusqu'au premier message non lu
+        flatListRef.current.scrollToIndex({ 
+          index: unreadIndex, 
+          animated: true 
+        });
+
+        // Marquer tous les messages comme lus
+        markConversationAsRead(conversationId);
+        setUnreadCount(0);
       }
     }
-  });
+  };
 
-  // Nettoyer l'abonnement lorsque le composant est démonté
-  return unsubscribe;
-}, [navigation, conversationId, conversation?.secret?._id]);
+  // Ajouter cet effet dans le ChatScreen
+  useEffect(() => {
+    // Gestionnaire d'événement pour le focus sur l'écran
+    const unsubscribe = navigation.addListener('focus', async () => {
+      if (conversationId) {
+        try {
+          // Créer une fonction pour rafraîchir la conversation complète
+          const fetchConversationData = async () => {
+            const instance = getAxiosInstance();
+            if (!instance) return;
+
+            // Récupérer la conversation complète (pas seulement les messages)
+            const response = await instance.get(`/api/secrets/conversations/secret/${conversation.secret._id}`);
+
+            // Mettre à jour le state local ou les paramètres de navigation
+            if (response.data) {
+              // Option 1: Mettre à jour directement les paramètres de route
+              navigation.setParams({ conversation: response.data });
+
+              // Option 2: Ou mettre à jour un état local si vous préférez
+              // setConversationData(response.data);
+            }
+          };
+
+          // Exécuter la fonction de récupération
+          await fetchConversationData();
+        } catch (error) {
+          console.error('Erreur lors du rechargement de la conversation:', error);
+        }
+      }
+    });
+
+    // Nettoyer l'abonnement lorsque le composant est démonté
+    return unsubscribe;
+  }, [navigation, conversationId, conversation?.secret?._id]);
 
   // Gestion du clavier
   useEffect(() => {
@@ -126,7 +155,7 @@ useEffect(() => {
     if (conversation?.messages) {
       console.log("Formatage des messages :", conversation.messages.length);
       console.log("userData :", userData?._id);
-      
+
       // Créer un mapping des IDs vers les infos utilisateurs
       const userMapping = {};
       if (conversation.participants) {
@@ -137,26 +166,26 @@ useEffect(() => {
           };
         });
       }
-  
+
       const formattedMessages = [];
       let lastMessageDate = null;
-  
+
       // Trier les messages par date
-      const sortedMessages = [...conversation.messages].sort((a, b) => 
+      const sortedMessages = [...conversation.messages].sort((a, b) =>
         new Date(a.createdAt) - new Date(b.createdAt)
       );
-  
+
       sortedMessages.forEach((msg, index) => {
         if (!msg.createdAt) {
           console.warn("Message sans createdAt:", msg);
           return; // Ignorer les messages sans horodatage
         }
-        
+
         const currentMessageDate = new Date(msg.createdAt);
-        
+
         // Détecter correctement si le message provient de l'utilisateur actuel
         let isCurrentUser = false;
-        
+
         // Vérifier l'ID du sender de différentes façons possibles
         if (msg.sender && typeof msg.sender === 'object' && msg.sender._id) {
           // Si le sender est un objet complet
@@ -167,7 +196,7 @@ useEffect(() => {
           isCurrentUser = msg.sender === userData?._id;
           console.log(`Message ${index} - Sender is string, isCurrentUser: ${isCurrentUser}`);
         }
-  
+
         // Séparateur de date si nécessaire
         if (!lastMessageDate ||
           currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
@@ -177,13 +206,13 @@ useEffect(() => {
             timestamp: msg.createdAt
           });
         }
-  
+
         // Vérifier si c'est un message image
         const isImageMessage = msg.messageType === 'image' || msg.image;
-  
+
         // Message avec le nom de l'expéditeur depuis le mapping
         const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
-        
+
         formattedMessages.push({
           id: msg._id || `msg-${index}`,
           text: msg.content,
@@ -198,10 +227,10 @@ useEffect(() => {
             profilePicture: userMapping[messageSenderId]?.profilePicture || null
           }
         });
-  
+
         lastMessageDate = currentMessageDate;
       });
-  
+
       console.log("Messages formatés :", formattedMessages.length);
       // Log du premier message non-séparateur pour vérifier
       const sampleMessage = formattedMessages.find(m => m.type !== 'separator');
@@ -212,15 +241,32 @@ useEffect(() => {
           senderInfo: sampleMessage.senderInfo
         });
       }
-  
+
       setMessages(formattedMessages);
-  
-      // Défilement automatique
-      requestAnimationFrame(() => {
+
+      setTimeout(() => {
         if (flatListRef.current) {
-          flatListRef.current.scrollToEnd({ animated: false });
+          // Ajoutez un délai supplémentaire si nécessaire
+          requestAnimationFrame(() => {
+            try {
+              flatListRef.current.scrollToEnd({ 
+                animated: false
+              });
+              
+              // Mettez à jour l'état de défilement après un court délai
+              setTimeout(() => {
+                setIsScrolling(false);
+              }, 100);
+            } catch (error) {
+              console.error('Erreur lors du défilement :', error);
+              setIsScrolling(false);
+            }
+          });
+        } else {
+          // Au cas où la ref n'est pas disponible
+          setIsScrolling(false);
         }
-      });
+      }, 100);
     }
   }, [conversation, userData?._id]);
 
@@ -479,27 +525,42 @@ useEffect(() => {
           </HStack>
 
           {/* Liste des messages */}
-          <Box flex={1} >
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              renderItem={renderMessage}
-              keyExtractor={item => item.id.toString()}
-              contentContainerStyle={{
-                flexGrow: 1,
-                paddingBottom: 20,
-              }}
-              onContentSizeChange={() => {
-                if (flatListRef.current) {
-                  flatListRef.current.scrollToEnd({ animated: false });
-                }
-              }}
-              onLayout={(event) => {
-                if (flatListRef.current && messages.length > 0) {
-                  flatListRef.current.scrollToEnd({ animated: false });
-                }
-              }}
-            />
+          <Box flex={1}>
+            {isScrolling ? (
+              <View
+                style={{
+                  flex: 1,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+              >
+                <ActivityIndicator
+                  size="large"
+                  color="#FF78B2"
+                />
+              </View>
+            ) : (
+              <FlatList
+                ref={flatListRef}
+                data={messages}
+                renderItem={renderMessage}
+                keyExtractor={item => item.id.toString()}
+                contentContainerStyle={{
+                  flexGrow: 1,
+                  paddingBottom: 20,
+                }}
+                onContentSizeChange={() => {
+                  if (flatListRef.current) {
+                    flatListRef.current.scrollToEnd({ animated: false });
+                  }
+                }}
+                onLayout={(event) => {
+                  if (flatListRef.current && messages.length > 0) {
+                    flatListRef.current.scrollToEnd({ animated: false });
+                  }
+                }}
+              />
+            )}
           </Box>
 
           {/* Zone d'input */}
@@ -666,6 +727,32 @@ useEffect(() => {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {unreadCount > 0 && (
+        <TouchableOpacity 
+          onPress={scrollToUnreadMessages}
+          style={{
+            position: 'absolute',
+            bottom: 80, // Ajustez selon votre mise en page
+            right: 20,
+            backgroundColor: '#FF78B2',
+            borderRadius: 25,
+            width: 50,
+            height: 50,
+            justifyContent: 'center',
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+            elevation: 5,
+          }}
+        >
+          <Text style={{ color: 'white', fontWeight: 'bold' }}>
+            {unreadCount}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Modal pour afficher le secret complet */}
       <Modal isOpen={isModalVisible} onClose={() => setModalVisible(false)}>

@@ -1,11 +1,12 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Image, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUser, faHome, faPlus, faComments } from '@fortawesome/free-solid-svg-icons';
 import AddSecret from '../presentation/screens/AddSecret';
-import { AuthContext } from '../infrastructure/context/AuthContext'
+import { AuthContext } from '../infrastructure/context/AuthContext';
+import { useCardData } from '../infrastructure/context/CardDataContexte';
 import ProfileStackNavigator from './StackNavigator/ProfileStackNavigator';
 import HomeStackNavigator from './StackNavigator/HomeStackNavigator';
 import ConversationStackNavigator from './StackNavigator/ConversationStackNavigator';
@@ -46,6 +47,28 @@ const GradientIcon = ({ icon, size, focused }) => {
 
 const TabNavigator = () => {
   const { userData, userToken } = useContext(AuthContext);
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+  const { getUserConversations } = useCardData(); // Utilisez le hook du contexte
+
+
+
+  useEffect(() => {
+    const calculateTotalUnread = async () => {
+      try {
+        const conversations = await getUserConversations();
+        const unreadTotal = conversations.reduce(
+          (total, conv) => total + (conv.unreadCount || 0), 
+          0
+        );
+        setTotalUnreadCount(unreadTotal);
+      } catch (error) {
+        console.error('Erreur calcul messages non lus', error);
+      }
+    };
+
+    calculateTotalUnread();
+  }, []);
+
 
   return (
     <Tab.Navigator
@@ -72,20 +95,45 @@ const TabNavigator = () => {
               );
             case 'AddSecret':
               return <GradientIcon icon={faPlus} size={size} focused={focused} />;
-            case 'ChatTab':
-              return <GradientIcon icon={faComments} size={size} focused={focused} />;
-          }
-        },
-        tabBarShowLabel: false,
-        tabBarActiveTintColor: '#94A3B8',
-        tabBarInactiveTintColor: '#94A3B8',
-        tabBarStyle: {
-          backgroundColor: 'white',
-          elevation: 0,
-          borderTopWidth: 0,
-        },
-      })}
-    >
+              case 'ChatTab':
+                return (
+                  <View style={{ position: 'relative' }}>
+                    <GradientIcon icon={faComments} size={size} focused={focused} />
+                    {totalUnreadCount > 0 && (
+                      <View style={{
+                        position: 'absolute',
+                        top: -5,
+                        right: -5,
+                        backgroundColor: '#FF78B2',
+                        borderRadius: 10,
+                        width: 20,
+                        height: 20,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                      }}>
+                        <Text style={{ 
+                          color: 'white', 
+                          fontSize: 10, 
+                          fontWeight: 'bold' 
+                        }}>
+                          {totalUnreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+            }
+          },
+          tabBarShowLabel: false,
+          tabBarActiveTintColor: '#94A3B8',
+          tabBarInactiveTintColor: '#94A3B8',
+          tabBarStyle: {
+            backgroundColor: 'white',
+            elevation: 0,
+            borderTopWidth: 0,
+          },
+        })}
+      >
       <Tab.Screen
         name="HomeTab"
         component={HomeStackNavigator}
