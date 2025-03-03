@@ -5,6 +5,7 @@ import { Box, HStack, Text, Image, VStack } from 'native-base';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
+import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { DATABASE_URL } from '@env';
 import TypewriterLoader from '../components/TypewriterLoader';
 import { useFocusEffect } from '@react-navigation/native'; // Ajoutez cet import
@@ -12,8 +13,6 @@ import { GestureHandlerRootView, Swipeable, RectButton } from 'react-native-gest
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 import { FontAwesome5 } from '@expo/vector-icons';
 import LinearGradient from 'react-native-linear-gradient';
-
-
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -24,9 +23,23 @@ const ConversationsList = ({ navigation }) => {
   const [openSwipeId, setOpenSwipeId] = useState(null); // Déplacez le state ici
   const { userToken } = useContext(AuthContext);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const { unreadCountsMap, refreshUnreadCounts } = useCardData();
 
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshUnreadCounts();
+
+      const now = Date.now();
+      if (!lastUpdate || now - lastUpdate > 5 * 60 * 1000) {
+        fetchConversations();
+        setLastUpdate(now);
+      }
+    }, [lastUpdate])
+  );
+
 
   const startAnimation = () => {
     // Reset les valeurs
@@ -83,6 +96,7 @@ const ConversationsList = ({ navigation }) => {
       // Vous pourriez ajouter une notification d'erreur ici
     }
   };
+
 
 
   useFocusEffect(
@@ -173,6 +187,10 @@ const ConversationsList = ({ navigation }) => {
 
   const renderConversation = ({ item }) => {
 
+    const unreadCount = unreadCountsMap[item._id] || 0;
+
+
+
     let row = [];
     let prevOpenedRow;
 
@@ -243,23 +261,23 @@ const ConversationsList = ({ navigation }) => {
                 </HStack>
                 <HStack justifyContent='space-between' alignContent='center'>
                   <Text style={styles.littleCaption} color="#94A3B8">{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
-                  {item.unreadCount > 0 && (
+                  {unreadCount > 0 && (
                     <LinearGradient
-                    colors={['#FF587E', '#CC4B8D']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={{
-                      borderRadius: 6,
-                      width: 24,
-                      height: 24,
-                      justifyContent: 'center',
-                      alignItems: 'center'
-                    }}
-                  >
-                    <Text color="white" fontSize={10} fontWeight="bold">
-                      {item.unreadCount}
-                    </Text>
-                  </LinearGradient>
+                      colors={['#FF587E', '#CC4B8D']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        borderRadius: 6,
+                        width: 24,
+                        height: 24,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <Text color="white" fontSize={10} fontWeight="bold">
+                        {unreadCount}
+                      </Text>
+                    </LinearGradient>
                   )}
                 </HStack>
               </VStack>

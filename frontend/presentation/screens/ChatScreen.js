@@ -22,7 +22,7 @@ const ChatScreen = ({ route }) => {
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
-  const { handleAddMessage, markConversationAsRead, uploadImage } = useCardData();
+  const { handleAddMessage, markConversationAsRead, uploadImage, refreshUnreadCounts } = useCardData();
   const { userData, userToken } = useContext(AuthContext);
   const navigation = useNavigation();
   const [showTimestamps, setShowTimestamps] = useState(false);
@@ -96,20 +96,17 @@ const ChatScreen = ({ route }) => {
 
   const handleScroll = (event) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-
-    // Vérifier si l'utilisateur a atteint le bas de la liste
-    const isBottomReached =
-      layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
-
-    // Si on a atteint le bas ET qu'il y a des messages non lus
+    const isBottomReached = layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
+  
     if (isBottomReached && unreadCount > 0) {
-      console.log('Marking as read with token:', userToken); // Ajoutez ce log
       markConversationAsRead(conversationId, userToken);
       setUnreadCount(0);
       setHasScrolledToBottom(true);
+      
+      // Rafraîchir les compteurs globaux
+      refreshUnreadCounts();
     }
   };
-
 
   // Ajouter cet effet dans le ChatScreen
   // Modifiez l'effet de focus de navigation

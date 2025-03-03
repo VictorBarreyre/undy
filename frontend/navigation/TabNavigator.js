@@ -47,26 +47,16 @@ const GradientIcon = ({ icon, size, focused }) => {
 
 const TabNavigator = () => {
   const { userData, userToken } = useContext(AuthContext);
-  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-  const { getUserConversations } = useCardData(); // Utilisez le hook du contexte
-
+  const { totalUnreadCount, refreshUnreadCounts } = useCardData();
 
 
   useEffect(() => {
-    const calculateTotalUnread = async () => {
-      try {
-        const conversations = await getUserConversations();
-        const unreadTotal = conversations.reduce(
-          (total, conv) => total + (conv.unreadCount || 0), 
-          0
-        );
-        setTotalUnreadCount(unreadTotal);
-      } catch (error) {
-        console.error('Erreur calcul messages non lus', error);
-      }
-    };
-
-    calculateTotalUnread();
+    refreshUnreadCounts();
+    
+    // Rafraîchir toutes les 30 secondes
+    const interval = setInterval(refreshUnreadCounts, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
 

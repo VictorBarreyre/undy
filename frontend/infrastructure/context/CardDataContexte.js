@@ -30,6 +30,8 @@ export const CardDataProvider = ({ children }) => {
   const { isLoggedIn } = useContext(AuthContext);
   const [lastFetchTime, setLastFetchTime] = useState(null);
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const [unreadCountsMap, setUnreadCountsMap] = useState({});
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
 
   useEffect(() => {
     const initAxios = async () => {
@@ -382,19 +384,19 @@ export const CardDataProvider = ({ children }) => {
     if (!instance) {
       throw new Error('Axios instance not initialized');
     }
-  
+
     // Si content est un string, on l'envoie directement
     // Si c'est un objet (cas d'une image), on l'envoie tel quel
-    const messageData = typeof content === 'string' 
-      ? { content } 
+    const messageData = typeof content === 'string'
+      ? { content }
       : content;
-  
+
     try {
       const response = await instance.post(
         `/api/secrets/conversations/${conversationId}/messages`,
         messageData
       );
-  
+
       if (response.data) {
         return response.data;
       }
@@ -404,55 +406,82 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
-// Fonction corrigée - À remplacer dans votre fichier CardDataContext.js
+  // Fonction corrigée - À remplacer dans votre fichier CardDataContext.js
 
-const getConversationMessages = async (conversationId) => {
-  const instance = getAxiosInstance();
-  if (!instance) {
-    throw new Error('Axios instance not initialized');
-  }
-  try {
-    // URL CORRIGÉE: l'API attend /messages à la fin
-    const response = await instance.get(
-      `/api/secrets/conversations/${conversationId}/messages`
-    );
-  
-    // Log pour débug
-    console.log("Messages reçus:", JSON.stringify(response.data, null, 2));
-  
-    // S'assurer que chaque message a les informations du sender
-    const messages = response.data.messages.map(msg => ({
-      ...msg,
-      sender: msg.sender ? {
-        _id: msg.sender._id,
-        name: msg.sender.name
-      } : null
-    }));
-  
-    return {
-      messages,
-      conversationId: response.data.conversationId
-    };
-  } catch (error) {
-    console.error('Erreur lors de la récupération des messages:', error);
-    throw error;
-  }
-};
+  const getConversationMessages = async (conversationId) => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios instance not initialized');
+    }
+    try {
+      // URL CORRIGÉE: l'API attend /messages à la fin
+      const response = await instance.get(
+        `/api/secrets/conversations/${conversationId}/messages`
+      );
+
+      // Log pour débug
+      console.log("Messages reçus:", JSON.stringify(response.data, null, 2));
+
+      // S'assurer que chaque message a les informations du sender
+      const messages = response.data.messages.map(msg => ({
+        ...msg,
+        sender: msg.sender ? {
+          _id: msg.sender._id,
+          name: msg.sender.name
+        } : null
+      }));
+
+      return {
+        messages,
+        conversationId: response.data.conversationId
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des messages:', error);
+      throw error;
+    }
+  };
 
 
-const getUserConversations = async () => {
-  const instance = getAxiosInstance();
-  if (!instance) {
-    throw new Error('Axios instance not initialized');
-  }
-  try {
-    const response = await instance.get('/api/secrets/conversations');
-    return response.data || []; // Retourne un tableau vide si pas de données
-  } catch (error) {
-    console.error('Erreur lors de la récupération des conversations:', error);
-    return []; // Retourne un tableau vide en cas d'erreur
-  }
-};
+  const getUserConversations = async () => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios instance not initialized');
+    }
+    try {
+      const response = await instance.get('/api/secrets/conversations');
+
+      // Normaliser la structure des unreadCount
+      const normalizedConversations = (response.data || []).map(conv => {
+        // Création d'un objet conversation normalisé
+        const normalizedConv = { ...conv };
+
+        // Déterminer unreadCount selon le format retourné par l'API
+        if (typeof conv.unreadCount === 'number') {
+          // Si c'est un nombre simple, le garder tel quel
+          normalizedConv.unreadCount = conv.unreadCount;
+        } else if (conv.unreadCount instanceof Map || typeof conv.unreadCount === 'object') {
+          // Si c'est une Map ou un objet, extraire la valeur pour l'utilisateur actuel
+          const userIdStr = conv.participants?.find(p =>
+            p._id === getUserId() // Fonction hypothétique pour obtenir l'ID utilisateur
+          )?._id?.toString() || '';
+
+          normalizedConv.unreadCount = (conv.unreadCount instanceof Map)
+            ? (conv.unreadCount.get(userIdStr) || 0)
+            : (conv.unreadCount?.[userIdStr] || 0);
+        } else {
+          // Par défaut, aucun message non lu
+          normalizedConv.unreadCount = 0;
+        }
+
+        return normalizedConv;
+      });
+
+      return normalizedConversations;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des conversations:', error);
+      return []; // Retourne un tableau vide en cas d'erreur
+    }
+  };
 
   const handleShareSecret = async (secret) => {
     try {
@@ -506,52 +535,98 @@ const getUserConversations = async () => {
   const getSharedSecret = async (secretId) => {
     const instance = getAxiosInstance();
     if (!instance) {
-        throw new Error('Axios instance not initialized');
+      throw new Error('Axios instance not initialized');
     }
     try {
-        console.log("Recherche du secret avec ID:", secretId);
-        const response = await instance.get(`/api/secrets/shared/${secretId}`);
-        console.log("Réponse reçue:", response.data);
-        return response.data;
+      console.log("Recherche du secret avec ID:", secretId);
+      const response = await instance.get(`/api/secrets/shared/${secretId}`);
+      console.log("Réponse reçue:", response.data);
+      return response.data;
     } catch (error) {
-        console.log("Secret recherché:", secretId);
-        console.log("Erreur complète:", error.response?.data);
-        throw error;
+      console.log("Secret recherché:", secretId);
+      console.log("Erreur complète:", error.response?.data);
+      throw error;
     }
-};
+  };
 
-const markConversationAsRead = async (conversationId, userToken) => {
-  const instance = getAxiosInstance();
-  
-  if (!conversationId || !userToken) return;
+  const uploadImage = async (imageData) => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios instance not initialized');
+    }
 
-  try {
-    const response = await instance.patch(
-      `/api/secrets/conversations/${conversationId}/read`,
-      {},
-      { headers: { Authorization: `Bearer ${userToken}` } }
-    );
-    return response.data;
-  } catch (error) {
-    console.error('Erreur lors du marquage comme lu', error);
-    throw error;
-  }
-};
+    try {
+      const response = await instance.post('/api/upload', { image: imageData });
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de l\'upload de l\'image:', error);
+      throw error;
+    }
+  };
 
-const uploadImage = async (imageData) => {
-  const instance = getAxiosInstance();
-  if (!instance) {
-    throw new Error('Axios instance not initialized');
-  }
-  
-  try {
-    const response = await instance.post('/api/upload', { image: imageData });
-    return response.data;
-  } catch (error) {
-    console.error('Erreur lors de l\'upload de l\'image:', error);
-    throw error;
-  }
-};
+  const refreshUnreadCounts = async () => {
+    try {
+      const conversations = await getUserConversations();
+
+      // Créer une map des compteurs non lus
+      const countsMap = {};
+      let total = 0;
+
+      conversations.forEach(conv => {
+        let count = 0;
+
+        // Déterminer le compte non lu selon le format
+        if (typeof conv.unreadCount === 'number') {
+          count = conv.unreadCount;
+        } else if (conv.unreadCount instanceof Map || typeof conv.unreadCount === 'object') {
+          const userIdStr = userData?._id?.toString() || '';
+          count = (conv.unreadCount instanceof Map)
+            ? (conv.unreadCount.get(userIdStr) || 0)
+            : (conv.unreadCount?.[userIdStr] || 0);
+        }
+
+        countsMap[conv._id] = count;
+        total += count;
+      });
+
+      setUnreadCountsMap(countsMap);
+      setTotalUnreadCount(total);
+
+      return { countsMap, total };
+    } catch (error) {
+      console.error('Erreur lors du rafraîchissement des compteurs non lus:', error);
+      return { countsMap: {}, total: 0 };
+    }
+  };
+
+  // Modifier la fonction markConversationAsRead
+  const markConversationAsRead = async (conversationId, userToken) => {
+    const instance = getAxiosInstance();
+
+    if (!conversationId || !userToken) return;
+
+    try {
+      await instance.patch(
+        `/api/secrets/conversations/${conversationId}/read`,
+        {},
+        { headers: { Authorization: `Bearer ${userToken}` } }
+      );
+
+      // Mettre à jour localement
+      setUnreadCountsMap(prev => ({
+        ...prev,
+        [conversationId]: 0
+      }));
+
+      // Recalculer le total
+      setTotalUnreadCount(prev => prev - (unreadCountsMap[conversationId] || 0));
+
+      return true;
+    } catch (error) {
+      console.error('Erreur lors du marquage comme lu', error);
+      throw error;
+    }
+  };
 
 
   return (
@@ -574,8 +649,11 @@ const uploadImage = async (imageData) => {
       handleShareSecret,
       getSharedSecret,
       markConversationAsRead,
-      uploadImage, 
-      getUserConversations
+      uploadImage,
+      getUserConversations,
+      refreshUnreadCounts,
+      unreadCountsMap,
+      totalUnreadCount,
     }}>
       {children}
     </CardDataContext.Provider>
