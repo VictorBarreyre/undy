@@ -669,8 +669,21 @@ export const CardDataProvider = ({ children }) => {
     setMarkedAsReadConversations({});
   };
   
-  
 
+useEffect(() => {
+  if (isLoggedIn && userData) {
+    // Rafraîchissez les compteurs lorsque l'utilisateur se connecte
+    const updateCounts = async () => {
+      try {
+        await refreshUnreadCounts();
+      } catch (error) {
+        console.error('Erreur lors du rafraîchissement des compteurs:', error);
+      }
+    };
+    
+    updateCounts();
+  }
+}, [isLoggedIn, userData]);
 
   return (
     <CardDataContext.Provider value={{

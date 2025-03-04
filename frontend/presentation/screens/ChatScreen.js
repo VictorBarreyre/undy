@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef,memo } from 'react';
+import React, { useState, useEffect, useContext, useRef, memo } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -23,7 +23,7 @@ const ChatScreen = ({ route }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const { handleAddMessage, markConversationAsRead, uploadImage, refreshUnreadCounts } = useCardData();
-  const { userData, userToken } = useContext(AuthContext);
+  const { userData, userToken,isLoggedIn } = useContext(AuthContext);
   const navigation = useNavigation();
   const [showTimestamps, setShowTimestamps] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
@@ -608,31 +608,38 @@ const ChatScreen = ({ route }) => {
     })
   ).current;
 
- // Créer une version memoïsée de MessageItem
-const MemoizedMessageItem = memo(MessageItem, (prevProps, nextProps) => {
-  // Comparer seulement les propriétés essentielles pour déterminer s'il faut re-render
-  return (
-    prevProps.item.id === nextProps.item.id &&
-    prevProps.showTimestamps === nextProps.showTimestamps
-  );
-});
 
-// Puis dans la renderItem de FlatList
-const renderMessage = ({ item, index }) => {
-  // Protéger contre les items null
-  if (!item || !item.id) return null;
-  
-  return (
-    <MemoizedMessageItem
-      key={item.id}
-      item={item}
-      index={index}
-      messages={messages}
-      userData={userData}
-      showTimestamps={showTimestamps}
-    />
-  );
-};
+
+
+  const MemoizedMessageItem = memo(MessageItem, (prevProps, nextProps) => {
+    // Comparaison plus complète
+    return (
+      prevProps.item.id === nextProps.item.id &&
+      prevProps.showTimestamps === nextProps.showTimestamps &&
+      prevProps.index === nextProps.index &&
+      // Comparaison d'égalité référentielle pour userData
+      prevProps.userData === nextProps.userData
+    );
+  });
+
+
+
+  // Puis dans la renderItem de FlatList
+  const renderMessage = ({ item, index }) => {
+    // Protéger contre les items null
+    if (!item || !item.id) return null;
+
+    return (
+      <MemoizedMessageItem
+        key={item.id}
+        item={item}
+        index={index}
+        messages={messages}
+        userData={userData}
+        showTimestamps={showTimestamps}
+      />
+    );
+  };
 
   return (
     <Background>
@@ -694,23 +701,20 @@ const renderMessage = ({ item, index }) => {
               data={messages}
               renderItem={renderMessage}
               keyExtractor={item => item?.id?.toString() || Math.random().toString()}
-              contentContainerStyle={{
-                flexGrow: 1,
-                paddingBottom: 20,
-              }}
-              onScroll={handleScroll}
-              scrollEventThrottle={100}  // Une valeur plus élevée pour réduire la fréquence des événements
-              onScrollToIndexFailed={onScrollToIndexFailed}
-              onLayout={onFlatListLayout}
-              windowSize={5}  // Réduire pour moins de renders
-              removeClippedSubviews={true}  // Optimisation pour les grandes listes
-              maxToRenderPerBatch={5}  // Réduire pour éviter des calculs intensifs
-              updateCellsBatchingPeriod={50}  // Augmenter pour regrouper les mises à jour
-              initialNumToRender={10}  // Réduire pour le rendu initial
-              maintainVisibleContentPosition={{
-                minIndexForVisible: 0,
-                autoscrollToTopThreshold: null,
-              }}
+              // Augmentez cette valeur
+              windowSize={3}
+              removeClippedSubviews={true}
+              // Réduisez ces valeurs
+              maxToRenderPerBatch={3}
+              initialNumToRender={7}
+              // Augmentez cette valeur pour regrouper les mises à jour
+              updateCellsBatchingPeriod={100}
+              // Ajouter ceci pour améliorer les performances de défilement
+              getItemLayout={(data, index) => ({
+                length: 100, // hauteur approximative d'un message
+                offset: 100 * index,
+                index,
+              })}
             />
 
           </Box>
@@ -812,25 +816,19 @@ const renderMessage = ({ item, index }) => {
                 overflow="hidden"
                 position="relative"
               >
-                <Input
+                <RN.TextInput
                   value={message}
                   onChangeText={setMessage}
                   placeholder={selectedImage ? "Envoyer" : "Message"}
                   placeholderTextColor="#8E8E93"
-                  color="#8E8E93"
-                  _focus={{
-                    color: "#8E8E93",
-                    borderColor: '#94A3B866'
-                  }}
-                  fontSize="16px"
-                  paddingX={4}
-                  paddingY={2}
-                  paddingRight={12}
-                  borderWidth={1}
-                  borderColor='#94A3B833'
                   style={{
                     minHeight: 36,
                     maxHeight: 100,
+                    borderWidth: 1,
+                    borderColor: '#94A3B833',
+                    borderRadius: borderRadius,
+                    padding: 10,
+                    color: "#8E8E93"
                   }}
                   multiline
                   onContentSizeChange={(event) => {
