@@ -513,6 +513,33 @@ exports.uploadProfilePicture = async (req, res) => {
 };
 
 
+// Dans userController.js
+exports.checkContactsInApp = async (req, res) => {
+    try {
+      const { phoneNumbers } = req.body;
+      
+      if (!phoneNumbers || !Array.isArray(phoneNumbers)) {
+        return res.status(400).json({ message: 'Liste de numéros invalide' });
+      }
+      
+      // Rechercher les utilisateurs avec ces numéros de téléphone
+      const usersWithPhones = await User.find({
+        phone: { $in: phoneNumbers }
+      }).select('phone');
+      
+      // Extraire uniquement les numéros
+      const usersPhoneNumbers = usersWithPhones.map(user => 
+        user.phone.replace(/\D/g, '')
+      );
+      
+      res.json({ usersPhoneNumbers });
+    } catch (error) {
+      console.error('Erreur lors de la vérification des contacts:', error);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  };
+
+
 // Dans votre contrôleur utilisateur
 exports.verifyStripeIdentity = async (req, res) => {
     try {

@@ -159,6 +159,10 @@ export default function Profile({ navigation }) {
         }
       };
 
+      useEffect(() => {
+        setContactsEnabled(contactsAccessEnabled);
+      }, [contactsAccessEnabled]);
+
     const handleContactsPress = async () => {
         if (!contactsEnabled) {
             // Si les contacts ne sont pas activés, demander l'activation

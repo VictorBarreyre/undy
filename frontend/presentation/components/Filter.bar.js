@@ -1,26 +1,28 @@
-import React, { useState, useRef, useEffect, useContext } from 'react';
-import { Box, Button, Icon, HStack, Input, Checkbox, Divider, Image, VStack, Radio } from 'native-base';
+import React, { useState, useEffect, useContext } from 'react';
+import { Box, Button, Checkbox, Divider } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faSearch, faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
-import { Modal, Pressable, Text, View, FlatList, ScrollView, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { Modal, Pressable, Text, View, ScrollView, SafeAreaView, Alert } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { BlurView } from '@react-native-community/blur';
 import { styles } from '../../infrastructure/theme/styles';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from "@react-navigation/native";
+import InviteContactsModal from './InviteContactsModals';
 
 const FilterBar = ({ onFilterChange, onTypeChange }) => {
   const { data } = useCardData();
   const { getContacts, userData, contactsAccessEnabled, updateContactsAccess } = useContext(AuthContext);
   const [activeButton, setActiveButton] = useState('Tous');
   const [selectedFilters, setSelectedFilters] = useState([]);
-  const [selectedType, setSelectedType] = useState('Tous');
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredResults, setFilteredResults] = useState([]);
   const [isOverlayVisible, setOverlayVisible] = useState(false);
   const [userContacts, setUserContacts] = useState([]);
   const [hasContactPermission, setHasContactPermission] = useState(userData?.contacts || false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [contactsData, setContactsData] = useState([]);
 
   const navigation = useNavigation();
 
@@ -36,69 +38,65 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
     onFilterChange(updatedFilters);
   };
 
-  const handleContactsPermission = async () => {
+  const getContactsWithAppStatus = async () => {
     try {
-      if (!hasContactPermission) {
-        // Demander l'autorisation d'accès aux contacts
-        const contacts = await getContacts();
-        if (contacts && contacts.length > 0) {
-          setHasContactPermission(true);
-          setUserContacts(contacts);
-          // Mettre à jour le type et filtrer les données
-          setActiveButton('Contacts');
-          onTypeChange('Contacts');
-          return true;
-        } else {
-          return false;
-        }
-      }
-      return true;
+      const contacts = await getContacts();
+      // Assuming a function or property that checks if contacts use the app
+      const hasAppUsers = contacts.some(contact => contact.usesApp === true);
+      return { contacts, hasAppUsers };
     } catch (error) {
-      console.error('Erreur lors de la demande d\'accès aux contacts:', error);
-      Alert.alert(
-        "Erreur",
-        "Impossible d'accéder à vos contacts. Veuillez vérifier les permissions de l'application."
-      );
-      return false;
+      console.error('Error checking contacts:', error);
+      return { contacts: [], hasAppUsers: false };
     }
   };
 
-const handleButtonClickType = async (buttonName) => {
-  if (buttonName === 'Contacts') {
-    if (!contactsAccessEnabled) {
-      // Demander l'accès aux contacts via l'API
-      Alert.alert(
-        "Accès aux contacts",
-        "Pour afficher les secrets de vos contacts, nous avons besoin d'accéder à vos contacts.",
-        [
-          { text: "Annuler", style: "cancel" },
-          { 
-            text: "Autoriser", 
-            onPress: async () => {
-              const success = await updateContactsAccess(true);
-              if (success) {
-                setActiveButton(buttonName);
-                onTypeChange(buttonName);
-              }
-            } 
-          }
-        ]
-      );
-      return;
-    }
-  }
-  
-  setActiveButton(buttonName);
-  onTypeChange(buttonName);
-};
+  const handleButtonClickType = async (buttonName) => {
+    if (buttonName === 'Contacts') {
+      if (!contactsAccessEnabled) {
+        // Demander l'accès aux contacts
+        Alert.alert(
+          "Accès aux contacts",
+          "Pour afficher les secrets de vos contacts, nous avons besoin d'accéder à vos contacts.",
+          [
+            { text: "Annuler", style: "cancel" },
+            {
+              text: "Autoriser",
+              onPress: async () => {
+                const success = await updateContactsAccess(true);
+                if (success) {
+                  // Vérifier si des contacts utilisent l'application
+                  const { contacts, hasAppUsers } = await getContactsWithAppStatus();
+                  setContactsData(contacts);
 
-// Vérifier si le filtre "Contacts" est actif mais que l'accès a été révoqué
-useEffect(() => {
-  if (activeButton === 'Contacts' && !contactsAccessEnabled) {
-    setActiveButton('Tous');
-    onTypeChange('Tous');
-  }
-}, [contactsAccessEnabled]);
+                  if (!hasAppUsers && contacts.length > 0) {
+                    // Aucun contact n'utilise l'application, montrer la modale d'invitation
+                    setShowInviteModal(true);
+                  } else {
+                    // Des contacts utilisent l'application, activer le filtre
+                    setActiveButton(buttonName);
+                    onTypeChange(buttonName);
+                  }
+                }
+              }
+            }
+          ]
+        );
+        return;
+      } else {
+        // L'accès est déjà accordé, vérifier si des contacts utilisent l'application
+        const { contacts, hasAppUsers } = await getContactsWithAppStatus();
+        setContactsData(contacts);
+
+        if (!hasAppUsers && contacts.length > 0) {
+          // Aucun contact n'utilise l'application, montrer la modale d'invitation
+          setShowInviteModal(true);
+        }
+      }
+    }
+
+    setActiveButton(buttonName);
+    onTypeChange(buttonName);
+  };
 
   // Filtrer les données en fonction de l'entrée utilisateur
   useEffect(() => {
@@ -136,10 +134,10 @@ useEffect(() => {
 
   return (
     <Box width="100%" paddingY={2} marginLeft={4}>
-      <HStack width='100%' space={1}>
+      <View style={{ flexDirection: 'row', width: '100%' }}>
         <View style={styles.containerFilter}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollContainer}>
-            {buttonTypes.map((type, index) => {
+            {buttonTypes.map((type) => {
               if (type === 'Catégories') {
                 return (
                   <Button
@@ -213,6 +211,12 @@ useEffect(() => {
           </ScrollView>
         </View>
 
+        <InviteContactsModal
+          isVisible={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          contacts={contactsData}
+        />
+
         {/* Modale des préférences */}
         <Modal
           animationType="swipe"
@@ -231,7 +235,7 @@ useEffect(() => {
           >
             <SafeAreaView style={styles.overlayModal}>
               <Box style={styles.overlayContent}>
-                <HStack paddingY={2} justifyContent="space-between" alignItems="center" width="100%">
+                <View style={{ flexDirection: 'row', paddingVertical: 8, justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                   <Text style={styles.h3}>Préférences</Text>
                   <Pressable
                     style={styles.closeButton}
@@ -239,15 +243,18 @@ useEffect(() => {
                   >
                     <FontAwesomeIcon icon={faTimes} size={24} color="black" />
                   </Pressable>
-                </HStack>
+                </View>
                 <Box marginTop={6} width="100%">
                   {labels.map((label, index) => (
                     <Box key={`${label}-${index}`}>
-                      <HStack
-                        width="100%"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        paddingY={5}
+                      <View
+                        style={{
+                          width: "100%",
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          paddingVertical: 20
+                        }}
                       >
                         <Text style={styles.h5}>{label}</Text>
                         <Checkbox
@@ -267,7 +274,7 @@ useEffect(() => {
                           isChecked={selectedFilters.includes(label)}
                           onChange={() => handleCheckboxChange(label)}
                         />
-                      </HStack>
+                      </View>
                       <Divider opacity={30} bg="#94A3B8" />
                     </Box>
                   ))}
@@ -276,7 +283,7 @@ useEffect(() => {
             </SafeAreaView>
           </BlurView>
         </Modal>
-      </HStack>
+      </View>
     </Box>
   );
 };

@@ -310,6 +310,50 @@ export const AuthProvider = ({ children }) => {
         }
       }, [userData]);
 
+      // Dans AuthContext.js
+const getContactsWithAppStatus = async () => {
+    try {
+      // Récupérer les contacts du téléphone
+      const phoneContacts = await getContacts();
+      
+      if (!phoneContacts || phoneContacts.length === 0) {
+        return { contacts: [], hasAppUsers: false };
+      }
+      
+      // Récupérer les numéros de téléphone formatés
+      const phoneNumbers = phoneContacts.flatMap(contact => 
+        contact.phoneNumbers.map(phone => ({
+          contactId: contact.recordID,
+          contactName: `${contact.givenName} ${contact.familyName}`.trim(),
+          phoneNumber: phone.number.replace(/\D/g, '')
+        }))
+      );
+      
+      // Appel à l'API pour vérifier quels numéros sont associés à des utilisateurs
+      const instance = getAxiosInstance();
+      const response = await instance.post('/api/users/check-contacts', { 
+        phoneNumbers: phoneNumbers.map(p => p.phoneNumber) 
+      });
+      
+      // Associer le statut d'utilisation de l'app à chaque contact
+      const contactsWithStatus = phoneNumbers.map(contact => ({
+        ...contact,
+        hasApp: response.data.usersPhoneNumbers.includes(contact.phoneNumber)
+      }));
+      
+      // Vérifier si au moins un contact utilise l'application
+      const hasAppUsers = contactsWithStatus.some(contact => contact.hasApp);
+      
+      return { 
+        contacts: contactsWithStatus,
+        hasAppUsers
+      };
+    } catch (error) {
+      console.error('Erreur lors de la vérification des contacts:', error);
+      return { contacts: [], hasAppUsers: false };
+    }
+  };
+
     const login = async (accessToken, refreshToken) => {
         try {
             console.log('[AuthProvider] Début de la connexion');
@@ -502,7 +546,8 @@ export const AuthProvider = ({ children }) => {
                 getContacts,
                 getContactById,
                 contactsAccessEnabled,
-                updateContactsAccess
+                updateContactsAccess,
+                getContactsWithAppStatus
             }}
         >
             {children}

@@ -14,6 +14,7 @@ const {
     createTransferIntent,
     clearUserData,
     deleteUserAccount,
+    checkContactsInApp,
     getUserById } = require('../controllers/userController');
 const protect = require('../middleware/authMiddleware'); // Importation du middleware
 const { uploadMiddleware, handleMulterError } = require('../middleware/uploadMiddleware');
@@ -108,6 +109,9 @@ router.post(
     },
     verifyStripeIdentity
 );
+
+
+router.post('/check-contacts', protect, checkContactsInApp);
 
 // Nouvelle route pour télécharger les données de l'utilisateur
 router.get('/download', protect, downloadUserData);
