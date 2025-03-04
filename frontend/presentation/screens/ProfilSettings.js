@@ -19,7 +19,7 @@ import NotificationService from '../Notifications/NotificationService';
 
 
 export default function Profile({ navigation }) {
-    const { userData, isLoadingUserData, updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount, getContacts } = useContext(AuthContext);
+    const { userData, isLoadingUserData, updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount, getContacts, updateContactsAccess,  contactsAccessEnabled} = useContext(AuthContext);
     const [selectedField, setSelectedField] = useState(null);
     const [tempValue, setTempValue] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
@@ -141,77 +141,23 @@ export default function Profile({ navigation }) {
 
     const toggleContacts = async () => {
         try {
-            const newContactsState = !contactsEnabled;
-
-            // Mettre à jour l'état local immédiatement pour une meilleure UX
-            setContactsEnabled(newContactsState);
-
-            if (newContactsState) {
-                // Si on active les contacts, demander l'accès
-                try {
-                    const contacts = await getContacts(); // Cette fonction gère déjà les demandes de permission
-
-                    if (contacts && contacts.length > 0) {
-                        // Accès accordé, mettre à jour la base de données
-                        const result = await updateUserData({
-                            contacts: true
-                        });
-
-                        if (!result.success) {
-                            // En cas d'échec de mise à jour, revenir à l'état précédent
-                            setContactsEnabled(false);
-                            Alert.alert(
-                                "Erreur",
-                                "Impossible de mettre à jour vos préférences. Veuillez réessayer."
-                            );
-                        } else {
-                            // Optionnel: Afficher un message de succès
-                            Alert.alert(
-                                "Accès aux contacts activé",
-                                "Vous pouvez maintenant voir les contenus de vos contacts"
-                            );
-                        }
-                    } else {
-                        // Si pas de contacts ou accès refusé, revenir à l'état précédent
-                        setContactsEnabled(false);
-                        Alert.alert(
-                            "Accès refusé",
-                            "Vous devez autoriser l'accès à vos contacts pour activer cette fonctionnalité."
-                        );
-                    }
-                } catch (error) {
-                    console.error("Erreur lors de l'accès aux contacts:", error);
-                    setContactsEnabled(false);
-                    Alert.alert(
-                        "Erreur",
-                        "Impossible d'accéder à vos contacts. Veuillez vérifier les permissions de l'application."
-                    );
-                }
-            } else {
-                // Désactiver l'accès aux contacts
-                const result = await updateUserData({
-                    contacts: false
-                });
-
-                if (!result.success) {
-                    // En cas d'échec, revenir à l'état précédent
-                    setContactsEnabled(true);
-                    Alert.alert(
-                        "Erreur",
-                        "Impossible de mettre à jour vos préférences. Veuillez réessayer."
-                    );
-                }
-            }
+          // Mettre à jour l'UI immédiatement pour une meilleure réactivité
+          setContactsEnabled(!contactsEnabled);
+          
+          // Appeler la fonction du contexte qui gère l'API
+          const success = await updateContactsAccess(!contactsEnabled);
+          
+          if (!success) {
+            // Revenir à l'état précédent si l'API échoue
+            setContactsEnabled(contactsEnabled);
+            Alert.alert("Erreur", "Impossible de mettre à jour les préférences de contacts");
+          }
         } catch (error) {
-            console.error("Erreur toggleContacts:", error);
-            // En cas d'erreur, revenir à l'état précédent
-            setContactsEnabled(!newContactsState);
-            Alert.alert(
-                "Erreur",
-                "Un problème est survenu lors de la mise à jour des préférences de contacts"
-            );
+          console.error("Erreur toggleContacts:", error);
+          setContactsEnabled(contactsEnabled); // Revenir à l'état précédent
+          Alert.alert("Erreur", "Un problème est survenu");
         }
-    };
+      };
 
     const handleContactsPress = async () => {
         if (!contactsEnabled) {

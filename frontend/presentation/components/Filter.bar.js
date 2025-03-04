@@ -12,7 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 
 const FilterBar = ({ onFilterChange, onTypeChange }) => {
   const { data } = useCardData();
-  const { getContacts, userData } = useContext(AuthContext);
+  const { getContacts, userData, contactsAccessEnabled, updateContactsAccess } = useContext(AuthContext);
   const [activeButton, setActiveButton] = useState('Tous');
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [selectedType, setSelectedType] = useState('Tous');
@@ -63,18 +63,42 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
     }
   };
 
-  const handleButtonClickType = async (buttonName) => {
-    if (buttonName === 'Contacts') {
-      const hasPermission = await handleContactsPermission();
-      if (!hasPermission) {
-        return; // Ne pas continuer si l'autorisation n'est pas accordée
-      }
-      // Si l'utilisateur a accordé l'accès, le code continue normalement
+const handleButtonClickType = async (buttonName) => {
+  if (buttonName === 'Contacts') {
+    if (!contactsAccessEnabled) {
+      // Demander l'accès aux contacts via l'API
+      Alert.alert(
+        "Accès aux contacts",
+        "Pour afficher les secrets de vos contacts, nous avons besoin d'accéder à vos contacts.",
+        [
+          { text: "Annuler", style: "cancel" },
+          { 
+            text: "Autoriser", 
+            onPress: async () => {
+              const success = await updateContactsAccess(true);
+              if (success) {
+                setActiveButton(buttonName);
+                onTypeChange(buttonName);
+              }
+            } 
+          }
+        ]
+      );
+      return;
     }
+  }
+  
+  setActiveButton(buttonName);
+  onTypeChange(buttonName);
+};
 
-    setActiveButton(buttonName);
-    onTypeChange(buttonName);
-  };
+// Vérifier si le filtre "Contacts" est actif mais que l'accès a été révoqué
+useEffect(() => {
+  if (activeButton === 'Contacts' && !contactsAccessEnabled) {
+    setActiveButton('Tous');
+    onTypeChange('Tous');
+  }
+}, [contactsAccessEnabled]);
 
   // Filtrer les données en fonction de l'entrée utilisateur
   useEffect(() => {

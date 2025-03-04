@@ -14,6 +14,8 @@ export const AuthProvider = ({ children }) => {
     const [userToken, setUserToken] = useState(null);
     const [userData, setUserData] = useState(null);
     const [isLoadingUserData, setIsLoadingUserData] = useState(true);
+    const [contactsAccessEnabled, setContactsAccessEnabled] = useState(false);
+
 
 
     useEffect(() => {
@@ -158,6 +160,9 @@ export const AuthProvider = ({ children }) => {
             const response = await instance.get('/api/users/profile');
             const cleanedData = cleanUserData(response.data);
             setUserData(cleanedData);
+           
+            setContactsAccessEnabled(cleanedData.contacts || false);
+             
             await AsyncStorage.setItem('userData', JSON.stringify(cleanedData));
             
             setUserData({
@@ -255,6 +260,10 @@ export const AuthProvider = ({ children }) => {
             // Mettre à jour le state local avec toutes les données
             setUserData({ ...userData, ...response.data });
             await AsyncStorage.setItem('userData', JSON.stringify({ ...userData, ...response.data }));
+
+            if (updatedData.contacts !== undefined) {
+                setContactsAccessEnabled(updatedData.contacts);
+              }
             
             return { success: true, message: 'Profil mis à jour avec succès.' };
         } catch (error) {
@@ -262,6 +271,44 @@ export const AuthProvider = ({ children }) => {
             return { success: false, message: 'Erreur lors de la mise à jour du profil.' };
         }
     };
+
+    const updateContactsAccess = async (enabled) => {
+        try {
+          if (enabled) {
+            // Si on active, demander l'accès aux contacts
+            const contacts = await getContacts(); // Cette fonction appelle les permissions natives
+            
+            if (contacts && contacts.length > 0) {
+              // Si l'accès est accordé, mettre à jour le backend via l'API
+              const result = await updateUserData({ contacts: true });
+              
+              if (result.success) {
+                setContactsAccessEnabled(true);
+                return true;
+              }
+            }
+            return false;
+          } else {
+            // Si on désactive, mettre à jour le backend via l'API
+            const result = await updateUserData({ contacts: false });
+            
+            if (result.success) {
+              setContactsAccessEnabled(false);
+              return true;
+            }
+            return false;
+          }
+        } catch (error) {
+          console.error("Erreur lors de la mise à jour de l'accès aux contacts:", error);
+          return false;
+        }
+      };
+
+      useEffect(() => {
+        if (userData) {
+          setContactsAccessEnabled(userData.contacts || false);
+        }
+      }, [userData]);
 
     const login = async (accessToken, refreshToken) => {
         try {
@@ -453,7 +500,9 @@ export const AuthProvider = ({ children }) => {
                 clearUserData,
                 deleteUserAccount,
                 getContacts,
-                getContactById
+                getContactById,
+                contactsAccessEnabled,
+                updateContactsAccess
             }}
         >
             {children}
