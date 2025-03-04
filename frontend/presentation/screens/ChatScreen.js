@@ -489,16 +489,53 @@ const ChatScreen = ({ route }) => {
 
   const scrollToUnreadMessages = () => {
     if (firstUnreadMessageIndex !== -1 && flatListRef.current) {
+      // Défilement vers le premier message non lu
       flatListRef.current.scrollToIndex({
         index: firstUnreadMessageIndex,
         animated: true,
+        viewPosition: 0, // Positionner le message en haut de l'écran
+        viewOffset: 50, // Offset pour voir un peu du contenu précédent
       });
-
-      // Marquer la conversation comme lue
-      markConversationAsRead(conversationId);
+  
+      // Attendre que l'animation de défilement soit terminée avant de marquer comme lu
+      setTimeout(() => {
+        // Marquer comme lu avec userToken
+        markConversationAsRead(conversationId, userToken);
+        
+        // Mettre à jour l'état local
+        setUnreadCount(0);
+        setHasScrolledToBottom(true);
+        
+        // Rafraîchir les compteurs globaux
+        refreshUnreadCounts();
+        
+        console.log('Messages marqués comme lus après clic sur bouton');
+      }, 300); // Attendre que l'animation de défilement soit terminée
+    } else {
+      // Fallback: si l'index n'est pas trouvé, défiler tout en bas
+      console.log('Index de message non lu introuvable, défilement vers le bas');
+      flatListRef.current?.scrollToEnd({ animated: true });
+      
+      // Marquer quand même comme lu
+      markConversationAsRead(conversationId, userToken);
       setUnreadCount(0);
       setHasScrolledToBottom(true);
+      refreshUnreadCounts();
     }
+  };
+
+  const onScrollToIndexFailed = (info) => {
+    console.log('Échec du défilement vers index:', info);
+    // Fallback en cas d'échec: défiler à la fin
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+      
+      // Marquer comme lu
+      markConversationAsRead(conversationId, userToken);
+      setUnreadCount(0);
+      setHasScrolledToBottom(true);
+      refreshUnreadCounts();
+    }, 100);
   };
 
   return (
@@ -566,8 +603,9 @@ const ChatScreen = ({ route }) => {
                 flexGrow: 1,
                 paddingBottom: 20,
               }}
-              onScroll={handleScroll} // Ajoutez cette ligne
+              onScroll={handleScroll}
               scrollEventThrottle={16}
+              onScrollToIndexFailed={onScrollToIndexFailed}
             />
 
           </Box>

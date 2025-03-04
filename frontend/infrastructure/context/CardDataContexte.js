@@ -33,6 +33,8 @@ export const CardDataProvider = ({ children }) => {
   const [unreadCountsMap, setUnreadCountsMap] = useState({});
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const { userData } = useContext(AuthContext);
+  const [markedAsReadConversations, setMarkedAsReadConversations] = useState({});
+
 
 
   useEffect(() => {
@@ -565,58 +567,95 @@ export const CardDataProvider = ({ children }) => {
   const refreshUnreadCounts = async () => {
     try {
       const conversations = await getUserConversations();
-
+      
       // Créer une map des compteurs non lus
       const countsMap = {};
       let total = 0;
-
+      
       conversations.forEach(conv => {
-        // Utiliser directement unreadCount normalisé
-        const count = conv.unreadCount || 0;
+        // Si la conversation a été marquée comme lue localement, forcer à 0
+        if (markedAsReadConversations[conv._id]) {
+          countsMap[conv._id] = 0;
+          return;
+        }
+        
+        // Sinon, utiliser la valeur de l'API
+        let count = 0;
+        if (typeof conv.unreadCount === 'number') {
+          count = conv.unreadCount;
+        } else if (conv.unreadCount instanceof Map || typeof conv.unreadCount === 'object') {
+          const userIdStr = userData?._id?.toString() || '';
+          count = (conv.unreadCount instanceof Map)
+            ? (conv.unreadCount.get(userIdStr) || 0)
+            : (conv.unreadCount?.[userIdStr] || 0);
+        }
+        
         countsMap[conv._id] = count;
         total += count;
       });
-
-      console.log("Mise à jour des compteurs:", { countsMap, total });
-
+      
+      console.log("Mise à jour des compteurs (avec cache local):", { 
+        countsMap,
+        total,
+        markedAsRead: Object.keys(markedAsReadConversations)
+      });
+      
       setUnreadCountsMap(countsMap);
       setTotalUnreadCount(total);
-
+      
       return { countsMap, total };
     } catch (error) {
       console.error('Erreur lors du rafraîchissement des compteurs non lus:', error);
       return { countsMap: {}, total: 0 };
     }
   };
+  
+  
 
   // Modifier la fonction markConversationAsRead
   const markConversationAsRead = async (conversationId, userToken) => {
     const instance = getAxiosInstance();
-
-    if (!conversationId || !userToken) return;
-
+    
+    if (!conversationId) return;
+  
     try {
-      await instance.patch(
-        `/api/secrets/conversations/${conversationId}/read`,
-        {},
-        { headers: { Authorization: `Bearer ${userToken}` } }
-      );
-
-      // Mettre à jour localement
+      // Marquer localement immédiatement
+      setMarkedAsReadConversations(prev => ({
+        ...prev,
+        [conversationId]: true
+      }));
+      
+      // Mettre à jour les compteurs locaux immédiatement
       setUnreadCountsMap(prev => ({
         ...prev,
         [conversationId]: 0
       }));
-
-      // Recalculer le total
+      
+      // Recalculer le total immédiatement
       setTotalUnreadCount(prev => prev - (unreadCountsMap[conversationId] || 0));
-
+      
+      // Appel API en arrière-plan
+      if (userToken) {
+        await instance.patch(
+          `/api/secrets/conversations/${conversationId}/read`,
+          {},
+          { headers: { Authorization: `Bearer ${userToken}` } }
+        );
+      }
+      
       return true;
     } catch (error) {
       console.error('Erreur lors du marquage comme lu', error);
       throw error;
     }
   };
+
+
+  const resetReadStatus = () => {
+    setMarkedAsReadConversations({});
+  };
+  
+  
 
 
   return (
@@ -644,6 +683,7 @@ export const CardDataProvider = ({ children }) => {
       refreshUnreadCounts,
       unreadCountsMap,
       totalUnreadCount,
+      resetReadStatus
     }}>
       {children}
     </CardDataContext.Provider>
