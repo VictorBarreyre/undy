@@ -6,6 +6,7 @@ import Connexion from '../../presentation/screens/Connexion';
 import DrawerNavigator from '../DrawerNavigator';
 import TypewriterLoader from '../../presentation/components/TypewriterLoader';
 import SharedSecretScreen from '../../presentation/screens/SharedScreen';
+import ContactsList from '../../presentation/components/ContactsList';
 
 
 const Stack = createStackNavigator();
@@ -65,6 +66,11 @@ const StackNavigator = () => {
                             headerShown: false,
                             presentation: 'modal'
                         }}
+                    />
+                    <Stack.Screen
+                        name="Contacts"
+                        component={ContactsList}
+                        options={{ headerShown: false }}
                     />
                 </>
             ) : (

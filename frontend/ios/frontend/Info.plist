@@ -16,6 +16,8 @@
     <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
+    <key>NSContactsUsageDescription</key>
+    <string>Cette application a besoin d'accéder à vos contacts pour fonctionner correctement</string>
     <key>CFBundleName</key>
     <string>$(PRODUCT_NAME)</string>
     <key>CFBundlePackageType</key>

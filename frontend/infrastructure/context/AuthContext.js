@@ -1,7 +1,9 @@
 import React, { createContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
-import { DeviceEventEmitter, Alert } from 'react-native';
+import { DeviceEventEmitter, Alert, PermissionsAndroid, Platform } from 'react-native';
+import Contacts from 'react-native-contacts';
+
 
 
 
@@ -385,6 +387,54 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const getContacts = async () => {
+        try {
+          let permission;
+          
+          // Gérer les permissions selon la plateforme
+          if (Platform.OS === 'ios') {
+            permission = await Contacts.requestPermission();
+          } else {
+            permission = await PermissionsAndroid.request(
+              PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
+              {
+                title: "Accès aux contacts",
+                message: "Cette application a besoin d'accéder à vos contacts.",
+                buttonPositive: "OK"
+              }
+            );
+          }
+      
+          if (permission === 'authorized' || permission === PermissionsAndroid.RESULTS.GRANTED) {
+            // Récupérer tous les contacts
+            const contacts = await Contacts.getAll();
+            console.log('Contacts:', contacts);
+            return contacts;
+          } else {
+            Alert.alert(
+              "Permission refusée",
+              "Vous devez autoriser l'accès aux contacts pour utiliser cette fonctionnalité."
+            );
+            return [];
+          }
+        } catch (error) {
+          console.error('Erreur lors de la récupération des contacts:', error);
+          return [];
+        }
+      };
+      
+      // Fonction pour récupérer un contact par son ID
+      const getContactById = async (contactId) => {
+        try {
+          const contact = await Contacts.getContactById(contactId);
+          return contact;
+        } catch (error) {
+          console.error('Erreur lors de la récupération du contact:', error);
+          return null;
+        }
+      };
+
+
 
     return (
         <AuthContext.Provider
@@ -401,7 +451,9 @@ export const AuthProvider = ({ children }) => {
                 handleProfileImageUpdate,
                 downloadUserData,
                 clearUserData,
-                deleteUserAccount
+                deleteUserAccount,
+                getContacts,
+                getContactById
             }}
         >
             {children}

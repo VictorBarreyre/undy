@@ -19,7 +19,7 @@ import NotificationService from '../Notifications/NotificationService';
 
 
 export default function Profile({ navigation }) {
-    const { userData, isLoadingUserData, updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount } = useContext(AuthContext);
+    const { userData, isLoadingUserData, updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount, getContacts } = useContext(AuthContext);
     const [selectedField, setSelectedField] = useState(null);
     const [tempValue, setTempValue] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
@@ -139,11 +139,94 @@ export default function Profile({ navigation }) {
     };
 
 
-    const toggleContacts = () => {
-        setContactsEnabled(!notificationsEnabled);
-        updateUserData({ ...userData, contacts: !contactsEnabled });
+    const toggleContacts = async () => {
+        try {
+            const newContactsState = !contactsEnabled;
+
+            // Mettre à jour l'état local immédiatement pour une meilleure UX
+            setContactsEnabled(newContactsState);
+
+            if (newContactsState) {
+                // Si on active les contacts, demander l'accès
+                try {
+                    const contacts = await getContacts(); // Cette fonction gère déjà les demandes de permission
+
+                    if (contacts && contacts.length > 0) {
+                        // Accès accordé, mettre à jour la base de données
+                        const result = await updateUserData({
+                            contacts: true
+                        });
+
+                        if (!result.success) {
+                            // En cas d'échec de mise à jour, revenir à l'état précédent
+                            setContactsEnabled(false);
+                            Alert.alert(
+                                "Erreur",
+                                "Impossible de mettre à jour vos préférences. Veuillez réessayer."
+                            );
+                        } else {
+                            // Optionnel: Afficher un message de succès
+                            Alert.alert(
+                                "Accès aux contacts activé",
+                                "Vous pouvez maintenant voir les contenus de vos contacts"
+                            );
+                        }
+                    } else {
+                        // Si pas de contacts ou accès refusé, revenir à l'état précédent
+                        setContactsEnabled(false);
+                        Alert.alert(
+                            "Accès refusé",
+                            "Vous devez autoriser l'accès à vos contacts pour activer cette fonctionnalité."
+                        );
+                    }
+                } catch (error) {
+                    console.error("Erreur lors de l'accès aux contacts:", error);
+                    setContactsEnabled(false);
+                    Alert.alert(
+                        "Erreur",
+                        "Impossible d'accéder à vos contacts. Veuillez vérifier les permissions de l'application."
+                    );
+                }
+            } else {
+                // Désactiver l'accès aux contacts
+                const result = await updateUserData({
+                    contacts: false
+                });
+
+                if (!result.success) {
+                    // En cas d'échec, revenir à l'état précédent
+                    setContactsEnabled(true);
+                    Alert.alert(
+                        "Erreur",
+                        "Impossible de mettre à jour vos préférences. Veuillez réessayer."
+                    );
+                }
+            }
+        } catch (error) {
+            console.error("Erreur toggleContacts:", error);
+            // En cas d'erreur, revenir à l'état précédent
+            setContactsEnabled(!newContactsState);
+            Alert.alert(
+                "Erreur",
+                "Un problème est survenu lors de la mise à jour des préférences de contacts"
+            );
+        }
     };
 
+    const handleContactsPress = async () => {
+        if (!contactsEnabled) {
+            // Si les contacts ne sont pas activés, demander l'activation
+            await toggleContacts();
+            // Vérifier si l'activation a réussi
+            if (contactsEnabled) {
+                navigation.navigate('Contacts');
+            }
+        } else {
+            // Si les contacts sont déjà activés, naviguer directement
+            navigation.navigate('Contacts');
+        }
+    };
+    
     const handleDownloadUserData = async () => {
         try {
             const response = await downloadUserData();
@@ -419,7 +502,11 @@ export default function Profile({ navigation }) {
                                     const isLast = index === Object.keys(fieldMappings).length - 1;
 
                                     return (
-                                        <Pressable key={key} onPress={key !== 'notifs' && key !== 'contacts' ? () => openEditModal(key, userData?.[key]) : undefined}>
+                                        <Pressable key={key} onPress={
+                                            key === 'contacts' 
+                                              ? handleContactsPress 
+                                              : (key !== 'notifs' ? () => openEditModal(key, userData?.[key]) : undefined)
+                                          }>
                                             <HStack
                                                 justifyContent="space-between"
                                                 paddingTop={4}
