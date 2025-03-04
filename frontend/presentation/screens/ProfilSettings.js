@@ -31,7 +31,7 @@ export default function Profile({ navigation }) {
     const [contactsEnabled, setContactsEnabled] = useState(userData?.contacts || false);
     const [inputValue, setInputValue] = useState('')
     const [earningsModalVisible, setEarningsModalVisible] = useState(false);
-    const { resetStripeAccount } = useCardData();
+    const { resetStripeAccount, resetReadStatus, unreadCountsMap, setUnreadCountsMap, setTotalUnreadCount } = useCardData();
 
 
 
@@ -90,10 +90,10 @@ export default function Profile({ navigation }) {
     const toggleNotifications = async () => {
         try {
             const newNotifState = !notificationsEnabled;
-            
+
             // On met à jour l'état local immédiatement pour une meilleure UX
             setNotificationsEnabled(newNotifState);
-    
+
             if (newNotifState) {
                 // Vérifier les permissions avant d'activer
                 const hasPermission = await NotificationService.checkPermissions();
@@ -102,7 +102,7 @@ export default function Profile({ navigation }) {
                     const result = await updateUserData({
                         notifs: true
                     });
-    
+
                     if (result.success) {
                         // Envoyer la notification de test après la mise à jour réussie
                         setTimeout(async () => {
@@ -121,7 +121,7 @@ export default function Profile({ navigation }) {
                 const result = await updateUserData({
                     notifs: false
                 });
-    
+
                 if (!result.success) {
                     // En cas d'échec, revenir à l'état précédent
                     setNotificationsEnabled(true);
@@ -138,7 +138,7 @@ export default function Profile({ navigation }) {
         }
     };
 
-    
+
     const toggleContacts = () => {
         setContactsEnabled(!notificationsEnabled);
         updateUserData({ ...userData, contacts: !contactsEnabled });
@@ -289,8 +289,9 @@ export default function Profile({ navigation }) {
     const handleLogoutno = async () => {
         try {
             await logout();
-            // Le changement de isLoggedIn dans AuthContext 
-            // déclenchera automatiquement la redirection
+            resetReadStatus(); // Réinitialise markedAsReadConversations
+            setUnreadCountsMap({}); // Réinitialisez également les compteurs
+            setTotalUnreadCount(0);
         } catch (error) {
             console.error('Erreur de déconnexion:', error);
             Alert.alert(
@@ -443,17 +444,17 @@ export default function Profile({ navigation }) {
                                                     </Text>
                                                 </HStack>
                                                 {key === 'notifs' || key === 'contacts' ? (
-                                                   <RNSwitch
-                                                   value={key === 'notifs' ? notificationsEnabled : contactsEnabled}
-                                                   onValueChange={key === 'notifs' ? toggleNotifications : toggleContacts}
-                                                   trackColor={{ 
-                                                       false: "#E2E8F0",
-                                                       true: "#E2E8F0"
-                                                   }}
-                                                   thumbColor={(key === 'notifs' ? notificationsEnabled : contactsEnabled) ? "#83D9FF" : "#FF78B2"}
-                                                   ios_backgroundColor="#E2E8F0"
-                                                   style={{ transform: [{ scale: 0.7 }] }}
-                                               />
+                                                    <RNSwitch
+                                                        value={key === 'notifs' ? notificationsEnabled : contactsEnabled}
+                                                        onValueChange={key === 'notifs' ? toggleNotifications : toggleContacts}
+                                                        trackColor={{
+                                                            false: "#E2E8F0",
+                                                            true: "#E2E8F0"
+                                                        }}
+                                                        thumbColor={(key === 'notifs' ? notificationsEnabled : contactsEnabled) ? "#83D9FF" : "#FF78B2"}
+                                                        ios_backgroundColor="#E2E8F0"
+                                                        style={{ transform: [{ scale: 0.7 }] }}
+                                                    />
                                                 ) : (
                                                     <FontAwesome name="chevron-right" size={14} color="#94A3B8" />
                                                 )}

@@ -454,6 +454,11 @@ export const CardDataProvider = ({ children }) => {
     try {
       const response = await instance.get('/api/secrets/conversations');
 
+      if (!userData) {
+        console.log('getUserConversations: userData is null, returning empty array');
+        return [];
+      }
+
       // Normaliser la structure des unreadCount
       const normalizedConversations = (response.data || []).map(conv => {
         // Création d'un objet conversation normalisé
@@ -565,6 +570,15 @@ export const CardDataProvider = ({ children }) => {
   };
 
   const refreshUnreadCounts = async () => {
+
+    if (!userData) {
+      console.log('refreshUnreadCounts: userData is null, skipping update');
+      setUnreadCountsMap({});
+      setTotalUnreadCount(0);
+      return { countsMap: {}, total: 0 };
+    }
+
+
     try {
       const conversations = await getUserConversations();
       
@@ -683,7 +697,9 @@ export const CardDataProvider = ({ children }) => {
       refreshUnreadCounts,
       unreadCountsMap,
       totalUnreadCount,
-      resetReadStatus
+      resetReadStatus,
+      setUnreadCountsMap,
+      setTotalUnreadCount
     }}>
       {children}
     </CardDataContext.Provider>

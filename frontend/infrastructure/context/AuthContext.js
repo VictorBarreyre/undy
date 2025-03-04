@@ -303,6 +303,11 @@ export const AuthProvider = ({ children }) => {
             setUserToken(null);
             // On met setIsLoggedIn en dernier car c'est lui qui déclenche la navigation
             setIsLoggedIn(false);
+
+            if (typeof onLogout === 'function') {
+                onLogout();
+              }
+          
             
             console.log('[AuthProvider] Déconnexion réussie');
             return true;

@@ -43,7 +43,7 @@ const ChatScreen = ({ route }) => {
 
   // Remplacez votre useEffect qui traite conversation.unreadCount par celui-ci
   useEffect(() => {
-    if (conversation) {
+    if (conversation && userData) {
       console.log('Conversation object structure:', {
         id: conversation._id,
         hasUnreadCount: !!conversation.unreadCount,
