@@ -16,6 +16,8 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import * as RN from 'react-native';
 import MessageItem from '../components/MessageItem';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 
 const ChatScreen = ({ route }) => {
@@ -39,7 +41,14 @@ const ChatScreen = ({ route }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [firstUnreadMessageIndex, setFirstUnreadMessageIndex] = useState(-1);
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
+  const [layoutHeight, setLayoutHeight] = useState(0);
+  const isManualScrolling = useRef(false);
+  const hasRestoredScroll = useRef(false);
+  const lastScrollPosition = useRef(0);
 
+  const isRestoringScroll = useRef(false);
 
   // Remplacez votre useEffect qui traite conversation.unreadCount par celui-ci
   useEffect(() => {
@@ -106,71 +115,175 @@ const ChatScreen = ({ route }) => {
   }, [conversation, messages, userData?._id]);
 
 
-  const handleScroll = (event) => {
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const isBottomReached = layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
+  // Fonction pour sauvegarder la position de défilement dans AsyncStorage
+const saveScrollPosition = async (position) => {
+  if (position > 0 && conversationId) {
+    try {
+      await AsyncStorage.setItem(`scroll_position_${conversationId}`, position.toString());
+      console.log('Position sauvegardée dans AsyncStorage:', position);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde de la position:', error);
+    }
+  }
+};
+
+
+// Fonction pour charger la position de défilement depuis AsyncStorage
+const loadScrollPosition = async () => {
+  if (!conversationId) return 0;
   
-    if (isBottomReached && unreadCount > 0) {
-      markConversationAsRead(conversationId, userToken);
-      setUnreadCount(0);
-      setHasScrolledToBottom(true);
-      
-      // Assurez-vous que cette ligne est présente
-      refreshUnreadCounts();
+  try {
+    const savedPosition = await AsyncStorage.getItem(`scroll_position_${conversationId}`);
+    if (savedPosition) {
+      const position = parseFloat(savedPosition);
+      console.log('Position chargée depuis AsyncStorage:', position);
+      return position;
+    }
+  } catch (error) {
+    console.error('Erreur lors du chargement de la position:', error);
+  }
+  return 0;
+};
+
+
+
+const handleScroll = (event) => {
+  const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+  
+  // Mettre à jour les dimensions
+  setLayoutHeight(layoutMeasurement.height);
+  setContentHeight(contentSize.height);
+  
+  // Ne pas enregistrer la position si c'est un défilement programmé
+  if (!isManualScrolling.current) {
+    setScrollPosition(contentOffset.y);
+    lastScrollPosition.current = contentOffset.y;
+    
+    // Débouncer la sauvegarde pour éviter trop d'écritures
+    if (scrollSaveTimeout.current) {
+      clearTimeout(scrollSaveTimeout.current);
+    }
+    
+    scrollSaveTimeout.current = setTimeout(() => {
+      saveScrollPosition(contentOffset.y);
+    }, 300);
+  }
+
+  const isBottomReached = layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
+  if (isBottomReached && unreadCount > 0) {
+    markConversationAsRead(conversationId, userToken);
+    setUnreadCount(0);
+    setHasScrolledToBottom(true);
+    refreshUnreadCounts();
+  }
+};
+
+const scrollSaveTimeout = useRef(null);
+const scrollRestoreAttempts = useRef(0);
+const scrollRestorationComplete = useRef(false);
+
+
+  const onFlatListLayout = () => {
+    if (messages.length > 0 && !hasRestoredScroll.current && lastScrollPosition.current > 0) {
+      restoreScrollPosition();
     }
   };
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', async () => {
-      if (conversationId) {
-        try {
-          const fetchConversationData = async () => {
-            const instance = getAxiosInstance();
-            if (!instance) return;
-  
-            console.log('Fetching conversation data for secret:', conversation.secret._id);
-  
-            // Récupérer la conversation complète
-            const response = await instance.get(`/api/secrets/conversations/secret/${conversation.secret._id}`);
-  
-            // Log détaillé de la réponse
-            console.log('Conversation API response details:', {
-              hasUnreadCount: !!response.data.unreadCount,
-              unreadCountType: response.data.unreadCount ? typeof response.data.unreadCount : 'none',
-              unreadCountData: response.data.unreadCount
+  const restoreScrollPosition = async () => {
+    // Ne pas restaurer si déjà fait ou si trop de tentatives
+    if (scrollRestorationComplete.current || scrollRestoreAttempts.current > 5) return;
+    
+    try {
+      const position = await loadScrollPosition();
+      if (position > 0 && flatListRef.current) {
+        console.log(`Tentative de restauration #${scrollRestoreAttempts.current + 1} à la position:`, position);
+        
+        isManualScrolling.current = true;
+        
+        // Utiliser requestAnimationFrame pour s'assurer que le rendu est terminé
+        requestAnimationFrame(() => {
+          if (flatListRef.current) {
+            flatListRef.current.scrollToOffset({
+              offset: position,
+              animated: false
             });
-  
-            // IMPORTANT : Préserver les informations de unreadCount
-            if (response.data) {
-              // Conserver le unreadCount actuel si la réponse n'en a pas
-              const updatedConversation = { 
-                ...response.data,
-                // Si la réponse n'a pas d'unreadCount mais que notre état local en a, conserver l'état local
-                unreadCount: response.data.unreadCount || (conversation && conversation.unreadCount) || 0
-              };
+            
+            // Vérifier si la restauration a fonctionné après un délai
+            setTimeout(() => {
+              isManualScrolling.current = false;
               
-              console.log('MISE À JOUR - Conversation avec unreadCount préservé:', {
-                original: conversation?.unreadCount,
-                fromResponse: response.data.unreadCount,
-                preserved: updatedConversation.unreadCount
-              });
+              // Vérifier si nous sommes réellement à la bonne position
+              if (Math.abs(scrollPosition - position) < 100) {
+                console.log('Restauration réussie!');
+                scrollRestorationComplete.current = true;
+              } else {
+                // Réessayer jusqu'à 5 fois
+                scrollRestoreAttempts.current += 1;
+                if (scrollRestoreAttempts.current <= 5) {
+                  console.log('Échec de la restauration, nouvel essai...');
+                  setTimeout(() => restoreScrollPosition(), 500);
+                } else {
+                  console.log('Échec après 5 tentatives, abandon.');
+                }
+              }
+            }, 200);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la restauration de la position:', error);
+    }
+  };
   
-              navigation.setParams({
-                conversation: updatedConversation,
-                doNotMarkAsRead: true
-              });
-            }
-          };
-  
-          await fetchConversationData();
-        } catch (error) {
-          console.error('Erreur lors du rechargement de la conversation:', error);
-        }
+  useEffect(() => {
+    const unsubscribeFocus = navigation.addListener('focus', () => {
+      // Réinitialiser les compteurs de tentatives à chaque focus
+      scrollRestoreAttempts.current = 0;
+      scrollRestorationComplete.current = false;
+      
+      // Attendre que les messages soient chargés
+      if (messages.length > 0) {
+        // Attendre que le rendu soit complet
+        setTimeout(() => {
+          restoreScrollPosition();
+        }, 500);
       }
     });
+    
+    const unsubscribeBlur = navigation.addListener('blur', () => {
+      // Sauvegarder explicitement lors du blur
+      if (scrollPosition > 0) {
+        saveScrollPosition(scrollPosition);
+      }
+    });
+    
+    return () => {
+      unsubscribeFocus();
+      unsubscribeBlur();
+    };
+  }, [navigation, messages.length]);
+
+
+  // 7. Ajoutez cet useEffect pour les messages
+useEffect(() => {
+  if (messages.length > 0 && !scrollRestorationComplete.current) {
+    setTimeout(() => {
+      restoreScrollPosition();
+    }, 300);
+  }
+}, [messages]);
+
+// 8. Ajoutez cet useEffect pour le nettoyage
+useEffect(() => {
+  return () => {
+    // Nettoyage lors du démontage du composant
+    if (scrollSaveTimeout.current) {
+      clearTimeout(scrollSaveTimeout.current);
+    }
+  };
+}, []);
+
   
-    return unsubscribe;
-  }, [navigation, conversationId, conversation?.secret?._id]);
 
   // Gestion du clavier
   useEffect(() => {
@@ -275,6 +388,56 @@ const ChatScreen = ({ route }) => {
       setMessages(formattedMessages);
     }
   }, [conversation, userData._id]);
+
+
+   // Restaurer la position de défilement quand l'écran est focalisé
+   useEffect(() => {
+    const unsubscribeFocus = navigation.addListener('focus', () => {
+      if (flatListRef.current && messages.length > 0 && lastScrollPosition.current > 0) {
+        console.log('Screen focused - Restauration de la position:', lastScrollPosition.current);
+        hasRestoredScroll.current = false;
+        
+        // Attendre que le rendu soit terminé
+        setTimeout(() => {
+          restoreScrollPosition();
+        }, 500);
+      }
+    });
+    
+    const unsubscribeBlur = navigation.addListener('blur', () => {
+      // Sauvegarder la dernière position connue
+      console.log('Screen unfocused - Sauvegarde de la position:', scrollPosition);
+      lastScrollPosition.current = scrollPosition;
+    });
+    
+    return () => {
+      unsubscribeFocus();
+      unsubscribeBlur();
+    };
+  }, [navigation, messages.length, scrollPosition]);
+
+
+  useEffect(() => {
+  // Lorsque les messages changent, essayer de restaurer la position
+  if (messages.length > 0 && lastScrollPosition.current > 0 && !hasRestoredScroll.current) {
+    setTimeout(() => {
+      restoreScrollPosition();
+    }, 300);
+  }
+}, [messages]);
+
+
+
+  useEffect(() => {
+    const unsubscribeBlur = navigation.addListener('blur', () => {
+      // On garde la position actuelle quand on quitte
+      // Elle est déjà maintenue par handleScroll
+    });
+
+    return () => {
+      unsubscribeBlur();
+    };
+  }, [navigation]);
 
 
   // Calcul du temps restant
@@ -604,8 +767,24 @@ const ChatScreen = ({ route }) => {
                 paddingBottom: 20,
               }}
               onScroll={handleScroll}
-              scrollEventThrottle={16}
+              scrollEventThrottle={100}  // Moins fréquent pour éviter trop d'événements
               onScrollToIndexFailed={onScrollToIndexFailed}
+              onLayout={onFlatListLayout}
+              initialNumToRender={20}
+              maxToRenderPerBatch={10}
+              windowSize={10}
+              removeClippedSubviews={false}
+              maintainVisibleContentPosition={{
+                minIndexForVisible: 0,
+                autoscrollToTopThreshold: null,
+              }}
+              // Ces props supplémentaires peuvent aider
+              getItemLayout={(data, index) => ({
+                length: 60, // Hauteur moyenne approximative d'un message
+                offset: 60 * index,
+                index,
+              })}
+              overscanCount={5}
             />
 
           </Box>
