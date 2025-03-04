@@ -7,50 +7,57 @@ import ImageView from 'react-native-image-viewing';
 
 // Fonction formatage de temps importée du ChatScreen
 const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false) => {
-  const messageDate = new Date(timestamp);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+  if (!timestamp) return '';
+  
+  try {
+    const messageDate = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
 
-  if (showTimeOnly) {
-    return messageDate.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  if (showFullDate) {
-    if (messageDate.toDateString() === today.toDateString()) {
-      return `Aujourd'hui, ${messageDate.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })}`;
-    } else if (messageDate.toDateString() === yesterday.toDateString()) {
-      return `Hier, ${messageDate.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })}`;
-    } else {
-      return messageDate.toLocaleString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
+    if (showTimeOnly) {
+      return messageDate.toLocaleTimeString('fr-FR', {
         hour: '2-digit',
         minute: '2-digit'
       });
     }
-  }
 
-  if (messageDate.toDateString() === today.toDateString()) {
-    return 'Aujourd\'hui';
-  } else if (messageDate.toDateString() === yesterday.toDateString()) {
-    return 'Hier';
-  } else {
-    return messageDate.toLocaleString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long'
-    });
+    if (showFullDate) {
+      if (messageDate.toDateString() === today.toDateString()) {
+        return `Aujourd'hui, ${messageDate.toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit'
+        })}`;
+      } else if (messageDate.toDateString() === yesterday.toDateString()) {
+        return `Hier, ${messageDate.toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit'
+        })}`;
+      } else {
+        return messageDate.toLocaleString('fr-FR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    }
+
+    if (messageDate.toDateString() === today.toDateString()) {
+      return 'Aujourd\'hui';
+    } else if (messageDate.toDateString() === yesterday.toDateString()) {
+      return 'Hier';
+    } else {
+      return messageDate.toLocaleString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      });
+    }
+  } catch (error) {
+    console.error('Erreur de formatage de date:', error);
+    return '';
   }
 };
 
@@ -69,10 +76,11 @@ const MessageItem = ({
   userData, 
   showTimestamps 
 }) => {
+  // Protection contre les valeurs null/undefined
+  if (!item) return null;
+  
   const timestampAnimation = useRef(new Animated.Value(showTimestamps ? 1 : 0)).current;
-
   const [isImageViewVisible, setIsImageViewVisible] = useState(false);
-
 
   useEffect(() => {
     Animated.timing(timestampAnimation, {
@@ -88,14 +96,22 @@ const MessageItem = ({
     return <DateSeparator timestamp={item.timestamp} />;
   }
 
-  // Déterminer la position du message dans une séquence de messages du même expéditeur
-  const isPreviousSameSender = index > 0 &&
-    messages[index - 1].sender === item.sender &&
-    messages[index - 1].type !== 'separator';
+  // Vérifier les index pour éviter des erreurs d'accès hors limites
+  const safeIndex = (idx) => {
+    return idx >= 0 && idx < messages.length ? idx : -1;
+  };
 
-  const isNextSameSender = index < messages.length - 1 &&
-    messages[index + 1].sender === item.sender &&
-    messages[index + 1].type !== 'separator';
+  // Déterminer la position du message dans une séquence de messages du même expéditeur
+  const prevIndex = safeIndex(index - 1);
+  const nextIndex = safeIndex(index + 1);
+  
+  const isPreviousSameSender = prevIndex !== -1 &&
+    messages[prevIndex].sender === item.sender &&
+    messages[prevIndex].type !== 'separator';
+
+  const isNextSameSender = nextIndex !== -1 &&
+    messages[nextIndex].sender === item.sender &&
+    messages[nextIndex].type !== 'separator';
 
   let position = 'single';
   if (isPreviousSameSender && isNextSameSender) {
@@ -109,8 +125,7 @@ const MessageItem = ({
   const showAvatar = position === 'single' || position === 'last';
 
   // Styles de bulle en fonction de la position dans la séquence
- // Styles de bulle en fonction de la position dans la séquence
-const getBubbleStyle = (isTextMessage = true) => {
+  const getBubbleStyle = (isTextMessage = true) => {
     // Style de base pour tous les messages
     const baseTextStyle = {
       borderRadius: 20,
@@ -187,9 +202,9 @@ const getBubbleStyle = (isTextMessage = true) => {
     }
   };
 
-  // Vérifier si le message a du texte et/ou une image
-  const hasRealText = item.text && item.text.trim().length > 0 && item.text.trim() !== " ";
-  const hasImage = item.messageType === 'image' || item.messageType === 'mixed' || item.image;
+  // Vérifier si le message a du texte et/ou une image de manière sécurisée
+  const hasRealText = item.text && typeof item.text === 'string' && item.text.trim().length > 0 && item.text.trim() !== " ";
+  const hasImage = item.image && typeof item.image === 'string' && item.image.length > 0;
 
   // Animation pour les horodatages
   const timestampWidth = timestampAnimation.interpolate({
@@ -211,13 +226,12 @@ const getBubbleStyle = (isTextMessage = true) => {
     if (hasImage && hasRealText) {
       return (
         <VStack alignItems={item.sender === 'user' ? 'flex-end' : 'flex-start'}>
-            <TouchableOpacity 
+          <TouchableOpacity 
             activeOpacity={0.9}
             onPress={() => setIsImageViewVisible(true)}
           >
             <Box style={{
               ...getBubbleStyle(false),
-  
             }}>
               <Image
                 alt="Message image"
@@ -266,21 +280,21 @@ const getBubbleStyle = (isTextMessage = true) => {
     } else if (hasImage) {
       return (
         <TouchableOpacity 
-        activeOpacity={0.9}
-        onPress={() => setIsImageViewVisible(true)}
-      >
-        <Box style={getBubbleStyle(false)}>
-          <Image
-            alt="Message image"
-            source={{ uri: item.image }}
-            style={{
-              width: 150,
-              height: 150,
-            }}
-            resizeMode="cover"
-          />
-        </Box>
-      </TouchableOpacity>
+          activeOpacity={0.9}
+          onPress={() => setIsImageViewVisible(true)}
+        >
+          <Box style={getBubbleStyle(false)}>
+            <Image
+              alt="Message image"
+              source={{ uri: item.image }}
+              style={{
+                width: 150,
+                height: 150,
+              }}
+              resizeMode="cover"
+            />
+          </Box>
+        </TouchableOpacity>
       );
     } else {
       return (
@@ -296,7 +310,6 @@ const getBubbleStyle = (isTextMessage = true) => {
                 right: 0,
                 top: 0,
                 bottom: 0,
-                
               }}
             />
           ) : (
@@ -308,13 +321,12 @@ const getBubbleStyle = (isTextMessage = true) => {
                 right: 0,
                 top: 0,
                 bottom: 0,
-                
               }}
             />
           )}
 
           <Text color={item.sender === 'user' ? 'white' : 'black'} style={styles.caption}>
-            {item.text}
+            {item.text || ''}
           </Text>
         </Box>
       );
@@ -327,9 +339,15 @@ const getBubbleStyle = (isTextMessage = true) => {
       return <Box size={8} opacity={0} />;
     }
 
-    const imageSource = item.sender === 'user'
-      ? (userData?.profilePicture ? { uri: userData.profilePicture } : require('../../assets/images/default.png'))
-      : (item.senderInfo?.profilePicture ? { uri: item.senderInfo.profilePicture } : require('../../assets/images/default.png'));
+    let imageSource = require('../../assets/images/default.png');
+    
+    if (item.sender === 'user') {
+      if (userData?.profilePicture) {
+        imageSource = { uri: userData.profilePicture };
+      }
+    } else if (item.senderInfo?.profilePicture) {
+      imageSource = { uri: item.senderInfo.profilePicture };
+    }
 
     return (
       <Image
@@ -388,7 +406,6 @@ const getBubbleStyle = (isTextMessage = true) => {
           doubleTapToZoomEnabled={true}
         />
       )}
-
 
       {showTimestamps && (
         <Animated.View

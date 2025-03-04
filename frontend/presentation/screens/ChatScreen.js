@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useContext, useRef,memo } from 'react';
+import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown } from '@fortawesome/free-solid-svg-icons';
@@ -15,10 +15,8 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import { launchImageLibrary } from 'react-native-image-picker';
 import * as RN from 'react-native';
 import MessageItem from '../components/MessageItem';
-import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
+import { getAxiosInstance } from '../../data/api/axiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-
 
 const ChatScreen = ({ route }) => {
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
@@ -30,176 +28,152 @@ const ChatScreen = ({ route }) => {
   const [showTimestamps, setShowTimestamps] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   const [isModalVisible, setModalVisible] = useState(showModalOnMount || false);
-  const isInitialMount = useRef(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [inputContainerHeight, setInputContainerHeight] = useState(60);
   const [inputHeight, setInputHeight] = useState(36);
   const [borderRadius, setBorderRadius] = useState(18);
-  const flatListRef = useRef(null);
   const [keyboardOffset, setKeyboardOffset] = useState(Platform.OS === 'ios' ? 60 : 0);
-  const [isScrolling, setIsScrolling] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [firstUnreadMessageIndex, setFirstUnreadMessageIndex] = useState(-1);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   const [layoutHeight, setLayoutHeight] = useState(0);
+
+  // Références
+  const flatListRef = useRef(null);
   const isManualScrolling = useRef(false);
-  const hasRestoredScroll = useRef(false);
-  const lastScrollPosition = useRef(0);
+  const scrollSaveTimeout = useRef(null);
+  const scrollRestoreAttempts = useRef(0);
+  const scrollRestorationComplete = useRef(false);
 
-  const isRestoringScroll = useRef(false);
-
-  // Remplacez votre useEffect qui traite conversation.unreadCount par celui-ci
+  // Analyse des données de conversation pour les messages non lus
   useEffect(() => {
-    if (conversation && userData) {
-      console.log('Conversation object structure:', {
-        id: conversation._id,
-        hasUnreadCount: !!conversation.unreadCount,
-        unreadCountType: conversation.unreadCount ? typeof conversation.unreadCount : 'none',
-        rawUnreadCount: conversation.unreadCount
-      });
-      
-      // Récupérer le nombre de messages non lus
-      let currentUnreadCount = 0;
-      let userIdStr = userData?._id?.toString() || '';
-      
-      // Si unreadCount est un nombre, utilisez-le directement
-      if (typeof conversation.unreadCount === 'number') {
-        currentUnreadCount = conversation.unreadCount;
-      } 
-      // Sinon, essayez de l'accéder comme un objet/map
-      else if (conversation.unreadCount && userData?._id) {
-        if (conversation.unreadCount instanceof Map) {
-          currentUnreadCount = conversation.unreadCount.get(userIdStr) || 0;
-        } else if (typeof conversation.unreadCount === 'object') {
-          currentUnreadCount = conversation.unreadCount[userIdStr] || 0;
-        }
-      }
-      
-      console.log('Extracted unreadCount:', currentUnreadCount, 'for user:', userIdStr);
-      
-      // IMPORTANT : Ne pas mettre à jour unreadCount à 0 si la valeur existante est positive
-      // et que la nouvelle valeur est 0 - cela pourrait être une erreur API
-      if (!(unreadCount > 0 && currentUnreadCount === 0 && !hasScrolledToBottom)) {
-        setUnreadCount(currentUnreadCount);
-        
-        // Si il y a des messages non lus, on s'assure que hasScrolledToBottom est false
-        if (currentUnreadCount > 0) {
-          setHasScrolledToBottom(false);
-        }
-      } else {
-        console.log('Conservation de unreadCount existant:', unreadCount, 'car nouvelle valeur est 0');
-      }
-      
-      // Trouver l'index du premier message non lu seulement si nous avons des messages non lus
-      if (messages.length > 0 && (currentUnreadCount > 0 || unreadCount > 0)) {
-        // Utiliser la valeur la plus élevée entre currentUnreadCount et unreadCount existant
-        const effectiveUnreadCount = Math.max(currentUnreadCount, unreadCount);
-        const unreadStartIndex = Math.max(0, messages.length - effectiveUnreadCount);
-        
-        const unreadIndex = messages.findIndex(
-          (msg, index) => index >= unreadStartIndex && msg.type !== 'separator'
-        );
-        
-        console.log('Unread Start Index:', unreadStartIndex);
-        console.log('First Unread Message Index:', unreadIndex);
-        
-        if (unreadIndex > -1) {
-          setFirstUnreadMessageIndex(unreadIndex);
-        } else {
-          setFirstUnreadMessageIndex(messages.length - 1);
-        }
+    if (!conversation || !userData) return;
+
+    // Récupérer le nombre de messages non lus
+    let currentUnreadCount = 0;
+    let userIdStr = userData?._id?.toString() || '';
+
+    // Si unreadCount est un nombre, utilisez-le directement
+    if (typeof conversation.unreadCount === 'number') {
+      currentUnreadCount = conversation.unreadCount;
+    }
+    // Sinon, essayez de l'accéder comme un objet/map
+    else if (conversation.unreadCount && userData?._id) {
+      if (conversation.unreadCount instanceof Map) {
+        currentUnreadCount = conversation.unreadCount.get(userIdStr) || 0;
+      } else if (typeof conversation.unreadCount === 'object') {
+        currentUnreadCount = conversation.unreadCount[userIdStr] || 0;
       }
     }
-  }, [conversation, messages, userData?._id]);
 
+    // Ne pas mettre à jour unreadCount à 0 si la valeur existante est positive
+    // et que la nouvelle valeur est 0 - cela pourrait être une erreur API
+    if (!(unreadCount > 0 && currentUnreadCount === 0 && !hasScrolledToBottom)) {
+      setUnreadCount(currentUnreadCount);
+
+      // Si il y a des messages non lus, on s'assure que hasScrolledToBottom est false
+      if (currentUnreadCount > 0) {
+        setHasScrolledToBottom(false);
+      }
+    }
+
+    // Trouver l'index du premier message non lu
+    if (messages.length > 0 && (currentUnreadCount > 0 || unreadCount > 0)) {
+      const effectiveUnreadCount = Math.max(currentUnreadCount, unreadCount);
+      const unreadStartIndex = Math.max(0, messages.length - effectiveUnreadCount);
+
+      const unreadIndex = messages.findIndex(
+        (msg, index) => index >= unreadStartIndex && msg.type !== 'separator'
+      );
+
+      if (unreadIndex > -1) {
+        setFirstUnreadMessageIndex(unreadIndex);
+      } else {
+        setFirstUnreadMessageIndex(messages.length - 1);
+      }
+    }
+  }, [conversation, messages, userData?._id, unreadCount, hasScrolledToBottom]);
 
   // Fonction pour sauvegarder la position de défilement dans AsyncStorage
-const saveScrollPosition = async (position) => {
-  if (position > 0 && conversationId) {
-    try {
-      await AsyncStorage.setItem(`scroll_position_${conversationId}`, position.toString());
-      console.log('Position sauvegardée dans AsyncStorage:', position);
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde de la position:', error);
-    }
-  }
-};
-
-
-// Fonction pour charger la position de défilement depuis AsyncStorage
-const loadScrollPosition = async () => {
-  if (!conversationId) return 0;
-  
-  try {
-    const savedPosition = await AsyncStorage.getItem(`scroll_position_${conversationId}`);
-    if (savedPosition) {
-      const position = parseFloat(savedPosition);
-      console.log('Position chargée depuis AsyncStorage:', position);
-      return position;
-    }
-  } catch (error) {
-    console.error('Erreur lors du chargement de la position:', error);
-  }
-  return 0;
-};
-
-
-
-const handleScroll = (event) => {
-  const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-  
-  // Mettre à jour les dimensions
-  setLayoutHeight(layoutMeasurement.height);
-  setContentHeight(contentSize.height);
-  
-  // Ne pas enregistrer la position si c'est un défilement programmé
-  if (!isManualScrolling.current) {
-    setScrollPosition(contentOffset.y);
-    lastScrollPosition.current = contentOffset.y;
-    
-    // Débouncer la sauvegarde pour éviter trop d'écritures
-    if (scrollSaveTimeout.current) {
-      clearTimeout(scrollSaveTimeout.current);
-    }
-    
-    scrollSaveTimeout.current = setTimeout(() => {
-      saveScrollPosition(contentOffset.y);
-    }, 300);
-  }
-
-  const isBottomReached = layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
-  if (isBottomReached && unreadCount > 0) {
-    markConversationAsRead(conversationId, userToken);
-    setUnreadCount(0);
-    setHasScrolledToBottom(true);
-    refreshUnreadCounts();
-  }
-};
-
-const scrollSaveTimeout = useRef(null);
-const scrollRestoreAttempts = useRef(0);
-const scrollRestorationComplete = useRef(false);
-
-
-  const onFlatListLayout = () => {
-    if (messages.length > 0 && !hasRestoredScroll.current && lastScrollPosition.current > 0) {
-      restoreScrollPosition();
+  const saveScrollPosition = async (position) => {
+    if (position > 0 && conversationId) {
+      try {
+        await AsyncStorage.setItem(`scroll_position_${conversationId}`, position.toString());
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de la position:', error);
+      }
     }
   };
 
+  // Fonction pour charger la position de défilement depuis AsyncStorage
+  const loadScrollPosition = async () => {
+    if (!conversationId) return 0;
+
+    try {
+      const savedPosition = await AsyncStorage.getItem(`scroll_position_${conversationId}`);
+      if (savedPosition) {
+        const position = parseFloat(savedPosition);
+        return position;
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de la position:', error);
+    }
+    return 0;
+  };
+
+  const handleScroll = (event) => {
+    // Vérifier que l'événement existe
+    if (!event || !event.nativeEvent) return;
+
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+
+    // Vérifier que toutes les valeurs nécessaires existent et sont des nombres
+    if (!layoutMeasurement || typeof layoutMeasurement.height !== 'number' ||
+      !contentOffset || typeof contentOffset.y !== 'number' ||
+      !contentSize || typeof contentSize.height !== 'number') {
+      return;
+    }
+
+    // Mettre à jour les dimensions (avec vérification)
+    setLayoutHeight(layoutMeasurement.height || 0);
+    setContentHeight(contentSize.height || 0);
+
+    // Ne pas enregistrer la position si c'est un défilement programmé
+    if (!isManualScrolling.current) {
+      setScrollPosition(contentOffset.y);
+
+      // Débouncer la sauvegarde pour éviter trop d'écritures
+      if (scrollSaveTimeout.current) {
+        clearTimeout(scrollSaveTimeout.current);
+      }
+
+      scrollSaveTimeout.current = setTimeout(() => {
+        saveScrollPosition(contentOffset.y);
+      }, 300);
+    }
+
+    // Vérifier si on est en bas pour marquer comme lu (avec vérification)
+    const isBottomReached = (layoutMeasurement.height + contentOffset.y) >= (contentSize.height - 20);
+    if (isBottomReached && unreadCount > 0) {
+      markConversationAsRead(conversationId, userToken);
+      setUnreadCount(0);
+      setHasScrolledToBottom(true);
+      refreshUnreadCounts();
+    }
+  };
+
+  // Restaurer la position de défilement
   const restoreScrollPosition = async () => {
     // Ne pas restaurer si déjà fait ou si trop de tentatives
     if (scrollRestorationComplete.current || scrollRestoreAttempts.current > 5) return;
-    
+
     try {
       const position = await loadScrollPosition();
       if (position > 0 && flatListRef.current) {
-        console.log(`Tentative de restauration #${scrollRestoreAttempts.current + 1} à la position:`, position);
-        
         isManualScrolling.current = true;
-        
+
         // Utiliser requestAnimationFrame pour s'assurer que le rendu est terminé
         requestAnimationFrame(() => {
           if (flatListRef.current) {
@@ -207,23 +181,19 @@ const scrollRestorationComplete = useRef(false);
               offset: position,
               animated: false
             });
-            
+
             // Vérifier si la restauration a fonctionné après un délai
             setTimeout(() => {
               isManualScrolling.current = false;
-              
+
               // Vérifier si nous sommes réellement à la bonne position
               if (Math.abs(scrollPosition - position) < 100) {
-                console.log('Restauration réussie!');
                 scrollRestorationComplete.current = true;
               } else {
                 // Réessayer jusqu'à 5 fois
                 scrollRestoreAttempts.current += 1;
                 if (scrollRestoreAttempts.current <= 5) {
-                  console.log('Échec de la restauration, nouvel essai...');
                   setTimeout(() => restoreScrollPosition(), 500);
-                } else {
-                  console.log('Échec après 5 tentatives, abandon.');
                 }
               }
             }, 200);
@@ -234,56 +204,80 @@ const scrollRestorationComplete = useRef(false);
       console.error('Erreur lors de la restauration de la position:', error);
     }
   };
-  
+
+  // Gestion de la mise en page de la liste
+  const onFlatListLayout = () => {
+    if (messages.length > 0 && !scrollRestorationComplete.current) {
+      restoreScrollPosition();
+    }
+  };
+
+  // Navigation - focus/blur events
   useEffect(() => {
-    const unsubscribeFocus = navigation.addListener('focus', () => {
+    // Récupérer les données de conversation quand on arrive sur l'écran
+    const unsubscribeFocus = navigation.addListener('focus', async () => {
       // Réinitialiser les compteurs de tentatives à chaque focus
       scrollRestoreAttempts.current = 0;
       scrollRestorationComplete.current = false;
-      
-      // Attendre que les messages soient chargés
+
+      // Essayer de restaurer la position de défilement
       if (messages.length > 0) {
-        // Attendre que le rendu soit complet
-        setTimeout(() => {
-          restoreScrollPosition();
-        }, 500);
+        setTimeout(() => restoreScrollPosition(), 500);
+      }
+
+      // Récupérer les données de conversation à jour
+      if (conversationId && conversation?.secret?._id) {
+        try {
+          const instance = getAxiosInstance();
+          if (!instance) return;
+
+          const response = await instance.get(`/api/secrets/conversations/secret/${conversation.secret._id}`);
+
+          if (response.data) {
+            const updatedConversation = {
+              ...response.data,
+              unreadCount: response.data.unreadCount || (conversation && conversation.unreadCount) || 0
+            };
+
+            navigation.setParams({
+              conversation: updatedConversation,
+              doNotMarkAsRead: true
+            });
+          }
+        } catch (error) {
+          console.error('Erreur lors du rechargement de la conversation:', error);
+        }
       }
     });
-    
+
+    // Sauvegarder la position quand on quitte l'écran
     const unsubscribeBlur = navigation.addListener('blur', () => {
-      // Sauvegarder explicitement lors du blur
       if (scrollPosition > 0) {
         saveScrollPosition(scrollPosition);
       }
     });
-    
+
     return () => {
       unsubscribeFocus();
       unsubscribeBlur();
     };
-  }, [navigation, messages.length]);
+  }, [navigation, conversationId, conversation?.secret?._id, messages.length, scrollPosition]);
 
-
-  // 7. Ajoutez cet useEffect pour les messages
-useEffect(() => {
-  if (messages.length > 0 && !scrollRestorationComplete.current) {
-    setTimeout(() => {
-      restoreScrollPosition();
-    }, 300);
-  }
-}, [messages]);
-
-// 8. Ajoutez cet useEffect pour le nettoyage
-useEffect(() => {
-  return () => {
-    // Nettoyage lors du démontage du composant
-    if (scrollSaveTimeout.current) {
-      clearTimeout(scrollSaveTimeout.current);
+  // Restaurer la position quand les messages changent
+  useEffect(() => {
+    if (messages.length > 0 && !scrollRestorationComplete.current) {
+      setTimeout(() => restoreScrollPosition(), 300);
     }
-  };
-}, []);
+  }, [messages]);
 
-  
+  // Nettoyage des timeouts
+  useEffect(() => {
+    return () => {
+      if (scrollSaveTimeout.current) {
+        clearTimeout(scrollSaveTimeout.current);
+      }
+    };
+  }, []);
 
   // Gestion du clavier
   useEffect(() => {
@@ -310,138 +304,74 @@ useEffect(() => {
     };
   }, []);
 
+  // Formatage des messages
   useEffect(() => {
-    const initialize = async () => {
-      // Autres initialisations mais PAS de marquage comme lu
-    };
-    initialize();
-    // ...
-  }, [conversationId, showModalOnMount]);
+    if (!conversation?.messages || !userData) return;
 
-  useEffect(() => {
-    console.log('Conditions bouton:', { unreadCount, hasScrolledToBottom });
-  }, [unreadCount, hasScrolledToBottom]);
+    const userMapping = {};
+    conversation.participants?.forEach(participant => {
+      userMapping[participant._id] = {
+        name: participant.name,
+        profilePicture: participant.profilePicture
+      };
+    });
 
+    const formattedMessages = [];
+    let lastMessageDate = null;
 
-  useEffect(() => {
-    if (conversation?.messages) {
-      const userMapping = {};
-      conversation.participants?.forEach(participant => {
-        userMapping[participant._id] = {
-          name: participant.name,
-          profilePicture: participant.profilePicture
-        };
-      });
+    const sortedMessages = [...conversation.messages].sort((a, b) =>
+      new Date(a.createdAt) - new Date(b.createdAt)
+    );
 
-      const formattedMessages = [];
-      let lastMessageDate = null;
-
-      const sortedMessages = [...conversation.messages].sort((a, b) =>
-        new Date(a.createdAt) - new Date(b.createdAt)
-      );
-
-      sortedMessages.forEach((msg, index) => {
-        if (!msg.createdAt) {
-          console.warn("Message sans createdAt:", msg);
-          return;
-        }
-
-        const currentMessageDate = new Date(msg.createdAt);
-
-        // Détecter si le message provient de l'utilisateur actuel
-        const isCurrentUser =
-          (msg.sender && typeof msg.sender === 'object' ? msg.sender._id : msg.sender) === userData._id;
-
-        // Séparateur de date si nécessaire
-        if (!lastMessageDate ||
-          currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
-          formattedMessages.push({
-            id: `separator-${index}`,
-            type: 'separator',
-            timestamp: msg.createdAt
-          });
-        }
-
-        // Vérifier si c'est un message image
-        const isImageMessage = msg.messageType === 'image' || msg.messageType === 'mixed' || msg.image;
-
-        // Message avec le nom de l'expéditeur
-        const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
-
-        formattedMessages.push({
-          id: msg._id || `msg-${index}`,
-          text: msg.content,
-          sender: isCurrentUser ? 'user' : 'other',
-          timestamp: msg.createdAt,
-          messageType: msg.messageType, // Important : préserver le type exact
-          image: msg.image,  // Toujours inclure l'image si elle existe
-          senderInfo: {
-            id: messageSenderId,
-            name: userMapping[messageSenderId]?.name || msg.senderName || 'Utilisateur',
-            profilePicture: userMapping[messageSenderId]?.profilePicture || null
-          }
-        });
-
-        lastMessageDate = currentMessageDate;
-      });
-
-      setMessages(formattedMessages);
-    }
-  }, [conversation, userData._id]);
-
-
-   // Restaurer la position de défilement quand l'écran est focalisé
-   useEffect(() => {
-    const unsubscribeFocus = navigation.addListener('focus', () => {
-      if (flatListRef.current && messages.length > 0 && lastScrollPosition.current > 0) {
-        console.log('Screen focused - Restauration de la position:', lastScrollPosition.current);
-        hasRestoredScroll.current = false;
-        
-        // Attendre que le rendu soit terminé
-        setTimeout(() => {
-          restoreScrollPosition();
-        }, 500);
+    sortedMessages.forEach((msg, index) => {
+      if (!msg.createdAt) {
+        console.warn("Message sans createdAt:", msg);
+        return;
       }
+
+      const currentMessageDate = new Date(msg.createdAt);
+
+      // Détecter si le message provient de l'utilisateur actuel
+      const isCurrentUser =
+        (msg.sender && typeof msg.sender === 'object' ? msg.sender._id : msg.sender) === userData._id;
+
+      // Séparateur de date si nécessaire
+      if (!lastMessageDate ||
+        currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
+        formattedMessages.push({
+          id: `separator-${index}`,
+          type: 'separator',
+          timestamp: msg.createdAt
+        });
+      }
+
+      // Message avec le nom de l'expéditeur
+      const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
+
+      formattedMessages.push({
+        id: msg._id || `msg-${index}`,
+        text: msg.content,
+        sender: isCurrentUser ? 'user' : 'other',
+        timestamp: msg.createdAt,
+        messageType: msg.messageType,
+        image: msg.image,
+        senderInfo: {
+          id: messageSenderId,
+          name: userMapping[messageSenderId]?.name || msg.senderName || 'Utilisateur',
+          profilePicture: userMapping[messageSenderId]?.profilePicture || null
+        }
+      });
+
+      lastMessageDate = currentMessageDate;
     });
-    
-    const unsubscribeBlur = navigation.addListener('blur', () => {
-      // Sauvegarder la dernière position connue
-      console.log('Screen unfocused - Sauvegarde de la position:', scrollPosition);
-      lastScrollPosition.current = scrollPosition;
-    });
-    
-    return () => {
-      unsubscribeFocus();
-      unsubscribeBlur();
-    };
-  }, [navigation, messages.length, scrollPosition]);
 
-
-  useEffect(() => {
-  // Lorsque les messages changent, essayer de restaurer la position
-  if (messages.length > 0 && lastScrollPosition.current > 0 && !hasRestoredScroll.current) {
-    setTimeout(() => {
-      restoreScrollPosition();
-    }, 300);
-  }
-}, [messages]);
-
-
-
-  useEffect(() => {
-    const unsubscribeBlur = navigation.addListener('blur', () => {
-      // On garde la position actuelle quand on quitte
-      // Elle est déjà maintenue par handleScroll
-    });
-
-    return () => {
-      unsubscribeBlur();
-    };
-  }, [navigation]);
-
+    setMessages(formattedMessages);
+  }, [conversation, userData?._id]);
 
   // Calcul du temps restant
   useEffect(() => {
+    if (!conversation?.expiresAt) return;
+
     const calculateTimeLeft = () => {
       const expirationDate = new Date(conversation.expiresAt);
       const now = new Date();
@@ -464,7 +394,7 @@ useEffect(() => {
     }, 60000);
 
     return () => clearInterval(timer);
-  }, [conversation.expiresAt]);
+  }, [conversation?.expiresAt]);
 
   // Gestion de l'image sélectionnée
   useEffect(() => {
@@ -476,6 +406,13 @@ useEffect(() => {
       });
     }
   }, [selectedImage]);
+
+  // Mise à jour des compteurs de messages non lus
+  useEffect(() => {
+    if (unreadCount === 0 && hasScrolledToBottom) {
+      refreshUnreadCounts();
+    }
+  }, [unreadCount, hasScrolledToBottom, refreshUnreadCounts]);
 
   // Mise à jour de la hauteur de la zone d'input
   const updateInputAreaHeight = (imageVisible) => {
@@ -514,6 +451,7 @@ useEffect(() => {
 
       // Si une image est sélectionnée, l'uploader
       if (selectedImage) {
+
         try {
           let imageData;
           if (selectedImage.base64) {
@@ -521,6 +459,12 @@ useEffect(() => {
           } else if (selectedImage.uri) {
             imageData = selectedImage.uri;
           }
+
+          const imageMetadata = {
+            width: selectedImage.width || 0,
+            height: selectedImage.height || 0,
+            fileSize: selectedImage.fileSize || 0
+          };
 
           const uploadResult = await uploadImage(imageData);
           messageContent.image = uploadResult.url;
@@ -532,19 +476,19 @@ useEffect(() => {
 
       // Envoyer le message
       const newMessage = await handleAddMessage(conversationId, messageContent);
-      console.log("Message envoyé avec succès:", newMessage);
 
       // Mise à jour de l'UI
       setMessages(prev => [...prev, {
         id: newMessage._id || `local-${Date.now()}`,
-        text: message,
-        messageType: messageContent.messageType,
-        image: messageContent.image,
+        text: message.trim() || "",
+        messageType: messageContent.messageType || "text",
+        // Initialiser image à undefined ou à une chaîne vide, mais JAMAIS à null
+        image: messageContent.image || "",
         sender: 'user',
         timestamp: new Date().toISOString(),
         senderInfo: {
-          id: userData._id,
-          name: userData.name
+          id: userData?._id || "",
+          name: userData?.name || "Utilisateur"
         }
       }]);
 
@@ -591,13 +535,50 @@ useEffect(() => {
 
   // Calcul du border radius en fonction de la hauteur
   const calculateBorderRadius = (height) => {
-    if (height <= 40) {
-      return 18;
-    } else if (height <= 60) {
-      return 15;
+    if (height <= 40) return 18;
+    if (height <= 60) return 15;
+    return 10;
+  };
+
+  // Fonction pour défiler vers les messages non lus
+  const scrollToUnreadMessages = () => {
+    if (firstUnreadMessageIndex !== -1 && flatListRef.current) {
+      // Défilement vers le premier message non lu
+      flatListRef.current.scrollToIndex({
+        index: firstUnreadMessageIndex,
+        animated: true,
+        viewPosition: 0,
+        viewOffset: 50,
+      });
+
+      // Attendre que l'animation de défilement soit terminée avant de marquer comme lu
+      setTimeout(() => {
+        markConversationAsRead(conversationId, userToken);
+        setUnreadCount(0);
+        setHasScrolledToBottom(true);
+        refreshUnreadCounts();
+      }, 300);
     } else {
-      return 10;
+      // Fallback: si l'index n'est pas trouvé, défiler tout en bas
+      flatListRef.current?.scrollToEnd({ animated: true });
+
+      // Marquer quand même comme lu
+      markConversationAsRead(conversationId, userToken);
+      setUnreadCount(0);
+      setHasScrolledToBottom(true);
+      refreshUnreadCounts();
     }
+  };
+
+  // Gestion de l'échec du défilement vers un index
+  const onScrollToIndexFailed = (info) => {
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+      markConversationAsRead(conversationId, userToken);
+      setUnreadCount(0);
+      setHasScrolledToBottom(true);
+      refreshUnreadCounts();
+    }, 100);
   };
 
   // Configuration du détecteur de geste pour les timestamps
@@ -627,79 +608,31 @@ useEffect(() => {
     })
   ).current;
 
+ // Créer une version memoïsée de MessageItem
+const MemoizedMessageItem = memo(MessageItem, (prevProps, nextProps) => {
+  // Comparer seulement les propriétés essentielles pour déterminer s'il faut re-render
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.showTimestamps === nextProps.showTimestamps
+  );
+});
 
-  useEffect(() => {
-    if (unreadCount === 0 && hasScrolledToBottom) {
-      console.log("ChatScreen: Tous les messages marqués comme lus");
-      refreshUnreadCounts();
-    }
-  }, [unreadCount, hasScrolledToBottom]);
-
-
-  // Fonction de rendu des messages
-  const renderMessage = ({ item, index }) => {
-    return (
-      <MessageItem
-        key={item.id}
-        item={item}
-        index={index}
-        messages={messages}
-        userData={userData}
-        showTimestamps={showTimestamps}
-      />
-    );
-  };
-
-  const scrollToUnreadMessages = () => {
-    if (firstUnreadMessageIndex !== -1 && flatListRef.current) {
-      // Défilement vers le premier message non lu
-      flatListRef.current.scrollToIndex({
-        index: firstUnreadMessageIndex,
-        animated: true,
-        viewPosition: 0, // Positionner le message en haut de l'écran
-        viewOffset: 50, // Offset pour voir un peu du contenu précédent
-      });
+// Puis dans la renderItem de FlatList
+const renderMessage = ({ item, index }) => {
+  // Protéger contre les items null
+  if (!item || !item.id) return null;
   
-      // Attendre que l'animation de défilement soit terminée avant de marquer comme lu
-      setTimeout(() => {
-        // Marquer comme lu avec userToken
-        markConversationAsRead(conversationId, userToken);
-        
-        // Mettre à jour l'état local
-        setUnreadCount(0);
-        setHasScrolledToBottom(true);
-        
-        // Rafraîchir les compteurs globaux
-        refreshUnreadCounts();
-        
-        console.log('Messages marqués comme lus après clic sur bouton');
-      }, 300); // Attendre que l'animation de défilement soit terminée
-    } else {
-      // Fallback: si l'index n'est pas trouvé, défiler tout en bas
-      console.log('Index de message non lu introuvable, défilement vers le bas');
-      flatListRef.current?.scrollToEnd({ animated: true });
-      
-      // Marquer quand même comme lu
-      markConversationAsRead(conversationId, userToken);
-      setUnreadCount(0);
-      setHasScrolledToBottom(true);
-      refreshUnreadCounts();
-    }
-  };
-
-  const onScrollToIndexFailed = (info) => {
-    console.log('Échec du défilement vers index:', info);
-    // Fallback en cas d'échec: défiler à la fin
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-      
-      // Marquer comme lu
-      markConversationAsRead(conversationId, userToken);
-      setUnreadCount(0);
-      setHasScrolledToBottom(true);
-      refreshUnreadCounts();
-    }, 100);
-  };
+  return (
+    <MemoizedMessageItem
+      key={item.id}
+      item={item}
+      index={index}
+      messages={messages}
+      userData={userData}
+      showTimestamps={showTimestamps}
+    />
+  );
+};
 
   return (
     <Background>
@@ -756,35 +689,28 @@ useEffect(() => {
 
           {/* Liste des messages */}
           <Box flex={1}>
-
             <FlatList
               ref={flatListRef}
               data={messages}
               renderItem={renderMessage}
-              keyExtractor={item => item.id.toString()}
+              keyExtractor={item => item?.id?.toString() || Math.random().toString()}
               contentContainerStyle={{
                 flexGrow: 1,
                 paddingBottom: 20,
               }}
               onScroll={handleScroll}
-              scrollEventThrottle={100}  // Moins fréquent pour éviter trop d'événements
+              scrollEventThrottle={100}  // Une valeur plus élevée pour réduire la fréquence des événements
               onScrollToIndexFailed={onScrollToIndexFailed}
               onLayout={onFlatListLayout}
-              initialNumToRender={20}
-              maxToRenderPerBatch={10}
-              windowSize={10}
-              removeClippedSubviews={false}
+              windowSize={5}  // Réduire pour moins de renders
+              removeClippedSubviews={true}  // Optimisation pour les grandes listes
+              maxToRenderPerBatch={5}  // Réduire pour éviter des calculs intensifs
+              updateCellsBatchingPeriod={50}  // Augmenter pour regrouper les mises à jour
+              initialNumToRender={10}  // Réduire pour le rendu initial
               maintainVisibleContentPosition={{
                 minIndexForVisible: 0,
                 autoscrollToTopThreshold: null,
               }}
-              // Ces props supplémentaires peuvent aider
-              getItemLayout={(data, index) => ({
-                length: 60, // Hauteur moyenne approximative d'un message
-                offset: 60 * index,
-                index,
-              })}
-              overscanCount={5}
             />
 
           </Box>
@@ -821,6 +747,7 @@ useEffect(() => {
                 <TouchableOpacity
                   onPress={() => {
                     setSelectedImage(null);
+                    updateInputAreaHeight(false);
                   }}
                   style={{
                     position: 'absolute',
@@ -991,11 +918,11 @@ useEffect(() => {
           <Text style={{ color: 'white', fontWeight: 'bold', zIndex: 1 }}>
             {unreadCount}
           </Text>
-          <FontAwesomeIcon 
-              icon={faChevronDown} 
-              size={12} 
-              color="white" 
-            />
+          <FontAwesomeIcon
+            icon={faChevronDown}
+            size={12}
+            color="white"
+          />
         </TouchableOpacity>
       )}
 
