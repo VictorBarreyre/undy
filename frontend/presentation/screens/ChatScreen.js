@@ -38,6 +38,11 @@ const ChatScreen = ({ route }) => {
   const [firstUnreadMessageIndex, setFirstUnreadMessageIndex] = useState(-1);
   const scrollPosition = useRef(0);
   const [scrollPositionState, setScrollPosition] = useState(0);
+  const [unreadState, setUnreadState] = useState({
+    count: 0,
+    hasScrolledToBottom: false,
+    showButton: false
+  });
 
 
   // Références
@@ -71,12 +76,11 @@ const ChatScreen = ({ route }) => {
     }
 
 
-    setUnreadCount(currentUnreadCount);
-    if (currentUnreadCount > 0) {
-      setHasScrolledToBottom(false);
-    } else {
-      setHasScrolledToBottom(true);
-    }
+    setUnreadState(prev => ({
+      count: currentUnreadCount,
+      hasScrolledToBottom: currentUnreadCount === 0,
+      showButton: currentUnreadCount > 0
+    }));
 
     // Trouver l'index du premier message non lu
     if (messages.length > 0 && (currentUnreadCount > 0 || unreadCount > 0)) {
@@ -93,7 +97,7 @@ const ChatScreen = ({ route }) => {
         setFirstUnreadMessageIndex(messages.length - 1);
       }
     }
-  }, [conversation, messages, userData?._id, unreadCount, hasScrolledToBottom]);
+  }, [conversation, messages, userData?._id]);
 
   // Fonction pour sauvegarder la position de défilement dans AsyncStorage
   const saveScrollPosition = async (position) => {
@@ -137,29 +141,34 @@ const ChatScreen = ({ route }) => {
       // pour éviter des re-renders excessifs
       const currentPosition = contentOffset.y;
       scrollPosition.current = currentPosition;
-      
+  
       // Débounce la sauvegarde et les mises à jour d'état
       if (scrollSaveTimeout.current) {
         clearTimeout(scrollSaveTimeout.current);
       }
-      
+  
       scrollSaveTimeout.current = setTimeout(() => {
         // N'utiliser setState qu'après le débounce
         setScrollPosition(currentPosition);
         saveScrollPosition(currentPosition);
-        
+  
         // Vérifier si on est en bas pour marquer comme lu
-        const isBottomReached = 
+        const isBottomReached =
           (layoutMeasurement.height + currentPosition) >= (contentSize.height - 20);
-          
-        if (isBottomReached && unreadCount > 0) {
+  
+        if (isBottomReached && unreadState.count > 0) {
           markConversationAsRead(conversationId, userToken);
-          setUnreadCount(0);
-          setHasScrolledToBottom(true);
+          
+          // Mettre à jour unreadState au lieu d'utiliser setShowUnreadButton
+          setUnreadState({
+            count: 0,
+            hasScrolledToBottom: true,
+            showButton: false
+          });
         }
       }, 300);
     }
-  }, [unreadCount, conversationId, userToken]);
+  }, [unreadState.count, conversationId, userToken]);
 
   // Restaurer la position de défilement
   const restoreScrollPosition = async () => {
@@ -406,7 +415,7 @@ const ChatScreen = ({ route }) => {
 
   useEffect(() => {
     let timer = null;
-    if (unreadCount === 0 && hasScrolledToBottom) {
+    if (unreadState.count === 0 && unreadState.hasScrolledToBottom) {
       timer = setTimeout(() => {
         safeRefreshUnreadCounts();
       }, 1000);
@@ -414,7 +423,7 @@ const ChatScreen = ({ route }) => {
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [unreadCount, hasScrolledToBottom, safeRefreshUnreadCounts]);
+  }, [unreadState.count, unreadState.hasScrolledToBottom, safeRefreshUnreadCounts]);
 
 
   const safeRefreshUnreadCounts = useCallback(() => {
@@ -559,33 +568,22 @@ const ChatScreen = ({ route }) => {
     return 10;
   };
 
-  // Fonction pour défiler vers les messages non lus
-  const scrollToUnreadMessages = () => {
-    if (firstUnreadMessageIndex !== -1 && flatListRef.current) {
-      // Défilement vers le premier message non lu
-      flatListRef.current.scrollToIndex({
-        index: firstUnreadMessageIndex,
-        animated: true,
-        viewPosition: 0,
-        viewOffset: 50,
-      });
-
-      // Attendre que l'animation de défilement soit terminée avant de marquer comme lu
+  const scrollToUnreadMessages = useCallback(() => {
+    if (flatListRef.current) {
+      flatListRef.current.scrollToEnd({ animated: true });
+      
       setTimeout(() => {
         markConversationAsRead(conversationId, userToken);
-        setUnreadCount(0);
-        setHasScrolledToBottom(true);
+        
+        // Mettre à jour tout l'état unreadState
+        setUnreadState({
+          count: 0,
+          hasScrolledToBottom: true,
+          showButton: false
+        });
       }, 300);
-    } else {
-      // Fallback: si l'index n'est pas trouvé, défiler tout en bas
-      flatListRef.current?.scrollToEnd({ animated: true });
-
-      // Marquer quand même comme lu
-      markConversationAsRead(conversationId, userToken);
-      setUnreadCount(0);
-      setHasScrolledToBottom(true);
     }
-  };
+  }, [conversationId, userToken]);
 
   // Gestion de l'échec du défilement vers un index
   const onScrollToIndexFailed = (info) => {
@@ -647,7 +645,7 @@ const ChatScreen = ({ route }) => {
   const renderMessage = useCallback(({ item, index }) => {
     // Protéger contre les items null
     if (!item || !item.id) return null;
-  
+
     return (
       <MemoizedMessageItem
         key={item.id}
@@ -731,9 +729,6 @@ const ChatScreen = ({ route }) => {
               // Améliorer le défilement
               onScroll={handleScrollOptimized}  // Utiliser une version optimisée du gestionnaire
               scrollEventThrottle={16}          // 16ms = 60fps, standard pour une animation fluide
-
-              // Supprimer getItemLayout problématique, sauf si vous pouvez calculer la hauteur exacte
-              // getItemLayout={...}            // À supprimer ou à remplacer par une implémentation précise
 
               // Ajouter un maintainVisibleContentPosition pour empêcher le saut lors de l'ajout de nouveaux messages
               maintainVisibleContentPosition={{
@@ -912,25 +907,28 @@ const ChatScreen = ({ route }) => {
       </SafeAreaView>
 
       {/* Badge de messages non lus */}
-      {unreadCount > 0 && (
+      {unreadState.showButton && (
         <TouchableOpacity
           onPress={scrollToUnreadMessages}
+          activeOpacity={1} // Conserve l'opacité à 100% lors du toucher
           style={{
             position: 'absolute',
+            paddingHorizontal: 16,
+            paddingVertical: 10,
             bottom: 80,
             right: 20,
-            borderRadius: 25,
-            width: 50,
-            height: 50,
+            borderRadius: 20,
             justifyContent: 'center',
             alignItems: 'center',
+            flexDirection: 'row', // Assure que les éléments sont alignés horizontalement
             overflow: 'hidden',
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.25,
             shadowRadius: 3.84,
             elevation: 5,
-            zIndex: 999, // Assurer que c'est au-dessus de tout
+            zIndex: 999,
+            opacity:0.5
           }}
         >
           <LinearGradient
@@ -945,8 +943,13 @@ const ChatScreen = ({ route }) => {
               bottom: 0
             }}
           />
-          <Text style={{ color: 'white', fontWeight: 'bold', zIndex: 1 }}>
-          Nouveaux messages
+          <Text style={{
+            color: 'white',
+            fontWeight: 'bold',
+            zIndex: 1,
+            marginRight: 5, // Ajoute un peu d'espace entre le texte et l'icône
+          }}>
+            Nouveaux messages
           </Text>
           <FontAwesomeIcon
             icon={faChevronDown}
