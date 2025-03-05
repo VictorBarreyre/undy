@@ -292,53 +292,35 @@ exports.googleLogin = async (req, res) => {
             }
         } else {
             // Code pour ID token...
-            try {
-                const ticket = await googleClient.verifyIdToken({
-                    idToken: token,
-                    audience: process.env.GOOGLE_CLIENT_ID,
-                });
-                
-                const payload = ticket.getPayload();
-                email = payload.email;
-                name = payload.name;
-                picture = payload.picture;
-                googleId = payload.sub;
-            } catch (verifyError) {
-                console.error('Erreur de vérification Google ID token:', verifyError);
-                return res.status(400).json({ 
-                    message: 'Échec de la vérification du ID token Google',
-                    details: verifyError.message 
-                });
-            }
         }
 
-        // Rechercher l'utilisateur par email ou googleId
-        let user = await User.findOne({
-            $or: [
-                { email: email },
-                { googleId: googleId }
-            ]
-        });
+        // Rechercher l'utilisateur par email
+        let user = await User.findOne({ email });
         
         if (!user) {
-            // Si l'utilisateur n'existe pas, le créer
-            user = new User({
-                email,
-                name,
-                googleId,
-                profilePicture: picture
-            });
+            // Générer un mot de passe aléatoire sécurisé pour les utilisateurs Google
+            const randomPassword = await bcrypt.hash(googleId + Date.now().toString(), 10);
             
-            await user.save();
-            console.log('Nouvel utilisateur créé avec Google:', user._id);
-        } else if (!user.googleId) {
-            // Si l'utilisateur existe mais n'a pas de googleId, le mettre à jour
-            user.googleId = googleId;
-            if (!user.profilePicture && picture) {
-                user.profilePicture = picture;
+            // Si l'utilisateur n'existe pas, le créer avec un mot de passe généré
+            try {
+                user = await User.create({
+                    email,
+                    name,
+                    googleId, // Si vous avez déjà ce champ dans votre schéma
+                    profilePicture: picture,
+                    password: randomPassword // Fournir un mot de passe pour satisfaire la validation
+                });
+                console.log('Nouvel utilisateur Google créé');
+            } catch (createError) {
+                console.error('Erreur création utilisateur:', createError);
+                throw createError;
             }
-            await user.save();
-            console.log('Utilisateur existant mis à jour avec Google ID:', user._id);
+        } else {
+            // Mettre à jour le googleId si ce champ existe dans votre schéma et n'est pas déjà défini
+            if ('googleId' in user.schema.paths && !user.googleId) {
+                user.googleId = googleId;
+                await user.save();
+            }
         }
 
         // Générer des tokens d'authentification pour votre application
