@@ -3,21 +3,21 @@ import { Animated, Easing, TouchableOpacity } from 'react-native';
 import { Box, Text, HStack, Image, VStack } from 'native-base';
 import LinearGradient from 'react-native-linear-gradient';
 import { styles } from '../../infrastructure/theme/styles';
-import ImageView from 'react-native-image-viewing'; 
+import ImageView from 'react-native-image-viewing';
 
 // Fonction formatage de temps importée du ChatScreen - Optimisée avec cache
 const timeFormatCache = new Map();
 const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false) => {
   if (!timestamp) return '';
-  
+
   // Créer une clé de cache basée sur les paramètres
   const cacheKey = `${timestamp}_${showFullDate}_${showTimeOnly}`;
-  
+
   // Vérifier si le résultat est dans le cache
   if (timeFormatCache.has(cacheKey)) {
     return timeFormatCache.get(cacheKey);
   }
-  
+
   try {
     const messageDate = new Date(timestamp);
     const today = new Date();
@@ -25,7 +25,7 @@ const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false
     yesterday.setDate(yesterday.getDate() - 1);
 
     let result = '';
-    
+
     if (showTimeOnly) {
       result = messageDate.toLocaleTimeString('fr-FR', {
         hour: '2-digit',
@@ -64,7 +64,7 @@ const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false
         });
       }
     }
-    
+
     // Stocker le résultat dans le cache
     timeFormatCache.set(cacheKey, result);
     return result;
@@ -153,7 +153,7 @@ const bubbleStyles = {
 
 // Composant image mémorisé pour éviter les re-renders inutiles
 const MessageImage = memo(({ uri, onPress }) => (
-  <TouchableOpacity 
+  <TouchableOpacity
     activeOpacity={0.9}
     onPress={onPress}
   >
@@ -216,16 +216,16 @@ const Avatar = memo(({ source }) => (
 // Fonction pour déterminer la position du message dans une séquence
 const getMessagePosition = (index, messages) => {
   const safeIndex = (idx) => idx >= 0 && idx < messages.length ? idx : -1;
-  
+
   const prevIndex = safeIndex(index - 1);
   const nextIndex = safeIndex(index + 1);
-  
-  const isPreviousSameSender = prevIndex !== -1 && 
-    messages[prevIndex].sender === messages[index].sender && 
+
+  const isPreviousSameSender = prevIndex !== -1 &&
+    messages[prevIndex].sender === messages[index].sender &&
     messages[prevIndex].type !== 'separator';
-    
-  const isNextSameSender = nextIndex !== -1 && 
-    messages[nextIndex].sender === messages[index].sender && 
+
+  const isNextSameSender = nextIndex !== -1 &&
+    messages[nextIndex].sender === messages[index].sender &&
     messages[nextIndex].type !== 'separator';
 
   if (isPreviousSameSender && isNextSameSender) return 'middle';
@@ -234,24 +234,49 @@ const getMessagePosition = (index, messages) => {
   return 'single';
 };
 
-const MessageItem = memo(({ 
-  item, 
-  index, 
-  messages, 
-  userData, 
-  showTimestamps 
+const MessageItem = memo(({
+  item,
+  index,
+  messages,
+  userData,
+  showTimestamps
 }) => {
   // Protection contre les valeurs null/undefined
   if (!item) return null;
-  
+
   // Si c'est un séparateur de date, on affiche uniquement la date
   if (item.type === 'separator') {
     return <DateSeparator timestamp={item.timestamp} />;
   }
-  
+
   const timestampAnimation = useRef(new Animated.Value(showTimestamps ? 1 : 0)).current;
   const [isImageViewVisible, setIsImageViewVisible] = useState(false);
-  
+  const isSending = !!item.isSending;
+  const sendFailed = !!item.sendFailed;
+
+
+  const messageOpacity = isSending ? 0.7 : 1;
+
+  const renderMessageStatus = () => {
+    if (sendFailed) {
+      return (
+        <Text style={[styles.littleCaption, { color: 'red' }]} mr={2}>
+          Échec
+        </Text>
+      );
+    }
+
+    if (isSending) {
+      return (
+        <Text style={[styles.littleCaption, { color: '#94A3B8' }]} mr={2}>
+          Envoi...
+        </Text>
+      );
+    }
+
+    return null;
+  };
+
   useEffect(() => {
     Animated.timing(timestampAnimation, {
       toValue: showTimestamps ? 1 : 0,
@@ -264,11 +289,11 @@ const MessageItem = memo(({
   // Calculer la position une seule fois
   const position = getMessagePosition(index, messages);
   const showAvatar = position === 'single' || position === 'last';
-  
+
   // Vérifier si le message a du texte et/ou une image de manière sécurisée
   const hasRealText = item.text && typeof item.text === 'string' && item.text.trim().length > 0 && item.text.trim() !== " ";
   const hasImage = item.image && typeof item.image === 'string' && item.image.length > 0;
-  
+
   // Utiliser les styles précalculés
   const isUser = item.sender === 'user';
   const getBubbleStyle = useCallback((isTextMessage = true) => {
@@ -282,7 +307,7 @@ const MessageItem = memo(({
     outputRange: [0, 1],
     extrapolate: 'clamp'
   });
-  
+
   const timestampWidth = timestampAnimation.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 10],
@@ -293,18 +318,18 @@ const MessageItem = memo(({
   const openImageViewer = useCallback(() => {
     setIsImageViewVisible(true);
   }, []);
-  
+
   // Handler pour la fermeture de la visionneuse d'images
   const closeImageViewer = useCallback(() => {
     setIsImageViewVisible(false);
   }, []);
-  
+
   // Préparer le contenu de l'avatar une seule fois
   const avatarContent = useCallback(() => {
     if (!showAvatar) return <Box size={8} opacity={0} />;
-    
+
     let imageSource = require('../../assets/images/default.png');
-    
+
     if (isUser) {
       if (userData?.profilePicture) {
         imageSource = { uri: userData.profilePicture };
@@ -312,7 +337,7 @@ const MessageItem = memo(({
     } else if (item.senderInfo?.profilePicture) {
       imageSource = { uri: item.senderInfo.profilePicture };
     }
-    
+
     return <Avatar source={imageSource} />;
   }, [showAvatar, isUser, userData, item.senderInfo]);
 
@@ -352,6 +377,7 @@ const MessageItem = memo(({
       alignItems="flex-end"
       my={0.3}
       px={2}
+      opacity={messageOpacity}  // Ajouter cette propriété
     >
       <HStack
         flex={1}
@@ -366,14 +392,23 @@ const MessageItem = memo(({
           alignItems={isUser ? 'flex-end' : 'flex-start'}
         >
           {!isUser && (position === 'first' || position === 'single') && (
-            <Text
-              style={styles.littleCaption}
-              color="#94A3B8"
-              ml={2}
-              mb={1}
-            >
-              {item.senderInfo?.name || 'Utilisateur'}
-            </Text>
+            <HStack alignItems="center">
+              <Text
+                style={styles.littleCaption}
+                color="#94A3B8"
+                ml={2}
+                mb={1}
+              >
+                {item.senderInfo?.name || 'Utilisateur'}
+              </Text>
+              {renderMessageStatus()}
+            </HStack>
+          )}
+
+          {isUser && (
+            <HStack alignItems="center" mb={1}>
+              {renderMessageStatus()}
+            </HStack>
           )}
 
           {messageContent()}
@@ -381,7 +416,7 @@ const MessageItem = memo(({
 
         {isUser && avatarContent()}
       </HStack>
-      
+
       {hasImage && (
         <ImageView
           images={[{ uri: item.image }]}

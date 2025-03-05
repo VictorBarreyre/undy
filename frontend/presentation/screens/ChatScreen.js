@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef, memo, useCallback } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder } from 'react-native';
-import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
+import { Box, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
@@ -17,13 +17,15 @@ import * as RN from 'react-native';
 import MessageItem from '../components/MessageItem';
 import { getAxiosInstance } from '../../data/api/axiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import ImageManipulator from 'react-native-image-manipulator';
+
 
 const ChatScreen = ({ route }) => {
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const { handleAddMessage, markConversationAsRead, uploadImage, refreshUnreadCounts } = useCardData();
-  const { userData, userToken, isLoggedIn } = useContext(AuthContext);
+  const { userData, userToken } = useContext(AuthContext);
   const navigation = useNavigation();
   const [showTimestamps, setShowTimestamps] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
@@ -33,26 +35,51 @@ const ChatScreen = ({ route }) => {
   const [inputHeight, setInputHeight] = useState(36);
   const [borderRadius, setBorderRadius] = useState(18);
   const [keyboardOffset, setKeyboardOffset] = useState(Platform.OS === 'ios' ? 60 : 0);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
-  const [firstUnreadMessageIndex, setFirstUnreadMessageIndex] = useState(-1);
-  const scrollPosition = useRef(0);
-  const [scrollPositionState, setScrollPosition] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // État unifié pour les messages non lus
   const [unreadState, setUnreadState] = useState({
     count: 0,
     hasScrolledToBottom: false,
     showButton: false
   });
 
-
   // Références
   const flatListRef = useRef(null);
   const isManualScrolling = useRef(false);
+  const scrollPosition = useRef(0);
   const scrollSaveTimeout = useRef(null);
-  const scrollRestoreAttempts = useRef(0);
-  const scrollRestorationComplete = useRef(false);
   const isRefreshingCountsRef = useRef(false);
 
+
+  const prepareImageForUpload = async (imageUri) => {
+  // Définir la taille maximale
+  const MAX_WIDTH = 1200;
+  const MAX_HEIGHT = 1200;
+  
+  try {
+    // Redimensionner l'image
+    const manipResult = await ImageManipulator.manipulate(
+      imageUri,
+      [
+        {
+          resize: {
+            width: MAX_WIDTH,
+            height: MAX_HEIGHT,
+          },
+        },
+      ],
+      { compress: 0.7, format: 'jpeg' }
+    );
+    
+    return manipResult.uri;
+  } catch (error) {
+    console.error('Erreur lors du redimensionnement:', error);
+    // En cas d'erreur, retourner l'URI originale
+    return imageUri;
+  }
+};
 
   // Analyse des données de conversation pour les messages non lus
   useEffect(() => {
@@ -75,29 +102,12 @@ const ChatScreen = ({ route }) => {
       }
     }
 
-
     setUnreadState(prev => ({
       count: currentUnreadCount,
       hasScrolledToBottom: currentUnreadCount === 0,
       showButton: currentUnreadCount > 0
     }));
-
-    // Trouver l'index du premier message non lu
-    if (messages.length > 0 && (currentUnreadCount > 0 || unreadCount > 0)) {
-      const effectiveUnreadCount = Math.max(currentUnreadCount, unreadCount);
-      const unreadStartIndex = Math.max(0, messages.length - effectiveUnreadCount);
-
-      const unreadIndex = messages.findIndex(
-        (msg, index) => index >= unreadStartIndex && msg.type !== 'separator'
-      );
-
-      if (unreadIndex > -1) {
-        setFirstUnreadMessageIndex(unreadIndex);
-      } else {
-        setFirstUnreadMessageIndex(messages.length - 1);
-      }
-    }
-  }, [conversation, messages, userData?._id]);
+  }, [conversation, userData?._id]);
 
   // Fonction pour sauvegarder la position de défilement dans AsyncStorage
   const saveScrollPosition = async (position) => {
@@ -117,8 +127,7 @@ const ChatScreen = ({ route }) => {
     try {
       const savedPosition = await AsyncStorage.getItem(`scroll_position_${conversationId}`);
       if (savedPosition) {
-        const position = parseFloat(savedPosition);
-        return position;
+        return parseFloat(savedPosition);
       }
     } catch (error) {
       console.error('Erreur lors du chargement de la position:', error);
@@ -126,40 +135,28 @@ const ChatScreen = ({ route }) => {
     return 0;
   };
 
+  // Gestionnaire de défilement optimisé
   const handleScrollOptimized = useCallback((event) => {
-    // Vérifier que l'événement existe
-    if (!event || !event.nativeEvent) return;
-  
+    if (!event?.nativeEvent) return;
+
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-  
-    // Vérification rapide pour les valeurs nécessaires
     if (!layoutMeasurement?.height || !contentOffset?.y || !contentSize?.height) return;
-  
-    // Ne pas enregistrer la position si c'est un défilement programmé
+
     if (!isManualScrolling.current) {
-      // Mettre à jour la position sans setState pendant le défilement
-      // pour éviter des re-renders excessifs
       const currentPosition = contentOffset.y;
       scrollPosition.current = currentPosition;
-  
-      // Débounce la sauvegarde et les mises à jour d'état
+
       if (scrollSaveTimeout.current) {
         clearTimeout(scrollSaveTimeout.current);
       }
-  
+
       scrollSaveTimeout.current = setTimeout(() => {
-        // N'utiliser setState qu'après le débounce
-        setScrollPosition(currentPosition);
         saveScrollPosition(currentPosition);
-  
-        // Vérifier si on est en bas pour marquer comme lu
-        const isBottomReached =
-          (layoutMeasurement.height + currentPosition) >= (contentSize.height - 20);
-  
+
+        const isBottomReached = (layoutMeasurement.height + currentPosition) >= (contentSize.height - 20);
         if (isBottomReached && unreadState.count > 0) {
           markConversationAsRead(conversationId, userToken);
-          
-          // Mettre à jour unreadState au lieu d'utiliser setShowUnreadButton
+
           setUnreadState({
             count: 0,
             hasScrolledToBottom: true,
@@ -172,39 +169,18 @@ const ChatScreen = ({ route }) => {
 
   // Restaurer la position de défilement
   const restoreScrollPosition = async () => {
-    // Ne pas restaurer si déjà fait ou si trop de tentatives
-    if (scrollRestorationComplete.current || scrollRestoreAttempts.current > 5) return;
-
     try {
       const position = await loadScrollPosition();
       if (position > 0 && flatListRef.current) {
         isManualScrolling.current = true;
-
-        // Utiliser requestAnimationFrame pour s'assurer que le rendu est terminé
-        requestAnimationFrame(() => {
-          if (flatListRef.current) {
-            flatListRef.current.scrollToOffset({
-              offset: position,
-              animated: false
-            });
-
-            // Vérifier si la restauration a fonctionné après un délai
-            setTimeout(() => {
-              isManualScrolling.current = false;
-
-              // Vérifier si nous sommes réellement à la bonne position
-              if (Math.abs(scrollPosition - position) < 100) {
-                scrollRestorationComplete.current = true;
-              } else {
-                // Réessayer jusqu'à 5 fois
-                scrollRestoreAttempts.current += 1;
-                if (scrollRestoreAttempts.current <= 5) {
-                  setTimeout(() => restoreScrollPosition(), 500);
-                }
-              }
-            }, 200);
-          }
+        flatListRef.current.scrollToOffset({
+          offset: position,
+          animated: false
         });
+
+        setTimeout(() => {
+          isManualScrolling.current = false;
+        }, 200);
       }
     } catch (error) {
       console.error('Erreur lors de la restauration de la position:', error);
@@ -212,21 +188,15 @@ const ChatScreen = ({ route }) => {
   };
 
   // Gestion de la mise en page de la liste
-  const onFlatListLayout = () => {
-    if (messages.length > 0 && !scrollRestorationComplete.current) {
-      restoreScrollPosition();
+  const onFlatListLayout = useCallback(() => {
+    if (messages.length > 0) {
+      setTimeout(() => restoreScrollPosition(), 300);
     }
-  };
+  }, [messages.length]);
 
   // Navigation - focus/blur events
   useEffect(() => {
-    // Récupérer les données de conversation quand on arrive sur l'écran
     const unsubscribeFocus = navigation.addListener('focus', async () => {
-      // Réinitialiser les compteurs de tentatives à chaque focus
-      scrollRestoreAttempts.current = 0;
-      scrollRestorationComplete.current = false;
-
-      // Essayer de restaurer la position de défilement
       if (messages.length > 0) {
         setTimeout(() => restoreScrollPosition(), 500);
       }
@@ -256,10 +226,9 @@ const ChatScreen = ({ route }) => {
       }
     });
 
-    // Sauvegarder la position quand on quitte l'écran
     const unsubscribeBlur = navigation.addListener('blur', () => {
-      if (scrollPosition > 0) {
-        saveScrollPosition(scrollPosition);
+      if (scrollPosition.current > 0) {
+        saveScrollPosition(scrollPosition.current);
       }
     });
 
@@ -267,14 +236,7 @@ const ChatScreen = ({ route }) => {
       unsubscribeFocus();
       unsubscribeBlur();
     };
-  }, [navigation, conversationId, conversation?.secret?._id, messages.length, scrollPosition]);
-
-  // Restaurer la position quand les messages changent
-  useEffect(() => {
-    if (messages.length > 0 && !scrollRestorationComplete.current) {
-      setTimeout(() => restoreScrollPosition(), 300);
-    }
-  }, [messages]);
+  }, [navigation, conversationId, conversation?.secret?._id, messages.length]);
 
   // Nettoyage des timeouts
   useEffect(() => {
@@ -413,6 +375,7 @@ const ChatScreen = ({ route }) => {
     }
   }, [selectedImage]);
 
+  // Rafraichissement des compteurs de messages non lus
   useEffect(() => {
     let timer = null;
     if (unreadState.count === 0 && unreadState.hasScrolledToBottom) {
@@ -423,22 +386,18 @@ const ChatScreen = ({ route }) => {
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [unreadState.count, unreadState.hasScrolledToBottom, safeRefreshUnreadCounts]);
+  }, [unreadState.count, unreadState.hasScrolledToBottom]);
 
-
+  // Fonction pour rafraîchir les compteurs de messages non lus de façon contrôlée
   const safeRefreshUnreadCounts = useCallback(() => {
-    // Ne rien faire si un rafraîchissement est déjà en cours
     if (isRefreshingCountsRef.current) return;
 
-    // Définir le drapeau à true pour éviter les appels parallèles
     isRefreshingCountsRef.current = true;
 
-    // Appeler la fonction originale
     refreshUnreadCounts().finally(() => {
-      // Réinitialiser le drapeau après l'exécution (qu'elle réussisse ou échoue)
       setTimeout(() => {
         isRefreshingCountsRef.current = false;
-      }, 2000); // Attendre au moins 2 secondes entre les rafraîchissements
+      }, 2000);
     });
   }, [refreshUnreadCounts]);
 
@@ -448,94 +407,143 @@ const ChatScreen = ({ route }) => {
     setInputContainerHeight(newHeight);
   };
 
-  // Envoi de message
-  const sendMessage = async () => {
-    try {
-      if (!conversationId) {
-        throw new Error('ID de conversation manquant');
+ // Envoi de message
+// Envoi de message
+const sendMessage = async () => {
+  try {
+    if (!conversationId) {
+      throw new Error('ID de conversation manquant');
+    }
+
+    // Vérifier s'il y a du contenu à envoyer
+    if (!message.trim() && !selectedImage) return;
+
+    if (!userData?.name) {
+      throw new Error('Informations utilisateur manquantes');
+    }
+
+    // Déterminer le type de message
+    let messageType = 'text';
+    if (selectedImage && message.trim()) {
+      messageType = 'mixed';
+    } else if (selectedImage) {
+      messageType = 'image';
+    }
+
+    // Créer un ID temporaire pour afficher immédiatement le message
+    const tempId = `temp-${Date.now()}`;
+    const messageText = message.trim() || "";
+    
+    // Ajouter immédiatement le message à l'interface avec état "en cours d'envoi"
+    setMessages(prev => [...prev, {
+      id: tempId,
+      text: messageText,
+      messageType: messageType,
+      image: selectedImage ? selectedImage.uri : "",
+      sender: 'user',
+      timestamp: new Date().toISOString(),
+      isSending: true,
+      senderInfo: {
+        id: userData?._id || "",
+        name: userData?.name || "Utilisateur"
       }
+    }]);
 
-      // Vérifier s'il y a du contenu à envoyer
-      if (!message.trim() && !selectedImage) return;
+    // Réinitialiser l'interface immédiatement pour une meilleure réactivité
+    setMessage('');
+    const imageToUpload = selectedImage;
+    setSelectedImage(null);
+    updateInputAreaHeight(false);
 
-      if (!userData?.name) {
-        throw new Error('Informations utilisateur manquantes');
+    // Défiler vers le bas
+    requestAnimationFrame(() => {
+      if (flatListRef.current) {
+        flatListRef.current.scrollToEnd({ animated: true });
       }
+    });
 
-      // Déterminer le type de message
-      let messageType = 'text';
-      if (selectedImage && message.trim()) {
-        messageType = 'mixed';
-      } else if (selectedImage) {
-        messageType = 'image';
-      }
+    // Créer l'objet du message pour l'API
+    let messageContent = {
+      content: messageText || " ",
+      senderName: userData.name,
+      messageType: messageType
+    };
 
-      // Créer l'objet du message
-      let messageContent = {
-        content: message.trim() || " ",
-        senderName: userData.name,
-        messageType: messageType
-      };
-
-      // Si une image est sélectionnée, l'uploader
-      if (selectedImage) {
-
-        try {
-          let imageData;
-          if (selectedImage.base64) {
-            imageData = `data:${selectedImage.type};base64,${selectedImage.base64}`;
-          } else if (selectedImage.uri) {
-            imageData = selectedImage.uri;
-          }
-
-          const imageMetadata = {
-            width: selectedImage.width || 0,
-            height: selectedImage.height || 0,
-            fileSize: selectedImage.fileSize || 0
-          };
-
-          const uploadResult = await uploadImage(imageData);
+    // Si une image est sélectionnée, l'uploader
+    if (imageToUpload) {
+      setIsUploading(true);
+      setUploadProgress(0);
+      
+      try {
+        // Utiliser directement la donnée base64
+        let imageData;
+        if (imageToUpload.base64) {
+          // Utiliser directement base64 au lieu de redimensionner
+          imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
+          
+          // Uploader l'image
+          const uploadResult = await uploadImage(
+            imageData, 
+            (progress) => setUploadProgress(progress)
+          );
+          
           messageContent.image = uploadResult.url;
-        } catch (uploadError) {
-          console.error('Erreur lors de l\'upload de l\'image:', uploadError);
-          throw new Error('Échec de l\'upload de l\'image');
+        } else {
+          throw new Error('Format d\'image non supporté');
         }
+      } catch (uploadError) {
+        console.error('Erreur lors de l\'upload de l\'image:', uploadError);
+        
+        // Marquer le message comme échoué
+        setMessages(prev => prev.map(msg => 
+          msg.id === tempId 
+            ? { ...msg, sendFailed: true, isSending: false }
+            : msg
+        ));
+        
+        throw new Error('Échec de l\'upload de l\'image');
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
       }
+    }
 
-      // Envoyer le message
+    // Envoyer le message
+    try {
       const newMessage = await handleAddMessage(conversationId, messageContent);
-
-      // Mise à jour de l'UI
-      setMessages(prev => [...prev, {
-        id: newMessage._id || `local-${Date.now()}`,
-        text: message.trim() || "",
-        messageType: messageContent.messageType || "text",
-        // Initialiser image à undefined ou à une chaîne vide, mais JAMAIS à null
-        image: messageContent.image || "",
-        sender: 'user',
-        timestamp: new Date().toISOString(),
-        senderInfo: {
-          id: userData?._id || "",
-          name: userData?.name || "Utilisateur"
-        }
-      }]);
-
-      // Réinitialiser
-      setMessage('');
-      setSelectedImage(null);
-      updateInputAreaHeight(false);
-
-      // Défiler vers le bas
-      requestAnimationFrame(() => {
-        if (flatListRef.current) {
-          flatListRef.current.scrollToEnd({ animated: true });
-        }
-      });
-
+      
+      // Remplacer le message temporaire par le message réel
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === tempId 
+            ? {
+                ...msg,
+                id: newMessage._id,
+                image: messageContent.image || "",
+                isSending: false
+              }
+            : msg
+        )
+      );
     } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);
+      
+      // Marquer le message comme échoué
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === tempId 
+            ? { ...msg, sendFailed: true, isSending: false }
+            : msg
+        )
+      );
+      
+      throw error;
     }
-  };
+
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi du message:', error);
+  }
+};
 
   // Sélection d'image
   const handleImagePick = async () => {
@@ -568,14 +576,14 @@ const ChatScreen = ({ route }) => {
     return 10;
   };
 
+  // Fonction pour défiler vers les messages non lus
   const scrollToUnreadMessages = useCallback(() => {
     if (flatListRef.current) {
       flatListRef.current.scrollToEnd({ animated: true });
-      
+
       setTimeout(() => {
         markConversationAsRead(conversationId, userToken);
-        
-        // Mettre à jour tout l'état unreadState
+
         setUnreadState({
           count: 0,
           hasScrolledToBottom: true,
@@ -584,16 +592,6 @@ const ChatScreen = ({ route }) => {
       }, 300);
     }
   }, [conversationId, userToken]);
-
-  // Gestion de l'échec du défilement vers un index
-  const onScrollToIndexFailed = (info) => {
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-      markConversationAsRead(conversationId, userToken);
-      setUnreadCount(0);
-      setHasScrolledToBottom(true);
-    }, 100);
-  };
 
   // Configuration du détecteur de geste pour les timestamps
   const panResponder = useRef(
@@ -622,28 +620,20 @@ const ChatScreen = ({ route }) => {
     })
   ).current;
 
-
-
-
+  // Composant de message mémorisé
   const MemoizedMessageItem = memo(MessageItem, (prevProps, nextProps) => {
-    // Comparaison optimisée pour éviter les re-renders inutiles
     return (
       prevProps.item.id === nextProps.item.id &&
       prevProps.showTimestamps === nextProps.showTimestamps &&
       prevProps.index === nextProps.index &&
-      // Pour les objets complexes, comparer uniquement l'ID
       prevProps.userData?._id === nextProps.userData?._id &&
-      // Éviter la re-rendu lors des changements d'état qui ne concernent pas les messages
       prevProps.item.text === nextProps.item.text &&
       prevProps.item.image === nextProps.item.image
     );
   });
 
-
-
-  // Puis dans la renderItem de FlatList
+  // Fonction de rendu des messages
   const renderMessage = useCallback(({ item, index }) => {
-    // Protéger contre les items null
     if (!item || !item.id) return null;
 
     return (
@@ -718,32 +708,21 @@ const ChatScreen = ({ route }) => {
               data={messages}
               renderItem={renderMessage}
               keyExtractor={item => item?.id?.toString() || Math.random().toString()}
-
-              // Optimisations de performance
-              windowSize={7}                    // Augmenter la taille de la fenêtre de rendu (5 → 7)
-              removeClippedSubviews={true}      // Garder cette propriété
-              maxToRenderPerBatch={5}          // Augmenter légèrement (3 → 5)
-              initialNumToRender={10}           // Augmenter légèrement pour un premier chargement plus fluide
-              updateCellsBatchingPeriod={50}    // Réduire ce délai (100 → 50) pour un rendu plus réactif
-
-              // Améliorer le défilement
-              onScroll={handleScrollOptimized}  // Utiliser une version optimisée du gestionnaire
-              scrollEventThrottle={16}          // 16ms = 60fps, standard pour une animation fluide
-
-              // Ajouter un maintainVisibleContentPosition pour empêcher le saut lors de l'ajout de nouveaux messages
+              windowSize={7}
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={5}
+              initialNumToRender={10}
+              updateCellsBatchingPeriod={50}
+              onScroll={handleScrollOptimized}
+              scrollEventThrottle={16}
               maintainVisibleContentPosition={{
                 minIndexForVisible: 0,
                 autoscrollToTopThreshold: 10,
               }}
-
-              // Désactiver le "bounce" sur iOS pour un défilement plus fluide
               bounces={false}
-
-              // Optimisations de liste
               ListEmptyComponent={<Text style={styles.caption}>Aucun message</Text>}
               onLayout={onFlatListLayout}
             />
-
           </Box>
 
           {/* Zone d'input */}
@@ -865,6 +844,7 @@ const ChatScreen = ({ route }) => {
                   }}
                 />
 
+            
                 {/* Bouton d'envoi */}
                 <TouchableOpacity
                   onPress={sendMessage}
@@ -910,7 +890,7 @@ const ChatScreen = ({ route }) => {
       {unreadState.showButton && (
         <TouchableOpacity
           onPress={scrollToUnreadMessages}
-          activeOpacity={1} // Conserve l'opacité à 100% lors du toucher
+          activeOpacity={1}
           style={{
             position: 'absolute',
             paddingHorizontal: 16,
@@ -920,7 +900,7 @@ const ChatScreen = ({ route }) => {
             borderRadius: 20,
             justifyContent: 'center',
             alignItems: 'center',
-            flexDirection: 'row', // Assure que les éléments sont alignés horizontalement
+            flexDirection: 'row',
             overflow: 'hidden',
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },
@@ -928,7 +908,7 @@ const ChatScreen = ({ route }) => {
             shadowRadius: 3.84,
             elevation: 5,
             zIndex: 999,
-            opacity:0.5
+            opacity: 0.5
           }}
         >
           <LinearGradient
@@ -947,7 +927,7 @@ const ChatScreen = ({ route }) => {
             color: 'white',
             fontWeight: 'bold',
             zIndex: 1,
-            marginRight: 5, // Ajoute un peu d'espace entre le texte et l'icône
+            marginRight: 5,
           }}>
             Nouveaux messages
           </Text>

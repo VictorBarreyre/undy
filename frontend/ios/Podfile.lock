@@ -1065,6 +1065,8 @@ PODS:
     - React-Core
   - react-native-get-random-values (1.11.0):
     - React-Core
+  - react-native-image-manipulator (1.0.6):
+    - React
   - react-native-image-picker (8.0.0):
     - DoubleConversion
     - glog
@@ -1536,6 +1538,7 @@ DEPENDENCIES:
   - react-native-contacts (from `../node_modules/react-native-contacts`)
   - react-native-fbsdk-next (from `../node_modules/react-native-fbsdk-next`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
+  - react-native-image-manipulator (from `../node_modules/react-native-image-manipulator`)
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
@@ -1706,6 +1709,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-fbsdk-next"
   react-native-get-random-values:
     :path: "../node_modules/react-native-get-random-values"
+  react-native-image-manipulator:
+    :path: "../node_modules/react-native-image-manipulator"
   react-native-image-picker:
     :path: "../node_modules/react-native-image-picker"
   react-native-netinfo:
@@ -1852,6 +1857,7 @@ SPEC CHECKSUMS:
   react-native-contacts: cdeb7709dcc626e5fd7ee3d3e3685357e877cbd5
   react-native-fbsdk-next: b430fc002cf9b8675b8688d43fe6eddd5ff4e029
   react-native-get-random-values: 21325b2244dfa6b58878f51f9aa42821e7ba3d06
+  react-native-image-manipulator: dd4d7f879ab00f55e3813e7119669b4a936ab973
   react-native-image-picker: 540f2c576baa890b8e83f6bac0bd7a55bd108e73
   react-native-netinfo: bdb108d340cdb41875c9ced535977cac6d2ff321
   react-native-safe-area-context: a240ad4b683349e48b1d51fed1611138d1bdad97
