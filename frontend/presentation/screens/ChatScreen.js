@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef, memo } from 'react';
+import React, { useState, useEffect, useContext, useRef, memo, useCallback } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder } from 'react-native';
 import { Box, Input, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -23,7 +23,7 @@ const ChatScreen = ({ route }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const { handleAddMessage, markConversationAsRead, uploadImage, refreshUnreadCounts } = useCardData();
-  const { userData, userToken,isLoggedIn } = useContext(AuthContext);
+  const { userData, userToken, isLoggedIn } = useContext(AuthContext);
   const navigation = useNavigation();
   const [showTimestamps, setShowTimestamps] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
@@ -36,9 +36,9 @@ const ChatScreen = ({ route }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [firstUnreadMessageIndex, setFirstUnreadMessageIndex] = useState(-1);
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const [contentHeight, setContentHeight] = useState(0);
-  const [layoutHeight, setLayoutHeight] = useState(0);
+  const scrollPosition = useRef(0);
+  const [scrollPositionState, setScrollPosition] = useState(0);
+
 
   // Références
   const flatListRef = useRef(null);
@@ -46,6 +46,8 @@ const ChatScreen = ({ route }) => {
   const scrollSaveTimeout = useRef(null);
   const scrollRestoreAttempts = useRef(0);
   const scrollRestorationComplete = useRef(false);
+  const isRefreshingCountsRef = useRef(false);
+
 
   // Analyse des données de conversation pour les messages non lus
   useEffect(() => {
@@ -68,15 +70,12 @@ const ChatScreen = ({ route }) => {
       }
     }
 
-    // Ne pas mettre à jour unreadCount à 0 si la valeur existante est positive
-    // et que la nouvelle valeur est 0 - cela pourrait être une erreur API
-    if (!(unreadCount > 0 && currentUnreadCount === 0 && !hasScrolledToBottom)) {
-      setUnreadCount(currentUnreadCount);
 
-      // Si il y a des messages non lus, on s'assure que hasScrolledToBottom est false
-      if (currentUnreadCount > 0) {
-        setHasScrolledToBottom(false);
-      }
+    setUnreadCount(currentUnreadCount);
+    if (currentUnreadCount > 0) {
+      setHasScrolledToBottom(false);
+    } else {
+      setHasScrolledToBottom(true);
     }
 
     // Trouver l'index du premier message non lu
@@ -123,46 +122,44 @@ const ChatScreen = ({ route }) => {
     return 0;
   };
 
-  const handleScroll = (event) => {
+  const handleScrollOptimized = useCallback((event) => {
     // Vérifier que l'événement existe
     if (!event || !event.nativeEvent) return;
-
+  
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-
-    // Vérifier que toutes les valeurs nécessaires existent et sont des nombres
-    if (!layoutMeasurement || typeof layoutMeasurement.height !== 'number' ||
-      !contentOffset || typeof contentOffset.y !== 'number' ||
-      !contentSize || typeof contentSize.height !== 'number') {
-      return;
-    }
-
-    // Mettre à jour les dimensions (avec vérification)
-    setLayoutHeight(layoutMeasurement.height || 0);
-    setContentHeight(contentSize.height || 0);
-
+  
+    // Vérification rapide pour les valeurs nécessaires
+    if (!layoutMeasurement?.height || !contentOffset?.y || !contentSize?.height) return;
+  
     // Ne pas enregistrer la position si c'est un défilement programmé
     if (!isManualScrolling.current) {
-      setScrollPosition(contentOffset.y);
-
-      // Débouncer la sauvegarde pour éviter trop d'écritures
+      // Mettre à jour la position sans setState pendant le défilement
+      // pour éviter des re-renders excessifs
+      const currentPosition = contentOffset.y;
+      scrollPosition.current = currentPosition;
+      
+      // Débounce la sauvegarde et les mises à jour d'état
       if (scrollSaveTimeout.current) {
         clearTimeout(scrollSaveTimeout.current);
       }
-
+      
       scrollSaveTimeout.current = setTimeout(() => {
-        saveScrollPosition(contentOffset.y);
+        // N'utiliser setState qu'après le débounce
+        setScrollPosition(currentPosition);
+        saveScrollPosition(currentPosition);
+        
+        // Vérifier si on est en bas pour marquer comme lu
+        const isBottomReached = 
+          (layoutMeasurement.height + currentPosition) >= (contentSize.height - 20);
+          
+        if (isBottomReached && unreadCount > 0) {
+          markConversationAsRead(conversationId, userToken);
+          setUnreadCount(0);
+          setHasScrolledToBottom(true);
+        }
       }, 300);
     }
-
-    // Vérifier si on est en bas pour marquer comme lu (avec vérification)
-    const isBottomReached = (layoutMeasurement.height + contentOffset.y) >= (contentSize.height - 20);
-    if (isBottomReached && unreadCount > 0) {
-      markConversationAsRead(conversationId, userToken);
-      setUnreadCount(0);
-      setHasScrolledToBottom(true);
-      refreshUnreadCounts();
-    }
-  };
+  }, [unreadCount, conversationId, userToken]);
 
   // Restaurer la position de défilement
   const restoreScrollPosition = async () => {
@@ -407,12 +404,34 @@ const ChatScreen = ({ route }) => {
     }
   }, [selectedImage]);
 
-  // Mise à jour des compteurs de messages non lus
   useEffect(() => {
+    let timer = null;
     if (unreadCount === 0 && hasScrolledToBottom) {
-      refreshUnreadCounts();
+      timer = setTimeout(() => {
+        safeRefreshUnreadCounts();
+      }, 1000);
     }
-  }, [unreadCount, hasScrolledToBottom, refreshUnreadCounts]);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [unreadCount, hasScrolledToBottom, safeRefreshUnreadCounts]);
+
+
+  const safeRefreshUnreadCounts = useCallback(() => {
+    // Ne rien faire si un rafraîchissement est déjà en cours
+    if (isRefreshingCountsRef.current) return;
+
+    // Définir le drapeau à true pour éviter les appels parallèles
+    isRefreshingCountsRef.current = true;
+
+    // Appeler la fonction originale
+    refreshUnreadCounts().finally(() => {
+      // Réinitialiser le drapeau après l'exécution (qu'elle réussisse ou échoue)
+      setTimeout(() => {
+        isRefreshingCountsRef.current = false;
+      }, 2000); // Attendre au moins 2 secondes entre les rafraîchissements
+    });
+  }, [refreshUnreadCounts]);
 
   // Mise à jour de la hauteur de la zone d'input
   const updateInputAreaHeight = (imageVisible) => {
@@ -556,7 +575,6 @@ const ChatScreen = ({ route }) => {
         markConversationAsRead(conversationId, userToken);
         setUnreadCount(0);
         setHasScrolledToBottom(true);
-        refreshUnreadCounts();
       }, 300);
     } else {
       // Fallback: si l'index n'est pas trouvé, défiler tout en bas
@@ -566,7 +584,6 @@ const ChatScreen = ({ route }) => {
       markConversationAsRead(conversationId, userToken);
       setUnreadCount(0);
       setHasScrolledToBottom(true);
-      refreshUnreadCounts();
     }
   };
 
@@ -577,7 +594,6 @@ const ChatScreen = ({ route }) => {
       markConversationAsRead(conversationId, userToken);
       setUnreadCount(0);
       setHasScrolledToBottom(true);
-      refreshUnreadCounts();
     }, 100);
   };
 
@@ -612,23 +628,26 @@ const ChatScreen = ({ route }) => {
 
 
   const MemoizedMessageItem = memo(MessageItem, (prevProps, nextProps) => {
-    // Comparaison plus complète
+    // Comparaison optimisée pour éviter les re-renders inutiles
     return (
       prevProps.item.id === nextProps.item.id &&
       prevProps.showTimestamps === nextProps.showTimestamps &&
       prevProps.index === nextProps.index &&
-      // Comparaison d'égalité référentielle pour userData
-      prevProps.userData === nextProps.userData
+      // Pour les objets complexes, comparer uniquement l'ID
+      prevProps.userData?._id === nextProps.userData?._id &&
+      // Éviter la re-rendu lors des changements d'état qui ne concernent pas les messages
+      prevProps.item.text === nextProps.item.text &&
+      prevProps.item.image === nextProps.item.image
     );
   });
 
 
 
   // Puis dans la renderItem de FlatList
-  const renderMessage = ({ item, index }) => {
+  const renderMessage = useCallback(({ item, index }) => {
     // Protéger contre les items null
     if (!item || !item.id) return null;
-
+  
     return (
       <MemoizedMessageItem
         key={item.id}
@@ -639,7 +658,7 @@ const ChatScreen = ({ route }) => {
         showTimestamps={showTimestamps}
       />
     );
-  };
+  }, [messages, userData, showTimestamps]);
 
   return (
     <Background>
@@ -701,20 +720,33 @@ const ChatScreen = ({ route }) => {
               data={messages}
               renderItem={renderMessage}
               keyExtractor={item => item?.id?.toString() || Math.random().toString()}
-              // Augmentez cette valeur
-              windowSize={3}
-              removeClippedSubviews={true}
-              // Réduisez ces valeurs
-              maxToRenderPerBatch={3}
-              initialNumToRender={7}
-              // Augmentez cette valeur pour regrouper les mises à jour
-              updateCellsBatchingPeriod={100}
-              // Ajouter ceci pour améliorer les performances de défilement
-              getItemLayout={(data, index) => ({
-                length: 100, // hauteur approximative d'un message
-                offset: 100 * index,
-                index,
-              })}
+
+              // Optimisations de performance
+              windowSize={7}                    // Augmenter la taille de la fenêtre de rendu (5 → 7)
+              removeClippedSubviews={true}      // Garder cette propriété
+              maxToRenderPerBatch={5}          // Augmenter légèrement (3 → 5)
+              initialNumToRender={10}           // Augmenter légèrement pour un premier chargement plus fluide
+              updateCellsBatchingPeriod={50}    // Réduire ce délai (100 → 50) pour un rendu plus réactif
+
+              // Améliorer le défilement
+              onScroll={handleScrollOptimized}  // Utiliser une version optimisée du gestionnaire
+              scrollEventThrottle={16}          // 16ms = 60fps, standard pour une animation fluide
+
+              // Supprimer getItemLayout problématique, sauf si vous pouvez calculer la hauteur exacte
+              // getItemLayout={...}            // À supprimer ou à remplacer par une implémentation précise
+
+              // Ajouter un maintainVisibleContentPosition pour empêcher le saut lors de l'ajout de nouveaux messages
+              maintainVisibleContentPosition={{
+                minIndexForVisible: 0,
+                autoscrollToTopThreshold: 10,
+              }}
+
+              // Désactiver le "bounce" sur iOS pour un défilement plus fluide
+              bounces={false}
+
+              // Optimisations de liste
+              ListEmptyComponent={<Text style={styles.caption}>Aucun message</Text>}
+              onLayout={onFlatListLayout}
             />
 
           </Box>
@@ -914,7 +946,7 @@ const ChatScreen = ({ route }) => {
             }}
           />
           <Text style={{ color: 'white', fontWeight: 'bold', zIndex: 1 }}>
-            {unreadCount}
+          Nouveaux messages
           </Text>
           <FontAwesomeIcon
             icon={faChevronDown}

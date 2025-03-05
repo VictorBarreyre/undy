@@ -130,7 +130,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
     loadContacts();
   }, [userData?.contacts]);
 
-  const buttonTypes = ['Tous', 'Contacts', 'Catégories'];
+  const buttonTypes = ['Tous', 'Contacts', 'Autour de moi', 'Catégories'];
 
   return (
     <Box width="100%" paddingY={2} marginLeft={4}>
