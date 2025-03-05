@@ -171,21 +171,45 @@ const Connexion = ({ navigation }) => {
     // Connexion Google
     const handleGoogleLogin = useCallback(async () => {
         try {
-            await GoogleSignin.hasPlayServices();
+            console.log('Configuration GoogleSignin:', {
+                webClientId: GOOGLE_WEBCLIENT_ID,
+                iosClientId: GOOGLE_IOS_ID
+            });
+    
+            // Configuration explicite de GoogleSignin
+            await GoogleSignin.configure({
+                webClientId: GOOGLE_WEBCLIENT_ID,
+                iosClientId: GOOGLE_IOS_ID,
+                offlineAccess: true
+            });
+    
+            // Vérifier la disponibilité des services Google
+            await GoogleSignin.hasPlayServices({
+                showIfNotAvailable: true
+            });
+    
+            // Tentative de connexion
             const userInfo = await GoogleSignin.signIn();
     
-            console.log('Informations Google complètes:', JSON.stringify(userInfo, null, 2));
-            console.log('ID Token:', userInfo.idToken);
+            console.log('Informations Google complètes:', {
+                idToken: userInfo.idToken ? 'Présent' : 'Absent',
+                accessToken: userInfo.accessToken ? 'Présent' : 'Absent'
+            });
+    
+            // Vérification explicite du token
+            if (!userInfo.idToken) {
+                throw new Error('Aucun ID Token récupéré');
+            }
     
             const instance = getAxiosInstance();
-    
+            
             if (!instance) {
                 throw new Error('Impossible de créer l\'instance Axios');
             }
     
-            // Envoi explicite avec JSON.stringify
+            // Envoi explicite du token
             const response = await instance.post('/api/users/google-login', 
-                JSON.stringify({ token: userInfo.idToken }),
+                { token: userInfo.idToken },
                 {
                     headers: {
                         'Content-Type': 'application/json'
@@ -196,10 +220,27 @@ const Connexion = ({ navigation }) => {
             await login(response.data.token, response.data.refreshToken);
             navigation.navigate('HomeTab', { screen: 'MainFeed' });
         } catch (error) {
-            console.error('Détails complets de l\'erreur:', error.response || error);
+            console.error('Erreur détaillée de connexion Google:', error);
             
             if (error.response) {
+                // Erreur de réponse du serveur
+                console.log('Détails de l\'erreur serveur:', error.response.data);
                 setMessage(error.response.data.message || 'Échec de la connexion Google');
+            } else if (error.code) {
+                // Erreurs spécifiques de GoogleSignin
+                switch (error.code) {
+                    case statusCodes.SIGN_IN_CANCELLED:
+                        setMessage('Connexion annulée');
+                        break;
+                    case statusCodes.IN_PROGRESS:
+                        setMessage('Connexion en cours');
+                        break;
+                    case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+                        setMessage('Services Google Play non disponibles');
+                        break;
+                    default:
+                        setMessage('Erreur de connexion Google');
+                }
             } else {
                 setMessage('Une erreur est survenue lors de la connexion');
             }
