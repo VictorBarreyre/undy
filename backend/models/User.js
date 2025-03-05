@@ -24,7 +24,10 @@ const UserSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true,
+        required: function() {
+            // Le mot de passe est requis seulement si aucune authentification externe n'est utilisée
+            return !this.googleId && !this.appleId;
+        }
     },
     birthdate: {
         type: Date,

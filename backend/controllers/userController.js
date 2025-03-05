@@ -262,7 +262,7 @@ exports.googleLogin = async (req, res) => {
             });
         }
 
-        let email, name, picture;
+        let email, name, picture, googleId;
         
         if (tokenType === 'access_token') {
             try {
@@ -276,6 +276,7 @@ exports.googleLogin = async (req, res) => {
                 email = response.data.email;
                 name = response.data.name;
                 picture = response.data.picture;
+                googleId = response.data.sub || userData?.id;
                 
                 console.log('Infos Google récupérées via access token:', { email, name });
                 
@@ -290,7 +291,7 @@ exports.googleLogin = async (req, res) => {
                 });
             }
         } else {
-            // Votre code existant pour ID token
+            // Code pour ID token...
             try {
                 const ticket = await googleClient.verifyIdToken({
                     idToken: token,
@@ -301,6 +302,7 @@ exports.googleLogin = async (req, res) => {
                 email = payload.email;
                 name = payload.name;
                 picture = payload.picture;
+                googleId = payload.sub;
             } catch (verifyError) {
                 console.error('Erreur de vérification Google ID token:', verifyError);
                 return res.status(400).json({ 
@@ -310,26 +312,51 @@ exports.googleLogin = async (req, res) => {
             }
         }
 
-        // Utiliser l'email récupéré pour authentifier/créer l'utilisateur
-        let user = await User.findOne({ email });
+        // Rechercher l'utilisateur par email ou googleId
+        let user = await User.findOne({
+            $or: [
+                { email: email },
+                { googleId: googleId }
+            ]
+        });
         
         if (!user) {
             // Si l'utilisateur n'existe pas, le créer
-            user = await User.create({
+            user = new User({
                 email,
                 name,
-                profilePicture: picture,
+                googleId,
+                profilePicture: picture
             });
+            
+            await user.save();
+            console.log('Nouvel utilisateur créé avec Google:', user._id);
+        } else if (!user.googleId) {
+            // Si l'utilisateur existe mais n'a pas de googleId, le mettre à jour
+            user.googleId = googleId;
+            if (!user.profilePicture && picture) {
+                user.profilePicture = picture;
+            }
+            await user.save();
+            console.log('Utilisateur existant mis à jour avec Google ID:', user._id);
         }
 
         // Générer des tokens d'authentification pour votre application
         const { accessToken, refreshToken } = generateTokens(user._id);
+        
+        // Sauvegarder le refresh token
+        await RefreshToken.create({
+            userId: user._id,
+            token: refreshToken,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 jours
+        });
 
         // Retourner la réponse
         res.json({
             _id: user._id,
             name: user.name,
             email: user.email,
+            profilePicture: user.profilePicture,
             token: accessToken,
             refreshToken: refreshToken
         });
