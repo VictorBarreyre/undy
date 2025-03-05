@@ -247,9 +247,11 @@ exports.googleLogin = async (req, res) => {
     console.log('Corps de la requête:', req.body);
 
     try {
-        const { token } = req.body;
+        const { token, tokenType, userData } = req.body;
         
-        console.log('Token reçu:', token);
+        console.log('Token reçu:', token ? 'Présent' : 'Absent');
+        console.log('Type de token:', tokenType);
+        console.log('Données utilisateur:', userData);
 
         if (!token) {
             return res.status(400).json({ 
@@ -258,51 +260,78 @@ exports.googleLogin = async (req, res) => {
             });
         }
 
-        try {
-            const ticket = await googleClient.verifyIdToken({
-                idToken: token,
-                audience: process.env.GOOGLE_CLIENT_ID,
-            });
-            
-            const payload = ticket.getPayload();
-            console.log('Payload Google:', payload);
-
-            const { email, name, picture } = payload;
-
-            if (!email) {
+        let email, name, picture;
+        
+        if (tokenType === 'access_token') {
+            try {
+                // Utiliser l'access token pour vérifier auprès de Google
+                const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                
+                email = response.data.email;
+                name = response.data.name;
+                picture = response.data.picture;
+                
+                console.log('Infos Google récupérées via access token:', { email, name });
+                
+                if (!email) {
+                    throw new Error('Impossible de récupérer l\'email');
+                }
+            } catch (verifyError) {
+                console.error('Erreur de vérification Google access token:', verifyError);
                 return res.status(400).json({ 
-                    message: 'Impossible de récupérer l\'email',
+                    message: 'Échec de la vérification de l\'access token Google',
+                    details: verifyError.message 
                 });
             }
-
-            // Reste de votre logique de connexion
-            let user = await User.findOne({ email });
-            
-            if (!user) {
-                user = await User.create({
-                    email,
-                    name,
-                    profilePicture: picture,
+        } else {
+            // Votre code existant pour ID token
+            try {
+                const ticket = await googleClient.verifyIdToken({
+                    idToken: token,
+                    audience: process.env.GOOGLE_CLIENT_ID,
+                });
+                
+                const payload = ticket.getPayload();
+                email = payload.email;
+                name = payload.name;
+                picture = payload.picture;
+            } catch (verifyError) {
+                console.error('Erreur de vérification Google ID token:', verifyError);
+                return res.status(400).json({ 
+                    message: 'Échec de la vérification du ID token Google',
+                    details: verifyError.message 
                 });
             }
+        }
 
-            const { accessToken, refreshToken } = generateTokens(user._id);
-
-            res.json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                token: accessToken,
-                refreshToken: refreshToken
-            });
-
-        } catch (verifyError) {
-            console.error('Erreur de vérification Google:', verifyError);
-            return res.status(400).json({ 
-                message: 'Échec de la vérification du token Google',
-                details: verifyError.message 
+        // Utiliser l'email récupéré pour authentifier/créer l'utilisateur
+        let user = await User.findOne({ email });
+        
+        if (!user) {
+            // Si l'utilisateur n'existe pas, le créer
+            user = await User.create({
+                email,
+                name,
+                profilePicture: picture,
             });
         }
+
+        // Générer des tokens d'authentification pour votre application
+        const { accessToken, refreshToken } = generateTokens(user._id);
+
+        // Retourner la réponse
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            token: accessToken,
+            refreshToken: refreshToken
+        });
+
     } catch (error) {
         console.error('Erreur lors de la connexion Google:', error);
         res.status(500).json({ 
