@@ -117,14 +117,12 @@ const Connexion = ({ navigation }) => {
     // Connexion Apple
     const handleAppleLogin = useCallback(async () => {
         try {
-            // Vérifier si Apple Sign In est pris en charge
             const isSupported = await appleAuth.isSupported;
             if (!isSupported) {
                 setMessage('Connexion Apple non disponible sur cet appareil');
                 return;
             }
-
-            // Demander l'authentification Apple
+    
             const appleAuthRequestResponse = await appleAuth.performRequest({
                 requestedOperation: appleAuth.Operation.LOGIN,
                 requestedScopes: [
@@ -132,18 +130,20 @@ const Connexion = ({ navigation }) => {
                     appleAuth.Scope.FULL_NAME
                 ]
             });
-
-            // Vérifier l'état des identifiants
+    
             const credentialState = await appleAuth.getCredentialStateForUser(
                 appleAuthRequestResponse.user
             );
-
-            // Vérifier si l'utilisateur est autorisé
+    
             if (credentialState === appleAuth.State.AUTHORIZED) {
-                const axiosInstance = await createAxiosInstance();
-
-                // Envoyer les données à votre backend
-                const response = await axiosInstance.post('/api/users/apple-login', {
+                // Utiliser l'instance existante au lieu d'en créer une nouvelle
+                const instance = getAxiosInstance();
+    
+                if (!instance) {
+                    throw new Error('Impossible de créer l\'instance Axios');
+                }
+    
+                const response = await instance.post('/api/users/apple-login', {
                     identityToken: appleAuthRequestResponse.identityToken,
                     authorizationCode: appleAuthRequestResponse.authorizationCode,
                     fullName: {
@@ -151,24 +151,17 @@ const Connexion = ({ navigation }) => {
                         familyName: appleAuthRequestResponse.fullName?.familyName
                     }
                 });
-
-                // Connexion réussie
+    
                 await login(response.data.token, response.data.refreshToken);
                 navigation.navigate('HomeTab', { screen: 'MainFeed' });
             }
         } catch (error) {
             console.error('Erreur de connexion Apple :', error);
-
-            // Gestion des erreurs spécifiques
+    
             if (error.response) {
-                // Erreur de réponse du serveur
                 setMessage(error.response.data.message || 'Échec de la connexion Apple');
             } else if (error.code === appleAuth.Error.CANCELED) {
                 setMessage('Connexion Apple annulée');
-            } else if (error.code === appleAuth.Error.FAILED) {
-                setMessage('La connexion Apple a échoué');
-            } else if (error.code === appleAuth.Error.INVALID_RESPONSE) {
-                setMessage('Réponse Apple invalide');
             } else {
                 setMessage('Une erreur est survenue lors de la connexion');
             }
@@ -180,21 +173,30 @@ const Connexion = ({ navigation }) => {
         try {
             await GoogleSignin.hasPlayServices();
             const userInfo = await GoogleSignin.signIn();
-
-            const axiosInstance = await createAxiosInstance();
-            const response = await axiosInstance.post('/api/users/google-login', {
+    
+            // Utiliser l'instance existante au lieu d'en créer une nouvelle
+            const instance = getAxiosInstance();
+    
+            if (!instance) {
+                throw new Error('Impossible de créer l\'instance Axios');
+            }
+    
+            const response = await instance.post('/api/users/google-login', {
                 token: userInfo.idToken,
             });
-
+    
             await login(response.data.token, response.data.refreshToken);
-            navigation.navigate('Home');
+            navigation.navigate('HomeTab', { screen: 'MainFeed' });
         } catch (error) {
-            setMessage('Échec de la connexion Google');
             console.error('Erreur de connexion Google:', error);
+            
+            if (error.response) {
+                setMessage(error.response.data.message || 'Échec de la connexion Google');
+            } else {
+                setMessage('Une erreur est survenue lors de la connexion');
+            }
         }
     }, [login, navigation]);
-
-
 
     return (
         <View style={styles.container}>
