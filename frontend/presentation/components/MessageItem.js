@@ -249,6 +249,9 @@ const MessageItem = memo(({
     return <DateSeparator timestamp={item.timestamp} />;
   }
 
+  const isLastMessage = index === messages.length - 1;
+
+
   const timestampAnimation = useRef(new Animated.Value(showTimestamps ? 1 : 0)).current;
   const [isImageViewVisible, setIsImageViewVisible] = useState(false);
   const isSending = !!item.isSending;
@@ -260,12 +263,35 @@ const MessageItem = memo(({
   const renderMessageStatus = () => {
     if (sendFailed) {
       return (
-        <Text style={[styles.littleCaption, { color: 'red' }]} mr={2}>
-          Échec
-        </Text>
+        <HStack alignItems="center" space={2}>
+          <Text style={[styles.littleCaption, { color: 'red' }]} mr={2}>
+            Échec
+          </Text>
+          <TouchableOpacity 
+            onPress={() => {
+              onRetryMessage && onRetryMessage({
+                text: item.text,
+                image: item.image,
+                messageType: item.messageType
+              });
+            }}
+          >
+            <Text 
+              style={[
+                styles.littleCaption, 
+                { 
+                  color: 'red', 
+                  textDecorationLine: 'underline' 
+                }
+              ]}
+            >
+              Renvoyer
+            </Text>
+          </TouchableOpacity>
+        </HStack>
       );
     }
-
+  
     if (isSending) {
       return (
         <Text style={[styles.littleCaption, { color: '#94A3B8' }]} mr={2}>
@@ -273,7 +299,7 @@ const MessageItem = memo(({
         </Text>
       );
     }
-
+  
     return null;
   };
 
@@ -375,7 +401,8 @@ const MessageItem = memo(({
       width="100%"
       justifyContent="space-between"
       alignItems="flex-end"
-      my={0.3}
+      my={0.2}
+      mb={isLastMessage ? 4 : 0}  // Add extra bottom margin only for the last message
       px={2}
       opacity={messageOpacity}  // Ajouter cette propriété
     >
@@ -406,7 +433,7 @@ const MessageItem = memo(({
           )}
 
           {isUser && (
-            <HStack alignItems="center" mb={1}>
+            <HStack alignItems="center" >
               {renderMessageStatus()}
             </HStack>
           )}
