@@ -245,6 +245,9 @@ exports.loginUser = async (req, res) => {
 exports.googleLogin = async (req, res) => {
     try {
         const { token } = req.body;
+
+        console.log('Token reçu:', token); // Log pour vérifier le token
+
         
         if (!token) {
             return res.status(400).json({ message: 'Token Google manquant' });

@@ -174,7 +174,11 @@ const Connexion = ({ navigation }) => {
             await GoogleSignin.hasPlayServices();
             const userInfo = await GoogleSignin.signIn();
     
-            // Utiliser l'instance existante au lieu d'en créer une nouvelle
+            console.log('Google User Info:', {
+                idToken: userInfo.idToken,
+                accessToken: userInfo.accessToken
+            });
+    
             const instance = getAxiosInstance();
     
             if (!instance) {
@@ -182,18 +186,22 @@ const Connexion = ({ navigation }) => {
             }
     
             const response = await instance.post('/api/users/google-login', {
-                token: userInfo.idToken,
+                token: userInfo.idToken, // Assurez-vous que c'est bien idToken
             });
     
             await login(response.data.token, response.data.refreshToken);
             navigation.navigate('HomeTab', { screen: 'MainFeed' });
         } catch (error) {
-            console.error('Erreur de connexion Google:', error);
+            console.error('Détails complets de l\'erreur de connexion Google:', error.response || error);
             
             if (error.response) {
+                // Erreur de réponse du serveur
                 setMessage(error.response.data.message || 'Échec de la connexion Google');
+            } else if (error.code) {
+                // Erreurs spécifiques de GoogleSignin
+                setMessage(`Erreur Google: ${error.code}`);
             } else {
-                setMessage('Une erreur est survenue lors de la connexion');
+                setMessage('Une erreur est survenue lors de la connexion Google');
             }
         }
     }, [login, navigation]);
