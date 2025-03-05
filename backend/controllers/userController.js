@@ -243,20 +243,21 @@ exports.loginUser = async (req, res) => {
 };
 
 exports.googleLogin = async (req, res) => {
+    console.log('Requête Google Login reçue');
+    console.log('Corps de la requête:', req.body);
+
     try {
         const { token } = req.body;
-
-        console.log('Token reçu:', token); // Log pour vérifier le token
-
         
-        if (!token || typeof token !== 'string' || token.trim() === '') {
-            console.error('Token Google invalide');
+        console.log('Token reçu:', token);
+
+        if (!token) {
             return res.status(400).json({ 
-                message: 'Token Google manquant ou invalide',
-                details: 'Le token fourni est vide ou incorrect'
+                message: 'Token Google manquant',
+                details: 'Aucun token n\'a été envoyé'
             });
         }
-        
+
         try {
             const ticket = await googleClient.verifyIdToken({
                 idToken: token,
@@ -264,16 +265,17 @@ exports.googleLogin = async (req, res) => {
             });
             
             const payload = ticket.getPayload();
+            console.log('Payload Google:', payload);
+
             const { email, name, picture } = payload;
 
             if (!email) {
                 return res.status(400).json({ 
                     message: 'Impossible de récupérer l\'email',
-                    details: 'Le token Google ne contient pas d\'email valide'
                 });
             }
 
-            // Rechercher ou créer l'utilisateur
+            // Reste de votre logique de connexion
             let user = await User.findOne({ email });
             
             if (!user) {
@@ -284,15 +286,7 @@ exports.googleLogin = async (req, res) => {
                 });
             }
 
-            // Générer les tokens
             const { accessToken, refreshToken } = generateTokens(user._id);
-
-            // Sauvegarder le refresh token
-            await RefreshToken.create({
-                userId: user._id,
-                token: refreshToken,
-                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 jours
-            });
 
             res.json({
                 _id: user._id,
