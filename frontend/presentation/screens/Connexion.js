@@ -174,10 +174,9 @@ const Connexion = ({ navigation }) => {
             await GoogleSignin.hasPlayServices();
             const userInfo = await GoogleSignin.signIn();
     
-            console.log('Google User Info:', {
-                idToken: userInfo.idToken,
-                accessToken: userInfo.accessToken
-            });
+            console.log('Informations Google complètes:', JSON.stringify(userInfo, null, 2));
+            console.log('ID Token:', userInfo.idToken);
+            console.log('Access Token:', userInfo.accessToken);
     
             const instance = getAxiosInstance();
     
@@ -185,8 +184,13 @@ const Connexion = ({ navigation }) => {
                 throw new Error('Impossible de créer l\'instance Axios');
             }
     
+            // Utilisez la méthode correcte pour envoyer les données
             const response = await instance.post('/api/users/google-login', {
-                token: userInfo.idToken, // Assurez-vous que c'est bien idToken
+                token: userInfo.idToken // Assurez-vous que c'est bien idToken
+            }, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             });
     
             await login(response.data.token, response.data.refreshToken);

@@ -249,8 +249,12 @@ exports.googleLogin = async (req, res) => {
         console.log('Token reçu:', token); // Log pour vérifier le token
 
         
-        if (!token) {
-            return res.status(400).json({ message: 'Token Google manquant' });
+        if (!token || typeof token !== 'string' || token.trim() === '') {
+            console.error('Token Google invalide');
+            return res.status(400).json({ 
+                message: 'Token Google manquant ou invalide',
+                details: 'Le token fourni est vide ou incorrect'
+            });
         }
         
         try {
@@ -263,7 +267,10 @@ exports.googleLogin = async (req, res) => {
             const { email, name, picture } = payload;
 
             if (!email) {
-                return res.status(400).json({ message: 'Impossible de récupérer l\'email' });
+                return res.status(400).json({ 
+                    message: 'Impossible de récupérer l\'email',
+                    details: 'Le token Google ne contient pas d\'email valide'
+                });
             }
 
             // Rechercher ou créer l'utilisateur
