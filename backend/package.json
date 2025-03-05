@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "apple-signin-auth": "^1.7.8",
+    "axios": "^1.8.1",
     "bcryptjs": "^2.4.3",
     "bson": "^4.7.2",
     "cloudinary": "^2.5.1",
