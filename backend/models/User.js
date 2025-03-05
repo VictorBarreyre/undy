@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const UserSchema = new mongoose.Schema({
+    appleId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
     name: {
         type: String,
         required: true,

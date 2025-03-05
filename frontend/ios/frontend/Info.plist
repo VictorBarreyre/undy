@@ -27,14 +27,17 @@
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleURLTypes</key>
+   <array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
     <array>
-      <dict>
-        <key>CFBundleURLSchemes</key>
-        <array>
-          <string>hushy</string>
-        </array>
-      </dict>
+      <string>hushy</string>
+      <string>com.googleusercontent.apps.78028346479-0202hheave6heusabd5cs2frfkrcdvd8</string>
     </array>
+    <key>CFBundleURLName</key>
+    <string>GoogleSignIn</string>
+  </dict>
+</array>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSRequiresIPhoneOS</key>

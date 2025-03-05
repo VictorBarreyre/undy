@@ -9,6 +9,8 @@ import API_URL from '../../infrastructure/config/config';
 import { styles } from '../../infrastructure/theme/styles';
 import LogoSvg from '../littlecomponents/Undy';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
+import { appleAuth } from '@invertase/react-native-apple-authentication';
+
 
 const Inscription = ({ navigation }) => {
     const { login } = useContext(AuthContext);
@@ -37,24 +39,81 @@ const Inscription = ({ navigation }) => {
         outputRange: ['0deg', '360deg'],
     });
 
+    const handleAppleLogin = useCallback(async () => {
+        try {
+          // Vérifier si Apple Sign In est pris en charge
+          const isSupported = await appleAuth.isSupported;
+          if (!isSupported) {
+            setMessage('Connexion Apple non disponible sur cet appareil');
+            return;
+          }
+      
+          // Demander l'authentification Apple
+          const appleAuthRequestResponse = await appleAuth.performRequest({
+            requestedOperation: appleAuth.Operation.LOGIN,
+            requestedScopes: [
+              appleAuth.Scope.EMAIL, 
+              appleAuth.Scope.FULL_NAME
+            ]
+          });
+      
+          // Vérifier l'état des identifiants
+          const credentialState = await appleAuth.getCredentialStateForUser(
+            appleAuthRequestResponse.user
+          );
+      
+          // Vérifier si l'utilisateur est autorisé
+          if (credentialState === appleAuth.State.AUTHORIZED) {
+            const axiosInstance = await createAxiosInstance();
+            
+            // Envoyer les données à votre backend
+            const response = await axiosInstance.post('/api/users/apple-login', {
+              identityToken: appleAuthRequestResponse.identityToken,
+              authorizationCode: appleAuthRequestResponse.authorizationCode,
+              fullName: {
+                givenName: appleAuthRequestResponse.fullName?.givenName,
+                familyName: appleAuthRequestResponse.fullName?.familyName
+              }
+            });
+      
+            // Connexion réussie
+            await login(response.data.token, response.data.refreshToken);
+            navigation.navigate('HomeTab', { screen: 'MainFeed' });
+          }
+        } catch (error) {
+          console.error('Erreur de connexion Apple :', error);
+          
+          // Gérer différents types d'erreurs
+          if (error.response) {
+            setMessage(error.response.data.message || 'Échec de la connexion Apple');
+          } else if (error.code === appleAuth.Error.CANCELED) {
+            setMessage('Connexion Apple annulée');
+          } else {
+            setMessage('Une erreur est survenue');
+          }
+        }
+      }, [login, navigation]);
+
+      
+
     const handleRegister = useCallback(async () => {
         try {
             console.log('Tentative d\'inscription...');
             // Créer une nouvelle instance axios avec l'URL de base correcte
             const instance = await getAxiosInstance();
-            
+
             console.log('Données envoyées:', {
                 name,
                 email: email.trim().toLowerCase(),
                 password: '***'
             });
-    
+
             const response = await instance.post('/api/users/register', {
                 name,
                 email: email.trim().toLowerCase(),
                 password,
             });
-    
+
             if (response.data.token) {
                 console.log('Inscription réussie:', response.data);
                 await login(response.data.token, response.data.refreshToken);

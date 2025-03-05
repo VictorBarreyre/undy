@@ -1,6 +1,7 @@
 // routes/userRoutes.js
 const express = require('express');
 const { 
+    appleLogin,
     registerUser,
     loginUser,
     googleLogin,
@@ -23,6 +24,9 @@ const multer = require('multer');
 const cloudinary = require('../config/cloudinary');
 const User = require('../models/User');
 
+
+
+router.post('/apple-login', appleLogin);
 
 // Route pour l'inscription
 router.post('/register', registerUser);

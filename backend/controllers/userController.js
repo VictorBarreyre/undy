@@ -4,6 +4,10 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const path = require('path'); // Ajoutez cette ligne en haut du fichier
 const fs = require('fs');
+const appleSignin = require('apple-signin-auth');
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 
 // Fonction pour générer les tokens
 const generateTokens = (userId) => {
@@ -16,6 +20,76 @@ const generateTokens = (userId) => {
     });
 
     return { accessToken, refreshToken };
+};
+
+exports.appleLogin = async (req, res) => {
+    try {
+        const { identityToken, authorizationCode, fullName } = req.body;
+
+        if (!identityToken) {
+            return res.status(400).json({ message: 'Token Apple manquant' });
+        }
+
+        // Configurer la vérification du token Apple
+        const appleVerifyOptions = {
+            // Remplacez par votre ID de service Apple
+            clientId: process.env.APPLE_SERVICE_ID, 
+            // Remplacez par votre ID d'équipe Apple
+            teamId: process.env.APPLE_TEAM_ID,      
+        };
+
+        try {
+            // Vérifier le token d'identité Apple
+            const appleUser = await appleSignin.verifyIdToken(identityToken, appleVerifyOptions);
+
+            // Extraire l'email et l'identifiant Apple
+            const { sub: appleId, email } = appleUser;
+
+            // Rechercher un utilisateur existant
+            let user = await User.findOne({ 
+                $or: [
+                    { email },
+                    { 'appleId': appleId }
+                ]
+            });
+
+            // Si l'utilisateur n'existe pas, créer un nouveau compte
+            if (!user) {
+                user = await User.create({
+                    email: email || `${appleId}@apple.com`, // Utiliser un email générique si non fourni
+                    name: fullName?.givenName || 'Utilisateur Apple',
+                    appleId: appleId,
+                    password: await bcrypt.hash(appleId, 10) // Générer un mot de passe sécurisé
+                });
+            }
+
+            // Générer les tokens
+            const { accessToken, refreshToken } = generateTokens(user._id);
+
+            // Sauvegarder le refresh token
+            await RefreshToken.create({
+                userId: user._id,
+                token: refreshToken,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 jours
+            });
+
+            res.json({
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                token: accessToken,
+                refreshToken: refreshToken
+            });
+
+        } catch (verifyError) {
+            console.error('Erreur de vérification Apple:', verifyError);
+            return res.status(400).json({ message: 'Échec de la connexion Apple' });
+        }
+
+    } catch (error) {
+        console.error('Erreur lors de la connexion Apple:', error);
+        res.status(500).json({ message: 'Erreur lors de la connexion Apple' });
+    }
 };
 
 exports.registerUser = async (req, res) => {
@@ -172,42 +246,65 @@ exports.googleLogin = async (req, res) => {
     try {
         const { token } = req.body;
         
-        // Vérifier le token Google
-        const ticket = await googleClient.verifyIdToken({
-            idToken: token,
-            audience: GOOGLE_CLIENT_ID,
-        });
+        if (!token) {
+            return res.status(400).json({ message: 'Token Google manquant' });
+        }
         
-        const payload = ticket.getPayload();
-        const { email, name, picture } = payload;
+        try {
+            const ticket = await googleClient.verifyIdToken({
+                idToken: token,
+                audience: process.env.GOOGLE_CLIENT_ID,
+            });
+            
+            const payload = ticket.getPayload();
+            const { email, name, picture } = payload;
 
-        // Rechercher ou créer l'utilisateur
-        let user = await User.findOne({ email });
-        
-        if (!user) {
-            user = await User.create({
-                email,
-                name,
-                profilePicture: picture,
-                // Autres champs par défaut
+            if (!email) {
+                return res.status(400).json({ message: 'Impossible de récupérer l\'email' });
+            }
+
+            // Rechercher ou créer l'utilisateur
+            let user = await User.findOne({ email });
+            
+            if (!user) {
+                user = await User.create({
+                    email,
+                    name,
+                    profilePicture: picture,
+                });
+            }
+
+            // Générer les tokens
+            const { accessToken, refreshToken } = generateTokens(user._id);
+
+            // Sauvegarder le refresh token
+            await RefreshToken.create({
+                userId: user._id,
+                token: refreshToken,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 jours
+            });
+
+            res.json({
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                token: accessToken,
+                refreshToken: refreshToken
+            });
+
+        } catch (verifyError) {
+            console.error('Erreur de vérification Google:', verifyError);
+            return res.status(400).json({ 
+                message: 'Échec de la vérification du token Google',
+                details: verifyError.message 
             });
         }
-
-        // Générer les tokens
-        const accessToken = generateAccessToken(user);
-        const refreshToken = generateRefreshToken(user);
-
-        res.json({
-            token: accessToken,
-            refreshToken,
-            user: {
-                id: user._id,
-                email: user.email,
-                name: user.name,
-            }
-        });
     } catch (error) {
-        res.status(400).json({ message: 'Échec de la connexion Google' });
+        console.error('Erreur lors de la connexion Google:', error);
+        res.status(500).json({ 
+            message: 'Erreur interne lors de la connexion Google',
+            details: error.message 
+        });
     }
 };
 

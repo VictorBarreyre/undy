@@ -20,6 +20,22 @@ const Connexion = ({ navigation }) => {
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [isAppleSignInSupported, setIsAppleSignInSupported] = useState(false);
+
+
+    useEffect(() => {
+        const checkAppleSignInSupport = async () => {
+            try {
+                const supported = await appleAuth.isSupported;
+                setIsAppleSignInSupported(supported);
+            } catch (error) {
+                console.error('Erreur de vérification Apple Sign In:', error);
+            }
+        };
+
+        checkAppleSignInSupport();
+    }, []);
+
 
     // Animation setup for background rotation
     const rotateValue = useRef(new Animated.Value(0)).current;
@@ -98,6 +114,67 @@ const Connexion = ({ navigation }) => {
         }
     }, [email, password, login, navigation]);
 
+    // Connexion Apple
+    const handleAppleLogin = useCallback(async () => {
+        try {
+            // Vérifier si Apple Sign In est pris en charge
+            const isSupported = await appleAuth.isSupported;
+            if (!isSupported) {
+                setMessage('Connexion Apple non disponible sur cet appareil');
+                return;
+            }
+
+            // Demander l'authentification Apple
+            const appleAuthRequestResponse = await appleAuth.performRequest({
+                requestedOperation: appleAuth.Operation.LOGIN,
+                requestedScopes: [
+                    appleAuth.Scope.EMAIL,
+                    appleAuth.Scope.FULL_NAME
+                ]
+            });
+
+            // Vérifier l'état des identifiants
+            const credentialState = await appleAuth.getCredentialStateForUser(
+                appleAuthRequestResponse.user
+            );
+
+            // Vérifier si l'utilisateur est autorisé
+            if (credentialState === appleAuth.State.AUTHORIZED) {
+                const axiosInstance = await createAxiosInstance();
+
+                // Envoyer les données à votre backend
+                const response = await axiosInstance.post('/api/users/apple-login', {
+                    identityToken: appleAuthRequestResponse.identityToken,
+                    authorizationCode: appleAuthRequestResponse.authorizationCode,
+                    fullName: {
+                        givenName: appleAuthRequestResponse.fullName?.givenName,
+                        familyName: appleAuthRequestResponse.fullName?.familyName
+                    }
+                });
+
+                // Connexion réussie
+                await login(response.data.token, response.data.refreshToken);
+                navigation.navigate('HomeTab', { screen: 'MainFeed' });
+            }
+        } catch (error) {
+            console.error('Erreur de connexion Apple :', error);
+
+            // Gestion des erreurs spécifiques
+            if (error.response) {
+                // Erreur de réponse du serveur
+                setMessage(error.response.data.message || 'Échec de la connexion Apple');
+            } else if (error.code === appleAuth.Error.CANCELED) {
+                setMessage('Connexion Apple annulée');
+            } else if (error.code === appleAuth.Error.FAILED) {
+                setMessage('La connexion Apple a échoué');
+            } else if (error.code === appleAuth.Error.INVALID_RESPONSE) {
+                setMessage('Réponse Apple invalide');
+            } else {
+                setMessage('Une erreur est survenue lors de la connexion');
+            }
+        }
+    }, [login, navigation]);
+
     // Connexion Google
     const handleGoogleLogin = useCallback(async () => {
         try {
@@ -117,31 +194,7 @@ const Connexion = ({ navigation }) => {
         }
     }, [login, navigation]);
 
-    // Connexion Apple
-    const handleAppleLogin = useCallback(async () => {
-        try {
-            const appleAuthRequestResponse = await appleAuth.performRequest({
-                requestedOperation: appleAuth.Operation.LOGIN,
-                requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
-            });
 
-            const credentialState = await appleAuth.getCredentialStateForUser(appleAuthRequestResponse.user);
-
-            if (credentialState === appleAuth.State.AUTHORIZED) {
-                const axiosInstance = await createAxiosInstance();
-                const response = await axiosInstance.post('/api/users/apple-login', {
-                    identityToken: appleAuthRequestResponse.identityToken,
-                    authorizationCode: appleAuthRequestResponse.authorizationCode,
-                });
-
-                await login(response.data.token, response.data.refreshToken);
-                navigation.navigate('Home');
-            }
-        } catch (error) {
-            setMessage('Échec de la connexion Apple');
-            console.error('Erreur de connexion Apple:', error);
-        }
-    }, [login, navigation]);
 
     return (
         <View style={styles.container}>
@@ -255,24 +308,24 @@ const Connexion = ({ navigation }) => {
                         <Box flex={1} h="1px" bg="#94A3B8" />
                     </HStack>
 
-
-                    {/* Bouton Apple */}
-                    <Button
-                        mt={4}
-                        paddingY={4}
-                        w="100%"
-                        bg="black"
-                        _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
-                        justifyContent="center"
-                        onPress={handleAppleLogin}
-                    >
-                        <HStack space={2} alignItems="center" justifyContent="center">
-                            <FontAwesomeIcon icon={faApple} size={16} color="#fff" />
-                            <Text color="white" fontFamily="SF-Pro-Display-Bold">
-                                Continue with Apple
-                            </Text>
-                        </HStack>
-                    </Button>
+                    {Platform.OS === 'ios' && isAppleSignInSupported && (
+                        <Button
+                            mt={4}
+                            paddingY={4}
+                            w="100%"
+                            bg="black"
+                            _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
+                            justifyContent="center"
+                            onPress={handleAppleLogin}
+                        >
+                            <HStack space={2} alignItems="center" justifyContent="center">
+                                <FontAwesomeIcon icon={faApple} size={16} color="#fff" />
+                                <Text color="white" fontFamily="SF-Pro-Display-Bold">
+                                    Continue with Apple
+                                </Text>
+                            </HStack>
+                        </Button>
+                    )}
 
                     {/* Bouton Google */}
                     <Button
