@@ -188,6 +188,7 @@ exports.createSecret = async (req, res) => {
 
 
 // Ajouter une route pour gérer le rafraîchissement de l'onboarding si nécessaire
+// Dans votre fichier de contrôleur (secretController.js)
 exports.refreshStripeOnboarding = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('+lastStripeOnboardingUrl stripeAccountId stripeAccountStatus');
@@ -199,6 +200,11 @@ exports.refreshStripeOnboarding = async (req, res) => {
                 needsRegistration: true
             });
         }
+
+        // Définir les URLs de retour (ce qui manquait)
+        const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
+        const refreshUrl = `${baseReturnUrl}/stripe/refresh`;
+        const returnUrl = `${baseReturnUrl}/stripe/return`;
 
         // Vérifier le statut du compte Stripe
         const account = await stripe.accounts.retrieve(user.stripeAccountId);
@@ -226,8 +232,8 @@ exports.refreshStripeOnboarding = async (req, res) => {
         // Créer un nouveau lien d'onboarding
         const accountLink = await stripe.accountLinks.create({
             account: user.stripeAccountId,
-            refresh_url: `${baseReturnUrl}/stripe/refresh`,
-            return_url: `${baseReturnUrl}/stripe/return`,
+            refresh_url: refreshUrl,
+            return_url: returnUrl,
             type: 'account_onboarding',
         });
 
