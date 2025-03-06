@@ -29,7 +29,7 @@ const User = require('../models/User');
 
 router.post('/apple-login', appleLogin);
 
-router.post('/api/users/apple-notifications', handleAppleNotifications);
+router.post('/apple-notifications', handleAppleNotifications);
 
 // Route pour l'inscription
 router.post('/register', registerUser);

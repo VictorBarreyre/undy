@@ -94,6 +94,28 @@ exports.appleLogin = async (req, res) => {
     }
 };
 
+
+exports.handleAppleNotifications = async (req, res) => {
+    try {
+        const notification = req.body;
+        console.log('Notification Apple reçue:', notification);
+        
+        // Traiter selon le type de notification
+        if (notification.type === 'email-disabled') {
+            // Gérer l'email désactivé
+        } else if (notification.type === 'account-delete') {
+            // Gérer la suppression de compte
+        }
+        
+        res.status(200).send();
+    } catch (error) {
+        console.error('Erreur lors du traitement de la notification Apple:', error);
+        res.status(500).send();
+    }
+};
+
+
+
 exports.registerUser = async (req, res) => {
     let { name, email, password, profilePicture, birthdate, phone, notifs, contacts, subscriptions } = req.body;
 
