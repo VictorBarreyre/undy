@@ -120,10 +120,10 @@ useFocusEffect(
         >
           <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
             <Text style={styles.h3} textAlign="center" mt={4}>
-              Vous n'avez pas encore déverrouillé d'Undy
+              Vous n'avez pas encore déverrouillé de Hushy
             </Text>
             <Text style={styles.caption} textAlign="center" color="gray.500" mt={2}>
-              Déverrouillez un undy pour commencer une conversation !
+              Déverrouillez un Hushy pour commencer une conversation !
             </Text>
           </VStack>
         </Animated.View>

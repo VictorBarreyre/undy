@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext,useEffect } from 'react';
 import { Alert, Pressable } from 'react-native';
 import { initStripe, useStripe } from '@stripe/stripe-react-native';
 import { Box, HStack, Text } from 'native-base';
@@ -8,6 +8,8 @@ import { STRIPE_PUBLISHABLE_KEY } from '@env';
 import { DATABASE_URL } from '@env';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
+import { canMakePayments } from '@stripe/stripe-react-native';
+
 
 
 const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
@@ -40,7 +42,7 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
             console.log(STRIPE_PUBLISHABLE_KEY)
             await initStripe({
                 publishableKey: STRIPE_PUBLISHABLE_KEY,
-                merchantIdentifier: "merchant.com.anonymous.frontend",
+                merchantIdentifier: "merchant.com.hushy.payments",
             });
             console.log('Stripe initialisé');
 
@@ -50,6 +52,8 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 merchantDisplayName: 'Hushy',
                 returnURL: `hushy://payment-result`, // Ajoutez un chemin spécifique
                 style: 'alwaysLight',
+                applePay: true, // Essayez cette valeur simple
+                applePayEnabled: true, //
                 appearance: {
                     colors: {
                         primary: '#000000', // Bouton noir
@@ -148,6 +152,23 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
             setLoading(false);
         }
     };
+    useEffect(() => {
+        const checkApplePay = async () => {
+          if (Platform.OS === 'ios') {
+            const isSupported = await canMakePayments();
+            console.log('Apple Pay supporté:', isSupported);
+            
+            // Plus de détails
+            const details = await canMakePayments({
+              networks: ['amex', 'visa', 'mastercard'],
+              capabilities: ['3ds', 'emv']
+            });
+            console.log('Détails Apple Pay:', details);
+          }
+        };
+        
+        checkApplePay();
+      }, []);
 
     // Retourne un composant chargement si secret est null
     if (!secret) {
