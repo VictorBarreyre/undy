@@ -25,56 +25,117 @@ const generateTokens = (userId) => {
 };
 
 exports.appleLogin = async (req, res) => {
+    console.log('---------- DÉBUT APPLE LOGIN ----------');
+    console.log('Requête reçue:', {
+        headers: req.headers,
+        method: req.method,
+        path: req.path
+    });
+    
     try {
+        console.log('Corps de la requête:', req.body);
         const { identityToken, authorizationCode, fullName } = req.body;
+        
+        console.log('Données extraites:', {
+            hasIdentityToken: !!identityToken,
+            hasAuthCode: !!authorizationCode,
+            fullName
+        });
 
         if (!identityToken) {
+            console.log('ERREUR: Token Apple manquant');
             return res.status(400).json({ message: 'Token Apple manquant' });
         }
 
         // Configurer la vérification du token Apple
         const appleVerifyOptions = {
-            // Remplacez par votre ID de service Apple
-            clientId: process.env.APPLE_SERVICE_ID, 
-            // Remplacez par votre ID d'équipe Apple
-            teamId: process.env.APPLE_TEAM_ID,      
+            clientId: process.env.APPLE_SERVICE_ID,
+            teamId: process.env.APPLE_TEAM_ID,
         };
+        
+        console.log('Options de vérification:', {
+            clientId: process.env.APPLE_SERVICE_ID,
+            teamId: process.env.APPLE_TEAM_ID,
+            clientIdConfigured: !!process.env.APPLE_SERVICE_ID,
+            teamIdConfigured: !!process.env.APPLE_TEAM_ID
+        });
 
         try {
+            console.log('Tentative de vérification du token Apple');
             // Vérifier le token d'identité Apple
             const appleUser = await appleSignin.verifyIdToken(identityToken, appleVerifyOptions);
+            console.log('Vérification réussie, données obtenues:', {
+                sub: appleUser.sub,
+                hasEmail: !!appleUser.email,
+                email: appleUser.email
+            });
 
             // Extraire l'email et l'identifiant Apple
             const { sub: appleId, email } = appleUser;
 
             // Rechercher un utilisateur existant
-            let user = await User.findOne({ 
+            console.log('Recherche d\'un utilisateur existant avec:', {
+                email,
+                appleId
+            });
+            
+            let user = await User.findOne({
                 $or: [
                     { email },
                     { 'appleId': appleId }
                 ]
             });
+            
+            console.log('Utilisateur trouvé:', user ? 'Oui' : 'Non');
 
             // Si l'utilisateur n'existe pas, créer un nouveau compte
             if (!user) {
-                user = await User.create({
-                    email: email || `${appleId}@apple.com`, // Utiliser un email générique si non fourni
+                console.log('Création d\'un nouvel utilisateur');
+                const hashedPassword = await bcrypt.hash(appleId, 10);
+                
+                const newUser = {
+                    email: email || `${appleId}@apple.com`,
                     name: fullName?.givenName || 'Utilisateur Apple',
                     appleId: appleId,
-                    password: await bcrypt.hash(appleId, 10) // Générer un mot de passe sécurisé
+                    password: hashedPassword
+                };
+                
+                console.log('Données du nouvel utilisateur:', {
+                    email: newUser.email,
+                    name: newUser.name,
+                    hasAppleId: !!newUser.appleId
                 });
+                
+                user = await User.create(newUser);
+                console.log('Nouvel utilisateur créé avec ID:', user._id);
+            } else {
+                console.log('Utilisateur existant trouvé:', {
+                    id: user._id,
+                    email: user.email,
+                    hasAppleId: !!user.appleId
+                });
+                
+                // Mettre à jour l'Apple ID si nécessaire
+                if (!user.appleId) {
+                    console.log('Mise à jour de l\'Apple ID pour l\'utilisateur existant');
+                    user.appleId = appleId;
+                    await user.save();
+                }
             }
 
             // Générer les tokens
+            console.log('Génération des tokens d\'authentification');
             const { accessToken, refreshToken } = generateTokens(user._id);
 
             // Sauvegarder le refresh token
+            console.log('Sauvegarde du refresh token');
             await RefreshToken.create({
                 userId: user._id,
                 token: refreshToken,
                 expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 jours
             });
 
+            console.log('Envoi de la réponse au client');
             res.json({
                 _id: user._id,
                 name: user.name,
@@ -82,15 +143,28 @@ exports.appleLogin = async (req, res) => {
                 token: accessToken,
                 refreshToken: refreshToken
             });
+            console.log('---------- FIN APPLE LOGIN (SUCCÈS) ----------');
 
         } catch (verifyError) {
-            console.error('Erreur de vérification Apple:', verifyError);
-            return res.status(400).json({ message: 'Échec de la connexion Apple' });
+            console.error('ERREUR DE VÉRIFICATION APPLE DÉTAILLÉE:', verifyError);
+            console.error('Message:', verifyError.message);
+            console.error('Stack:', verifyError.stack);
+            console.log('---------- FIN APPLE LOGIN (ERREUR VÉRIFICATION) ----------');
+            return res.status(400).json({ 
+                message: 'Échec de la connexion Apple',
+                details: verifyError.message
+            });
         }
 
     } catch (error) {
-        console.error('Erreur lors de la connexion Apple:', error);
-        res.status(500).json({ message: 'Erreur lors de la connexion Apple' });
+        console.error('ERREUR GÉNÉRALE APPLE LOGIN:', error);
+        console.error('Message:', error.message);
+        console.error('Stack:', error.stack);
+        console.log('---------- FIN APPLE LOGIN (ERREUR GÉNÉRALE) ----------');
+        res.status(500).json({ 
+            message: 'Erreur lors de la connexion Apple',
+            details: error.message
+        });
     }
 };
 
