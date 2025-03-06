@@ -117,53 +117,126 @@ const Connexion = ({ navigation }) => {
     // Connexion Apple
     const handleAppleLogin = useCallback(async () => {
         try {
+            console.log('1. Début de la connexion Apple');
+            
             const isSupported = await appleAuth.isSupported;
+            console.log('2. Apple Sign In supporté:', isSupported);
+            
             if (!isSupported) {
                 setMessage('Connexion Apple non disponible sur cet appareil');
                 return;
             }
-    
-            const appleAuthRequestResponse = await appleAuth.performRequest({
-                requestedOperation: appleAuth.Operation.LOGIN,
-                requestedScopes: [
-                    appleAuth.Scope.EMAIL,
-                    appleAuth.Scope.FULL_NAME
-                ]
+            
+            console.log('3. Tentative d\'authentification Apple - AVANT performRequest');
+            let appleAuthRequestResponse;
+            
+            try {
+                appleAuthRequestResponse = await appleAuth.performRequest({
+                    requestedOperation: appleAuth.Operation.LOGIN,
+                    requestedScopes: [
+                        appleAuth.Scope.EMAIL,
+                        appleAuth.Scope.FULL_NAME
+                    ]
+                });
+                console.log('4. Réponse reçue de Apple après performRequest');
+            } catch (appleAuthError) {
+                console.error('Erreur spécifique performRequest:', {
+                    message: appleAuthError.message,
+                    code: appleAuthError.code,
+                    name: appleAuthError.name
+                });
+                throw new Error(`Erreur lors de la demande Apple: ${appleAuthError.message}`);
+            }
+            
+            console.log('5. Détails de la réponse Apple:', {
+                hasUser: !!appleAuthRequestResponse.user,
+                hasIdentityToken: !!appleAuthRequestResponse.identityToken,
+                hasAuthorizationCode: !!appleAuthRequestResponse.authorizationCode,
+                hasRealUserStatus: !!appleAuthRequestResponse.realUserStatus,
+                hasFullName: !!appleAuthRequestResponse.fullName
             });
-    
-            const credentialState = await appleAuth.getCredentialStateForUser(
-                appleAuthRequestResponse.user
-            );
-    
+            
+            if (!appleAuthRequestResponse.identityToken) {
+                console.error('6. ERREUR: Pas d\'identity token reçu!');
+                throw new Error('Authentification Apple incomplète: pas de token reçu');
+            }
+            
+            console.log('7. AVANT vérification des identifiants');
+            let credentialState;
+            try {
+                credentialState = await appleAuth.getCredentialStateForUser(
+                    appleAuthRequestResponse.user
+                );
+                console.log('8. État des identifiants obtenu:', credentialState);
+            } catch (credentialError) {
+                console.error('8. Erreur de vérification des identifiants:', {
+                    message: credentialError.message,
+                    code: credentialError.code
+                });
+                throw new Error(`Erreur de vérification des identifiants: ${credentialError.message}`);
+            }
+            
             if (credentialState === appleAuth.State.AUTHORIZED) {
-                // Utiliser l'instance existante au lieu d'en créer une nouvelle
+                console.log('9. Identifiants autorisés, préparation de l\'envoi au serveur');
+                
                 const instance = getAxiosInstance();
-    
+                console.log('10. Instance Axios obtenue:', !!instance);
+                
                 if (!instance) {
                     throw new Error('Impossible de créer l\'instance Axios');
                 }
-    
-                const response = await instance.post('/api/users/apple-login', {
+                
+                console.log('11. Préparation des données pour le serveur');
+                const requestData = {
                     identityToken: appleAuthRequestResponse.identityToken,
                     authorizationCode: appleAuthRequestResponse.authorizationCode,
                     fullName: {
                         givenName: appleAuthRequestResponse.fullName?.givenName,
                         familyName: appleAuthRequestResponse.fullName?.familyName
                     }
+                };
+                
+                console.log('12. AVANT envoi de la requête au serveur');
+                let response;
+                try {
+                    response = await instance.post('/api/users/apple-login', requestData);
+                    console.log('13. Réponse reçue du serveur');
+                } catch (serverError) {
+                    console.error('13. Erreur de communication avec le serveur:', {
+                        message: serverError.message,
+                        responseStatus: serverError.response?.status,
+                        responseData: serverError.response?.data
+                    });
+                    throw new Error(`Erreur serveur: ${serverError.message}`);
+                }
+                
+                console.log('14. Contenu de la réponse:', {
+                    status: response.status,
+                    hasToken: !!response.data.token,
+                    hasRefreshToken: !!response.data.refreshToken
                 });
-    
+                
+                console.log('15. AVANT login avec les tokens');
                 await login(response.data.token, response.data.refreshToken);
+                console.log('16. Login réussi, navigation vers MainFeed');
                 navigation.navigate('HomeTab', { screen: 'MainFeed' });
+            } else {
+                console.error('9. ERREUR: Identifiants non autorisés, état:', credentialState);
+                throw new Error(`Identifiants Apple non autorisés (état: ${credentialState})`);
             }
         } catch (error) {
-            console.error('Erreur de connexion Apple :', error);
-    
+            console.error('Erreur globale de connexion Apple:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
+            
             if (error.response) {
-                setMessage(error.response.data.message || 'Échec de la connexion Apple');
+                setMessage(error.response.data?.message || 'Échec de la connexion Apple');
             } else if (error.code === appleAuth.Error.CANCELED) {
                 setMessage('Connexion Apple annulée');
             } else {
-                setMessage('Une erreur est survenue lors de la connexion');
+                setMessage(`Erreur: ${error.message}`);
             }
         }
     }, [login, navigation]);
