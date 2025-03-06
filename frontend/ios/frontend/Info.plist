@@ -27,17 +27,27 @@
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleURLTypes</key>
-   <array>
-  <dict>
-    <key>CFBundleURLSchemes</key>
     <array>
-      <string>hushy</string>
-      <string>com.googleusercontent.apps.78028346479-0202hheave6heusabd5cs2frfkrcdvd8</string>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>hushy</string>
+          <string>com.googleusercontent.apps.78028346479-0202hheave6heusabd5cs2frfkrcdvd8</string>
+        </array>
+        <key>CFBundleURLName</key>
+        <string>GoogleSignIn</string>
+      </dict>
+      <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.hushy</string>
+        </array>
+        <key>CFBundleURLName</key>
+        <string>AppleSignIn</string>
+      </dict>
     </array>
-    <key>CFBundleURLName</key>
-    <string>GoogleSignIn</string>
-  </dict>
-</array>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSRequiresIPhoneOS</key>
@@ -75,5 +85,9 @@
     <string>Light</string>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
+    <key>com.apple.developer.applesignin</key>
+    <array>
+      <string>Default</string>
+    </array>
   </dict>
 </plist>

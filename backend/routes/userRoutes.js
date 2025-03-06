@@ -2,6 +2,7 @@
 const express = require('express');
 const { 
     appleLogin,
+    handleAppleNotifications,
     registerUser,
     loginUser,
     googleLogin,
@@ -27,6 +28,8 @@ const User = require('../models/User');
 
 
 router.post('/apple-login', appleLogin);
+
+router.post('/api/users/apple-notifications', handleAppleNotifications);
 
 // Route pour l'inscription
 router.post('/register', registerUser);
