@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { VStack, Box, Text, Button, Pressable, Actionsheet, Input, HStack, Spinner } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, Switch as RNSwitch } from 'react-native';
+import { Animated, StyleSheet, ScrollView, Platform, Alert, Switch as RNSwitch, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Dimensions, useWindowDimensions } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -19,7 +19,7 @@ import NotificationService from '../Notifications/NotificationService';
 
 
 export default function Profile({ navigation }) {
-    const { userData, isLoadingUserData, updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount, getContacts, updateContactsAccess,  contactsAccessEnabled} = useContext(AuthContext);
+    const { userData, isLoadingUserData, updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount, getContacts, updateContactsAccess, contactsAccessEnabled } = useContext(AuthContext);
     const [selectedField, setSelectedField] = useState(null);
     const [tempValue, setTempValue] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
@@ -33,6 +33,42 @@ export default function Profile({ navigation }) {
     const [earningsModalVisible, setEarningsModalVisible] = useState(false);
     const { resetStripeAccount, resetReadStatus, unreadCountsMap, setUnreadCountsMap, setTotalUnreadCount } = useCardData();
 
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+    const { height: windowHeight } = useWindowDimensions();
+    const [actionSheetPosition] = useState(new Animated.Value(0));
+
+
+    useEffect(() => {
+        const keyboardWillShowListener = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            (e) => {
+                // Animation synchronisée avec le clavier
+                Animated.timing(actionSheetPosition, {
+                    toValue: e.endCoordinates.height,
+                    duration: e.duration || 250,
+                    useNativeDriver: false,
+                }).start();
+            }
+        );
+
+        const keyboardWillHideListener = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            (e) => {
+                Animated.timing(actionSheetPosition, {
+                    toValue: 0,
+                    duration: e.duration || 250,
+                    useNativeDriver: false,
+                }).start();
+            }
+        );
+
+        return () => {
+            keyboardWillShowListener.remove();
+            keyboardWillHideListener.remove();
+        };
+    }, []);
+
+    const AnimatedActionsheetContent = Animated.createAnimatedComponent(Actionsheet.Content);
 
 
     const [isLoading, setIsLoading] = useState(false);
@@ -141,27 +177,27 @@ export default function Profile({ navigation }) {
 
     const toggleContacts = async () => {
         try {
-          // Mettre à jour l'UI immédiatement pour une meilleure réactivité
-          setContactsEnabled(!contactsEnabled);
-          
-          // Appeler la fonction du contexte qui gère l'API
-          const success = await updateContactsAccess(!contactsEnabled);
-          
-          if (!success) {
-            // Revenir à l'état précédent si l'API échoue
-            setContactsEnabled(contactsEnabled);
-            Alert.alert("Erreur", "Impossible de mettre à jour les préférences de contacts");
-          }
-        } catch (error) {
-          console.error("Erreur toggleContacts:", error);
-          setContactsEnabled(contactsEnabled); // Revenir à l'état précédent
-          Alert.alert("Erreur", "Un problème est survenu");
-        }
-      };
+            // Mettre à jour l'UI immédiatement pour une meilleure réactivité
+            setContactsEnabled(!contactsEnabled);
 
-      useEffect(() => {
+            // Appeler la fonction du contexte qui gère l'API
+            const success = await updateContactsAccess(!contactsEnabled);
+
+            if (!success) {
+                // Revenir à l'état précédent si l'API échoue
+                setContactsEnabled(contactsEnabled);
+                Alert.alert("Erreur", "Impossible de mettre à jour les préférences de contacts");
+            }
+        } catch (error) {
+            console.error("Erreur toggleContacts:", error);
+            setContactsEnabled(contactsEnabled); // Revenir à l'état précédent
+            Alert.alert("Erreur", "Un problème est survenu");
+        }
+    };
+
+    useEffect(() => {
         setContactsEnabled(contactsAccessEnabled);
-      }, [contactsAccessEnabled]);
+    }, [contactsAccessEnabled]);
 
     const handleContactsPress = async () => {
         if (!contactsEnabled) {
@@ -176,7 +212,7 @@ export default function Profile({ navigation }) {
             navigation.navigate('Contacts');
         }
     };
-    
+
     const handleDownloadUserData = async () => {
         try {
             const response = await downloadUserData();
@@ -399,192 +435,201 @@ export default function Profile({ navigation }) {
 
     return (
         <Background>
-            <ScrollView contentContainerStyle={customStyles.scrollViewContent}>
-                <Box flex={1} justifyContent="flex-start" padding={5}>
-                    <VStack space={6}>
-                        <HStack alignItems="center" justifyContent="space-between" width="100%">
-                            {/* Icône Back */}
-                            <Pressable width={26} onPress={() => navigation.navigate('ProfileMain')}>
-                                <FontAwesome name="chevron-left" size={18} color="black" />
-                            </Pressable>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} // Ajustez cette valeur selon vos besoins
+            >
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <ScrollView contentContainerStyle={customStyles.scrollViewContent}>
+                        <Box flex={1} justifyContent="flex-start" padding={5}>
+                            <VStack space={6}>
+                                <HStack alignItems="center" justifyContent="space-between" width="100%">
+                                    {/* Icône Back */}
+                                    <Pressable width={26} onPress={() => navigation.navigate('ProfileMain')}>
+                                        <FontAwesome name="chevron-left" size={18} color="black" />
+                                    </Pressable>
 
-                            {/* Texte */}
-                            <Text style={styles.h3} width='auto' textAlign="center">
-                                Vos paramètres
-                            </Text>
+                                    {/* Texte */}
+                                    <Text style={styles.h3} width='auto' textAlign="center">
+                                        Vos paramètres
+                                    </Text>
 
-                            {/* Icône Settings */}
-                            <Pressable onPress={() => navigation.navigate('ProfilSettings')}>
-                                <FontAwesome5 name="cog" size={26} color="black" solid={false} />
-                            </Pressable>
-                        </HStack>
-                        <Box
-                            display="flex"
-                            width="100%"
-                            marginX="auto"
-                            height="auto"
-                            borderRadius="lg"
-                            backgroundColor="white"
-                            marginTop={2}
-                            padding={4}
-                            justifyContent="space-between"
-                            style={[styles.cardStyle, customStyles.shadowBox]}
-                        >
-                            <VStack backgroundColor="white">
-                                <Text paddingBottom={1} style={styles.h5}>Général</Text>
-                            </VStack>
-
-
-                            <VStack justifyContent="space-between">
-                                {Object.keys(fieldMappings).map((key, index) => {
-                                    const field = fieldMappings[key];
-                                    const value = key === 'password'
-                                        ? field.value
-                                        : key === 'income' || key === 'bank'
-                                            ? field.getValue(userData)
-                                            : key === 'notifs'
-                                                ? (notificationsEnabled ? 'Activé' : 'Désactivé')
-                                                : key === 'contacts'
-                                                    ? (contactsEnabled ? 'Activé' : 'Désactivé')
-                                                    : truncateText(userData?.[key] || 'Non renseigné', field.truncateLength || 15);
-
-                                    // Vérifie si c'est le dernier élément
-                                    const isLast = index === Object.keys(fieldMappings).length - 1;
-
-                                    return (
-                                        <Pressable key={key} onPress={
-                                            key === 'contacts' 
-                                              ? handleContactsPress 
-                                              : (key !== 'notifs' ? () => openEditModal(key, userData?.[key]) : undefined)
-                                          }>
-                                            <HStack
-                                                justifyContent="space-between"
-                                                paddingTop={4}
-                                                paddingBottom={isLast ? 1 : 4}
-                                                px={1}
-                                                borderBottomWidth={isLast ? 0 : 1} // Retire la bordure pour le dernier élément
-                                                borderColor={isLast ? "transparent" : "#94A3B820"} // Rend la bordure invisible pour le dernier élément
-                                                alignItems="center"
-                                                width="100%"
-                                            >
-                                                <HStack space={3} alignItems="center">
-                                                    <FontAwesomeIcon icon={field.icon} style={{ fontSize: 18, color: 'black' }} />
-                                                </HStack>
-                                                <HStack flex={1} justifyContent="space-between" px={4}>
-                                                    <Text style={[styles.h5]} isTruncated>{field.label}</Text>
-                                                    <Text style={[styles.caption]} color="#94A3B8">
-                                                        {key === 'notifs'
-                                                            ? (notificationsEnabled ? 'Activé' : 'Désactivé')
-                                                            : key === 'contacts'
-                                                                ? (contactsEnabled ? 'Activé' : 'Désactivé')
-                                                                : truncateText(value, field.truncateLength || 15)}
-                                                    </Text>
-                                                </HStack>
-                                                {key === 'notifs' || key === 'contacts' ? (
-                                                    <RNSwitch
-                                                        value={key === 'notifs' ? notificationsEnabled : contactsEnabled}
-                                                        onValueChange={key === 'notifs' ? toggleNotifications : toggleContacts}
-                                                        trackColor={{
-                                                            false: "#E2E8F0",
-                                                            true: "#E2E8F0"
-                                                        }}
-                                                        thumbColor={(key === 'notifs' ? notificationsEnabled : contactsEnabled) ? "#83D9FF" : "#FF78B2"}
-                                                        ios_backgroundColor="#E2E8F0"
-                                                        style={{ transform: [{ scale: 0.7 }] }}
-                                                    />
-                                                ) : (
-                                                    <FontAwesome name="chevron-right" size={14} color="#94A3B8" />
-                                                )}
-                                            </HStack>
-                                        </Pressable>
-                                    );
-                                })}
-                            </VStack>
-                        </Box>
-
-                        <Box
-                            display="flex"
-                            width="100%"
-                            marginX="auto"
-                            height="auto"
-                            borderRadius="lg"
-                            backgroundColor="white"
-                            marginTop={2}
-                            padding={4}
-                            justifyContent="space-between"
-                            style={[styles.cardStyle, customStyles.shadowBox]}
-                        >
-                            <VStack backgroundColor="white">
-                                <Text paddingBottom={1} style={styles.h5}>Données</Text>
-                            </VStack>
-                            <VStack justifyContent="space-between">
-                                {Object.keys(accountFieldMapping).map((key, index) => {
-                                    const field = accountFieldMapping[key];
-                                    const value = key === 'password'
-                                        ? field.value
-                                        : userData?.[key] || 'Non renseigné'; // Priorité à une valeur spécifique (ex: password)
-
-                                    // Vérifie si c'est le dernier élément
-                                    const isLast = index === Object.keys(accountFieldMapping).length - 1;
-
-                                    return (
-                                        <Pressable key={key} onPress={async () => {
-                                            try {
-                                                if (key === 'download') {
-                                                    await handleDownloadUserData();
-                                                }
-                                                else if (key === 'clear') {
-                                                    await handleClearUserData();
-                                                }
-                                                else if (key === 'delete') {
-                                                    await handleDeleteUserAccount();
-                                                }
-                                            } catch (error) {
-                                                console.error('Error:', error);
-                                            }
-                                        }}>
-                                            <HStack
-                                                justifyContent="space-between"
-                                                paddingTop={4}
-                                                paddingBottom={isLast ? 1 : 4}
-                                                px={1}
-                                                borderBottomWidth={isLast ? 0 : 1} // Retire la bordure pour le dernier élément
-                                                borderColor={isLast ? "transparent" : "gray.200"} // Rend la bordure invisible pour le dernier élément
-                                                alignItems="center"
-                                                width="100%"
-                                            >
-                                                <Text style={[styles.h5, { textDecorationLine: 'underline' }]} >{field.label}</Text>
-                                            </HStack>
-                                        </Pressable>
-                                    );
-                                })}
-                            </VStack>
-
-                        </Box>
-
-                        <Box
-                            display="flex"
-                            width="100%"
-                            marginX="auto"
-                            height="auto"
-                            borderRadius="lg"
-                            backgroundColor="white"
-                            marginTop={2}
-                            py={4}
-                            justifyContent="space-between"
-                            style={[styles.cardStyle, customStyles.shadowBox]}
-                        >
-                            {/* Déconnexion */}
-                            <Pressable onPress={handleLogoutno}>
-                                <HStack justifyContent="start" px={4} >
-                                    <Text style={styles.h5} color="#FF78B2" fontSize="md">Déconnexion</Text>
+                                    {/* Icône Settings */}
+                                    <Pressable onPress={() => navigation.navigate('ProfilSettings')}>
+                                        <FontAwesome5 name="cog" size={26} color="black" solid={false} />
+                                    </Pressable>
                                 </HStack>
-                            </Pressable>
-                        </Box>
+                                <Box
+                                    display="flex"
+                                    width="100%"
+                                    marginX="auto"
+                                    height="auto"
+                                    borderRadius="lg"
+                                    backgroundColor="white"
+                                    marginTop={2}
+                                    padding={4}
+                                    justifyContent="space-between"
+                                    style={[styles.cardStyle, customStyles.shadowBox]}
+                                >
+                                    <VStack backgroundColor="white">
+                                        <Text paddingBottom={1} style={styles.h5}>Général</Text>
+                                    </VStack>
 
-                    </VStack>
-                </Box>
-            </ScrollView>
+
+                                    <VStack justifyContent="space-between">
+                                        {Object.keys(fieldMappings).map((key, index) => {
+                                            const field = fieldMappings[key];
+                                            const value = key === 'password'
+                                                ? field.value
+                                                : key === 'income' || key === 'bank'
+                                                    ? field.getValue(userData)
+                                                    : key === 'notifs'
+                                                        ? (notificationsEnabled ? 'Activé' : 'Désactivé')
+                                                        : key === 'contacts'
+                                                            ? (contactsEnabled ? 'Activé' : 'Désactivé')
+                                                            : truncateText(userData?.[key] || 'Non renseigné', field.truncateLength || 15);
+
+                                            // Vérifie si c'est le dernier élément
+                                            const isLast = index === Object.keys(fieldMappings).length - 1;
+
+                                            return (
+                                                <Pressable key={key} onPress={
+                                                    key === 'contacts'
+                                                        ? handleContactsPress
+                                                        : (key !== 'notifs' ? () => openEditModal(key, userData?.[key]) : undefined)
+                                                }>
+                                                    <HStack
+                                                        justifyContent="space-between"
+                                                        paddingTop={4}
+                                                        paddingBottom={isLast ? 1 : 4}
+                                                        px={1}
+                                                        borderBottomWidth={isLast ? 0 : 1} // Retire la bordure pour le dernier élément
+                                                        borderColor={isLast ? "transparent" : "#94A3B820"} // Rend la bordure invisible pour le dernier élément
+                                                        alignItems="center"
+                                                        width="100%"
+                                                    >
+                                                        <HStack space={3} alignItems="center">
+                                                            <FontAwesomeIcon icon={field.icon} style={{ fontSize: 18, color: 'black' }} />
+                                                        </HStack>
+                                                        <HStack flex={1} justifyContent="space-between" px={4}>
+                                                            <Text style={[styles.h5]} isTruncated>{field.label}</Text>
+                                                            <Text style={[styles.caption]} color="#94A3B8">
+                                                                {key === 'notifs'
+                                                                    ? (notificationsEnabled ? 'Activé' : 'Désactivé')
+                                                                    : key === 'contacts'
+                                                                        ? (contactsEnabled ? 'Activé' : 'Désactivé')
+                                                                        : truncateText(value, field.truncateLength || 15)}
+                                                            </Text>
+                                                        </HStack>
+                                                        {key === 'notifs' || key === 'contacts' ? (
+                                                            <RNSwitch
+                                                                value={key === 'notifs' ? notificationsEnabled : contactsEnabled}
+                                                                onValueChange={key === 'notifs' ? toggleNotifications : toggleContacts}
+                                                                trackColor={{
+                                                                    false: "#E2E8F0",
+                                                                    true: "#E2E8F0"
+                                                                }}
+                                                                thumbColor={(key === 'notifs' ? notificationsEnabled : contactsEnabled) ? "#83D9FF" : "#FF78B2"}
+                                                                ios_backgroundColor="#E2E8F0"
+                                                                style={{ transform: [{ scale: 0.7 }] }}
+                                                            />
+                                                        ) : (
+                                                            <FontAwesome name="chevron-right" size={14} color="#94A3B8" />
+                                                        )}
+                                                    </HStack>
+                                                </Pressable>
+                                            );
+                                        })}
+                                    </VStack>
+                                </Box>
+
+                                <Box
+                                    display="flex"
+                                    width="100%"
+                                    marginX="auto"
+                                    height="auto"
+                                    borderRadius="lg"
+                                    backgroundColor="white"
+                                    marginTop={2}
+                                    padding={4}
+                                    justifyContent="space-between"
+                                    style={[styles.cardStyle, customStyles.shadowBox]}
+                                >
+                                    <VStack backgroundColor="white">
+                                        <Text paddingBottom={1} style={styles.h5}>Données</Text>
+                                    </VStack>
+                                    <VStack justifyContent="space-between">
+                                        {Object.keys(accountFieldMapping).map((key, index) => {
+                                            const field = accountFieldMapping[key];
+                                            const value = key === 'password'
+                                                ? field.value
+                                                : userData?.[key] || 'Non renseigné'; // Priorité à une valeur spécifique (ex: password)
+
+                                            // Vérifie si c'est le dernier élément
+                                            const isLast = index === Object.keys(accountFieldMapping).length - 1;
+
+                                            return (
+                                                <Pressable key={key} onPress={async () => {
+                                                    try {
+                                                        if (key === 'download') {
+                                                            await handleDownloadUserData();
+                                                        }
+                                                        else if (key === 'clear') {
+                                                            await handleClearUserData();
+                                                        }
+                                                        else if (key === 'delete') {
+                                                            await handleDeleteUserAccount();
+                                                        }
+                                                    } catch (error) {
+                                                        console.error('Error:', error);
+                                                    }
+                                                }}>
+                                                    <HStack
+                                                        justifyContent="space-between"
+                                                        paddingTop={4}
+                                                        paddingBottom={isLast ? 1 : 4}
+                                                        px={1}
+                                                        borderBottomWidth={isLast ? 0 : 1} // Retire la bordure pour le dernier élément
+                                                        borderColor={isLast ? "transparent" : "gray.200"} // Rend la bordure invisible pour le dernier élément
+                                                        alignItems="center"
+                                                        width="100%"
+                                                    >
+                                                        <Text style={[styles.h5, { textDecorationLine: 'underline' }]} >{field.label}</Text>
+                                                    </HStack>
+                                                </Pressable>
+                                            );
+                                        })}
+                                    </VStack>
+
+                                </Box>
+
+                                <Box
+                                    display="flex"
+                                    width="100%"
+                                    marginX="auto"
+                                    height="auto"
+                                    borderRadius="lg"
+                                    backgroundColor="white"
+                                    marginTop={2}
+                                    py={4}
+                                    justifyContent="space-between"
+                                    style={[styles.cardStyle, customStyles.shadowBox]}
+                                >
+                                    {/* Déconnexion */}
+                                    <Pressable onPress={handleLogoutno}>
+                                        <HStack justifyContent="start" px={4} >
+                                            <Text style={styles.h5} color="#FF78B2" fontSize="md">Déconnexion</Text>
+                                        </HStack>
+                                    </Pressable>
+                                </Box>
+
+                            </VStack>
+                        </Box>
+                    </ScrollView>
+
+                </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
 
             <EarningsModal
                 isOpen={earningsModalVisible}
@@ -601,8 +646,19 @@ export default function Profile({ navigation }) {
                 navigation={navigation}
             />
 
-            <Actionsheet isOpen={modalVisible} onClose={() => setModalVisible(false)}>
-                <Actionsheet.Content>
+            <Actionsheet
+                isOpen={modalVisible}
+                onClose={() => {
+                    Keyboard.dismiss();
+                    setModalVisible(false);
+                }}
+            >
+                <AnimatedActionsheetContent
+                    style={{
+                        marginBottom: actionSheetPosition,
+                    }}
+                >
+
                     <VStack width="100%" space={4} px={4}>
                         {selectedField === 'abonnements' && (!userData?.subscriptions || userData.subscriptions === 0) ? (
                             <>
@@ -693,9 +749,9 @@ export default function Profile({ navigation }) {
                             </>
                         )}
                     </VStack>
-                </Actionsheet.Content>
-            </Actionsheet>
-        </Background>
+                    </AnimatedActionsheetContent>
+                    </Actionsheet>
+        </Background >
     );
 };
 

@@ -42,7 +42,7 @@
 			<string>AppleSignIn</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-    <string>com.hushy.app</string>
+				<string>com.hushy.app</string>
 			</array>
 		</dict>
 	</array>

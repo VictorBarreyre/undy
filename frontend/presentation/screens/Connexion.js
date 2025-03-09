@@ -244,10 +244,10 @@ const Connexion = ({ navigation }) => {
     // Connexion Google
     const handleGoogleLogin = useCallback(async () => {
         try {
+            // Your existing Google login code...
             console.log('1. Début de la connexion Google');
             
             // Configuration de GoogleSignin
-            console.log('2. Configuration de GoogleSignin');
             await GoogleSignin.configure({
                 webClientId: GOOGLE_WEBCLIENT_ID,
                 iosClientId: GOOGLE_IOS_ID,
@@ -256,60 +256,41 @@ const Connexion = ({ navigation }) => {
                 forceCodeForRefreshToken: true
             });
             
-            // Nettoyage des sessions précédentes (facultatif)
+            // Clean previous sessions
             try {
-                console.log('3. Tentative de nettoyage de session existante');
                 await GoogleSignin.signOut();
             } catch (signOutError) {
+                // Silent fail - no need to show this error
                 console.log('Erreur de déconnexion (normal si pas déjà connecté):', signOutError.message);
-                // On continue même si le signOut échoue
             }
             
-            // Vérification des services Google Play (pour Android)
-            console.log('4. Vérification des services Google');
+            // Check Google Play Services (for Android)
             await GoogleSignin.hasPlayServices({
                 showPlayServicesUpdateDialog: true
             });
             
-            // Tentative de connexion
-            console.log('5. Tentative de connexion');
+            // Sign-in attempt
             const userInfo = await GoogleSignin.signIn();
             
-            console.log('6. Résultat de la connexion:', {
-                user: userInfo.user ? {
-                    email: userInfo.user.email,
-                    name: userInfo.user.name,
-                    id: userInfo.user.id
-                } : null
-            });
-            
-            // Obtenir l'access token
-            console.log('7. Récupération des tokens');
+            // Get access token
             const tokens = await GoogleSignin.getTokens();
-            
-            console.log('8. Tokens récupérés:', {
-                hasAccessToken: !!tokens.accessToken,
-                accessTokenLength: tokens.accessToken ? tokens.accessToken.length : 0
-            });
             
             if (!tokens.accessToken) {
                 throw new Error('Aucun access token récupéré');
             }
             
-            // Connexion au serveur avec l'access token
-            console.log('9. Préparation de la requête au serveur');
+            // Login to server with the access token
             const instance = getAxiosInstance();
             
             if (!instance) {
                 throw new Error('Impossible de créer l\'instance Axios');
             }
             
-            console.log('10. Envoi de l\'access token au serveur');
             const response = await instance.post('/api/users/google-login', 
                 { 
                     token: tokens.accessToken,
                     tokenType: 'access_token',
-                    userData: userInfo.user // Inclure les données utilisateur pour faciliter l'authentification côté serveur
+                    userData: userInfo.user
                 },
                 {
                     headers: {
@@ -318,52 +299,50 @@ const Connexion = ({ navigation }) => {
                 }
             );
             
-            console.log('11. Réponse du serveur reçue:', {
-                hasToken: !!response.data.token,
-                hasRefreshToken: !!response.data.refreshToken
-            });
-            
-            // Connexion locale avec les tokens reçus
+            // Login locally with received tokens
             await login(response.data.token, response.data.refreshToken);
             
-            // Navigation vers la page principale
-            console.log('12. Navigation vers MainFeed');
+            // Navigate to main page
             navigation.navigate('HomeTab', { screen: 'MainFeed' });
             
         } catch (error) {
-            console.error('Erreur détaillée de connexion Google:');
-            console.error('- Message:', error.message);
+            console.error('Erreur détaillée de connexion Google:', error.message);
             
-            // Gestion spécifique des erreurs Google Sign-In
-            const statusCodes = GoogleSignin.statusCodes || {};
-            
+            // Google Sign-In specific error handling
             if (error.code) {
-                console.error('- Code d\'erreur:', error.code);
-                
                 switch (error.code) {
                     case statusCodes.SIGN_IN_CANCELLED:
-                        setMessage('Connexion annulée');
-                        break;
+                        // User cancelled the login flow - don't show error
+                        console.log('Connexion annulée par l\'utilisateur');
+                        return; // Just return without setting any message
+                        
                     case statusCodes.IN_PROGRESS:
-                        setMessage('Connexion en cours');
-                        break;
+                        // Silent handling - operation already in progress
+                        console.log('Connexion déjà en cours');
+                        return;
+                        
                     case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-                        setMessage('Services Google Play non disponibles');
+                        setMessage('Services Google indisponibles');
                         break;
+                        
                     default:
-                        setMessage(`Erreur de connexion Google (${error.code})`);
+                        // Technical error but with user-friendly message
+                        setMessage('Problème de connexion avec Google');
+                        // Log the technical details for debugging only
+                        console.error(`Code d'erreur technique: ${error.code}`);
                 }
             } else if (error.response) {
-                // Erreur de réponse du serveur
-                console.error('- Détails de l\'erreur serveur:', error.response.data);
-                setMessage(error.response.data.message || 'Échec de la connexion côté serveur');
+                // Server response error - use generic message
+                console.error('Détails de l\'erreur serveur:', error.response.data);
+                setMessage('Échec de connexion au serveur');
             } else {
-                // Erreur générique
-                setMessage(`Une erreur est survenue: ${error.message}`);
+                // Generic error - user-friendly message
+                setMessage('Problème de connexion');
             }
         }
     }, [login, navigation]);
 
+    
     return (
         <View style={styles.container}>
             {/* Fond animé */}
