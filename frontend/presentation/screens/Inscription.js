@@ -13,8 +13,10 @@ import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInsta
 import { appleAuth } from '@invertase/react-native-apple-authentication';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { GOOGLE_WEBCLIENT_ID, GOOGLE_IOS_ID } from '@env';
+import { useTranslation } from 'react-i18next';
 
 const Inscription = ({ navigation }) => {
+    const { t } = useTranslation();
     const { login } = useContext(AuthContext);
 
     const [name, setName] = useState('');
@@ -74,7 +76,11 @@ const Inscription = ({ navigation }) => {
             console.log('2. Apple Sign In supporté:', isSupported);
             
             if (!isSupported) {
-                Alert.alert("Service non disponible", "Connexion Apple non disponible sur cet appareil");
+                Alert.alert(
+                    t('auth.alerts.serviceUnavailable'),
+                    t('auth.errors.appleNotAvailable'),
+                    [{ text: t('auth.alerts.ok') }]
+                );
                 return;
             }
             
@@ -162,15 +168,23 @@ const Inscription = ({ navigation }) => {
             });
             
             if (error.response) {
-                Alert.alert("Erreur", error.response.data?.message || "Échec de la connexion Apple");
+                Alert.alert(
+                    t('auth.alerts.errorTitle'),
+                    error.response.data?.message || t('auth.errors.genericError'),
+                    [{ text: t('auth.alerts.ok') }]
+                );
             } else if (error.code === appleAuth.Error.CANCELED) {
                 // Ne rien faire quand l'utilisateur annule
                 return;
             } else {
-                Alert.alert("Erreur", `Problème lors de la connexion: ${error.message}`);
+                Alert.alert(
+                    t('auth.alerts.errorTitle'),
+                    `${t('auth.errors.genericError')}: ${error.message}`,
+                    [{ text: t('auth.alerts.ok') }]
+                );
             }
         }
-    }, [login, navigation]);
+    }, [login, navigation, t]);
 
     const handleGoogleLogin = useCallback(async () => {
         try {
@@ -245,17 +259,17 @@ const Inscription = ({ navigation }) => {
                         
                     case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
                         Alert.alert(
-                            "Service indisponible",
-                            "Les services Google Play ne sont pas disponibles sur cet appareil",
-                            [{ text: "OK" }]
+                            t('auth.alerts.serviceUnavailable'),
+                            t('auth.errors.googlePlayNotAvailable'),
+                            [{ text: t('auth.alerts.ok') }]
                         );
                         break;
                         
                     default:
                         Alert.alert(
-                            "Erreur de connexion",
-                            "Un problème est survenu lors de la connexion avec Google",
-                            [{ text: "OK" }]
+                            t('auth.errors.connectionError'),
+                            t('auth.errors.googleConnectionError'),
+                            [{ text: t('auth.alerts.ok') }]
                         );
                         // Log technique pour le débogage
                         console.error(`Code d'erreur technique: ${error.code}`);
@@ -264,20 +278,20 @@ const Inscription = ({ navigation }) => {
                 // Erreur de réponse du serveur
                 console.error('Détails de l\'erreur serveur:', error.response.data);
                 Alert.alert(
-                    "Erreur de connexion",
-                    "Le serveur n'a pas pu traiter votre demande",
-                    [{ text: "OK" }]
+                    t('auth.errors.serverError'),
+                    t('auth.errors.genericError'),
+                    [{ text: t('auth.alerts.ok') }]
                 );
             } else {
                 // Erreur générique
                 Alert.alert(
-                    "Erreur de connexion",
-                    "Un problème est survenu pendant la connexion",
-                    [{ text: "OK" }]
+                    t('auth.alerts.errorTitle'),
+                    t('auth.errors.genericError'),
+                    [{ text: t('auth.alerts.ok') }]
                 );
             }
         }
-    }, [login, navigation]);
+    }, [login, navigation, t]);
 
     const handleRegister = useCallback(async () => {
         try {
@@ -301,17 +315,17 @@ const Inscription = ({ navigation }) => {
                 console.log('Inscription réussie:', response.data);
                 await login(response.data.token, response.data.refreshToken);
                 Alert.alert(
-                    "Inscription réussie",
-                    "Votre compte a été créé avec succès!",
-                    [{ text: "OK" }]
+                    t('auth.register.successTitle'),
+                    t('auth.register.successMessage'),
+                    [{ text: t('auth.alerts.ok') }]
                 );
                 navigation.navigate('HomeTab', { screen: 'MainFeed' });
             } else {
                 console.error('Erreur: Token non reçu.');
                 Alert.alert(
-                    "Erreur d'inscription",
-                    "Erreur lors de la génération du token.",
-                    [{ text: "OK" }]
+                    t('auth.register.errorTitle'),
+                    t('auth.errors.tokenError'),
+                    [{ text: t('auth.alerts.ok') }]
                 );
             }
         } catch (error) {
@@ -321,12 +335,12 @@ const Inscription = ({ navigation }) => {
                 config: error.config
             });
             Alert.alert(
-                "Erreur d'inscription",
-                error.response?.data?.message || "Erreur lors de l'inscription",
-                [{ text: "OK" }]
+                t('auth.register.errorTitle'),
+                error.response?.data?.message || t('auth.register.genericError'),
+                [{ text: t('auth.alerts.ok') }]
             );
         }
-    }, [name, email, password, login, navigation]);
+    }, [name, email, password, login, navigation, t]);
 
 
     return (
@@ -363,14 +377,14 @@ const Inscription = ({ navigation }) => {
                         mt={10}
                         textAlign="center"
                     >
-                        Inscrivez-vous
+                        {t('auth.register.title')}
                     </Text>
 
                     <VStack mt={4} space={2} w="90%">
                         {/* Email */}
                         <Input
                             width='100%'
-                            placeholder="Email"
+                            placeholder={t('auth.login.email')}
                             value={email}
                             onChangeText={setEmail}
                             autoCapitalize="none"
@@ -379,7 +393,7 @@ const Inscription = ({ navigation }) => {
 
                         {/* Name */}
                         <Input
-                            placeholder="Nom"
+                            placeholder={t('auth.register.name')}
                             value={name}
                             onChangeText={setName}
                             autoCapitalize="words"
@@ -387,7 +401,7 @@ const Inscription = ({ navigation }) => {
 
                         {/* Password */}
                         <Input
-                            placeholder="Mot de passe"
+                            placeholder={t('auth.login.password')}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword}
@@ -412,11 +426,11 @@ const Inscription = ({ navigation }) => {
                         _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
                         onPress={handleRegister}
                     >
-                        S'inscrire
+                        {t('auth.register.registerButton')}
                     </Button>
 
-                        {/* Link to Login */}
-                        <Link
+                    {/* Link to Login */}
+                    <Link
                         px={10}
                         mt={4}
                         mb={4}
@@ -430,17 +444,14 @@ const Inscription = ({ navigation }) => {
                         }}
                         onPress={() => navigation.navigate('Connexion')}
                     >
-                        J'ai déjà un compte{' '}
-                        <Text color="black" fontFamily="SF-Pro-Display-Regular" fontSize="14px">
-                            🙂
-                        </Text>
+                        {t('auth.register.hasAccount')}
                     </Link>
                     
 
                     {/* Séparateur avec "ou" */}
                     <HStack w="90%" mt={4} mb={2} alignItems="center" opacity={0.8}>
                         <Box flex={1} h="1px" bg="#94A3B8" />
-                        <Text style={styles.caption} mx={2} color="#94A3B8">ou</Text>
+                        <Text style={styles.caption} mx={2} color="#94A3B8">{t('auth.login.or')}</Text>
                         <Box flex={1} h="1px" bg="#94A3B8" />
                     </HStack>
 
@@ -458,7 +469,7 @@ const Inscription = ({ navigation }) => {
                             <HStack space={2} alignItems="center" justifyContent="center">
                                 <FontAwesomeIcon icon={faApple} size={16} color="#fff" />
                                 <Text color="white" fontFamily="SF-Pro-Display-Bold">
-                                    Continue with Apple
+                                    {t('auth.login.continueWithApple')}
                                 </Text>
                             </HStack>
                         </Button>
@@ -478,7 +489,7 @@ const Inscription = ({ navigation }) => {
                         <HStack space={2} alignItems="center" justifyContent="center">
                             <FontAwesomeIcon icon={faGoogle} size={16} color="#000" />
                             <Text color="black" fontFamily="SF-Pro-Display-Bold">
-                                Continue with Google
+                                {t('auth.login.continueWithGoogle')}
                             </Text>
                         </HStack>
                     </Button>
@@ -498,8 +509,7 @@ const Inscription = ({ navigation }) => {
                             textDecoration: 'none'
                         }}
                     >
-                        En vous inscrivant, vous acceptez nos Conditions d'utilisation et
-                        Politiques de confidentialité
+                        {t('auth.register.termsAndPrivacy')}
                     </Link>
                 </Box>
             </ScrollView>

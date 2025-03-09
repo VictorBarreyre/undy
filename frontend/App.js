@@ -52,10 +52,10 @@ const App = () => {
     },
     subscribe(listener) {
       const onReceiveURL = ({ url }) => listener(url);
-  
+
       // Écouter les événements quand l'app est ouverte
       const subscription = Linking.addEventListener('url', onReceiveURL);
-  
+
       return () => {
         subscription.remove();
       };
@@ -73,7 +73,7 @@ const App = () => {
 
   React.useEffect(() => {
     loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
-  }, []);``
+  }, []); ``
 
 
 
@@ -92,16 +92,16 @@ const App = () => {
         <CardDataProvider>
           <NativeBaseProvider theme={lightTheme}>
             <SafeAreaProvider>
-            <NavigationContainer
-            linking={linking}
-              theme={{
-                colors: {
-                  background: 'transparent',
-                  card: 'transparent',
-                  border: 'transparent',
-                },
-              }}
-            >
+              <NavigationContainer
+                linking={linking}
+                theme={{
+                  colors: {
+                    background: 'transparent',
+                    card: 'transparent',
+                    border: 'transparent',
+                  },
+                }}
+              >
                 <StackNavigator />
                 <DeepLinkHandler />
               </NavigationContainer>

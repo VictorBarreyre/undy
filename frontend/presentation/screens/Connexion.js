@@ -11,16 +11,17 @@ import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInsta
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
-import { GOOGLE_WEBCLIENT_ID, GOOGLE_IOS_ID } from '@env'
+import { GOOGLE_WEBCLIENT_ID, GOOGLE_IOS_ID } from '@env';
+import { useTranslation } from 'react-i18next';
 
 const Connexion = ({ navigation }) => {
+    const { t } = useTranslation();
     const { login } = useContext(AuthContext);
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isAppleSignInSupported, setIsAppleSignInSupported] = useState(false);
-
 
     useEffect(() => {
         const checkAppleSignInSupport = async () => {
@@ -34,7 +35,6 @@ const Connexion = ({ navigation }) => {
 
         checkAppleSignInSupport();
     }, []);
-
 
     // Animation setup for background rotation
     const rotateValue = useRef(new Animated.Value(0)).current;
@@ -101,9 +101,9 @@ const Connexion = ({ navigation }) => {
                 navigation.navigate('HomeTab', { screen: 'MainFeed' });
             } else {
                 Alert.alert(
-                    "Erreur de connexion",
-                    "Erreur lors de la génération du token.",
-                    [{ text: "OK" }]
+                    t('auth.errors.connectionError'),
+                    t('auth.errors.tokenError'),
+                    [{ text: t('auth.alerts.ok') }]
                 );
             }
         } catch (error) {
@@ -114,12 +114,12 @@ const Connexion = ({ navigation }) => {
                 headers: error.response?.headers
             });
             Alert.alert(
-                "Erreur de connexion",
-                error.response?.data?.message || 'Erreur lors de la connexion',
-                [{ text: "OK" }]
+                t('auth.errors.connectionError'),
+                error.response?.data?.message || t('auth.errors.genericError'),
+                [{ text: t('auth.alerts.ok') }]
             );
         }
-    }, [email, password, login, navigation]);
+    }, [email, password, login, navigation, t]);
 
     // Connexion Apple
     const handleAppleLogin = useCallback(async () => {
@@ -131,14 +131,14 @@ const Connexion = ({ navigation }) => {
             
             if (!isSupported) {
                 Alert.alert(
-                    "Service non disponible",
-                    "Connexion Apple non disponible sur cet appareil",
-                    [{ text: "OK" }]
+                    t('auth.alerts.serviceUnavailable'),
+                    t('auth.errors.appleNotAvailable'),
+                    [{ text: t('auth.alerts.ok') }]
                 );
                 return;
             }
             
-            console.log('3. Tentative d\'authentification Apple - AVANT performRequest');
+            // Reste du code Apple login...
             let appleAuthRequestResponse;
             
             try {
@@ -149,7 +149,6 @@ const Connexion = ({ navigation }) => {
                         appleAuth.Scope.FULL_NAME
                     ]
                 });
-                console.log('4. Réponse reçue de Apple après performRequest');
             } catch (appleAuthError) {
                 console.error('Erreur spécifique performRequest:', {
                     message: appleAuthError.message,
@@ -159,45 +158,26 @@ const Connexion = ({ navigation }) => {
                 throw new Error(`Erreur lors de la demande Apple: ${appleAuthError.message}`);
             }
             
-            console.log('5. Détails de la réponse Apple:', {
-                hasUser: !!appleAuthRequestResponse.user,
-                hasIdentityToken: !!appleAuthRequestResponse.identityToken,
-                hasAuthorizationCode: !!appleAuthRequestResponse.authorizationCode,
-                hasRealUserStatus: !!appleAuthRequestResponse.realUserStatus,
-                hasFullName: !!appleAuthRequestResponse.fullName
-            });
-            
             if (!appleAuthRequestResponse.identityToken) {
-                console.error('6. ERREUR: Pas d\'identity token reçu!');
                 throw new Error('Authentification Apple incomplète: pas de token reçu');
             }
             
-            console.log('7. AVANT vérification des identifiants');
             let credentialState;
             try {
                 credentialState = await appleAuth.getCredentialStateForUser(
                     appleAuthRequestResponse.user
                 );
-                console.log('8. État des identifiants obtenu:', credentialState);
             } catch (credentialError) {
-                console.error('8. Erreur de vérification des identifiants:', {
-                    message: credentialError.message,
-                    code: credentialError.code
-                });
                 throw new Error(`Erreur de vérification des identifiants: ${credentialError.message}`);
             }
             
             if (credentialState === appleAuth.State.AUTHORIZED) {
-                console.log('9. Identifiants autorisés, préparation de l\'envoi au serveur');
-                
                 const instance = getAxiosInstance();
-                console.log('10. Instance Axios obtenue:', !!instance);
                 
                 if (!instance) {
                     throw new Error('Impossible de créer l\'instance Axios');
                 }
                 
-                console.log('11. Préparation des données pour le serveur');
                 const requestData = {
                     identityToken: appleAuthRequestResponse.identityToken,
                     authorizationCode: appleAuthRequestResponse.authorizationCode,
@@ -207,32 +187,16 @@ const Connexion = ({ navigation }) => {
                     }
                 };
                 
-                console.log('12. AVANT envoi de la requête au serveur');
                 let response;
                 try {
                     response = await instance.post('/api/users/apple-login', requestData);
-                    console.log('13. Réponse reçue du serveur');
                 } catch (serverError) {
-                    console.error('13. Erreur de communication avec le serveur:', {
-                        message: serverError.message,
-                        responseStatus: serverError.response?.status,
-                        responseData: serverError.response?.data
-                    });
                     throw new Error(`Erreur serveur: ${serverError.message}`);
                 }
                 
-                console.log('14. Contenu de la réponse:', {
-                    status: response.status,
-                    hasToken: !!response.data.token,
-                    hasRefreshToken: !!response.data.refreshToken
-                });
-                
-                console.log('15. AVANT login avec les tokens');
                 await login(response.data.token, response.data.refreshToken);
-                console.log('16. Login réussi, navigation vers MainFeed');
                 navigation.navigate('HomeTab', { screen: 'MainFeed' });
             } else {
-                console.error('9. ERREUR: Identifiants non autorisés, état:', credentialState);
                 throw new Error(`Identifiants Apple non autorisés (état: ${credentialState})`);
             }
         } catch (error) {
@@ -244,9 +208,9 @@ const Connexion = ({ navigation }) => {
             
             if (error.response) {
                 Alert.alert(
-                    "Erreur de connexion",
-                    error.response.data?.message || 'Échec de la connexion Apple',
-                    [{ text: "OK" }]
+                    t('auth.errors.connectionError'),
+                    error.response.data?.message || t('auth.errors.genericError'),
+                    [{ text: t('auth.alerts.ok') }]
                 );
             } else if (error.code === appleAuth.Error.CANCELED) {
                 // Ne rien afficher quand l'utilisateur annule
@@ -254,20 +218,18 @@ const Connexion = ({ navigation }) => {
                 return;
             } else {
                 Alert.alert(
-                    "Erreur de connexion",
-                    `Problème lors de la connexion Apple : ${error.message}`,
-                    [{ text: "OK" }]
+                    t('auth.errors.connectionError'),
+                    `${t('auth.errors.genericError')}: ${error.message}`,
+                    [{ text: t('auth.alerts.ok') }]
                 );
             }
         }
-    }, [login, navigation]);
+    }, [login, navigation, t]);
 
     // Connexion Google
     const handleGoogleLogin = useCallback(async () => {
         try {
-            console.log('1. Début de la connexion Google');
-            
-            // Configuration de GoogleSignin
+            // Configuration de GoogleSignin, etc...
             await GoogleSignin.configure({
                 webClientId: GOOGLE_WEBCLIENT_ID,
                 iosClientId: GOOGLE_IOS_ID,
@@ -276,30 +238,23 @@ const Connexion = ({ navigation }) => {
                 forceCodeForRefreshToken: true
             });
             
-            // Clean previous sessions
             try {
                 await GoogleSignin.signOut();
             } catch (signOutError) {
-                // Silent fail - no need to show this error
-                console.log('Erreur de déconnexion (normal si pas déjà connecté):', signOutError.message);
+                console.log('Erreur de déconnexion (normal):', signOutError.message);
             }
             
-            // Check Google Play Services (for Android)
             await GoogleSignin.hasPlayServices({
                 showPlayServicesUpdateDialog: true
             });
             
-            // Sign-in attempt
             const userInfo = await GoogleSignin.signIn();
-            
-            // Get access token
             const tokens = await GoogleSignin.getTokens();
             
             if (!tokens.accessToken) {
                 throw new Error('Aucun access token récupéré');
             }
             
-            // Login to server with the access token
             const instance = getAxiosInstance();
             
             if (!instance) {
@@ -319,22 +274,18 @@ const Connexion = ({ navigation }) => {
                 }
             );
             
-            // Login locally with received tokens
             await login(response.data.token, response.data.refreshToken);
-            
-            // Navigate to main page
             navigation.navigate('HomeTab', { screen: 'MainFeed' });
             
         } catch (error) {
             console.error('Erreur détaillée de connexion Google:', error.message);
             
-            // Google Sign-In specific error handling
             if (error.code) {
                 switch (error.code) {
                     case statusCodes.SIGN_IN_CANCELLED:
                         // User cancelled the login flow - don't show error
                         console.log('Connexion annulée par l\'utilisateur');
-                        return; // Just return without showing any message
+                        return;
                         
                     case statusCodes.IN_PROGRESS:
                         // Silent handling - operation already in progress
@@ -343,40 +294,36 @@ const Connexion = ({ navigation }) => {
                         
                     case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
                         Alert.alert(
-                            "Service indisponible",
-                            "Les services Google Play ne sont pas disponibles",
-                            [{ text: "OK" }]
+                            t('auth.alerts.serviceUnavailable'),
+                            t('auth.errors.googlePlayNotAvailable'),
+                            [{ text: t('auth.alerts.ok') }]
                         );
                         break;
                         
                     default:
-                        // Technical error but with user-friendly message
                         Alert.alert(
-                            "Erreur de connexion",
-                            "Problème de connexion avec Google",
-                            [{ text: "OK" }]
+                            t('auth.errors.connectionError'),
+                            t('auth.errors.googleConnectionError'),
+                            [{ text: t('auth.alerts.ok') }]
                         );
-                        // Log the technical details for debugging only
                         console.error(`Code d'erreur technique: ${error.code}`);
                 }
             } else if (error.response) {
-                // Server response error - use generic message
                 console.error('Détails de l\'erreur serveur:', error.response.data);
                 Alert.alert(
-                    "Erreur serveur",
-                    "Échec de connexion au serveur",
-                    [{ text: "OK" }]
+                    t('auth.errors.serverError'),
+                    t('auth.errors.genericError'),
+                    [{ text: t('auth.alerts.ok') }]
                 );
             } else {
-                // Generic error - user-friendly message
                 Alert.alert(
-                    "Erreur",
-                    "Problème de connexion",
-                    [{ text: "OK" }]
+                    t('auth.alerts.errorTitle'),
+                    t('auth.errors.genericError'),
+                    [{ text: t('auth.alerts.ok') }]
                 );
             }
         }
-    }, [login, navigation]);
+    }, [login, navigation, t]);
 
     
     return (
@@ -411,14 +358,13 @@ const Connexion = ({ navigation }) => {
                         mt={10}
                         textAlign="center"
                     >
-                        Connectez-vous ou{'\n'}créez un compte
+                        {t('auth.login.title')}
                     </Text>
 
                     <VStack mt={4} space={2} w="100%">
-                        {/* Form Section */}
                         {/* Email */}
                         <Input
-                            placeholder="Email"
+                            placeholder={t('auth.login.email')}
                             value={email}
                             onChangeText={setEmail}
                             autoCapitalize="none"
@@ -427,7 +373,7 @@ const Connexion = ({ navigation }) => {
 
                         {/* Password */}
                         <Input
-                            placeholder="Mot de passe"
+                            placeholder={t('auth.login.password')}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword}
@@ -452,7 +398,7 @@ const Connexion = ({ navigation }) => {
                         _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
                         onPress={handleLogin}
                     >
-                        Se connecter
+                        {t('auth.login.loginButton')}
                     </Button>
 
                     {/* Link to Register */}
@@ -470,15 +416,12 @@ const Connexion = ({ navigation }) => {
                         }}
                         onPress={() => navigation.navigate('Inscription')}
                     >
-                        Enfait je n'ai pas de compte{' '}
-                        <Text color="black" fontFamily="SF-Pro-Display-Regular" fontSize="14px">
-                            🙂
-                        </Text>
+                        {t('auth.login.noAccount')}
                     </Link>
 
                     <HStack w="95%" mt={2} mb={2} alignItems="center" opacity={0.8}>
                         <Box flex={1} h="1px" bg="#94A3B8" />
-                        <Text style={styles.caption} mx={2} color="#94A3B8" >ou</Text>
+                        <Text style={styles.caption} mx={2} color="#94A3B8">{t('auth.login.or')}</Text>
                         <Box flex={1} h="1px" bg="#94A3B8" />
                     </HStack>
 
@@ -495,7 +438,7 @@ const Connexion = ({ navigation }) => {
                             <HStack space={2} alignItems="center" justifyContent="center">
                                 <FontAwesomeIcon icon={faApple} size={16} color="#fff" />
                                 <Text color="white" fontFamily="SF-Pro-Display-Bold">
-                                    Continue with Apple
+                                    {t('auth.login.continueWithApple')}
                                 </Text>
                             </HStack>
                         </Button>
@@ -515,7 +458,7 @@ const Connexion = ({ navigation }) => {
                         <HStack space={2} alignItems="center" justifyContent="center">
                             <FontAwesomeIcon icon={faGoogle} size={16} color="#000" />
                             <Text color="black" fontFamily="SF-Pro-Display-Bold">
-                                Continue with Google
+                                {t('auth.login.continueWithGoogle')}
                             </Text>
                         </HStack>
                     </Button>
@@ -534,8 +477,7 @@ const Connexion = ({ navigation }) => {
                             textDecoration: 'none'
                         }}
                     >
-                        En vous connectant, vous acceptez nos Conditions d'utilisation et
-                        Politiques de confidentialité
+                        {t('auth.login.termsAndPrivacy')}
                     </Link>
                 </Box>
             </ScrollView>
