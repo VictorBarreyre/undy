@@ -1,6 +1,6 @@
 import React, { useState, useContext, useCallback, useRef, useEffect } from 'react';
 import { VStack, Box, Input, Button, Text, Link, ScrollView, Pressable, Icon, HStack } from 'native-base';
-import { Animated, View, Platform } from 'react-native';
+import { Animated, View, Platform, Alert } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEye, faEyeSlash, faEnvelope } from '@fortawesome/free-solid-svg-icons';
@@ -18,7 +18,6 @@ const Connexion = ({ navigation }) => {
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [message, setMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isAppleSignInSupported, setIsAppleSignInSupported] = useState(false);
 
@@ -101,7 +100,11 @@ const Connexion = ({ navigation }) => {
                 console.log('6. Login réussi, navigation vers MainFeed');
                 navigation.navigate('HomeTab', { screen: 'MainFeed' });
             } else {
-                setMessage('Erreur lors de la génération du token.');
+                Alert.alert(
+                    "Erreur de connexion",
+                    "Erreur lors de la génération du token.",
+                    [{ text: "OK" }]
+                );
             }
         } catch (error) {
             console.error('Erreur détaillée:', {
@@ -110,7 +113,11 @@ const Connexion = ({ navigation }) => {
                 status: error.response?.status,
                 headers: error.response?.headers
             });
-            setMessage(error.response?.data?.message || 'Erreur lors de la connexion');
+            Alert.alert(
+                "Erreur de connexion",
+                error.response?.data?.message || 'Erreur lors de la connexion',
+                [{ text: "OK" }]
+            );
         }
     }, [email, password, login, navigation]);
 
@@ -123,7 +130,11 @@ const Connexion = ({ navigation }) => {
             console.log('2. Apple Sign In supporté:', isSupported);
             
             if (!isSupported) {
-                setMessage('Connexion Apple non disponible sur cet appareil');
+                Alert.alert(
+                    "Service non disponible",
+                    "Connexion Apple non disponible sur cet appareil",
+                    [{ text: "OK" }]
+                );
                 return;
             }
             
@@ -232,11 +243,21 @@ const Connexion = ({ navigation }) => {
             });
             
             if (error.response) {
-                setMessage(error.response.data?.message || 'Échec de la connexion Apple');
+                Alert.alert(
+                    "Erreur de connexion",
+                    error.response.data?.message || 'Échec de la connexion Apple',
+                    [{ text: "OK" }]
+                );
             } else if (error.code === appleAuth.Error.CANCELED) {
-                setMessage('Connexion Apple annulée');
+                // Ne rien afficher quand l'utilisateur annule
+                console.log('Connexion Apple annulée par l\'utilisateur');
+                return;
             } else {
-                setMessage(`Erreur: ${error.message}`);
+                Alert.alert(
+                    "Erreur de connexion",
+                    `Problème lors de la connexion Apple : ${error.message}`,
+                    [{ text: "OK" }]
+                );
             }
         }
     }, [login, navigation]);
@@ -244,7 +265,6 @@ const Connexion = ({ navigation }) => {
     // Connexion Google
     const handleGoogleLogin = useCallback(async () => {
         try {
-            // Your existing Google login code...
             console.log('1. Début de la connexion Google');
             
             // Configuration de GoogleSignin
@@ -314,7 +334,7 @@ const Connexion = ({ navigation }) => {
                     case statusCodes.SIGN_IN_CANCELLED:
                         // User cancelled the login flow - don't show error
                         console.log('Connexion annulée par l\'utilisateur');
-                        return; // Just return without setting any message
+                        return; // Just return without showing any message
                         
                     case statusCodes.IN_PROGRESS:
                         // Silent handling - operation already in progress
@@ -322,22 +342,38 @@ const Connexion = ({ navigation }) => {
                         return;
                         
                     case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-                        setMessage('Services Google indisponibles');
+                        Alert.alert(
+                            "Service indisponible",
+                            "Les services Google Play ne sont pas disponibles",
+                            [{ text: "OK" }]
+                        );
                         break;
                         
                     default:
                         // Technical error but with user-friendly message
-                        setMessage('Problème de connexion avec Google');
+                        Alert.alert(
+                            "Erreur de connexion",
+                            "Problème de connexion avec Google",
+                            [{ text: "OK" }]
+                        );
                         // Log the technical details for debugging only
                         console.error(`Code d'erreur technique: ${error.code}`);
                 }
             } else if (error.response) {
                 // Server response error - use generic message
                 console.error('Détails de l\'erreur serveur:', error.response.data);
-                setMessage('Échec de connexion au serveur');
+                Alert.alert(
+                    "Erreur serveur",
+                    "Échec de connexion au serveur",
+                    [{ text: "OK" }]
+                );
             } else {
                 // Generic error - user-friendly message
-                setMessage('Problème de connexion');
+                Alert.alert(
+                    "Erreur",
+                    "Problème de connexion",
+                    [{ text: "OK" }]
+                );
             }
         }
     }, [login, navigation]);
@@ -367,15 +403,6 @@ const Connexion = ({ navigation }) => {
                 <Box alignItems="center" mt={20}>
                     <LogoSvg />
                 </Box>
-
-                {/* Message d'erreur */}
-                {message ? (
-                    <Box mt={4} p={4} bg="red.100" borderRadius="md">
-                        <Text color="red.500" fontFamily="SF-Pro-Display-Regular">
-                            {message}
-                        </Text>
-                    </Box>
-                ) : null}
 
                 {/* Section de connexion */}
                 <Box alignItems="center" mb={4}>
@@ -443,7 +470,7 @@ const Connexion = ({ navigation }) => {
                         }}
                         onPress={() => navigation.navigate('Inscription')}
                     >
-                        Enfait je n’ai pas de compte{' '}
+                        Enfait je n'ai pas de compte{' '}
                         <Text color="black" fontFamily="SF-Pro-Display-Regular" fontSize="14px">
                             🙂
                         </Text>
@@ -492,8 +519,6 @@ const Connexion = ({ navigation }) => {
                             </Text>
                         </HStack>
                     </Button>
-
-
 
                     <Link
                         px={10}

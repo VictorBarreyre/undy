@@ -1,16 +1,18 @@
 import React, { useState, useContext, useCallback, useRef, useEffect } from 'react';
-import { VStack, Box, Input, Button, Text, Link, ScrollView, Pressable, Icon } from 'native-base';
-import { Animated, View } from 'react-native';
+import { VStack, Box, Input, Button, Text, Link, ScrollView, Pressable, Icon, HStack } from 'native-base';
+import { Animated, View, Platform, Alert } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faGoogle, faApple } from '@fortawesome/free-brands-svg-icons';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import API_URL from '../../infrastructure/config/config';
 import { styles } from '../../infrastructure/theme/styles';
 import LogoSvg from '../littlecomponents/Undy';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
-
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { GOOGLE_WEBCLIENT_ID, GOOGLE_IOS_ID } from '@env';
 
 const Inscription = ({ navigation }) => {
     const { login } = useContext(AuthContext);
@@ -19,12 +21,33 @@ const Inscription = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [message, setMessage] = useState('');
+    const [isAppleSignInSupported, setIsAppleSignInSupported] = useState(false);
 
     // Animation setup for background rotation
     const rotateValue = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
+        // Configuration des services de connexion
+        GoogleSignin.configure({
+            webClientId: GOOGLE_WEBCLIENT_ID,
+            iosClientId: GOOGLE_IOS_ID,
+            offlineAccess: true,
+            scopes: ['email', 'profile'],
+            forceCodeForRefreshToken: true
+        });
+
+        const checkAppleSignInSupport = async () => {
+            try {
+                const supported = await appleAuth.isSupported;
+                setIsAppleSignInSupported(supported);
+            } catch (error) {
+                console.error('Erreur de vérification Apple Sign In:', error);
+            }
+        };
+
+        checkAppleSignInSupport();
+
+        // Animation de rotation
         Animated.loop(
             Animated.timing(rotateValue, {
                 toValue: 1,
@@ -32,6 +55,10 @@ const Inscription = ({ navigation }) => {
                 useNativeDriver: true,
             })
         ).start();
+
+        return () => {
+            // Cleanup
+        };
     }, []);
 
     const rotateAnimation = rotateValue.interpolate({
@@ -41,60 +68,216 @@ const Inscription = ({ navigation }) => {
 
     const handleAppleLogin = useCallback(async () => {
         try {
-          // Vérifier si Apple Sign In est pris en charge
-          const isSupported = await appleAuth.isSupported;
-          if (!isSupported) {
-            setMessage('Connexion Apple non disponible sur cet appareil');
-            return;
-          }
-      
-          // Demander l'authentification Apple
-          const appleAuthRequestResponse = await appleAuth.performRequest({
-            requestedOperation: appleAuth.Operation.LOGIN,
-            requestedScopes: [
-              appleAuth.Scope.EMAIL, 
-              appleAuth.Scope.FULL_NAME
-            ]
-          });
-      
-          // Vérifier l'état des identifiants
-          const credentialState = await appleAuth.getCredentialStateForUser(
-            appleAuthRequestResponse.user
-          );
-      
-          // Vérifier si l'utilisateur est autorisé
-          if (credentialState === appleAuth.State.AUTHORIZED) {
-            const axiosInstance = await createAxiosInstance();
+            console.log('1. Début de la connexion Apple');
             
-            // Envoyer les données à votre backend
-            const response = await axiosInstance.post('/api/users/apple-login', {
-              identityToken: appleAuthRequestResponse.identityToken,
-              authorizationCode: appleAuthRequestResponse.authorizationCode,
-              fullName: {
-                givenName: appleAuthRequestResponse.fullName?.givenName,
-                familyName: appleAuthRequestResponse.fullName?.familyName
-              }
-            });
-      
-            // Connexion réussie
-            await login(response.data.token, response.data.refreshToken);
-            navigation.navigate('HomeTab', { screen: 'MainFeed' });
-          }
+            const isSupported = await appleAuth.isSupported;
+            console.log('2. Apple Sign In supporté:', isSupported);
+            
+            if (!isSupported) {
+                Alert.alert("Service non disponible", "Connexion Apple non disponible sur cet appareil");
+                return;
+            }
+            
+            console.log('3. Tentative d\'authentification Apple');
+            let appleAuthRequestResponse;
+            
+            try {
+                appleAuthRequestResponse = await appleAuth.performRequest({
+                    requestedOperation: appleAuth.Operation.LOGIN,
+                    requestedScopes: [
+                        appleAuth.Scope.EMAIL,
+                        appleAuth.Scope.FULL_NAME
+                    ]
+                });
+                console.log('4. Réponse reçue de Apple');
+            } catch (appleAuthError) {
+                console.error('Erreur performRequest:', {
+                    message: appleAuthError.message,
+                    code: appleAuthError.code,
+                    name: appleAuthError.name
+                });
+                throw new Error(`Erreur lors de la demande Apple: ${appleAuthError.message}`);
+            }
+            
+            if (!appleAuthRequestResponse.identityToken) {
+                console.error('6. ERREUR: Pas d\'identity token reçu!');
+                throw new Error('Authentification Apple incomplète: pas de token reçu');
+            }
+            
+            let credentialState;
+            try {
+                credentialState = await appleAuth.getCredentialStateForUser(
+                    appleAuthRequestResponse.user
+                );
+                console.log('8. État des identifiants obtenu:', credentialState);
+            } catch (credentialError) {
+                console.error('Erreur de vérification des identifiants:', {
+                    message: credentialError.message,
+                    code: credentialError.code
+                });
+                throw new Error(`Erreur de vérification des identifiants: ${credentialError.message}`);
+            }
+            
+            if (credentialState === appleAuth.State.AUTHORIZED) {
+                console.log('9. Identifiants autorisés, préparation de l\'envoi au serveur');
+                
+                const instance = getAxiosInstance();
+                
+                if (!instance) {
+                    throw new Error('Impossible de créer l\'instance Axios');
+                }
+                
+                const requestData = {
+                    identityToken: appleAuthRequestResponse.identityToken,
+                    authorizationCode: appleAuthRequestResponse.authorizationCode,
+                    fullName: {
+                        givenName: appleAuthRequestResponse.fullName?.givenName,
+                        familyName: appleAuthRequestResponse.fullName?.familyName
+                    }
+                };
+                
+                let response;
+                try {
+                    response = await instance.post('/api/users/apple-login', requestData);
+                } catch (serverError) {
+                    console.error('Erreur de communication avec le serveur:', {
+                        message: serverError.message,
+                        responseStatus: serverError.response?.status,
+                        responseData: serverError.response?.data
+                    });
+                    throw new Error(`Erreur serveur: ${serverError.message}`);
+                }
+                
+                await login(response.data.token, response.data.refreshToken);
+                navigation.navigate('HomeTab', { screen: 'MainFeed' });
+            } else {
+                console.error('ERREUR: Identifiants non autorisés, état:', credentialState);
+                throw new Error(`Identifiants Apple non autorisés (état: ${credentialState})`);
+            }
         } catch (error) {
-          console.error('Erreur de connexion Apple :', error);
-          
-          // Gérer différents types d'erreurs
-          if (error.response) {
-            setMessage(error.response.data.message || 'Échec de la connexion Apple');
-          } else if (error.code === appleAuth.Error.CANCELED) {
-            setMessage('Connexion Apple annulée');
-          } else {
-            setMessage('Une erreur est survenue');
-          }
+            console.error('Erreur globale de connexion Apple:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
+            
+            if (error.response) {
+                Alert.alert("Erreur", error.response.data?.message || "Échec de la connexion Apple");
+            } else if (error.code === appleAuth.Error.CANCELED) {
+                // Ne rien faire quand l'utilisateur annule
+                return;
+            } else {
+                Alert.alert("Erreur", `Problème lors de la connexion: ${error.message}`);
+            }
         }
-      }, [login, navigation]);
+    }, [login, navigation]);
 
-      
+    const handleGoogleLogin = useCallback(async () => {
+        try {
+            console.log('1. Début de la connexion Google');
+            
+            // Configuration de GoogleSignin a déjà été faite dans useEffect
+            
+            // Nettoyage des sessions précédentes
+            try {
+                await GoogleSignin.signOut();
+            } catch (signOutError) {
+                // Erreur silencieuse, normal si pas déjà connecté
+                console.log('Erreur de déconnexion (normal):', signOutError.message);
+            }
+            
+            // Vérification des services Google Play (pour Android)
+            await GoogleSignin.hasPlayServices({
+                showPlayServicesUpdateDialog: true
+            });
+            
+            // Tentative de connexion
+            const userInfo = await GoogleSignin.signIn();
+            
+            // Obtenir l'access token
+            const tokens = await GoogleSignin.getTokens();
+            
+            if (!tokens.accessToken) {
+                throw new Error('Aucun access token récupéré');
+            }
+            
+            // Connexion au serveur
+            const instance = getAxiosInstance();
+            
+            if (!instance) {
+                throw new Error('Impossible de créer l\'instance Axios');
+            }
+            
+            const response = await instance.post('/api/users/google-login', 
+                { 
+                    token: tokens.accessToken,
+                    tokenType: 'access_token',
+                    userData: userInfo.user
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+            
+            // Connexion locale avec les tokens
+            await login(response.data.token, response.data.refreshToken);
+            
+            // Navigation vers la page principale
+            navigation.navigate('HomeTab', { screen: 'MainFeed' });
+            
+        } catch (error) {
+            console.error('Erreur détaillée de connexion Google:', error.message);
+            
+            // Gestion spécifique des erreurs Google Sign-In
+            if (error.code) {
+                switch (error.code) {
+                    case statusCodes.SIGN_IN_CANCELLED:
+                        // Ne rien afficher quand l'utilisateur annule
+                        console.log('Connexion annulée par l\'utilisateur');
+                        return;
+                        
+                    case statusCodes.IN_PROGRESS:
+                        // Ne rien afficher non plus
+                        console.log('Connexion déjà en cours');
+                        return;
+                        
+                    case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+                        Alert.alert(
+                            "Service indisponible",
+                            "Les services Google Play ne sont pas disponibles sur cet appareil",
+                            [{ text: "OK" }]
+                        );
+                        break;
+                        
+                    default:
+                        Alert.alert(
+                            "Erreur de connexion",
+                            "Un problème est survenu lors de la connexion avec Google",
+                            [{ text: "OK" }]
+                        );
+                        // Log technique pour le débogage
+                        console.error(`Code d'erreur technique: ${error.code}`);
+                }
+            } else if (error.response) {
+                // Erreur de réponse du serveur
+                console.error('Détails de l\'erreur serveur:', error.response.data);
+                Alert.alert(
+                    "Erreur de connexion",
+                    "Le serveur n'a pas pu traiter votre demande",
+                    [{ text: "OK" }]
+                );
+            } else {
+                // Erreur générique
+                Alert.alert(
+                    "Erreur de connexion",
+                    "Un problème est survenu pendant la connexion",
+                    [{ text: "OK" }]
+                );
+            }
+        }
+    }, [login, navigation]);
 
     const handleRegister = useCallback(async () => {
         try {
@@ -117,10 +300,19 @@ const Inscription = ({ navigation }) => {
             if (response.data.token) {
                 console.log('Inscription réussie:', response.data);
                 await login(response.data.token, response.data.refreshToken);
-                setMessage('Inscription réussie, connexion en cours...');
+                Alert.alert(
+                    "Inscription réussie",
+                    "Votre compte a été créé avec succès!",
+                    [{ text: "OK" }]
+                );
+                navigation.navigate('HomeTab', { screen: 'MainFeed' });
             } else {
                 console.error('Erreur: Token non reçu.');
-                setMessage('Erreur lors de la génération du token.');
+                Alert.alert(
+                    "Erreur d'inscription",
+                    "Erreur lors de la génération du token.",
+                    [{ text: "OK" }]
+                );
             }
         } catch (error) {
             console.error('Erreur complète:', {
@@ -128,9 +320,13 @@ const Inscription = ({ navigation }) => {
                 response: error.response?.data,
                 config: error.config
             });
-            setMessage(error.response?.data?.message || "Erreur lors de l'inscription");
+            Alert.alert(
+                "Erreur d'inscription",
+                error.response?.data?.message || "Erreur lors de l'inscription",
+                [{ text: "OK" }]
+            );
         }
-    }, [name, email, password, login]);
+    }, [name, email, password, login, navigation]);
 
 
     return (
@@ -159,14 +355,6 @@ const Inscription = ({ navigation }) => {
                 <Box alignItems="center" mt={16}>
                     <LogoSvg />
                 </Box>
-
-                {message ? (
-                    <Box mt={4} p={4} bg="red.100" borderRadius="md">
-                        <Text color="red.500" fontFamily="SF-Pro-Display-Regular">
-                            {message}
-                        </Text>
-                    </Box>
-                ) : null}
 
                 {/* Form Section */}
                 <Box alignItems="center" mb={4}>
@@ -227,10 +415,11 @@ const Inscription = ({ navigation }) => {
                         S'inscrire
                     </Button>
 
-                    {/* Link to Login */}
-                    <Link
+                        {/* Link to Login */}
+                        <Link
                         px={10}
                         mt={4}
+                        mb={4}
                         _text={{
                             color: 'black',
                             fontFamily: 'SF-Pro-Display-Regular',
@@ -241,10 +430,76 @@ const Inscription = ({ navigation }) => {
                         }}
                         onPress={() => navigation.navigate('Connexion')}
                     >
-                        J’ai déjà un compte{' '}
+                        J'ai déjà un compte{' '}
                         <Text color="black" fontFamily="SF-Pro-Display-Regular" fontSize="14px">
                             🙂
                         </Text>
+                    </Link>
+                    
+
+                    {/* Séparateur avec "ou" */}
+                    <HStack w="90%" mt={4} mb={2} alignItems="center" opacity={0.8}>
+                        <Box flex={1} h="1px" bg="#94A3B8" />
+                        <Text style={styles.caption} mx={2} color="#94A3B8">ou</Text>
+                        <Box flex={1} h="1px" bg="#94A3B8" />
+                    </HStack>
+
+                    {/* Bouton Apple Sign In (iOS uniquement) */}
+                    {Platform.OS === 'ios' && isAppleSignInSupported && (
+                        <Button
+                            mt={2}
+                            paddingY={4}
+                            w="90%"
+                            bg="black"
+                            _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
+                            justifyContent="center"
+                            onPress={handleAppleLogin}
+                        >
+                            <HStack space={2} alignItems="center" justifyContent="center">
+                                <FontAwesomeIcon icon={faApple} size={16} color="#fff" />
+                                <Text color="white" fontFamily="SF-Pro-Display-Bold">
+                                    Continue with Apple
+                                </Text>
+                            </HStack>
+                        </Button>
+                    )}
+
+                    {/* Bouton Google */}
+                    <Button
+                        mt={2}
+                        mb={4}
+                        paddingY={4}
+                        w="90%"
+                        bg="white"
+                        _text={{ fontFamily: 'SF-Pro-Display-Bold' }}
+                        justifyContent="center"
+                        onPress={handleGoogleLogin}
+                    >
+                        <HStack space={2} alignItems="center" justifyContent="center">
+                            <FontAwesomeIcon icon={faGoogle} size={16} color="#000" />
+                            <Text color="black" fontFamily="SF-Pro-Display-Bold">
+                                Continue with Google
+                            </Text>
+                        </HStack>
+                    </Button>
+
+                
+                    {/* Politique de confidentialité */}
+                    <Link
+                        px={10}
+                        mt={4}
+                        style={styles.littleCaption}
+                        _text={{
+                            color: 'black',
+                            fontFamily: 'SF-Pro-Display-Regular',
+                            fontSize: '12',
+                            textAlign: 'center',
+                            lineHeight: '14',
+                            textDecoration: 'none'
+                        }}
+                    >
+                        En vous inscrivant, vous acceptez nos Conditions d'utilisation et
+                        Politiques de confidentialité
                     </Link>
                 </Box>
             </ScrollView>
