@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect,useRef } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Dimensions, Alert, Animated } from 'react-native';
 import { VStack, Box, Text, Pressable, Image, HStack, FlatList, Spinner } from 'native-base';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
@@ -9,12 +9,12 @@ import { Background } from '../../navigation/Background';
 import SecretCard from '../components/SecretCard';
 import TypewriterLoader from '../components/TypewriterLoader';
 import { launchImageLibrary } from 'react-native-image-picker';
-
+import { useTranslation } from 'react-i18next';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-
 export default function Profile({ navigation }) {
+    const { t } = useTranslation();
     const { userData, setUserData, userToken, handleProfileImageUpdate, getImageSource } = useContext(AuthContext);
     const { fetchUserSecretsWithCount, fetchPurchasedSecrets } = useCardData();
     const [secretCount, setSecretCount] = useState(0);
@@ -29,7 +29,6 @@ export default function Profile({ navigation }) {
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const photoUpdateAnim = useRef(new Animated.Value(1)).current;
-
 
     const startAnimation = () => {
         // Reset la valeur
@@ -58,7 +57,7 @@ export default function Profile({ navigation }) {
                 startAnimation(); // Démarrer l'animation après le chargement
 
             } catch (error) {
-                console.error('Erreur chargement données:', error);
+                console.error(t('profile.errors.loadingData'), error);
                 setError(error.message);
             } finally {
                 setIsLoading(false);
@@ -69,14 +68,11 @@ export default function Profile({ navigation }) {
         loadUserData();
     }, []);
 
-
-
-
     const tabs = [
         {
-            title: 'Vos hushy',
+            title: t('profile.tabs.yourSecrets'),
             content: isLoading ? (
-                <Text>Chargement...</Text>
+                <Text>{t('profile.loading')}</Text>
             ) : (
                 <Box flex={1} width="100%" height="100%">
                     <FlatList
@@ -96,7 +92,7 @@ export default function Profile({ navigation }) {
                         ListEmptyComponent={
                             <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
                                 <Text style={styles.h4} textAlign="center" mt={4}>
-                                    Wow mais c'est désert ici
+                                    {t('profile.emptyList')}
                                 </Text>
                             </VStack>
                         }
@@ -105,9 +101,9 @@ export default function Profile({ navigation }) {
             )
         },
         {
-            title: 'Ceux des autres',
+            title: t('profile.tabs.othersSecrets'),
             content: isLoading ? (
-                <Text>Chargement...</Text>
+                <Text>{t('profile.loading')}</Text>
             ) : (
                 <Box flex={1} width="100%" height="100%">
                     <FlatList
@@ -127,7 +123,7 @@ export default function Profile({ navigation }) {
                         ListEmptyComponent={
                             <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
                                 <Text style={styles.h4} textAlign="center" mt={4}>
-                                    Wow mais c'est désert ici
+                                    {t('profile.emptyList')}
                                 </Text>
                             </VStack>
                         }
@@ -165,7 +161,6 @@ export default function Profile({ navigation }) {
         ]).start();
       };
 
-
     const handleImageSelection = async () => {
         try {
           setIsUploadingImage(true);
@@ -179,12 +174,12 @@ export default function Profile({ navigation }) {
           });
           
           if (result.didCancel) {
-            console.log('Upload annulé par l\'utilisateur');
+            console.log(t('profile.imagePicker.canceled'));
             return;
           }
           
           if (!result.assets || !result.assets[0]) {
-            throw new Error('Aucune image sélectionnée');
+            throw new Error(t('profile.imagePicker.noImageSelected'));
           }
           
           const imageAsset = result.assets[0];
@@ -197,19 +192,17 @@ export default function Profile({ navigation }) {
             animateProfilePhoto();
           }
         } catch (error) {
-          console.error('Erreur complète:', error);
+          console.error(t('profile.errors.fullError'), error);
           Alert.alert(
-            "Erreur",
-            error.message || "Impossible de changer la photo de profil"
+            t('profile.errors.title'),
+            error.message || t('profile.errors.unableToChangeProfilePicture')
           );
         } finally {
           setIsUploadingImage(false);
         }
       };
 
-
-    const content = "Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l'imprimerie depuis les années 1500, quand un imprimeur anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n'a pas fait que survivre cinq siècles, mais s'est aussi adapté à la bureautique informatique, sans que son contenu n'en soit modifié"
-
+    const content = t('profile.dummyText');
 
     if (isLoading) {
         return <TypewriterLoader />;
@@ -233,7 +226,7 @@ export default function Profile({ navigation }) {
 
                         {/* Texte */}
                         <Text style={styles.h3} width='auto' textAlign="center">
-                            Mon Profil
+                            {t('profile.title')}
                         </Text>
 
                         {/* Icône Settings */}
@@ -249,7 +242,7 @@ export default function Profile({ navigation }) {
                                     source={{
                                         uri: userData?.profilePicture
                                     }}
-                                    alt={`${userData?.name || 'User'}'s profile`}
+                                    alt={t('profile.profilePictureAlt', { name: userData?.name || t('profile.defaultName') })}
                                     width={75}
                                     height={75}
                                     borderRadius={50}
@@ -287,15 +280,15 @@ export default function Profile({ navigation }) {
                                 <Text style={styles.h4} fontWeight="bold" color="black">
                                     {secretCount || 0}
                                 </Text>
-                                <Text style={styles.caption}>Secrets</Text>
+                                <Text style={styles.caption}>{t('profile.stats.secrets')}</Text>
                             </VStack>
                             <VStack alignItems="center">
                                 <Text style={styles.h4} fontWeight="bold" color="black">0</Text>
-                                <Text style={styles.caption}>Abonnés</Text>
+                                <Text style={styles.caption}>{t('profile.stats.followers')}</Text>
                             </VStack>
                             <VStack alignItems="center">
                                 <Text style={styles.h4} fontWeight="bold" color="black">0</Text>
-                                <Text style={styles.caption}>Abonnements</Text>
+                                <Text style={styles.caption}>{t('profile.stats.following')}</Text>
                             </VStack>
                         </HStack>
                     </HStack>
@@ -305,7 +298,6 @@ export default function Profile({ navigation }) {
                         <Text color='#94A3B8'>
                             {!isExpanded ? (
                                 <>
-
                                     <Text style={styles.caption}>
                                         {truncateText(content)}
                                     </Text>
@@ -314,7 +306,7 @@ export default function Profile({ navigation }) {
                                         color="#FF78B2"
                                         onPress={() => setIsExpanded(true)}
                                     >
-                                        Voir plus
+                                        {t('profile.seeMore')}
                                     </Text>
                                 </>
                             ) : (
@@ -325,7 +317,7 @@ export default function Profile({ navigation }) {
                                         color="#FF78B2"
                                         onPress={() => setIsExpanded(false)}
                                     >
-                                        {" "}Voir moins
+                                        {" "}{t('profile.seeLess')}
                                     </Text>
                                 </>
                             )}
@@ -360,12 +352,8 @@ export default function Profile({ navigation }) {
                         <Text>{tabs[activeTab].content}</Text>
                     </Box>
                 </VStack>
-
-
             </Box>
             </Animated.View>
-        </Background >
+        </Background>
     );
 };
-
-

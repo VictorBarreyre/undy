@@ -6,14 +6,13 @@ import { Box, Text, HStack, VStack, Image, Select, Input, CheckIcon } from 'nati
 import { Alert, Pressable, Dimensions, StyleSheet, Linking, KeyboardAvoidingView, Keyboard, Platform, TouchableWithoutFeedback, FlatList, Share } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
 import { FontAwesome } from '@expo/vector-icons'; // Assurez-vous que FontAwesome est disponible
-
+import { useTranslation } from 'react-i18next';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-
 const AddSecret = () => {
-
+    const { t } = useTranslation();
     const { userData } = useContext(AuthContext); // Utilisation correcte de useContext
     const { data, handlePostSecret, handleStripeOnboardingRefresh, handleStripeReturn } = useCardData();
     const [secretText, setSecretText] = useState('');
@@ -21,33 +20,14 @@ const AddSecret = () => {
     const [price, setPrice] = useState(''); // État pour le prix
     const [secretPostAvailable, setSecretPostAvailable] = useState('false')
     const [expiresIn, setExpiresIn] = useState(7);
-    const [buttonMessage, setButtonMessage] = useState('Poster le secret');
+    const [buttonMessage, setButtonMessage] = useState(t('addSecret.postSecret'));
     const [boxHeight, setBoxHeight] = useState('70%');
     const [alertStep, setAlertStep] = useState(1);
     const { handleShareSecret } = useCardData();
 
-
-
     const MIN_PRICE = 3;
     const MIN_WORDS = 2;
-    const CATEGORIES = [
-        "Confession",
-        "Amour",
-        "Travail",
-        "Famille",
-        "Argent",
-        "Amitié",
-        "Trahison",
-        "Regret",
-        "Réussite",
-        "Rêve",
-        "Honte",
-        "Évènement",
-        "Secret de famille",
-        "Infidélité",
-        "Culpabilité"
-    ];
-
+    const CATEGORIES = t('addSecret.categories', { returnObjects: true });
 
     const labels = [...new Set(data.map((item) => item.label))];
 
@@ -75,14 +55,10 @@ const AddSecret = () => {
                     (parsedUrl.hostname === 'stripe-return' || parsedUrl.hostname === 'profile')
                 ) {
                     const result = await handleStripeReturn(fullUrl);
-    
-        
-    
-        
                 }
             } catch (error) {
-                console.error('Deep link error:', error);
-                Alert.alert('Erreur', 'Impossible de traiter le lien');
+                console.error(t('addSecret.errors.deepLink'), error);
+                Alert.alert(t('addSecret.errors.title'), t('addSecret.errors.unableToProcessLink'));
             }
         };
     
@@ -99,9 +75,7 @@ const AddSecret = () => {
         return () => {
             subscription.remove();
         };
-    }, [handleStripeReturn]);
-
-
+    }, [handleStripeReturn, t]);
 
     const handlePress = async () => {
         try {
@@ -114,11 +88,11 @@ const AddSecret = () => {
     
             if (result.requiresStripeSetup) {
                 Alert.alert(
-                    "Configuration nécessaire",
-                    "Votre secret a été créé. Pour pouvoir le vendre, vous devez configurer votre compte de paiement.",
+                    t('addSecret.alerts.setupRequired.title'),
+                    t('addSecret.alerts.setupRequired.message'),
                     [
                         {
-                            text: "Configurer maintenant",
+                            text: t('addSecret.alerts.setupRequired.configureNow'),
                             onPress: async () => {
                                 try {
                                     const stripeStatus = await handleStripeOnboardingRefresh();
@@ -126,31 +100,31 @@ const AddSecret = () => {
                                     if (stripeStatus.stripeOnboardingUrl) {
                                         await Linking.openURL(stripeStatus.stripeOnboardingUrl);
                                     } else {
-                                        Alert.alert('Information', stripeStatus.message);
+                                        Alert.alert(t('addSecret.alerts.info'), stripeStatus.message);
                                     }
                                 } catch (error) {
-                                    Alert.alert('Erreur', error.message);
+                                    Alert.alert(t('addSecret.errors.title'), error.message);
                                 }
                             }
                         },
                         {
-                            text: "Plus tard",
+                            text: t('addSecret.alerts.later'),
                             style: "cancel"
                         }
                     ]
                 );
             } else {
                 Alert.alert(
-                    "Félicitations ! 🎉",
-                    "Votre secret a été publié avec succès. Il est maintenant disponible à la vente !",
+                    t('addSecret.alerts.success.title'),
+                    t('addSecret.alerts.success.message'),
                     [
                         {
-                            text: "Partager maintenant 🔐",
+                            text: t('addSecret.alerts.success.shareNow'),
                             onPress: async () => {
                                 try {
                                     await handleShareSecret(result.secret);
                                 } catch (error) {
-                                    Alert.alert('Erreur', 'Impossible de partager le secret.');
+                                    Alert.alert(t('addSecret.errors.title'), t('addSecret.errors.unableToShare'));
                                 } finally {
                                     // Reset form fields
                                     setSecretText('');
@@ -161,7 +135,7 @@ const AddSecret = () => {
                             }
                         },
                         {
-                            text: "Plus tard",
+                            text: t('addSecret.alerts.later'),
                             style: "cancel",
                             onPress: () => {
                                 // Reset form fields
@@ -175,10 +149,9 @@ const AddSecret = () => {
                 );
             }
         } catch (error) {
-            Alert.alert('Erreur', error.message);
+            Alert.alert(t('addSecret.errors.title'), error.message);
         }
     };
-
 
     // Surveille les changements dans les champs et met à jour l'état de `secretPostAvailable`
     useEffect(() => {
@@ -190,15 +163,15 @@ const AddSecret = () => {
 
         // Définir le message approprié
         if (!isTextValid) {
-            setButtonMessage('Trop court pour poster !');
+            setButtonMessage(t('addSecret.validation.tooShort'));
         } else if (!isPriceValid) {
-            setButtonMessage('Le prix doit être supérieur à 5€');
+            setButtonMessage(t('addSecret.validation.priceRequirement', { minPrice: MIN_PRICE }));
         } else if (!isLabelValid) {
-            setButtonMessage('Sélectionnez une catégorie');
+            setButtonMessage(t('addSecret.validation.selectCategory'));
         } else {
-            setButtonMessage('Poster le secret');
+            setButtonMessage(t('addSecret.postSecret'));
         }
-    }, [secretText, selectedLabel, price]);
+    }, [secretText, selectedLabel, price, t]);
 
     return (
         <Background>   {/* KeyboardAvoidingView pour gérer le clavier */}
@@ -224,7 +197,7 @@ const AddSecret = () => {
                             >
                                 <VStack style={styles.containerAddSecret} space={4}>
                                     <Text style={styles.h3}>
-                                        Ajouter un hushy
+                                        {t('addSecret.addHushy')}
                                     </Text>
                                     <Box
                                         display="flex"
@@ -243,7 +216,7 @@ const AddSecret = () => {
                                             <HStack alignItems="center" justifyContent="space-between" width="97%">
                                                 <Box flex={1} mr={4} ml={2}>
                                                     <Text style={styles.h5}>
-                                                        Posté par {userData?.name || 'Aucune description disponible.'}
+                                                        {t('addSecret.postedBy')} {userData?.name || t('addSecret.noDescriptionAvailable')}
                                                     </Text>
                                                 </Box>
                                                 <Image
@@ -259,7 +232,7 @@ const AddSecret = () => {
                                                 <Input
                                                     value={secretText}
                                                     onChangeText={(text) => setSecretText(text)}
-                                                    placeholder="Quoi de neuf ?"
+                                                    placeholder={t('addSecret.whatIsNew')}
                                                     backgroundColor="transparent"
                                                     borderRadius="md"
                                                     fontSize="md"
@@ -275,17 +248,15 @@ const AddSecret = () => {
                                                 />
                                             </Box>
 
-
-
                                             <HStack mt={6} alignItems="start" alignContent="center" justifyContent="space-between" width="95%" space={2}>
                                                 <VStack width="30%" alignItems="left">
-                                                    <Text left={2} style={styles.ctalittle}>Catégorie</Text>
+                                                    <Text left={2} style={styles.ctalittle}>{t('addSecret.category')}</Text>
                                                     <Select
                                                         width="100%"
                                                         padding={2}
                                                         selectedValue={selectedLabel}
-                                                        accessibilityLabel="Choisissez la catégorie"
-                                                        placeholder="Choisissez la catégorie"
+                                                        accessibilityLabel={t('addSecret.chooseCategory')}
+                                                        placeholder={t('addSecret.chooseCategory')}
                                                         _placeholder={{
                                                             fontSize: 14,
                                                             lineHeight: 18,
@@ -327,7 +298,7 @@ const AddSecret = () => {
                                                 </VStack>
 
                                                 <VStack width="33%" alignItems="center">
-                                                    <Text style={styles.ctalittle}>Son prix</Text>
+                                                    <Text style={styles.ctalittle}>{t('addSecret.price')}</Text>
                                                     <Input
                                                         value={`${price}${price ? '€' : ''}`}
                                                         width="100%"
@@ -337,7 +308,7 @@ const AddSecret = () => {
                                                             const numericText = text.replace(/[^0-9]/g, '');
                                                             setPrice(numericText);
                                                         }}
-                                                        placeholder={`${MIN_PRICE}€ min`}
+                                                        placeholder={`${MIN_PRICE}€ ${t('addSecret.min')}`}
                                                         backgroundColor="transparent"
                                                         borderRadius="md"
                                                         keyboardType="numeric"
@@ -352,13 +323,13 @@ const AddSecret = () => {
                                                     />
                                                 </VStack>
                                                 <VStack width="20%" alignItems="end">
-                                                    <Text left={2} style={styles.ctalittle}>Durée</Text>
+                                                    <Text left={2} style={styles.ctalittle}>{t('addSecret.duration')}</Text>
                                                     <Select
                                                         width="100%"
                                                         padding={2}
                                                         selectedValue={expiresIn}
-                                                        accessibilityLabel="Choisir une durée"
-                                                        placeholder="Choisir une durée"
+                                                        accessibilityLabel={t('addSecret.chooseDuration')}
+                                                        placeholder={t('addSecret.chooseDuration')}
                                                         _placeholder={{
                                                             fontSize: 14,
                                                             lineHeight: 18,
@@ -384,7 +355,7 @@ const AddSecret = () => {
                                                         onValueChange={value => setExpiresIn(value)}
                                                     >
                                                         <Select.Item
-                                                            label="24 heures"
+                                                            label={t('addSecret.duration24h')}
                                                             value={1}
                                                             _text={{
                                                                 fontSize: 14,
@@ -394,7 +365,7 @@ const AddSecret = () => {
                                                             }}
                                                         />
                                                         <Select.Item
-                                                            label="7 jours"
+                                                            label={t('addSecret.duration7d')}
                                                             value={7}
                                                             _text={{
                                                                 fontSize: 14,
@@ -404,7 +375,7 @@ const AddSecret = () => {
                                                             }}
                                                         />
                                                         <Select.Item
-                                                            label="30 jours"
+                                                            label={t('addSecret.duration30d')}
                                                             value={30}
                                                             _text={{
                                                                 fontSize: 14,
@@ -416,7 +387,6 @@ const AddSecret = () => {
                                                     </Select>
                                                 </VStack>
                                             </HStack>
-
                                         </VStack>
                                     </Box>
 
@@ -425,9 +395,8 @@ const AddSecret = () => {
                                             style={[styles.caption]}
                                             color="#94A3B8"
                                             textAlign="center"
-
                                         >
-                                            Vous recevrez {calculatePriceAfterMargin(price)}€
+                                            {t('addSecret.youWillReceive', { amount: calculatePriceAfterMargin(price) })}
                                         </Text>
                                     ) : null}
                                     <Pressable
@@ -459,13 +428,11 @@ const AddSecret = () => {
                     />
                 </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
-
         </Background>
     );
 };
 
 const customStyles = StyleSheet.create({
-
     container: {
         display: 'flex',
         flex: 1,
@@ -483,6 +450,5 @@ const customStyles = StyleSheet.create({
         elevation: 5
     },
 });
-
 
 export default AddSecret;

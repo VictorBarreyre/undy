@@ -8,6 +8,8 @@ import { useNavigation } from '@react-navigation/native';
 import PaymentSheet from './PaymentSheet';
 import TypewriterSpinner from './TypewriterSpinner';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -28,6 +30,8 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   const navigation = useNavigation();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const { t } = useTranslation();
+
 
   useFocusEffect(
     React.useCallback(() => {
@@ -45,7 +49,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
           setIsLoading(true);
           await fetchUnpurchasedSecrets();
         } catch (error) {
-          console.error('Erreur de chargement initial:', error);
+          console.error(t('swipeDeck.errors.initialLoading'), error);
         } finally {
           setIsLoading(false);
         }
@@ -84,7 +88,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
           await fetchUnpurchasedSecrets();
           didInitialFetch.current = true;
         } catch (error) {
-          console.error('Erreur lors du chargement initial:', error);
+          console.error(t('swipeDeck.errors.initialLoading'), error);
         } finally {
           setIsLoading(false);
           setHasAttemptedRefresh(true);
@@ -217,12 +221,12 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     return (
       <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
         <Text style={styles.h3} textAlign="center">
-          Aucun secret disponible
+        {t('swipeDeck.noSecrets')}
         </Text>
         <Text style={styles.caption} textAlign="center" color="gray.500" mt={2}>
           {selectedFilters.length > 0
-            ? "Essayez de modifier vos filtres"
-            : "Revenez plus tard pour découvrir de nouveaux secrets"}
+              ? t('swipeDeck.tryChangingFilters')
+            : t('swipeDeck.checkBackLater')}
         </Text>
       </VStack>
     );
@@ -259,7 +263,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
         });
       });
     } catch (error) {
-      console.error('Erreur lors de l\'achat:', error);
+      console.error(t('swipeDeck.errors.purchase'), error);
       setIsLoading(false);
       setIsTransitioning(false);
       // Reset de l'animation en cas d'erreur
@@ -287,7 +291,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
           secret={currentItem}
           onPaymentSuccess={handlePaymentSuccess}
           onPaymentError={(error) => {
-            console.error('Erreur de paiement:', error);
+            console.error(t('swipeDeck.errors.payment'), error);
             setIsLoading(false);
             setIsTransitioning(false);
             fadeAnim.setValue(1);

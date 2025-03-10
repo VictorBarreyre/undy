@@ -13,11 +13,12 @@ import { GestureHandlerRootView, Swipeable, RectButton } from 'react-native-gest
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 import { FontAwesome5 } from '@expo/vector-icons';
 import LinearGradient from 'react-native-linear-gradient';
-
+import { useTranslation } from 'react-i18next';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const ConversationsList = ({ navigation }) => {
+  const { t } = useTranslation();
   const [conversations, setConversations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [openSwipeId, setOpenSwipeId] = useState(null); // Déplacez le state ici
@@ -25,10 +26,7 @@ const ConversationsList = ({ navigation }) => {
   const [lastUpdate, setLastUpdate] = useState(null);
   const { unreadCountsMap, refreshUnreadCounts } = useCardData();
 
-
   const fadeAnim = useRef(new Animated.Value(0)).current;
-
-
 
   const startAnimation = () => {
     // Reset les valeurs
@@ -40,7 +38,6 @@ const ConversationsList = ({ navigation }) => {
         duration: 500,
         useNativeDriver: true,
       }),
-
     ]).start();
   };
 
@@ -55,7 +52,7 @@ const ConversationsList = ({ navigation }) => {
       setConversations(response.data);
       startAnimation(); // Démarrer l'animation après le chargement
     } catch (error) {
-      console.error('Erreur chargement conversations:', error);
+      console.error(t('conversations.errors.loading'), error);
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +67,6 @@ const ConversationsList = ({ navigation }) => {
     }).start();
   }, [isLoading, conversations]);
 
-
   const deleteConversation = async (conversationId) => {
     const instance = getAxiosInstance();
     try {
@@ -81,25 +77,25 @@ const ConversationsList = ({ navigation }) => {
       // Mettre à jour la liste localement après suppression
       setConversations(prev => prev.filter(conv => conv._id !== conversationId));
     } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
+      console.error(t('conversations.errors.deletion'), error);
       // Vous pourriez ajouter une notification d'erreur ici
     }
   };
 
-// Supprimer un des deux useFocusEffect
-useFocusEffect(
-  React.useCallback(() => {
-    // Rafraîchir les compteurs de messages non lus
-    refreshUnreadCounts();
-    
-    const now = Date.now();
-    // Ne recharge que si plus de 5 minutes se sont écoulées depuis le dernier chargement
-    if (!lastUpdate || now - lastUpdate > 5 * 60 * 1000) {
-      fetchConversations();
-      setLastUpdate(now);
-    }
-  }, [userToken, lastUpdate])
-);
+  // Supprimer un des deux useFocusEffect
+  useFocusEffect(
+    React.useCallback(() => {
+      // Rafraîchir les compteurs de messages non lus
+      refreshUnreadCounts();
+      
+      const now = Date.now();
+      // Ne recharge que si plus de 5 minutes se sont écoulées depuis le dernier chargement
+      if (!lastUpdate || now - lastUpdate > 5 * 60 * 1000) {
+        fetchConversations();
+        setLastUpdate(now);
+      }
+    }, [userToken, lastUpdate])
+  );
 
   if (isLoading) {
     return (
@@ -120,10 +116,10 @@ useFocusEffect(
         >
           <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
             <Text style={styles.h3} textAlign="center" mt={4}>
-              Vous n'avez pas encore déverrouillé de Hushy
+              {t('conversations.noConversations')}
             </Text>
             <Text style={styles.caption} textAlign="center" color="gray.500" mt={2}>
-              Déverrouillez un Hushy pour commencer une conversation !
+              {t('conversations.unlockToStart')}
             </Text>
           </VStack>
         </Animated.View>
@@ -132,7 +128,6 @@ useFocusEffect(
   }
 
   const renderRightActions = (conversationId, dragX) => {
-
     const trans = dragX.interpolate({
       inputRange: [-70, 0],
       outputRange: [0, 70],
@@ -152,7 +147,6 @@ useFocusEffect(
           backgroundColor: 'transparent',
           justifyContent: 'center',
           alignItems: 'flex-end',
-
           transform: [{ translateX: trans }],
           opacity: opacity
         }}
@@ -177,10 +171,8 @@ useFocusEffect(
   };
 
   const renderConversation = ({ item }) => {
-
     const unreadCount = unreadCountsMap[item._id] || 0;
     console.log(`Conversation ${item._id} - unreadCount:`, unreadCount);
-
 
     let row = [];
     let prevOpenedRow;
@@ -193,14 +185,13 @@ useFocusEffect(
     };
 
     const truncateText = (text, maxLength = 50) => {
-      if (!text) return 'Sans titre';
+      if (!text) return t('conversations.untitled');
       return text.length > maxLength
         ? text.substring(0, maxLength) + '...'
         : text;
     };
 
     return (
-
       <GestureHandlerRootView>
         <Swipeable
           ref={(ref) => (row[item._id] = ref)}
@@ -225,7 +216,6 @@ useFocusEffect(
               py={4}
               borderBottomWidth={1}
               borderColor="#94A3B820"
-
             >
               <Image
                 source={
@@ -233,7 +223,7 @@ useFocusEffect(
                     ? { uri: item.secret.user.profilePicture }
                     : require('../../assets/images/default.png')
                 }
-                alt="Profile"
+                alt={t('conversations.profilePicture')}
                 width={45}
                 height={45}
                 rounded="full"
@@ -247,11 +237,12 @@ useFocusEffect(
                     <Text style={styles.littleCaption} color="#94A3B8">
                       {new Date(item.updatedAt).toLocaleDateString()}
                     </Text>
-
                   </HStack>
                 </HStack>
                 <HStack justifyContent='space-between' alignContent='center'>
-                  <Text style={styles.littleCaption} color="#94A3B8">{item.secret?.user?.name || 'Utilisateur inconnu'}</Text>
+                  <Text style={styles.littleCaption} color="#94A3B8">
+                    {item.secret?.user?.name || t('conversations.unknownUser')}
+                  </Text>
                   {unreadCount > 0 && (
                     <LinearGradient
                       colors={['#FF587E', '#CC4B8D']}
@@ -272,7 +263,6 @@ useFocusEffect(
                   )}
                 </HStack>
               </VStack>
-
             </HStack>
           </Pressable>
         </Swipeable>
@@ -291,13 +281,10 @@ useFocusEffect(
         <Box flex={1} justifyContent="flex-start" paddingTop={5}>
           <VStack paddingLeft={5} paddingRight={5} space={4}>
             <HStack alignItems="center" justifyContent="center" width="100%">
-
               {/* Texte */}
               <Text style={styles.h3} width='auto' textAlign="center">
-                Conversations
+                {t('conversations.title')}
               </Text>
-
-
             </HStack>
             <FlatList
               style={{

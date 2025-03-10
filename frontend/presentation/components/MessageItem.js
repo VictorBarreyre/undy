@@ -4,81 +4,16 @@ import { Box, Text, HStack, Image, VStack } from 'native-base';
 import LinearGradient from 'react-native-linear-gradient';
 import { styles } from '../../infrastructure/theme/styles';
 import ImageView from 'react-native-image-viewing';
+import { useTranslation } from 'react-i18next';
+import { useDateFormatter } from '../../utils/dateFormatters'; // Ajustez le chemin selon votre structure
 
-// Fonction formatage de temps importée du ChatScreen - Optimisée avec cache
-const timeFormatCache = new Map();
-const formatMessageTime = (timestamp, showFullDate = false, showTimeOnly = false) => {
-  if (!timestamp) return '';
-
-  // Créer une clé de cache basée sur les paramètres
-  const cacheKey = `${timestamp}_${showFullDate}_${showTimeOnly}`;
-
-  // Vérifier si le résultat est dans le cache
-  if (timeFormatCache.has(cacheKey)) {
-    return timeFormatCache.get(cacheKey);
-  }
-
-  try {
-    const messageDate = new Date(timestamp);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    let result = '';
-
-    if (showTimeOnly) {
-      result = messageDate.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } else if (showFullDate) {
-      if (messageDate.toDateString() === today.toDateString()) {
-        result = `Aujourd'hui, ${messageDate.toLocaleTimeString('fr-FR', {
-          hour: '2-digit',
-          minute: '2-digit'
-        })}`;
-      } else if (messageDate.toDateString() === yesterday.toDateString()) {
-        result = `Hier, ${messageDate.toLocaleTimeString('fr-FR', {
-          hour: '2-digit',
-          minute: '2-digit'
-        })}`;
-      } else {
-        result = messageDate.toLocaleString('fr-FR', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-      }
-    } else {
-      if (messageDate.toDateString() === today.toDateString()) {
-        result = 'Aujourd\'hui';
-      } else if (messageDate.toDateString() === yesterday.toDateString()) {
-        result = 'Hier';
-      } else {
-        result = messageDate.toLocaleString('fr-FR', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long'
-        });
-      }
-    }
-
-    // Stocker le résultat dans le cache
-    timeFormatCache.set(cacheKey, result);
-    return result;
-  } catch (error) {
-    console.error('Erreur de formatage de date:', error);
-    return '';
-  }
-};
-
-// Séparateur de date mémorisé pour éviter les re-renders inutiles
+// Composant séparateur de date mémorisé 
 const DateSeparator = memo(({ timestamp }) => {
+  const dateFormatter = useDateFormatter();
+  
   return (
     <Text style={styles.littleCaption} textAlign="center" color="#94A3B8" mb={4} mt={10}>
-      {formatMessageTime(timestamp, true)}
+      {dateFormatter.formatDate(timestamp)}
     </Text>
   );
 });
@@ -239,8 +174,12 @@ const MessageItem = memo(({
   index,
   messages,
   userData,
-  showTimestamps
+  showTimestamps,
+  onRetryMessage
 }) => {
+  const { t } = useTranslation();
+  const dateFormatter = useDateFormatter();
+  
   // Protection contre les valeurs null/undefined
   if (!item) return null;
 
@@ -251,12 +190,10 @@ const MessageItem = memo(({
 
   const isLastMessage = index === messages.length - 1;
 
-
   const timestampAnimation = useRef(new Animated.Value(showTimestamps ? 1 : 0)).current;
   const [isImageViewVisible, setIsImageViewVisible] = useState(false);
   const isSending = !!item.isSending;
   const sendFailed = !!item.sendFailed;
-
 
   const messageOpacity = isSending ? 0.7 : 1;
 
@@ -265,7 +202,7 @@ const MessageItem = memo(({
       return (
         <HStack alignItems="center" space={2}>
           <Text style={[styles.littleCaption, { color: 'red' }]} mr={2}>
-            Échec
+            {t('chat.messageFailed')}
           </Text>
           <TouchableOpacity 
             onPress={() => {
@@ -285,7 +222,7 @@ const MessageItem = memo(({
                 }
               ]}
             >
-              Renvoyer
+              {t('chat.retry')}
             </Text>
           </TouchableOpacity>
         </HStack>
@@ -295,7 +232,7 @@ const MessageItem = memo(({
     if (isSending) {
       return (
         <Text style={[styles.littleCaption, { color: '#94A3B8' }]} mr={2}>
-          Envoi...
+          {t('chat.sending')}
         </Text>
       );
     }
@@ -404,7 +341,7 @@ const MessageItem = memo(({
       my={0.2}
       mb={isLastMessage ? 4 : 0}  // Add extra bottom margin only for the last message
       px={2}
-      opacity={messageOpacity}  // Ajouter cette propriété
+      opacity={messageOpacity}
     >
       <HStack
         flex={1}
@@ -426,7 +363,7 @@ const MessageItem = memo(({
                 ml={2}
                 mb={1}
               >
-                {item.senderInfo?.name || 'Utilisateur'}
+                {item.senderInfo?.name || t('chat.defaultUser')}
               </Text>
               {renderMessageStatus()}
             </HStack>
@@ -474,7 +411,7 @@ const MessageItem = memo(({
               }
             ]}
           >
-            {formatMessageTime(item.timestamp, false, true)}
+            {dateFormatter.formatTimeOnly(item.timestamp)}
           </Animated.Text>
         </Animated.View>
       )}
@@ -482,14 +419,12 @@ const MessageItem = memo(({
   );
 }, (prevProps, nextProps) => {
   // Fonction de comparaison optimisée pour React.memo
-  // Retourne true si les props n'ont pas changé de manière significative
   return (
     prevProps.item.id === nextProps.item.id &&
     prevProps.showTimestamps === nextProps.showTimestamps &&
     prevProps.item.text === nextProps.item.text &&
     prevProps.item.image === nextProps.item.image &&
     prevProps.userData?._id === nextProps.userData?._id &&
-    // Les autres props comme index et messages ne devraient pas changer fréquemment
     true
   );
 });

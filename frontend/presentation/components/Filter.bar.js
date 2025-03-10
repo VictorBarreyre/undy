@@ -10,11 +10,13 @@ import { styles } from '../../infrastructure/theme/styles';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from "@react-navigation/native";
 import InviteContactsModal from './InviteContactsModals';
+import { useTranslation } from 'react-i18next';
 
 const FilterBar = ({ onFilterChange, onTypeChange }) => {
+  const { t } = useTranslation();
   const { data } = useCardData();
   const { getContacts, userData, contactsAccessEnabled, updateContactsAccess } = useContext(AuthContext);
-  const [activeButton, setActiveButton] = useState('Tous');
+  const [activeButton, setActiveButton] = useState(t('filter.all'));
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredResults, setFilteredResults] = useState([]);
@@ -51,16 +53,16 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   };
 
   const handleButtonClickType = async (buttonName) => {
-    if (buttonName === 'Contacts') {
+    if (buttonName === t('filter.contacts')) {
       if (!contactsAccessEnabled) {
         // Demander l'accès aux contacts
         Alert.alert(
-          "Accès aux contacts",
-          "Pour afficher les secrets de vos contacts, nous avons besoin d'accéder à vos contacts.",
+          t('filter.contactAccess.title'),
+          t('filter.contactAccess.message'),
           [
-            { text: "Annuler", style: "cancel" },
+            { text: t('filter.contactAccess.cancel'), style: "cancel" },
             {
-              text: "Autoriser",
+              text: t('filter.contactAccess.authorize'),
               onPress: async () => {
                 const success = await updateContactsAccess(true);
                 if (success) {
@@ -130,7 +132,12 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
     loadContacts();
   }, [userData?.contacts]);
 
-  const buttonTypes = ['Tous', 'Contacts', 'Autour de moi', 'Catégories'];
+  const buttonTypes = [
+    t('filter.all'), 
+    t('filter.contacts'), 
+    t('filter.aroundMe'), 
+    t('filter.categories')
+  ];
 
   return (
     <Box width="100%" paddingY={2} marginLeft={4}>
@@ -138,7 +145,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
         <View style={styles.containerFilter}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollContainer}>
             {buttonTypes.map((type) => {
-              if (type === 'Catégories') {
+              if (type === t('filter.categories')) {
                 return (
                   <Button
                     key={type}
@@ -236,7 +243,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
             <SafeAreaView style={styles.overlayModal}>
               <Box style={styles.overlayContent}>
                 <View style={{ flexDirection: 'row', paddingVertical: 8, justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                  <Text style={styles.h3}>Préférences</Text>
+                  <Text style={styles.h3}>{t('filter.preferences')}</Text>
                   <Pressable
                     style={styles.closeButton}
                     onPress={() => setOverlayVisible(false)}

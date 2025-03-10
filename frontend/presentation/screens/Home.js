@@ -7,24 +7,26 @@ import { Background } from '../../navigation/Background';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const Home = ({navigation}) => {
+  const { t } = useTranslation();
   const { getContacts, userData } = useContext(AuthContext);
   const [selectedFilters, setSelectedFilters] = useState([]);
-  const [activeType, setActiveType] = useState('Tous');
+  const [activeType, setActiveType] = useState(t('filter.all'));
   const [userContacts, setUserContacts] = useState([]);
   const [isContactsLoaded, setIsContactsLoaded] = useState(false);
 
   const typeTexts = {
-    Tous: "De tout le monde",
-    Contacts: "De vos contacts",
-    Suivis: "Des personnes que vous suivez"
+    [t('filter.all')]: t('home.sourceTexts.everyone'),
+    [t('filter.contacts')]: t('home.sourceTexts.fromContacts'),
+    [t('filter.following')]: t('home.sourceTexts.fromFollowing')
   };
 
   // Effet pour charger les contacts quand le filtre "Contacts" est activé
   useEffect(() => {
     const loadContacts = async () => {
-      if (activeType === 'Contacts' && !isContactsLoaded) {
+      if (activeType === t('filter.contacts') && !isContactsLoaded) {
         try {
           const contacts = await getContacts();
           if (contacts && contacts.length > 0) {
@@ -36,25 +38,25 @@ const Home = ({navigation}) => {
             setIsContactsLoaded(true);
           }
         } catch (error) {
-          console.error('Erreur lors du chargement des contacts:', error);
+          console.error(t('home.errors.contactsLoading'), error);
         }
       }
     };
 
     loadContacts();
-  }, [activeType]);
+  }, [activeType, t]);
 
   const handleFilterChange = (filters) => {
     setSelectedFilters(filters);
-    console.log("Filtres sélectionnés :", filters);
+    console.log(t('home.logs.selectedFilters'), filters);
   };
 
   const handleTypeChange = (type) => {
     setActiveType(type);
-    console.log("Type sélectionné :", type);
+    console.log(t('home.logs.selectedType'), type);
     
     // Si on passe à un type autre que "Contacts", pas besoin de charger les contacts
-    if (type !== 'Contacts') {
+    if (type !== t('filter.contacts')) {
       setIsContactsLoaded(false);
     }
   };
@@ -67,7 +69,7 @@ const Home = ({navigation}) => {
       <VStack style={styles.containerHome} space={4}>
         <VStack paddingLeft={1} space={0}>
           <HStack alignItems='center' justifyContent='space-between'>
-            <Text paddingBottom={1} style={styles.h3}>Les derniers hushys 🔥</Text>
+            <Text paddingBottom={1} style={styles.h3}>{t('home.latestHushys')}</Text>
             <FontAwesomeIcon
               icon={faEllipsis}
               size={16}

@@ -18,9 +18,12 @@ import MessageItem from '../components/MessageItem';
 import { getAxiosInstance } from '../../data/api/axiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ImageManipulator from 'react-native-image-manipulator';
-
+import { useTranslation } from 'react-i18next';
+import { useDateFormatter } from '../../utils/dateFormatters';
 
 const ChatScreen = ({ route }) => {
+  const { t } = useTranslation();
+  const dateFormatter = useDateFormatter();
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
@@ -75,7 +78,7 @@ const ChatScreen = ({ route }) => {
     
     return manipResult.uri;
   } catch (error) {
-    console.error('Erreur lors du redimensionnement:', error);
+    console.error(t('chat.errors.resizing'), error);
     // En cas d'erreur, retourner l'URI originale
     return imageUri;
   }
@@ -115,7 +118,7 @@ const ChatScreen = ({ route }) => {
       try {
         await AsyncStorage.setItem(`scroll_position_${conversationId}`, position.toString());
       } catch (error) {
-        console.error('Erreur lors de la sauvegarde de la position:', error);
+        console.error(t('chat.errors.saveScrollPosition'), error);
       }
     }
   };
@@ -130,7 +133,7 @@ const ChatScreen = ({ route }) => {
         return parseFloat(savedPosition);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement de la position:', error);
+      console.error(t('chat.errors.loadScrollPosition'), error);
     }
     return 0;
   };
@@ -183,7 +186,7 @@ const ChatScreen = ({ route }) => {
         }, 200);
       }
     } catch (error) {
-      console.error('Erreur lors de la restauration de la position:', error);
+      console.error(t('chat.errors.restoreScrollPosition'), error);
     }
   };
 
@@ -221,7 +224,7 @@ const ChatScreen = ({ route }) => {
             });
           }
         } catch (error) {
-          console.error('Erreur lors du rechargement de la conversation:', error);
+          console.error(t('chat.errors.reloadConversation'), error);
         }
       }
     });
@@ -236,7 +239,7 @@ const ChatScreen = ({ route }) => {
       unsubscribeFocus();
       unsubscribeBlur();
     };
-  }, [navigation, conversationId, conversation?.secret?._id, messages.length]);
+  }, [navigation, conversationId, conversation?.secret?._id, messages.length, t]);
 
   // Nettoyage des timeouts
   useEffect(() => {
@@ -293,7 +296,7 @@ const ChatScreen = ({ route }) => {
 
     sortedMessages.forEach((msg, index) => {
       if (!msg.createdAt) {
-        console.warn("Message sans createdAt:", msg);
+        console.warn(t('chat.errors.missingCreatedAt'), msg);
         return;
       }
 
@@ -309,7 +312,9 @@ const ChatScreen = ({ route }) => {
         formattedMessages.push({
           id: `separator-${index}`,
           type: 'separator',
-          timestamp: msg.createdAt
+          timestamp: msg.createdAt,
+          // Ajoutez la date formatée pour l'affichage
+          formattedDate: dateFormatter.formatDateOnly(msg.createdAt)
         });
       }
 
@@ -321,11 +326,14 @@ const ChatScreen = ({ route }) => {
         text: msg.content,
         sender: isCurrentUser ? 'user' : 'other',
         timestamp: msg.createdAt,
+        // Ajoutez la date et l'heure formatées pour l'affichage
+        formattedTime: dateFormatter.formatTimeOnly(msg.createdAt),
+        formattedDate: dateFormatter.formatDate(msg.createdAt),
         messageType: msg.messageType,
         image: msg.image,
         senderInfo: {
           id: messageSenderId,
-          name: userMapping[messageSenderId]?.name || msg.senderName || 'Utilisateur',
+          name: userMapping[messageSenderId]?.name || msg.senderName || t('chat.defaultUser'),
           profilePicture: userMapping[messageSenderId]?.profilePicture || null
         }
       });
@@ -334,7 +342,7 @@ const ChatScreen = ({ route }) => {
     });
 
     setMessages(formattedMessages);
-  }, [conversation, userData?._id]);
+  }, [conversation, userData?._id, t]);
 
   // Calcul du temps restant
   useEffect(() => {
@@ -346,23 +354,23 @@ const ChatScreen = ({ route }) => {
       const difference = expirationDate - now;
 
       if (difference <= 0) {
-        return 'Expiré';
+        return t('chat.expired');
       }
 
       const days = Math.floor(difference / (1000 * 60 * 60 * 24));
       const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
       const minutes = Math.floor((difference / 1000 / 60) % 60);
 
-      return `${days}j ${hours}h ${minutes}m`;
+      return t('chat.timeLeft', { days, hours, minutes });
     };
 
-    setTimeLeft(calculateTimeLeft());
+    setTimeLeft(dateFormatter.formatTimeLeft(conversation.expiresAt));
     const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
+      setTimeLeft(dateFormatter.formatTimeLeft(conversation.expiresAt));
     }, 60000);
 
     return () => clearInterval(timer);
-  }, [conversation?.expiresAt]);
+  }, [conversation?.expiresAt, t]);
 
   // Gestion de l'image sélectionnée
   useEffect(() => {
@@ -408,18 +416,17 @@ const ChatScreen = ({ route }) => {
   };
 
  // Envoi de message
-// Envoi de message
 const sendMessage = async () => {
   try {
     if (!conversationId) {
-      throw new Error('ID de conversation manquant');
+      throw new Error(t('chat.errors.missingConversationId'));
     }
 
     // Vérifier s'il y a du contenu à envoyer
     if (!message.trim() && !selectedImage) return;
 
     if (!userData?.name) {
-      throw new Error('Informations utilisateur manquantes');
+      throw new Error(t('chat.errors.missingUserInfo'));
     }
 
     // Déterminer le type de message
@@ -445,7 +452,7 @@ const sendMessage = async () => {
       isSending: true,
       senderInfo: {
         id: userData?._id || "",
-        name: userData?.name || "Utilisateur"
+        name: userData?.name || t('chat.defaultUser')
       }
     }]);
 
@@ -489,10 +496,10 @@ const sendMessage = async () => {
           
           messageContent.image = uploadResult.url;
         } else {
-          throw new Error('Format d\'image non supporté');
+          throw new Error(t('chat.errors.unsupportedImageFormat'));
         }
       } catch (uploadError) {
-        console.error('Erreur lors de l\'upload de l\'image:', uploadError);
+        console.error(t('chat.errors.imageUpload'), uploadError);
         
         // Marquer le message comme échoué
         setMessages(prev => prev.map(msg => 
@@ -501,7 +508,7 @@ const sendMessage = async () => {
             : msg
         ));
         
-        throw new Error('Échec de l\'upload de l\'image');
+        throw new Error(t('chat.errors.imageUploadFailed'));
       } finally {
         setIsUploading(false);
         setUploadProgress(0);
@@ -526,7 +533,7 @@ const sendMessage = async () => {
         )
       );
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du message:', error);
+      console.error(t('chat.errors.sendMessage'), error);
       
       // Marquer le message comme échoué
       setMessages(prev => 
@@ -541,7 +548,7 @@ const sendMessage = async () => {
     }
 
   } catch (error) {
-    console.error('Erreur lors de l\'envoi du message:', error);
+    console.error(t('chat.errors.sendMessage'), error);
   }
 };
 
@@ -565,7 +572,7 @@ const sendMessage = async () => {
         });
       }
     } catch (error) {
-      console.error('Erreur lors de la sélection d\'image:', error);
+      console.error(t('chat.errors.imageSelection'), error);
     }
   };
 
@@ -673,17 +680,17 @@ const sendMessage = async () => {
                     ? { uri: secretData.user.profilePicture }
                     : require('../../assets/images/default.png')
                 }
-                alt="Profile"
+                alt={t('chat.profilePicture')}
                 size={12}
                 rounded="full"
               />
               <VStack space={1} flex={1}>
                 <HStack justifyContent="space-between" alignItems="center">
                   <Text style={styles.h5}>
-                    {secretData?.user?.name || 'Utilisateur'}
+                    {secretData?.user?.name || t('chat.defaultUser')}
                   </Text>
                   <Text style={styles.littleCaption} color="#94A3B8">
-                    {conversation?.participants?.length || 0} participants
+                    {t('chat.participants', { count: conversation?.participants?.length || 0 })}
                   </Text>
                 </HStack>
 
@@ -694,7 +701,7 @@ const sendMessage = async () => {
                     </Text>
                   </Pressable>
                   <Text style={styles.littleCaption} color="#94A3B8">
-                    Expire dans {timeLeft}
+                    {t('chat.expiresIn')} {timeLeft}
                   </Text>
                 </HStack>
               </VStack>
@@ -720,7 +727,7 @@ const sendMessage = async () => {
                 autoscrollToTopThreshold: 10,
               }}
               bounces={false}
-              ListEmptyComponent={<Text style={styles.caption}>Aucun message</Text>}
+              ListEmptyComponent={<Text style={styles.caption}>{t('chat.noMessages')}</Text>}
               onLayout={onFlatListLayout}
             />
           </Box>
@@ -746,7 +753,7 @@ const sendMessage = async () => {
                 }}
               >
                 <Image
-                  alt='img-chat'
+                  alt={t('chat.selectedImage')}
                   source={{ uri: selectedImage.uri }}
                   style={{
                     height: 200,
@@ -825,7 +832,7 @@ const sendMessage = async () => {
                 <RN.TextInput
                   value={message}
                   onChangeText={setMessage}
-                  placeholder={selectedImage ? "Envoyer" : "Message"}
+                  placeholder={selectedImage ? t('chat.send') : t('chat.message')}
                   placeholderTextColor="#8E8E93"
                   style={{
                     minHeight: 36,
@@ -929,7 +936,7 @@ const sendMessage = async () => {
             zIndex: 1,
             marginRight: 5,
           }}>
-            Nouveaux messages
+            {t('chat.newMessages')}
           </Text>
           <FontAwesomeIcon
             icon={faChevronDown}
@@ -981,7 +988,9 @@ const sendMessage = async () => {
                 {/* Header */}
                 <HStack space={2} justifyContent="start">
                   <Text style={styles.h5}>
-                    {secretData && secretData.user ? `Posté par ${secretData.user.name}` : 'Posté par Utilisateur'}
+                    {secretData && secretData.user 
+                      ? t('chat.postedBy', { name: secretData.user.name }) 
+                      : t('chat.postedByDefault')}
                   </Text>
                 </HStack>
 
@@ -993,7 +1002,7 @@ const sendMessage = async () => {
                 <HStack justifyContent='space-between' mt={4}>
                   <Text style={styles.caption}>{secretData?.label}</Text>
                   <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
-                    Expire dans {timeLeft}
+                    {t('chat.expiresIn')} {timeLeft}
                   </Text>
                 </HStack>
               </VStack>
