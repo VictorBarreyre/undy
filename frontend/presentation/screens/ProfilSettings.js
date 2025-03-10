@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { VStack, Box, Text, Button, Pressable, Actionsheet, Input, HStack, Spinner } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Animated, StyleSheet, ScrollView, Platform, Alert, Switch as RNSwitch, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Dimensions, useWindowDimensions } from 'react-native';
+import { Linking,Animated, StyleSheet, ScrollView, Platform, Alert, Switch as RNSwitch, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Dimensions, useWindowDimensions } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -172,20 +172,117 @@ export default function Profile({ navigation }) {
 
     const toggleContacts = async () => {
         try {
-            // Mettre à jour l'UI immédiatement pour une meilleure réactivité
-            setContactsEnabled(!contactsEnabled);
-
-            // Appeler la fonction du contexte qui gère l'API
-            const success = await updateContactsAccess(!contactsEnabled);
-
-            if (!success) {
-                // Revenir à l'état précédent si l'API échoue
-                setContactsEnabled(contactsEnabled);
-                Alert.alert(t('settings.errors.title'), t('settings.errors.contactsUpdateError'));
+            // Vérifier d'abord l'état actuel de la permission au niveau système
+            let permissionCheck;
+            
+            if (Platform.OS === 'ios') {
+                permissionCheck = await Contacts.checkPermission();
+            } else {
+                permissionCheck = await PermissionsAndroid.check(
+                    PermissionsAndroid.PERMISSIONS.READ_CONTACTS
+                );
+            }
+            
+            console.log(`[Profile] État de la permission système: ${permissionCheck}`);
+            
+            // Si on veut activer les contacts
+            if (!contactsEnabled) {
+                // Gérer le cas où la permission a été refusée précédemment sur iOS
+                if (Platform.OS === 'ios' && permissionCheck === 'denied') {
+                    Alert.alert(
+                        t('filter.contactSettings.title'),
+                        t('filter.contactSettings.message'),
+                        [
+                            { text: t('filter.contactSettings.cancel'), style: "cancel" },
+                            { text: t('filter.contactSettings.openSettings'), onPress: () => Linking.openSettings() }
+                        ]
+                    );
+                    return;
+                }
+                
+                // Si la permission n'est pas accordée au niveau du système, la demander
+                if (!permissionCheck || permissionCheck === 'denied' || permissionCheck === false) {
+                    Alert.alert(
+                        t('filter.contactAccess.title'),
+                        t('filter.contactAccess.message'),
+                        [
+                            { text: t('filter.contactAccess.cancel'), style: "cancel" },
+                            {
+                                text: t('filter.contactAccess.authorize'),
+                                onPress: async () => {
+                                    try {
+                                        // Demander la permission au système
+                                        let permission;
+                                        if (Platform.OS === 'ios') {
+                                            permission = await Contacts.requestPermission();
+                                        } else {
+                                            permission = await PermissionsAndroid.request(
+                                                PermissionsAndroid.PERMISSIONS.READ_CONTACTS
+                                            );
+                                        }
+                                        
+                                        console.log(`[Profile] Résultat de la demande de permission: ${permission}`);
+                                        
+                                        // Vérifier si la permission a été accordée
+                                        const isGranted = 
+                                            permission === 'authorized' || 
+                                            permission === PermissionsAndroid.RESULTS.GRANTED;
+                                        
+                                        if (isGranted) {
+                                            // Mettre à jour l'UI immédiatement pour une meilleure réactivité
+                                            setContactsEnabled(true);
+                                            
+                                            // Appeler la fonction du contexte qui gère l'API
+                                            const success = await updateContactsAccess(true);
+                                            
+                                            if (!success) {
+                                                // Revenir à l'état précédent si l'API échoue
+                                                setContactsEnabled(false);
+                                                Alert.alert(t('settings.errors.title'), t('settings.errors.contactsUpdateError'));
+                                            }
+                                        } else if (Platform.OS === 'ios' && permission === 'denied') {
+                                            // Si l'utilisateur a refusé sur iOS, proposer d'aller dans les paramètres
+                                            Alert.alert(
+                                                t('filter.contactDenied.title'),
+                                                t('filter.contactDenied.message'),
+                                                [
+                                                    { text: t('filter.contactDenied.cancel'), style: "cancel" },
+                                                    { text: t('filter.contactDenied.openSettings'), onPress: () => Linking.openSettings() }
+                                                ]
+                                            );
+                                        }
+                                    } catch (error) {
+                                        console.error('[Profile] Erreur lors de la demande de permission:', error);
+                                        Alert.alert(t('settings.errors.title'), t('settings.errors.genericError'));
+                                    }
+                                }
+                            }
+                        ]
+                    );
+                    return;
+                }
+                
+                // Si on arrive ici, c'est que la permission est déjà accordée au niveau système
+                // On peut donc activer les contacts dans l'app
+                setContactsEnabled(true);
+                const success = await updateContactsAccess(true);
+                
+                if (!success) {
+                    setContactsEnabled(false);
+                    Alert.alert(t('settings.errors.title'), t('settings.errors.contactsUpdateError'));
+                }
+            } else {
+                // Cas de désactivation des contacts
+                setContactsEnabled(false);
+                const success = await updateContactsAccess(false);
+                
+                if (!success) {
+                    setContactsEnabled(true);
+                    Alert.alert(t('settings.errors.title'), t('settings.errors.contactsUpdateError'));
+                }
             }
         } catch (error) {
-            console.error(t('settings.errors.toggleContactsError'), error);
-            setContactsEnabled(contactsEnabled); // Revenir à l'état précédent
+            console.error('[Profile] Erreur dans toggleContacts:', error);
             Alert.alert(t('settings.errors.title'), t('settings.errors.genericError'));
         }
     };
@@ -196,12 +293,16 @@ export default function Profile({ navigation }) {
 
     const handleContactsPress = async () => {
         if (!contactsEnabled) {
-            // Si les contacts ne sont pas activés, demander l'activation
+            // Si les contacts ne sont pas activés, lancer le processus d'activation
+            // mais sans naviguer immédiatement
             await toggleContacts();
-            // Vérifier si l'activation a réussi
-            if (contactsEnabled) {
-                navigation.navigate('Contacts');
-            }
+            
+            // On vérifie après un court délai si l'activation a réussi
+            setTimeout(() => {
+                if (contactsEnabled) {
+                    navigation.navigate('Contacts');
+                }
+            }, 500);
         } else {
             // Si les contacts sont déjà activés, naviguer directement
             navigation.navigate('Contacts');

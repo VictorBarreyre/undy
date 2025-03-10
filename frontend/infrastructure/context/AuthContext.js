@@ -266,37 +266,106 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateContactsAccess = async (enabled) => {
-    try {
-      if (enabled) {
-        // Si on active, demander l'accès aux contacts
-        const contacts = await getContacts(); // Cette fonction appelle les permissions natives
+ // Dans AuthContext.js, modifiez la fonction updateContactsAccess comme suit:
 
-        if (contacts && contacts.length > 0) {
-          // Si l'accès est accordé, mettre à jour le backend via l'API
-          const result = await updateUserData({ contacts: true });
-
-          if (result.success) {
-            setContactsAccessEnabled(true);
-            return true;
-          }
-        }
-        return false;
+const updateContactsAccess = async (enabled) => {
+  console.log(`[AuthProvider] Début updateContactsAccess avec enabled=${enabled}`);
+  
+  try {
+    if (enabled) {
+      // Si on active, vérifier d'abord si la permission est déjà accordée
+      let permissionStatus;
+      
+      if (Platform.OS === 'ios') {
+        permissionStatus = await Contacts.checkPermission();
+        console.log(`[AuthProvider] iOS permission status: ${permissionStatus}`);
       } else {
-        // Si on désactive, mettre à jour le backend via l'API
-        const result = await updateUserData({ contacts: false });
-
+        permissionStatus = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.READ_CONTACTS
+        );
+        console.log(`[AuthProvider] Android permission status: ${permissionStatus}`);
+      }
+      
+      // Si la permission n'est pas déjà accordée, on la demande
+      if (permissionStatus !== 'authorized' && 
+          permissionStatus !== PermissionsAndroid.RESULTS.GRANTED && 
+          permissionStatus !== true) {
+        
+        let newPermissionStatus;
+        
+        if (Platform.OS === 'ios') {
+          newPermissionStatus = await Contacts.requestPermission();
+        } else {
+          newPermissionStatus = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
+            {
+              title: i18n.t('auth.permissions.contactsAccess.title'),
+              message: i18n.t('auth.permissions.contactsAccess.message'),
+              buttonPositive: i18n.t('auth.permissions.contactsAccess.ok')
+            }
+          );
+        }
+        
+        console.log(`[AuthProvider] Nouvelle permission status: ${newPermissionStatus}`);
+        
+        // Vérifier si la permission a bien été accordée
+        if (newPermissionStatus !== 'authorized' && 
+            newPermissionStatus !== PermissionsAndroid.RESULTS.GRANTED && 
+            newPermissionStatus !== true) {
+          console.log('[AuthProvider] Permission refusée par l\'utilisateur');
+          return false;
+        }
+      }
+      
+      // Tenter de récupérer les contacts pour vérifier l'accès
+      try {
+        const contacts = await Contacts.getAll();
+        console.log(`[AuthProvider] ${contacts.length} contacts récupérés`);
+        
+        // Mise à jour du backend
+        const result = await updateUserData({ contacts: true });
+        
         if (result.success) {
-          setContactsAccessEnabled(false);
+          // Mettre à jour l'état local SEULEMENT si l'API a réussi
+          setContactsAccessEnabled(true);
+          
+          // Mise à jour immédiate du userData pour éviter le décalage
+          setUserData(prevData => ({
+            ...prevData,
+            contacts: true
+          }));
+          
           return true;
         }
+        
+        return false;
+      } catch (contactError) {
+        console.error('[AuthProvider] Erreur lors de la récupération des contacts:', contactError);
         return false;
       }
-    } catch (error) {
-      console.error(i18n.t('auth.errors.contactsAccess'), error);
+    } else {
+      // Si on désactive, mettre à jour le backend
+      const result = await updateUserData({ contacts: false });
+      
+      if (result.success) {
+        setContactsAccessEnabled(false);
+        
+        // Mise à jour immédiate du userData
+        setUserData(prevData => ({
+          ...prevData,
+          contacts: false
+        }));
+        
+        return true;
+      }
+      
       return false;
     }
-  };
+  } catch (error) {
+    console.error('[AuthProvider] Erreur dans updateContactsAccess:', error);
+    return false;
+  }
+};
 
   useEffect(() => {
     if (userData) {
@@ -304,46 +373,99 @@ export const AuthProvider = ({ children }) => {
     }
   }, [userData]);
 
-  // Dans AuthContext.js
-  const getContactsWithAppStatus = async () => {
-    try {
-      // Récupérer les contacts du téléphone
-      const phoneContacts = await getContacts();
 
+  const getContactsWithAppStatus = async () => {
+    console.log('[AuthProvider] Début getContactsWithAppStatus');
+    
+    try {
+      // Vérifier d'abord si la permission est accordée au niveau système
+      let permissionCheck;
+      
+      if (Platform.OS === 'ios') {
+        permissionCheck = await Contacts.checkPermission();
+      } else {
+        permissionCheck = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.READ_CONTACTS
+        );
+      }
+      
+      console.log(`[AuthProvider] Permission check: ${permissionCheck}`);
+      
+      const isGranted = 
+        permissionCheck === 'authorized' || 
+        permissionCheck === PermissionsAndroid.RESULTS.GRANTED ||
+        permissionCheck === true;
+        
+      if (!isGranted) {
+        console.log('[AuthProvider] Permission non accordée, retour sans contacts');
+        return { contacts: [], hasAppUsers: false };
+      }
+      
+      // Récupérer les contacts du téléphone
+      const phoneContacts = await Contacts.getAll();
+      console.log(`[AuthProvider] ${phoneContacts.length} contacts récupérés`);
+      
       if (!phoneContacts || phoneContacts.length === 0) {
         return { contacts: [], hasAppUsers: false };
       }
-
+      
       // Récupérer les numéros de téléphone formatés
-      const phoneNumbers = phoneContacts.flatMap(contact =>
-        contact.phoneNumbers.map(phone => ({
+      const phoneNumbers = phoneContacts.flatMap(contact => {
+        if (!contact.phoneNumbers || contact.phoneNumbers.length === 0) {
+          return [];
+        }
+        
+        return contact.phoneNumbers.map(phone => ({
           contactId: contact.recordID,
-          contactName: `${contact.givenName} ${contact.familyName}`.trim(),
+          contactName: `${contact.givenName || ''} ${contact.familyName || ''}`.trim() || 'Sans nom',
           phoneNumber: phone.number.replace(/\D/g, '')
-        }))
-      );
-
+        }));
+      }).filter(entry => entry.phoneNumber && entry.phoneNumber.length > 0);
+      
+      console.log(`[AuthProvider] ${phoneNumbers.length} numéros de téléphone extraits`);
+      
+      if (phoneNumbers.length === 0) {
+        return { contacts: [], hasAppUsers: false };
+      }
+      
       // Appel à l'API pour vérifier quels numéros sont associés à des utilisateurs
       const instance = getAxiosInstance();
-      const response = await instance.post('/api/users/check-contacts', {
-        phoneNumbers: phoneNumbers.map(p => p.phoneNumber)
-      });
-
-      // Associer le statut d'utilisation de l'app à chaque contact
-      const contactsWithStatus = phoneNumbers.map(contact => ({
-        ...contact,
-        hasApp: response.data.usersPhoneNumbers.includes(contact.phoneNumber)
-      }));
-
-      // Vérifier si au moins un contact utilise l'application
-      const hasAppUsers = contactsWithStatus.some(contact => contact.hasApp);
-
-      return {
-        contacts: contactsWithStatus,
-        hasAppUsers
-      };
+      
+      if (!instance) {
+        console.error('[AuthProvider] Instance Axios non disponible');
+        return { contacts: [], hasAppUsers: false };
+      }
+      
+      try {
+        const response = await instance.post('/api/users/check-contacts', {
+          phoneNumbers: phoneNumbers.map(p => p.phoneNumber)
+        });
+        
+        console.log(`[AuthProvider] Réponse API: ${response.data.usersPhoneNumbers?.length || 0} numéros correspondants`);
+        
+        // Associer le statut d'utilisation de l'app à chaque contact
+        const contactsWithStatus = phoneNumbers.map(contact => ({
+          ...contact,
+          hasApp: response.data.usersPhoneNumbers?.includes(contact.phoneNumber) || false
+        }));
+        
+        // Vérifier si au moins un contact utilise l'application
+        const hasAppUsers = contactsWithStatus.some(contact => contact.hasApp);
+        console.log(`[AuthProvider] ${hasAppUsers ? 'Des' : 'Aucun'} contact(s) utilise(nt) l'application`);
+        
+        return {
+          contacts: contactsWithStatus,
+          hasAppUsers
+        };
+      } catch (apiError) {
+        console.error('[AuthProvider] Erreur API check-contacts:', apiError);
+        return { 
+          contacts: phoneNumbers.map(contact => ({...contact, hasApp: false})),
+          hasAppUsers: false 
+        };
+      }
     } catch (error) {
-      console.error(i18n.t('auth.errors.checkingContacts'), error);
+      console.error('[AuthProvider] Erreur dans getContactsWithAppStatus:', error);
       return { contacts: [], hasAppUsers: false };
     }
   };

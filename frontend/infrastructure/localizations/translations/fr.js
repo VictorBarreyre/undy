@@ -85,6 +85,18 @@ export default {
       "message": "Pour afficher les secrets de vos contacts, nous avons besoin d'accéder à vos contacts.",
       "cancel": "Annuler",
       "authorize": "Autoriser"
+    },
+    "contactSettings": {
+      "title": "Accès aux contacts nécessaire",
+      "message": "Vous avez précédemment refusé l'accès aux contacts. Veuillez l'activer manuellement dans les paramètres de votre téléphone.",
+      "cancel": "Annuler",
+      "openSettings": "Ouvrir les paramètres"
+    },
+    "contactDenied": {
+      "title": "Accès aux contacts nécessaire",
+      "message": "L'accès aux contacts est nécessaire pour cette fonctionnalité. Veuillez l'autoriser dans les paramètres.",
+      "cancel": "Annuler",
+      "openSettings": "Ouvrir les paramètres"
     }
   },
   "home": {

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Box, Button, Checkbox, Divider } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
-import { Modal, Pressable, Text, View, ScrollView, SafeAreaView, Alert } from 'react-native';
+import { Modal, Pressable, Text, View, ScrollView, SafeAreaView, Alert, Platform,PermissionsAndroid, Linking } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { BlurView } from '@react-native-community/blur';
@@ -11,6 +11,8 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from "@react-navigation/native";
 import InviteContactsModal from './InviteContactsModals';
 import { useTranslation } from 'react-i18next';
+import Contacts from 'react-native-contacts';
+
 
 const FilterBar = ({ onFilterChange, onTypeChange }) => {
   const { t } = useTranslation();
@@ -53,52 +55,127 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   };
 
   const handleButtonClickType = async (buttonName) => {
+    console.log(`[FilterBar] Bouton ${buttonName} cliqué, accès contacts: ${contactsAccessEnabled}`);
+    
     if (buttonName === t('filter.contacts')) {
-      if (!contactsAccessEnabled) {
-        // Demander l'accès aux contacts
-        Alert.alert(
-          t('filter.contactAccess.title'),
-          t('filter.contactAccess.message'),
-          [
-            { text: t('filter.contactAccess.cancel'), style: "cancel" },
-            {
-              text: t('filter.contactAccess.authorize'),
-              onPress: async () => {
-                const success = await updateContactsAccess(true);
-                if (success) {
-                  // Vérifier si des contacts utilisent l'application
-                  const { contacts, hasAppUsers } = await getContactsWithAppStatus();
-                  setContactsData(contacts);
-
-                  if (!hasAppUsers && contacts.length > 0) {
-                    // Aucun contact n'utilise l'application, montrer la modale d'invitation
-                    setShowInviteModal(true);
-                  } else {
-                    // Des contacts utilisent l'application, activer le filtre
-                    setActiveButton(buttonName);
-                    onTypeChange(buttonName);
+      // Vérifier si la permission a déjà été accordée
+      try {
+        // Vérifier d'abord si la permission est déjà accordée dans le système (pas juste notre état local)
+        let permissionCheck;
+        
+        if (Platform.OS === 'ios') {
+          permissionCheck = await Contacts.checkPermission();
+        } else {
+          permissionCheck = await PermissionsAndroid.check(
+            PermissionsAndroid.PERMISSIONS.READ_CONTACTS
+          );
+        }
+        
+        console.log(`[FilterBar] État de la permission système: ${permissionCheck}`);
+        
+        // Gérer le cas où la permission a été refusée précédemment sur iOS
+        if (Platform.OS === 'ios' && permissionCheck === 'denied') {
+          Alert.alert(
+            t('filter.contactSettings.title'),
+            t('filter.contactSettings.message'),
+            [
+              { text: t('filter.contactSettings.cancel'), style: "cancel" },
+              { text: t('filter.contactSettings.openSettings'), onPress: () => Linking.openSettings() }
+            ]
+          );
+          return;
+        }
+        
+        // Si la permission n'est pas accordée au niveau du système, la demander
+        if (!permissionCheck || permissionCheck === 'denied' || permissionCheck === false) {
+          Alert.alert(
+            t('filter.contactAccess.title'),
+            t('filter.contactAccess.message'),
+            [
+              { text: t('filter.contactAccess.cancel'), style: "cancel" },
+              {
+                text: t('filter.contactAccess.authorize'),
+                onPress: async () => {
+                  try {
+                    // Demander la permission au système
+                    let permission;
+                    if (Platform.OS === 'ios') {
+                      permission = await Contacts.requestPermission();
+                    } else {
+                      permission = await PermissionsAndroid.request(
+                        PermissionsAndroid.PERMISSIONS.READ_CONTACTS
+                      );
+                    }
+                    
+                    console.log(`[FilterBar] Résultat de la demande de permission: ${permission}`);
+                    
+                    // Vérifier si la permission a été accordée
+                    const isGranted = 
+                      permission === 'authorized' || 
+                      permission === PermissionsAndroid.RESULTS.GRANTED;
+                    
+                    if (isGranted) {
+                      // Mettre à jour l'état dans le contexte
+                      const success = await updateContactsAccess(true);
+                      console.log(`[FilterBar] Mise à jour du contexte: ${success}`);
+                      
+                      if (success) {
+                        // Charger les contacts et vérifier si certains utilisent l'app
+                        const contactsResult = await getContactsWithAppStatus();
+                        setContactsData(contactsResult.contacts || []);
+                        
+                        if (!contactsResult.hasAppUsers && contactsResult.contacts.length > 0) {
+                          setShowInviteModal(true);
+                        }
+                        
+                        // Dans tous les cas, on change le filtre actif
+                        setActiveButton(buttonName);
+                        onTypeChange(buttonName);
+                      }
+                    } else if (Platform.OS === 'ios' && permission === 'denied') {
+                      // Si l'utilisateur a refusé sur iOS, proposer d'aller dans les paramètres
+                      Alert.alert(
+                        t('filter.contactDenied.title'),
+                        t('filter.contactDenied.message'),
+                        [
+                          { text: t('filter.contactDenied.cancel'), style: "cancel" },
+                          { text: t('filter.contactDenied.openSettings'), onPress: () => Linking.openSettings() }
+                        ]
+                      );
+                    }
+                  } catch (error) {
+                    console.error('[FilterBar] Erreur lors de la demande de permission:', error);
                   }
                 }
               }
-            }
-          ]
-        );
-        return;
-      } else {
-        // L'accès est déjà accordé, vérifier si des contacts utilisent l'application
-        const { contacts, hasAppUsers } = await getContactsWithAppStatus();
-        setContactsData(contacts);
-
-        if (!hasAppUsers && contacts.length > 0) {
-          // Aucun contact n'utilise l'application, montrer la modale d'invitation
-          setShowInviteModal(true);
+            ]
+          );
+          return;
+        } else {
+          // Permission déjà accordée au niveau système mais pas dans notre contexte
+          if (!contactsAccessEnabled) {
+            const success = await updateContactsAccess(true);
+            console.log(`[FilterBar] Mise à jour du contexte pour une permission déjà accordée: ${success}`);
+          }
+          
+          // Charger les contacts et vérifier
+          const contactsResult = await getContactsWithAppStatus();
+          setContactsData(contactsResult.contacts || []);
+          
+          if (!contactsResult.hasAppUsers && contactsResult.contacts.length > 0) {
+            setShowInviteModal(true);
+          }
         }
+      } catch (error) {
+        console.error('[FilterBar] Erreur lors de la vérification des permissions:', error);
       }
     }
-
+    
+    // Dans tous les cas, on change le filtre actif
     setActiveButton(buttonName);
     onTypeChange(buttonName);
   };
+
 
   // Filtrer les données en fonction de l'entrée utilisateur
   useEffect(() => {

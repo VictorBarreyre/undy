@@ -81,10 +81,22 @@ export default {
     "categories": "Categories",
     "preferences": "Preferences",
     "contactAccess": {
-      "title": "Contact access",
-      "message": "To view your contacts' secrets, we need access to your contacts.",
+      "title": "Contact Access",
+      "message": "To view secrets from your contacts, we need access to your contacts.",
       "cancel": "Cancel",
       "authorize": "Authorize"
+    },
+    "contactSettings": {
+      "title": "Contact Access Required",
+      "message": "You have previously denied access to contacts. Please enable it manually in your phone's settings.",
+      "cancel": "Cancel",
+      "openSettings": "Open Settings"
+    },
+    "contactDenied": {
+      "title": "Contact Access Required",
+      "message": "Contact access is necessary for this feature. Please allow it in settings.",
+      "cancel": "Cancel",
+      "openSettings": "Open Settings"
     }
   },
 
