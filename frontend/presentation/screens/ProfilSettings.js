@@ -190,15 +190,24 @@ export default function Profile({ navigation }) {
                 // Gérer le cas où la permission a été refusée précédemment sur iOS
                 if (Platform.OS === 'ios' && permissionCheck === 'denied') {
                     Alert.alert(
-                        t('filter.contactSettings.title'),
-                        t('filter.contactSettings.message'),
-                        [
-                            { text: t('filter.contactSettings.cancel'), style: "cancel" },
-                            { text: t('filter.contactSettings.openSettings'), onPress: () => Linking.openSettings() }
-                        ]
+                      t('filter.contactSettings.title'),
+                      t('filter.contactSettings.message'),
+                      [
+                        { text: t('filter.contactSettings.cancel'), style: "cancel" },
+                        { 
+                          text: t('filter.contactSettings.openSettings'), 
+                          onPress: () => {
+                            // Essayez d'abord d'ouvrir directement les paramètres de l'app
+                            Linking.openURL('app-settings:').catch(() => {
+                              // Si cela échoue, ouvrez les paramètres généraux
+                              Linking.openSettings();
+                            });
+                          } 
+                        }
+                      ]
                     );
                     return;
-                }
+                  }
                 
                 // Si la permission n'est pas accordée au niveau du système, la demander
                 if (!permissionCheck || permissionCheck === 'denied' || permissionCheck === false) {
@@ -244,10 +253,19 @@ export default function Profile({ navigation }) {
                                             // Si l'utilisateur a refusé sur iOS, proposer d'aller dans les paramètres
                                             Alert.alert(
                                                 t('filter.contactDenied.title'),
-                                                t('filter.contactDenied.message'),
+                                                "L'accès aux contacts est nécessaire. Pour l'activer :\n\n1. Appuyez sur \"Ouvrir les paramètres\"\n2. Sélectionnez \"hushy\"\n3. Activez l'accès aux contacts",
                                                 [
                                                     { text: t('filter.contactDenied.cancel'), style: "cancel" },
-                                                    { text: t('filter.contactDenied.openSettings'), onPress: () => Linking.openSettings() }
+                                                    { 
+                                                        text: t('filter.contactDenied.openSettings'), 
+                                                        onPress: () => {
+                                                            // Pour iOS, tenter d'ouvrir directement les paramètres de l'app
+                                                            Linking.openURL('app-settings:').catch(() => {
+                                                                // Si cette URL ne fonctionne pas, on revient à la méthode standard
+                                                                Linking.openSettings();
+                                                            });
+                                                        } 
+                                                    }
                                                 ]
                                             );
                                         }

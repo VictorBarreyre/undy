@@ -74,17 +74,26 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
         console.log(`[FilterBar] État de la permission système: ${permissionCheck}`);
         
         // Gérer le cas où la permission a été refusée précédemment sur iOS
-        if (Platform.OS === 'ios' && permissionCheck === 'denied') {
-          Alert.alert(
-            t('filter.contactSettings.title'),
-            t('filter.contactSettings.message'),
-            [
-              { text: t('filter.contactSettings.cancel'), style: "cancel" },
-              { text: t('filter.contactSettings.openSettings'), onPress: () => Linking.openSettings() }
-            ]
-          );
-          return;
-        }
+  if (Platform.OS === 'ios' && permissionCheck === 'denied') {
+                      Alert.alert(
+                        t('filter.contactSettings.title'),
+                        t('filter.contactSettings.message'),
+                        [
+                          { text: t('filter.contactSettings.cancel'), style: "cancel" },
+                          { 
+                            text: t('filter.contactSettings.openSettings'), 
+                            onPress: () => {
+                              // Essayez d'abord d'ouvrir directement les paramètres de l'app
+                              Linking.openURL('app-settings:').catch(() => {
+                                // Si cela échoue, ouvrez les paramètres généraux
+                                Linking.openSettings();
+                              });
+                            } 
+                          }
+                        ]
+                      );
+                      return;
+                    }
         
         // Si la permission n'est pas accordée au niveau du système, la demander
         if (!permissionCheck || permissionCheck === 'denied' || permissionCheck === false) {
