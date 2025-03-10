@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform, Alert, Linking } from 'react-native';
+import i18n from 'i18next'; // Importez i18n directement pour accéder aux traductions
 
 class NotificationService {
     constructor() {
@@ -31,35 +32,35 @@ class NotificationService {
     async checkPermissions() {
         if (!Device.isDevice) {
             if (__DEV__) {
-                console.log("Mode développement: autorisation simulateur");
+                console.log(i18n.t('notifications.logs.devModePermission'));
                 return true;
             }
-            Alert.alert('Les notifications ne fonctionnent pas sur simulateur');
+            Alert.alert(i18n.t('notifications.alerts.simulatorWarning'));
             return false;
         }
     
         try {
             const { status: existingStatus } = await Notifications.getPermissionsAsync();
-            console.log("Status existant:", existingStatus);
+            console.log(i18n.t('notifications.logs.existingStatus'), existingStatus);
     
             if (existingStatus === 'granted') {
                 return true;
             }
     
             const { status } = await Notifications.requestPermissionsAsync();
-            console.log("Nouveau status:", status);
+            console.log(i18n.t('notifications.logs.newStatus'), status);
     
             if (status !== 'granted') {
                 Alert.alert(
-                    "Notifications désactivées",
-                    "Voulez-vous activer les notifications dans les paramètres ?",
+                    i18n.t('notifications.alerts.disabled.title'),
+                    i18n.t('notifications.alerts.disabled.message'),
                     [
                         {
-                            text: "Non",
+                            text: i18n.t('notifications.alerts.disabled.no'),
                             style: "cancel"
                         },
                         {
-                            text: "Ouvrir les paramètres",
+                            text: i18n.t('notifications.alerts.disabled.openSettings'),
                             onPress: () => Linking.openSettings()
                         }
                     ]
@@ -69,7 +70,7 @@ class NotificationService {
     
             return true;
         } catch (error) {
-            console.error("Erreur de vérification des permissions:", error);
+            console.error(i18n.t('notifications.errors.permissionCheck'), error);
             return false;
         }
     }
@@ -81,7 +82,7 @@ class NotificationService {
             });
             return token.data;
         } catch (error) {
-            console.error("Erreur lors de l'obtention du token:", error);
+            console.error(i18n.t('notifications.errors.tokenRetrieval'), error);
             return null;
         }
     }
@@ -99,7 +100,7 @@ class NotificationService {
             });
             return true;
         } catch (error) {
-            console.error("Erreur lors de l'envoi de la notification:", error);
+            console.error(i18n.t('notifications.errors.sending'), error);
             return false;
         }
     }
@@ -109,12 +110,12 @@ class NotificationService {
             const hasPermission = await this.checkPermissions();
             if (hasPermission) {
                 const success = await this.sendTestNotification();
-                console.log("Notification test envoyée:", success);
+                console.log(i18n.t('notifications.logs.testSent'), success);
                 return true;
             }
             return false;
         } catch (error) {
-            console.error("Erreur d'activation:", error);
+            console.error(i18n.t('notifications.errors.activation'), error);
             return false;
         }
     }
@@ -122,8 +123,8 @@ class NotificationService {
     // Pour tester les notifications
     async sendTestNotification() {
         return this.sendLocalNotification(
-            "Notifications activées",
-            "Vous recevrez désormais des notifications de l'application",
+            i18n.t('notifications.test.title'),
+            i18n.t('notifications.test.body'),
             { type: 'test' }
         );
     }

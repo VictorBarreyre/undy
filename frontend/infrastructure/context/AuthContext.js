@@ -4,9 +4,7 @@ import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInsta
 import { DeviceEventEmitter, Alert, PermissionsAndroid, Platform } from 'react-native';
 import Contacts from 'react-native-contacts';
 import { useCardData } from './CardDataContexte';
-
-
-
+import i18n from 'i18next'; // Importation directe de i18n
 
 export const AuthContext = createContext();
 
@@ -16,10 +14,6 @@ export const AuthProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
   const [contactsAccessEnabled, setContactsAccessEnabled] = useState(false);
-
-
-
-
 
   useEffect(() => {
     const initAxios = async () => {
@@ -43,10 +37,10 @@ export const AuthProvider = ({ children }) => {
         console.log('[AuthProvider] Déconnexion réussie');
 
         Alert.alert(
-          "Session expirée",
+          i18n.t('auth.alerts.sessionExpired.title'),
           event.message,
           [{
-            text: "OK",
+            text: i18n.t('auth.alerts.ok'),
             onPress: () => console.log('[AuthProvider] Alerte acquittée par l\'utilisateur')
           }]
         );
@@ -98,8 +92,6 @@ export const AuthProvider = ({ children }) => {
       profilePicture: cleanProfilePicture(data.profilePicture)
     };
   };
-
-
 
   const loadStoredData = async () => {
     console.log('[AuthProvider] Début du chargement des données stockées');
@@ -156,7 +148,7 @@ export const AuthProvider = ({ children }) => {
     console.log('[AuthProvider] Début fetchUserData');
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('auth.errors.axiosNotInitialized'));
     }
 
     try {
@@ -183,11 +175,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-
   const handleProfileImageUpdate = async (imageFile) => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('auth.errors.axiosNotInitialized'));
     }
 
     try {
@@ -230,9 +221,9 @@ export const AuthProvider = ({ children }) => {
         return updatedUserData;
       }
 
-      throw new Error('URL d\'image non reçue du serveur');
+      throw new Error(i18n.t('auth.errors.noImageUrlReceived'));
     } catch (error) {
-      console.error('Erreur Upload:', error);
+      console.error(i18n.t('auth.errors.uploadError'), error);
       throw error;
     }
   };
@@ -240,7 +231,7 @@ export const AuthProvider = ({ children }) => {
   const updateUserData = async (updatedData) => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('auth.errors.axiosNotInitialized'));
     }
     try {
       // Ne prendre que les champs qui ont changé
@@ -252,7 +243,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (Object.keys(changedFields).length === 0) {
-        return { success: true, message: 'Aucune modification nécessaire.' };
+        return { success: true, message: i18n.t('auth.success.noChangeNeeded') };
       }
 
       // Ajouter l'ID pour l'identification
@@ -268,10 +259,10 @@ export const AuthProvider = ({ children }) => {
         setContactsAccessEnabled(updatedData.contacts);
       }
 
-      return { success: true, message: 'Profil mis à jour avec succès.' };
+      return { success: true, message: i18n.t('auth.success.profileUpdated') };
     } catch (error) {
-      console.error('Error updating user data:', error);
-      return { success: false, message: 'Erreur lors de la mise à jour du profil.' };
+      console.error(i18n.t('auth.errors.updatingUserData'), error);
+      return { success: false, message: i18n.t('auth.errors.profileUpdateFailed') };
     }
   };
 
@@ -302,7 +293,7 @@ export const AuthProvider = ({ children }) => {
         return false;
       }
     } catch (error) {
-      console.error("Erreur lors de la mise à jour de l'accès aux contacts:", error);
+      console.error(i18n.t('auth.errors.contactsAccess'), error);
       return false;
     }
   };
@@ -352,57 +343,56 @@ export const AuthProvider = ({ children }) => {
         hasAppUsers
       };
     } catch (error) {
-      console.error('Erreur lors de la vérification des contacts:', error);
+      console.error(i18n.t('auth.errors.checkingContacts'), error);
       return { contacts: [], hasAppUsers: false };
     }
   };
 
-// Dans AuthContext.js, modifiez la fonction login:
-const login = async (accessToken, refreshToken) => {
-  try {
-    console.log('[AuthProvider] Début de la connexion');
-    
-    // Étape 1: Stockez les tokens
-    await AsyncStorage.multiSet([
-      ['accessToken', accessToken],
-      ['refreshToken', refreshToken]
-    ]);
-    
-    // Étape 2: Mettez à jour l'instance Axios avec le nouveau token
-    const instance = getAxiosInstance();
-    if (instance) {
-      instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-    }
-    
-    // Étape 3: Mettez à jour l'état local
-    setUserToken(accessToken);
-    
-    // Étape 4: Récupérez les données utilisateur
+  // Dans AuthContext.js, modifiez la fonction login:
+  const login = async (accessToken, refreshToken) => {
     try {
-      await fetchUserData();
-    } catch (error) {
-      console.error('[AuthProvider] Erreur fetchUserData, 2e tentative:', error);
+      console.log('[AuthProvider] Début de la connexion');
       
-      // Réessayez après un court délai (le serveur peut avoir besoin d'un moment pour valider le token)
-      setTimeout(async () => {
-        try {
-          await fetchUserData();
-        } catch (secondError) {
-          console.error('[AuthProvider] Échec de la 2e tentative:', secondError);
-        }
-      }, 500);
+      // Étape 1: Stockez les tokens
+      await AsyncStorage.multiSet([
+        ['accessToken', accessToken],
+        ['refreshToken', refreshToken]
+      ]);
+      
+      // Étape 2: Mettez à jour l'instance Axios avec le nouveau token
+      const instance = getAxiosInstance();
+      if (instance) {
+        instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      }
+      
+      // Étape 3: Mettez à jour l'état local
+      setUserToken(accessToken);
+      
+      // Étape 4: Récupérez les données utilisateur
+      try {
+        await fetchUserData();
+      } catch (error) {
+        console.error('[AuthProvider] Erreur fetchUserData, 2e tentative:', error);
+        
+        // Réessayez après un court délai (le serveur peut avoir besoin d'un moment pour valider le token)
+        setTimeout(async () => {
+          try {
+            await fetchUserData();
+          } catch (secondError) {
+            console.error('[AuthProvider] Échec de la 2e tentative:', secondError);
+          }
+        }, 500);
+      }
+      
+      // Étape 5: Terminez la connexion
+      setIsLoggedIn(true);
+      
+      console.log('[AuthProvider] Connexion réussie');
+    } catch (error) {
+      console.error('[AuthProvider] Erreur lors de la connexion:', error);
+      throw error;
     }
-    
-    // Étape 5: Terminez la connexion
-    setIsLoggedIn(true);
-    
-    console.log('[AuthProvider] Connexion réussie');
-  } catch (error) {
-    console.error('[AuthProvider] Erreur lors de la connexion:', error);
-    throw error;
-  }
-};
-
+  };
 
   const logout = async () => {
     try {
@@ -426,7 +416,6 @@ const login = async (accessToken, refreshToken) => {
         onLogout();
       }
 
-
       console.log('[AuthProvider] Déconnexion réussie');
       return true;
     } catch (error) {
@@ -436,13 +425,11 @@ const login = async (accessToken, refreshToken) => {
     }
   };
 
-
-
   const persistUserData = useCallback(async (data) => {
     try {
       await AsyncStorage.setItem('userData', JSON.stringify(data));
     } catch (error) {
-      console.error('Error persisting user data', error);
+      console.error(i18n.t('auth.errors.persistingUserData'), error);
     }
   }, []);
 
@@ -456,7 +443,7 @@ const login = async (accessToken, refreshToken) => {
         setIsLoggedIn(true);
       }
     } catch (error) {
-      console.error('Error loading persisted user data', error);
+      console.error(i18n.t('auth.errors.loadingPersistedData'), error);
     }
   }, []);
 
@@ -464,18 +451,16 @@ const login = async (accessToken, refreshToken) => {
     loadPersistedUserData();
   }, [loadPersistedUserData]);
 
-
-
   const downloadUserData = async () => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('auth.errors.axiosNotInitialized'));
     }
     try {
       const response = await instance.get('/api/users/download');
       return response.data;
     } catch (error) {
-      console.error('Erreur téléchargement données:', error);
+      console.error(i18n.t('auth.errors.downloadingData'), error);
       throw error;
     }
   };
@@ -483,7 +468,7 @@ const login = async (accessToken, refreshToken) => {
   const clearUserData = async () => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('auth.errors.axiosNotInitialized'));
     }
     try {
       await instance.delete('/api/users/clear');
@@ -496,9 +481,9 @@ const login = async (accessToken, refreshToken) => {
       setUserData(clearedUserData);
       await AsyncStorage.setItem('userData', JSON.stringify(clearedUserData));
 
-      return { success: true, message: 'Données effacées avec succès.' };
+      return { success: true, message: i18n.t('auth.success.dataCleared') };
     } catch (error) {
-      console.error('Erreur effacement données:', error);
+      console.error(i18n.t('auth.errors.clearingData'), error);
       throw error;
     }
   };
@@ -506,29 +491,28 @@ const login = async (accessToken, refreshToken) => {
   const deleteUserAccount = async () => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('auth.errors.axiosNotInitialized'));
     }
     try {
       await instance.delete('/api/users/delete');
       await logout();
-      return { success: true, message: 'Compte supprimé avec succès.' };
+      return { success: true, message: i18n.t('auth.success.accountDeleted') };
     } catch (error) {
-      console.error('Erreur suppression compte:', error);
+      console.error(i18n.t('auth.errors.deletingAccount'), error);
       throw error;
     }
   };
 
-
   const fetchUserDataById = async (userId) => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('auth.errors.axiosNotInitialized'));
     }
     try {
       const response = await instance.get(`/api/users/${userId}`);
       return cleanUserData(response.data);
     } catch (error) {
-      console.error('Erreur récupération données utilisateur:', error);
+      console.error(i18n.t('auth.errors.fetchingUserData'), error);
       throw error;
     }
   };
@@ -544,9 +528,9 @@ const login = async (accessToken, refreshToken) => {
         permission = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
           {
-            title: "Accès aux contacts",
-            message: "Cette application a besoin d'accéder à vos contacts.",
-            buttonPositive: "OK"
+            title: i18n.t('auth.permissions.contactsAccess.title'),
+            message: i18n.t('auth.permissions.contactsAccess.message'),
+            buttonPositive: i18n.t('auth.permissions.contactsAccess.ok')
           }
         );
       }
@@ -558,13 +542,13 @@ const login = async (accessToken, refreshToken) => {
         return contacts;
       } else {
         Alert.alert(
-          "Permission refusée",
-          "Vous devez autoriser l'accès aux contacts pour utiliser cette fonctionnalité."
+          i18n.t('auth.alerts.permissionDenied.title'),
+          i18n.t('auth.alerts.permissionDenied.message')
         );
         return [];
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des contacts:', error);
+      console.error(i18n.t('auth.errors.retrievingContacts'), error);
       return [];
     }
   };
@@ -575,12 +559,10 @@ const login = async (accessToken, refreshToken) => {
       const contact = await Contacts.getContactById(contactId);
       return contact;
     } catch (error) {
-      console.error('Erreur lors de la récupération du contact:', error);
+      console.error(i18n.t('auth.errors.retrievingContact'), error);
       return null;
     }
   };
-
-
 
   return (
     <AuthContext.Provider

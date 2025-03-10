@@ -8,8 +8,10 @@ import { STRIPE_PUBLISHABLE_KEY } from '@env';
 import { DATABASE_URL } from '@env';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
+import { useTranslation } from 'react-i18next';
 
 const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
+    const { t } = useTranslation();
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
     const [loading, setLoading] = useState(false);
     const { userToken } = useContext(AuthContext);
@@ -31,7 +33,7 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 // Vérifier si Apple Pay est supporté
                 if (Platform.OS === 'ios' && typeof canMakePayments === 'function') {
                     const isSupported = await canMakePayments();
-                    console.log('Apple Pay supporté:', isSupported);
+                    console.log(t('paymentSheet.logs.applePaySupported'), isSupported);
                     setApplePaySupported(isSupported);
                     
                     if (isSupported) {
@@ -41,16 +43,16 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                                 networks: ['visa', 'mastercard'],
                                 capabilities: ['3ds']
                             });
-                            console.log('Détails Apple Pay:', details);
+                            console.log(t('paymentSheet.logs.applePayDetails'), details);
                         } catch (detailsError) {
-                            console.log('Erreur lors de la vérification des détails Apple Pay:', detailsError);
+                            console.log(t('paymentSheet.errors.applePayDetailsError'), detailsError);
                         }
                     }
                 } else {
-                    console.log('canMakePayments non disponible ou non iOS');
+                    console.log(t('paymentSheet.logs.applePayUnavailable'));
                 }
             } catch (error) {
-                console.log('Erreur lors de la vérification d\'Apple Pay:', error);
+                console.log(t('paymentSheet.errors.applePayCheckError'), error);
             }
         };
         
@@ -75,7 +77,7 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
 
     const initializePaymentSheet = async (clientSecret) => {
         try {
-            console.log('Début initialisation PaymentSheet');
+            console.log(t('paymentSheet.logs.initializationStart'));
             
             // On suppose que Stripe est déjà initialisé dans l'useEffect
             
@@ -111,7 +113,7 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 };
                 paymentSheetConfig.applePayEnabled = true;
             } else {
-                console.log('Apple Pay non configuré car non supporté ou non iOS');
+                console.log(t('paymentSheet.logs.applePayNotConfigured'));
             }
             
             // Ajouter Google Pay pour Android
@@ -122,18 +124,18 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 };
             }
             
-            console.log('Configuration PaymentSheet:', JSON.stringify(paymentSheetConfig, null, 2));
+            console.log(t('paymentSheet.logs.paymentSheetConfig'), JSON.stringify(paymentSheetConfig, null, 2));
             
             const { error } = await initPaymentSheet(paymentSheetConfig);
 
             if (error) {
-                console.log('Erreur initPaymentSheet:', JSON.stringify(error, null, 2));
+                console.log(t('paymentSheet.errors.initPaymentSheetError'), JSON.stringify(error, null, 2));
                 throw error;
             }
 
-            console.log('PaymentSheet initialisé avec succès');
+            console.log(t('paymentSheet.logs.initializationSuccess'));
         } catch (error) {
-            console.log('Erreur dans initializePaymentSheet:', error);
+            console.log(t('paymentSheet.errors.initializationError'), error);
             throw error;
         }
     };
@@ -141,14 +143,14 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     const handlePayment = async () => {
         try {
             setLoading(true);
-            console.log('Début du processus de paiement');
+            console.log(t('paymentSheet.logs.paymentProcessStart'));
             
             // Vérifier que secret existe et a un _id
             if (!secret || !secret._id) {
-                throw new Error('Données du secret invalides');
+                throw new Error(t('paymentSheet.errors.invalidSecretData'));
             }
     
-            console.log(`Création de l'intention de paiement pour le secret ${secret._id}`);
+            console.log(t('paymentSheet.logs.creatingPaymentIntent', { secretId: secret._id }));
             const response = await fetch(`${DATABASE_URL}/api/secrets/${secret._id}/create-payment-intent`, {
                 method: 'POST',
                 headers: {
@@ -159,17 +161,17 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(errorText || 'Erreur lors de la création du paiement');
+                throw new Error(errorText || t('paymentSheet.errors.paymentCreationError'));
             }
     
-            console.log('Réponse reçue de l\'API');
+            console.log(t('paymentSheet.logs.apiResponseReceived'));
             const { 
                 clientSecret, 
                 paymentId, 
                 buyerTotal 
             } = await response.json();
 
-            console.log(`Client secret reçu, ID du paiement: ${paymentId}`);
+            console.log(t('paymentSheet.logs.clientSecretReceived', { paymentId }));
             
             // Réinitialiser Stripe pour s'assurer que tout est frais
             await initStripe({
@@ -180,31 +182,31 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
             
             await initializePaymentSheet(clientSecret);
     
-            console.log('Présentation de la feuille de paiement');
+            console.log(t('paymentSheet.logs.presentingPaymentSheet'));
             const { error: presentError } = await presentPaymentSheet();
     
             if (presentError) {
-                console.log('Erreur de présentation:', JSON.stringify(presentError, null, 2));
+                console.log(t('paymentSheet.errors.presentationError'), JSON.stringify(presentError, null, 2));
                 
                 // Différencier les annulations volontaires des autres erreurs
                 if (presentError.code === 'Canceled') {
-                    console.log('Paiement annulé par l\'utilisateur');
+                    console.log(t('paymentSheet.logs.paymentCanceled'));
                     return;
                 }
                 throw presentError;
             }
     
-            console.log('Paiement réussi');
+            console.log(t('paymentSheet.logs.paymentSuccess'));
             // Uniquement appeler onPaymentSuccess si le paiement est réellement effectué
             onPaymentSuccess(paymentId);
     
         } catch (error) {
-            console.log('Erreur dans handlePayment:', error);
+            console.log(t('paymentSheet.errors.handlePaymentError'), error);
             // Ne pas afficher d'alerte si c'est une annulation volontaire
             if (error.code !== 'Canceled') {
                 Alert.alert(
-                    'Erreur de paiement',
-                    error.message || 'Une erreur est survenue lors du paiement'
+                    t('paymentSheet.errors.paymentErrorTitle'),
+                    error.message || t('paymentSheet.errors.paymentErrorMessage')
                 );
                 onPaymentError(error);
             }
@@ -221,7 +223,7 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 style={{ backgroundColor: '#ccc', padding: 18, borderRadius: 30, width: '100%', alignSelf: 'center' }}
             >
                 <HStack alignItems="center" justifyContent="center" space={3}>
-                    <Text color="white">Chargement...</Text>
+                    <Text color="white">{t('paymentSheet.loading')}</Text>
                 </HStack>
             </Pressable>
         );
@@ -243,8 +245,8 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 <FontAwesomeIcon icon={faUnlock} size={18} color="white" />
                 <Text fontSize="md" color="white" fontWeight="bold">
                     {loading
-                        ? 'Chargement...'
-                        : `Déverrouiller pour ${getDisplayPrice(secret?.price || 0)} €`}
+                        ? t('paymentSheet.loading')
+                        : t('paymentSheet.unlockForPrice', { price: getDisplayPrice(secret?.price || 0) })}
                 </Text>
             </HStack>
         </Pressable>

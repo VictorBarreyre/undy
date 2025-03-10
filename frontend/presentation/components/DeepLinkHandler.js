@@ -1,8 +1,10 @@
 import React, { useEffect } from 'react';
 import { Linking, Alert } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
+import { useTranslation } from 'react-i18next';
 
 const DeepLinkHandler = () => {
+    const { t } = useTranslation();
     const { handleStripeReturn } = useCardData();
 
     useEffect(() => {
@@ -22,21 +24,24 @@ const DeepLinkHandler = () => {
                     
                     if (result.success) {
                         Alert.alert(
-                            'Succès',
-                            'Votre compte Stripe a été configuré avec succès !',
-                            [{ text: 'OK' }]
+                            t('deepLink.alerts.success.title'),
+                            t('deepLink.alerts.success.message'),
+                            [{ text: t('deepLink.alerts.ok') }]
                         );
                     } else {
                         Alert.alert(
-                            'Configuration en cours',
+                            t('deepLink.alerts.configInProgress.title'),
                             result.message,
-                            [{ text: 'OK' }]
+                            [{ text: t('deepLink.alerts.ok') }]
                         );
                     }
                 }
             } catch (error) {
-                console.error('Deep link error:', error);
-                Alert.alert('Erreur', 'Impossible de traiter le lien');
+                console.error(t('deepLink.errors.deepLinkError'), error);
+                Alert.alert(
+                    t('deepLink.errors.title'), 
+                    t('deepLink.errors.unableToProcessLink')
+                );
             }
         };
 

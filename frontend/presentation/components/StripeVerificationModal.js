@@ -7,6 +7,7 @@ import { Platform, Alert } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { styles } from '../../infrastructure/theme/styles';
 import { getAxiosInstance } from '../../data/api/axiosInstance';
+import { useTranslation } from 'react-i18next';
 
 const StripeVerificationActionSheet = ({ 
     isOpen, 
@@ -15,6 +16,7 @@ const StripeVerificationActionSheet = ({
     resetStripeAccount, 
     navigation 
 }) => {
+    const { t } = useTranslation();
     const [identityDocument, setIdentityDocument] = useState(null);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
@@ -27,9 +29,12 @@ const StripeVerificationActionSheet = ({
             includeBase64: false,
         }, (response) => {
             if (response.didCancel) {
-                console.log('User cancelled image picker');
+                console.log(t('stripeVerification.logs.userCancelled'));
             } else if (response.errorCode) {
-                Alert.alert('Erreur', response.errorMessage || 'Une erreur est survenue');
+                Alert.alert(
+                    t('stripeVerification.errors.title'), 
+                    response.errorMessage || t('stripeVerification.errors.generic')
+                );
             } else if (response.assets && response.assets.length > 0) {
                 setIdentityDocument(response.assets[0]);
             }
@@ -38,7 +43,10 @@ const StripeVerificationActionSheet = ({
 
     const uploadIdentityDocument = async () => {
         if (!identityDocument) {
-            Alert.alert('Erreur', 'Veuillez sélectionner un document');
+            Alert.alert(
+                t('stripeVerification.errors.title'), 
+                t('stripeVerification.errors.selectDocument')
+            );
             return;
         }
 
@@ -67,16 +75,22 @@ const StripeVerificationActionSheet = ({
 
             if (response.data.success) {
                 Alert.alert(
-                    'Succès', 
-                    'Votre document d\'identité a été soumis avec succès. Nous vérifions actuellement vos informations.'
+                    t('stripeVerification.success.title'), 
+                    t('stripeVerification.success.documentSubmitted')
                 );
                 onClose();
             } else {
-                Alert.alert('Erreur', response.data.message || 'Échec de la vérification');
+                Alert.alert(
+                    t('stripeVerification.errors.title'), 
+                    response.data.message || t('stripeVerification.errors.verificationFailed')
+                );
             }
         } catch (error) {
-            console.error('Erreur d\'upload:', error);
-            Alert.alert('Erreur', 'Une erreur est survenue lors de l\'upload');
+            console.error(t('stripeVerification.errors.uploadError'), error);
+            Alert.alert(
+                t('stripeVerification.errors.title'), 
+                t('stripeVerification.errors.uploadFailed')
+            );
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
@@ -97,7 +111,7 @@ const StripeVerificationActionSheet = ({
                     {!userData?.stripeAccountStatus || userData?.stripeAccountStatus === 'pending' ? (
                         <>
                             <Text style={styles.h4} textAlign="center">
-                                Configuration du compte bancaire
+                                {t('stripeVerification.bankAccountSetup.title')}
                             </Text>
 
                             <Text
@@ -106,7 +120,7 @@ const StripeVerificationActionSheet = ({
                                 textAlign="center"
                                 mb={2}
                             >
-                                Votre compte bancaire sera configuré automatiquement lors de la publication de votre premier secret.
+                                {t('stripeVerification.bankAccountSetup.description')}
                             </Text>
 
                             <Button
@@ -118,14 +132,14 @@ const StripeVerificationActionSheet = ({
                                 borderRadius="full"
                             >
                                 <Text color="white" style={styles.cta}>
-                                    Publier un secret
+                                    {t('stripeVerification.bankAccountSetup.publishSecret')}
                                 </Text>
                             </Button>
                         </>
                     ) : userData?.stripeAccountStatus === 'active' && !userData?.stripeIdentityVerified ? (
                         <>
                             <Text style={styles.h4} textAlign="center">
-                                Vérification d'identité
+                                {t('stripeVerification.identityVerification.title')}
                             </Text>
 
                             <Text
@@ -134,15 +148,15 @@ const StripeVerificationActionSheet = ({
                                 textAlign="center"
                                 mb={2}
                             >
-                                Pour finaliser la configuration de votre compte Stripe, 
-                                nous avons besoin d'une photo de votre pièce d'identité.
-                                Ne tardez pas si voulez pouvoir continuer à recevoir des paiements et à les transférer sur votre compte
+                                {t('stripeVerification.identityVerification.description')}
                             </Text>
 
                             {identityDocument ? (
                                 <Box>
                                     <Text style={styles.caption} textAlign="center">
-                                        Document sélectionné : {identityDocument.fileName}
+                                        {t('stripeVerification.identityVerification.documentSelected', {
+                                            name: identityDocument.fileName
+                                        })}
                                     </Text>
                                     {isUploading && (
                                         <Progress 
@@ -162,7 +176,7 @@ const StripeVerificationActionSheet = ({
                                     flex={1}
                                 >
                                     <Text color="black" style={styles.cta}>
-                                        Choisir un document
+                                        {t('stripeVerification.identityVerification.chooseDocument')}
                                     </Text>
                                 </Button>
 
@@ -175,7 +189,7 @@ const StripeVerificationActionSheet = ({
                                         isDisabled={isUploading}
                                     >
                                         <Text color="white" style={styles.cta}>
-                                            Soumettre
+                                            {t('stripeVerification.identityVerification.submit')}
                                         </Text>
                                     </Button>
                                 )}
@@ -184,7 +198,7 @@ const StripeVerificationActionSheet = ({
                     ) : (
                         <>
                             <Text style={styles.h4} textAlign="center">
-                                Compte Stripe configuré
+                                {t('stripeVerification.accountConfigured.title')}
                             </Text>
 
                             <Text
@@ -193,7 +207,7 @@ const StripeVerificationActionSheet = ({
                                 textAlign="center"
                                 mb={2}
                             >
-                                Votre compte bancaire est actif. Vous pouvez réinitialiser ou gérer votre compte Stripe si nécessaire.
+                                {t('stripeVerification.accountConfigured.description')}
                             </Text>
 
                             <Button
@@ -203,7 +217,7 @@ const StripeVerificationActionSheet = ({
                                 mb={2}
                             >
                                 <Text color="white" style={styles.cta}>
-                                    Réinitialiser le compte Stripe
+                                    {t('stripeVerification.accountConfigured.resetAccount')}
                                 </Text>
                             </Button>
 
@@ -215,7 +229,7 @@ const StripeVerificationActionSheet = ({
                                 borderRadius="full"
                             >
                                 <Text color="white" style={styles.cta}>
-                                    Gérer mon compte
+                                    {t('stripeVerification.accountConfigured.manageAccount')}
                                 </Text>
                             </Button>
                         </>

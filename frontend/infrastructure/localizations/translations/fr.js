@@ -2,7 +2,7 @@ export default {
   "auth": {
     "login": {
       // Garder les traductions existantes...
-"title": "Connectez-vous ou\ncréez un compte",
+      "title": "Connectez-vous ou\ncréez un compte",
       "email": "Email",
       "password": "Mot de passe",
       "loginButton": "Se connecter",
@@ -38,196 +38,577 @@ export default {
       // Garder les traductions existantes...
       "ok": "OK",
       "serviceUnavailable": "Service non disponible",
-      "errorTitle": "Erreur"
-    }
-  },
-  "filter": {
-  "all": "Tous",
-  "contacts": "Contacts",
-  "aroundMe": "Autour de moi",
-  "categories": "Catégories",
-  "preferences": "Préférences",
-  "contactAccess": {
-    "title": "Accès aux contacts",
-    "message": "Pour afficher les secrets de vos contacts, nous avons besoin d'accéder à vos contacts.",
-    "cancel": "Annuler",
-    "authorize": "Autoriser"
-  }
-},
-"home": {
-  "latestHushys": "Les derniers hushys 🔥",
-  "sourceTexts": {
-    "everyone": "De tout le monde",
-    "fromContacts": "De vos contacts",
-    "fromFollowing": "Des personnes que vous suivez"
-  },
-  "errors": {
-    "contactsLoading": "Erreur lors du chargement des contacts:"
-  },
-  "logs": {
-    "selectedFilters": "Filtres sélectionnés :",
-    "selectedType": "Type sélectionné :"
-  }
-},
-"swipeDeck": {
-  "noSecrets": "Aucun secret disponible",
-  "tryChangingFilters": "Essayez de modifier vos filtres",
-  "checkBackLater": "Revenez plus tard pour découvrir de nouveaux secrets",
-  "errors": {
-    "initialLoading": "Erreur de chargement initial:",
-    "purchase": "Erreur lors de l'achat:",
-    "payment": "Erreur de paiement:"
-  }
-},
-"addSecret": {
-  "addHushy": "Ajouter un hushy",
-  "postedBy": "Posté par",
-  "noDescriptionAvailable": "Aucune description disponible.",
-  "whatIsNew": "Quoi de neuf ?",
-  "category": "Catégorie",
-  "chooseCategory": "Choisissez la catégorie",
-  "price": "Son prix",
-  "min": "min",
-  "duration": "Durée",
-  "chooseDuration": "Choisir une durée",
-  "duration24h": "24 heures",
-  "duration7d": "7 jours",
-  "duration30d": "30 jours",
-  "youWillReceive": "Vous recevrez {{amount}}€",
-  "postSecret": "Poster le secret",
-  "categories": [
-    "Confession",
-    "Amour",
-    "Travail",
-    "Famille",
-    "Argent",
-    "Amitié",
-    "Trahison",
-    "Regret",
-    "Réussite",
-    "Rêve",
-    "Honte",
-    "Évènement",
-    "Secret de famille",
-    "Infidélité",
-    "Culpabilité"
-  ],
-  "validation": {
-    "tooShort": "Trop court pour poster !",
-    "priceRequirement": "Le prix doit être supérieur à {{minPrice}}€",
-    "selectCategory": "Sélectionnez une catégorie"
-  },
-  "alerts": {
-    "setupRequired": {
-      "title": "Configuration nécessaire",
-      "message": "Votre secret a été créé. Pour pouvoir le vendre, vous devez configurer votre compte de paiement.",
-      "configureNow": "Configurer maintenant"
+      "errorTitle": "Erreur",
+      "sessionExpired": {
+        "title": "Session expirée"
+      },
+      "permissionDenied": {
+        "title": "Permission refusée",
+        "message": "Vous devez autoriser l'accès aux contacts pour utiliser cette fonctionnalité."
+      },
     },
     "success": {
-      "title": "Félicitations ! 🎉",
-      "message": "Votre secret a été publié avec succès. Il est maintenant disponible à la vente !",
-      "shareNow": "Partager maintenant 🔐"
+      "noChangeNeeded": "Aucune modification nécessaire.",
+      "profileUpdated": "Profil mis à jour avec succès.",
+      "dataCleared": "Données effacées avec succès.",
+      "accountDeleted": "Compte supprimé avec succès."
     },
-    "info": "Information",
-    "later": "Plus tard"
-  },
-  "errors": {
-    "title": "Erreur",
-    "deepLink": "Deep link error:",
-    "unableToProcessLink": "Impossible de traiter le lien",
-    "unableToShare": "Impossible de partager le secret."
-  }
-},
+    "permissions": {
+      "contactsAccess": {
+        "title": "Accès aux contacts",
+        "message": "Cette application a besoin d'accéder à vos contacts.",
+        "ok": "OK"
+      }
+    },
+    "axiosNotInitialized": "Instance Axios non initialisée",
+    "noImageUrlReceived": "URL d'image non reçue du serveur",
+    "contactsAccess": "Erreur lors de la mise à jour de l'accès aux contacts:",
+    "checkingContacts": "Erreur lors de la vérification des contacts:",
+    "persistingUserData": "Erreur lors de la persistance des données utilisateur",
+    "loadingPersistedData": "Erreur lors du chargement des données enregistrées",
+    "downloadingData": "Erreur téléchargement données:",
+    "clearingData": "Erreur effacement données:",
+    "deletingAccount": "Erreur suppression compte:",
+    "fetchingUserData": "Erreur récupération données utilisateur:",
+    "retrievingContacts": "Erreur lors de la récupération des contacts:",
+    "retrievingContact": "Erreur lors de la récupération du contact:"
 
-"conversations": {
-  "title": "Conversations",
-  "noConversations": "You haven't unlocked any Hushy yet",
-  "unlockToStart": "Unlock a Hushy to start a conversation!",
-  "untitled": "Untitled",
-  "unknownUser": "Unknown user",
-  "profilePicture": "Profile picture",
+  },
+  "filter": {
+    "all": "Tous",
+    "contacts": "Contacts",
+    "aroundMe": "Autour de moi",
+    "categories": "Catégories",
+    "preferences": "Préférences",
+    "contactAccess": {
+      "title": "Accès aux contacts",
+      "message": "Pour afficher les secrets de vos contacts, nous avons besoin d'accéder à vos contacts.",
+      "cancel": "Annuler",
+      "authorize": "Autoriser"
+    }
+  },
+  "home": {
+    "latestHushys": "Les derniers hushys 🔥",
+    "sourceTexts": {
+      "everyone": "De tout le monde",
+      "fromContacts": "De vos contacts",
+      "fromFollowing": "Des personnes que vous suivez"
+    },
+    "errors": {
+      "contactsLoading": "Erreur lors du chargement des contacts:"
+    },
+    "logs": {
+      "selectedFilters": "Filtres sélectionnés :",
+      "selectedType": "Type sélectionné :"
+    }
+  },
+  "swipeDeck": {
+    "noSecrets": "Aucun secret disponible",
+    "tryChangingFilters": "Essayez de modifier vos filtres",
+    "checkBackLater": "Revenez plus tard pour découvrir de nouveaux secrets",
+    "errors": {
+      "initialLoading": "Erreur de chargement initial:",
+      "purchase": "Erreur lors de l'achat:",
+      "payment": "Erreur de paiement:"
+    }
+  },
+  "addSecret": {
+    "addHushy": "Ajouter un hushy",
+    "postedBy": "Posté par",
+    "noDescriptionAvailable": "Aucune description disponible.",
+    "whatIsNew": "Quoi de neuf ?",
+    "category": "Catégorie",
+    "chooseCategory": "Choisissez la catégorie",
+    "price": "Son prix",
+    "min": "min",
+    "duration": "Durée",
+    "chooseDuration": "Choisir une durée",
+    "duration24h": "24 heures",
+    "duration7d": "7 jours",
+    "duration30d": "30 jours",
+    "youWillReceive": "Vous recevrez {{amount}}€",
+    "postSecret": "Poster le secret",
+    "categories": [
+      "Confession",
+      "Amour",
+      "Travail",
+      "Famille",
+      "Argent",
+      "Amitié",
+      "Trahison",
+      "Regret",
+      "Réussite",
+      "Rêve",
+      "Honte",
+      "Évènement",
+      "Secret de famille",
+      "Infidélité",
+      "Culpabilité"
+    ],
+    "validation": {
+      "tooShort": "Trop court pour poster !",
+      "priceRequirement": "Le prix doit être supérieur à {{minPrice}}€",
+      "selectCategory": "Sélectionnez une catégorie"
+    },
+    "alerts": {
+      "setupRequired": {
+        "title": "Configuration nécessaire",
+        "message": "Votre secret a été créé. Pour pouvoir le vendre, vous devez configurer votre compte de paiement.",
+        "configureNow": "Configurer maintenant"
+      },
+      "success": {
+        "title": "Félicitations ! 🎉",
+        "message": "Votre secret a été publié avec succès. Il est maintenant disponible à la vente !",
+        "shareNow": "Partager maintenant 🔐"
+      },
+      "info": "Information",
+      "later": "Plus tard"
+    },
+    "errors": {
+      "title": "Erreur",
+      "deepLink": "Deep link error:",
+      "unableToProcessLink": "Impossible de traiter le lien",
+      "unableToShare": "Impossible de partager le secret."
+    }
+  },
+
+  "conversations": {
+    "title": "Conversations",
+    "noConversations": "Vous n'avez pas encore déverrouillé de Hushy",
+    "unlockToStart": "Déverrouillez un Hushy pour commencer une conversation !",
+    "untitled": "Sans titre",
+    "unknownUser": "Utilisateur inconnu",
+    "profilePicture": "Photo de profil",
+    "errors": {
+      "loading": "Erreur chargement conversations:",
+      "deletion": "Erreur lors de la suppression:"
+    }
+  },
+  "chat": {
+    "defaultUser": "Utilisateur",
+    "profilePicture": "Photo de profil",
+    "participants": "{{count}} participants",
+    "expiresIn": "Expire dans",
+    "expired": "Expiré",
+    "timeLeft": "{{days}}j {{hours}}h {{minutes}}m",
+    "noMessages": "Aucun message",
+    "newMessages": "Nouveaux messages",
+    "send": "Envoyer",
+    "message": "Message",
+    "postedBy": "Posté par {{name}}",
+    "postedByDefault": "Posté par Utilisateur",
+    "selectedImage": "Image sélectionnée",
+    "errors": {
+      "resizing": "Erreur lors du redimensionnement:",
+      "saveScrollPosition": "Erreur lors de la sauvegarde de la position:",
+      "loadScrollPosition": "Erreur lors du chargement de la position:",
+      "restoreScrollPosition": "Erreur lors de la restauration de la position:",
+      "reloadConversation": "Erreur lors du rechargement de la conversation:",
+      "missingCreatedAt": "Message sans createdAt:",
+      "missingConversationId": "ID de conversation manquant",
+      "missingUserInfo": "Informations utilisateur manquantes",
+      "unsupportedImageFormat": "Format d'image non supporté",
+      "imageUpload": "Erreur lors de l'upload de l'image:",
+      "imageUploadFailed": "Échec de l'upload de l'image",
+      "sendMessage": "Erreur lors de l'envoi du message:",
+      "imageSelection": "Erreur lors de la sélection d'image:"
+    },
+    "messageFailed": "Échec",
+    "retry": "Renvoyer",
+    "sending": "Envoi...",
+    "messageImage": "Image du message"
+  },
+
+  "dateTime": {
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "at": "à",
+    "expired": "Expiré",
+    "expiresIn": "Expire dans",
+    "justNow": "À l'instant",
+    "minutesAgo": "Il y a {{count}} minute",
+    "minutesAgo_plural": "Il y a {{count}} minutes",
+    "hoursAgo": "Il y a {{count}} heure",
+    "hoursAgo_plural": "Il y a {{count}} heures",
+    "daysAgo": "Il y a {{count}} jour",
+    "daysAgo_plural": "Il y a {{count}} jours"
+  },
+
+  "profile": {
+    "title": "Mon Profil",
+    "loading": "Chargement...",
+    "emptyList": "Wow mais c'est désert ici",
+    "tabs": {
+      "yourSecrets": "Vos hushy",
+      "othersSecrets": "Ceux des autres"
+    },
+    "stats": {
+      "secrets": "Secrets",
+      "followers": "Abonnés",
+      "following": "Abonnements"
+    },
+    "seeMore": "Voir plus",
+    "seeLess": "Voir moins",
+    "defaultName": "Utilisateur",
+    "profilePictureAlt": "Photo de profil de {{name}}",
+    "dummyText": "Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l'imprimerie depuis les années 1500, quand un imprimeur anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n'a pas fait que survivre cinq siècles, mais s'est aussi adapté à la bureautique informatique, sans que son contenu n'en soit modifié",
+    "imagePicker": {
+      "canceled": "Upload annulé par l'utilisateur",
+      "noImageSelected": "Aucune image sélectionnée"
+    },
+    "errors": {
+      "title": "Erreur",
+      "loadingData": "Erreur chargement données:",
+      "fullError": "Erreur complète:",
+      "unableToChangeProfilePicture": "Impossible de changer la photo de profil"
+    }
+  },
+
+  "settings": {
+    "title": "Vos paramètres",
+    "generalSection": "Général",
+    "dataSection": "Données",
+    "logout": "Déconnexion",
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "notSpecified": "Non renseigné",
+    "notConfigured": "Non configuré",
+    "userDataLog": "Données utilisateur :",
+    "selectedFieldLog": "Champ sélectionné :",
+    "inputValueLog": "Valeur d'entrée :",
+    "dataToUpdateLog": "Données à mettre à jour avant envoi :",
+    "dataReceivedLog": "Données reçues :",
+    "success": "Succès",
+    "dataCopiedToClipboard": "Les données ont été copiées dans votre presse-papier",
+    "ok": "OK",
+    "dataDownloadSuccess": "Données téléchargées avec succès",
+    "confirmation": "Confirmation",
+    "clearDataConfirmation": "Êtes-vous sûr de vouloir effacer vos données ?",
+    "cancel": "Annuler",
+    "clear": "Effacer",
+    "dataClearedSuccess": "Vos données ont été effacées",
+    "deleteAccountConfirmation": "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.",
+    "delete": "Supprimer",
+    "accountDeletedSuccess": "Votre compte a été supprimé",
+    "resetStripeAccount": "Réinitialiser le compte Stripe",
+    "resetStripeConfirmation": "Êtes-vous sûr de vouloir réinitialiser votre compte Stripe ? Vous devrez refaire le processus d'onboarding.",
+    "reset": "Réinitialiser",
+    "stripeResetSuccess": "Votre compte Stripe a été réinitialisé. Vous allez être redirigé vers l'onboarding.",
+    "mySubscriptions": "Mes abonnements",
+    "noSubscriptionsYet": "Vous n'avez pas encore d'abonnements. Découvrez nos offres pour enrichir votre expérience.",
+    "viewSubscriptions": "Voir les abonnements",
+    "editField": "Modifier votre {field}",
+    "editFieldPlaceholder": "Modifier votre {field}",
+    "information": "information",
+    "save": "Enregistrer",
+    "fields": {
+      "name": "Nom",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "phone": "Numéro de téléphone",
+      "birthdate": "Date de naissance",
+      "income": "Vos revenus",
+      "bank": "Compte bancaire",
+      "notifications": "Mes notifications",
+      "contacts": "Mes contacts",
+      "subscriptions": "Mes abonnements"
+    },
+    "account": {
+      "downloadData": "Télécharger les données",
+      "clearData": "Effacer les données",
+      "deleteAccount": "Supprimer mon compte"
+    },
+    "errors": {
+      "title": "Erreur",
+      "toggleNotificationsError": "Erreur toggleNotifications:",
+      "notificationUpdateError": "Un problème est survenu lors de la mise à jour des préférences de notification",
+      "toggleContactsError": "Erreur toggleContacts:",
+      "contactsUpdateError": "Impossible de mettre à jour les préférences de contacts",
+      "genericError": "Un problème est survenu",
+      "genericLog": "Erreur:",
+      "dataDownloadError": "Une erreur est survenue lors du téléchargement des données",
+      "stripeResetErrorLog": "Erreur de réinitialisation du compte Stripe:",
+      "stripeResetError": "Erreur lors de la réinitialisation du compte Stripe",
+      "logoutErrorLog": "Erreur de déconnexion:",
+      "logoutError": "Une erreur est survenue lors de la déconnexion"
+    }
+  },
+
+  "sharedSecret": {
+    "title": "Découvrez le hushy 🔐",
+    "subtitle": "et accédez à la conversation !",
+    "loading": "Undy...",
+    "errors": {
+      "title": "Erreur",
+      "fetchError": "Erreur:",
+      "unableToLoad": "Impossible de charger le secret.",
+      "purchaseError": "Erreur lors de l'achat:",
+      "paymentError": "Erreur de paiement:"
+    }
+  },
+
+  "cardHome": {
+    "postedBy": "Posté par {{name}}",
+    "expiresIn": "Expire dans",
+    "noData": "Aucune donnée disponible",
+    "notAvailable": "N/A",
+    "anonymous": "Anonyme",
+    "noDescriptionAvailable": "Aucune description disponible.",
+    "labelUnavailable": "Label indisponible",
+    "profilePicture": "Photo de profil de {{name}}",
+    "logs": {
+      "secretRevealed": "Secret révélé !"
+    },
+    "errors": {
+      "title": "Erreur",
+      "unableToShare": "Impossible de partager le secret."
+    }
+  },
+
+  "contacts": {
+    "title": "Contacts",
+    "loading": "Chargement des contacts...",
+    "searchPlaceholder": "Rechercher un contact",
+    "noContactsFound": "Aucun contact trouvé",
+    "errors": {
+      "loading": "Erreur lors du chargement des contacts:"
+    }
+  },
+
+  "deepLink": {
+    "alerts": {
+      "success": {
+        "title": "Succès",
+        "message": "Votre compte Stripe a été configuré avec succès !"
+      },
+      "configInProgress": {
+        "title": "Configuration en cours"
+      },
+      "ok": "OK"
+    },
+    "errors": {
+      "title": "Erreur",
+      "deepLinkError": "Deep link error:",
+      "unableToProcessLink": "Impossible de traiter le lien"
+    }
+  },
+
+  "earnings": {
+    "title": "Détails des revenus",
+    "noEarningsYet": "Vous n'avez pas encore généré de revenus. Commencez à vendre vos secrets pour gagner de l'argent.",
+    "publishSecret": "Publier un secret",
+    "loadingTransactions": "Chargement des transactions...",
+    "transfer": "Transfert",
+    "sale": "Vente",
+    "succeeded": "Réussi",
+    "pending": "En attente",
+    "totalEarned": "Total gagné",
+    "available": "Disponible",
+    "availableEarnings": "Revenus disponibles",
+    "noAvailableFunds": "Aucun fonds disponible",
+    "retrieveFunds": "Récupérer les fonds",
+    "logs": {
+      "allData": "tout les data ",
+      "totalMoney": "tout le fric ",
+      "transferSuccess": "Virement effectué avec succès !"
+    },
+    "errors": {
+      "generic": "Erreur:",
+      "paymentSheetInit": "Erreur lors de l'initialisation du formulaire de paiement :",
+      "paymentSheetPresent": "Erreur lors de la présentation du formulaire de paiement :",
+      "transferFunds": "Erreur lors du virement des fonds :"
+    }
+  },
+
+  "inviteContacts": {
+    "title": "Inviter des contacts",
+    "noContactsUsingApp": "Aucun de vos contacts n'utilise encore Hushy. Invitez-les à rejoindre l'application !",
+    "cancel": "Annuler",
+    "inviteWithCount": "Inviter ({{count}})",
+    "invitationMessage": "Hey ! Je t'invite à rejoindre Hushy, une super app pour partager des secrets ! Télécharge-la maintenant : https://hushy.app",
+    "invitationTitle": "Invitation à Hushy",
+    "errors": {
+      "title": "Erreur",
+      "invitationError": "Erreur lors de l'invitation:",
+      "unableToSendInvitations": "Impossible d'envoyer les invitations"
+    }
+  },
+
+  "paymentSheet": {
+    "loading": "Chargement...",
+    "unlockForPrice": "Déverrouiller pour {{price}} €",
+    "logs": {
+      "applePaySupported": "Apple Pay supporté:",
+      "applePayDetails": "Détails Apple Pay:",
+      "applePayUnavailable": "canMakePayments non disponible ou non iOS",
+      "applePayNotConfigured": "Apple Pay non configuré car non supporté ou non iOS",
+      "initializationStart": "Début initialisation PaymentSheet",
+      "paymentSheetConfig": "Configuration PaymentSheet:",
+      "initializationSuccess": "PaymentSheet initialisé avec succès",
+      "paymentProcessStart": "Début du processus de paiement",
+      "creatingPaymentIntent": "Création de l'intention de paiement pour le secret {{secretId}}",
+      "apiResponseReceived": "Réponse reçue de l'API",
+      "clientSecretReceived": "Client secret reçu, ID du paiement: {{paymentId}}",
+      "presentingPaymentSheet": "Présentation de la feuille de paiement",
+      "paymentCanceled": "Paiement annulé par l'utilisateur",
+      "paymentSuccess": "Paiement réussi"
+    },
+    "errors": {
+      "applePayDetailsError": "Erreur lors de la vérification des détails Apple Pay:",
+      "applePayCheckError": "Erreur lors de la vérification d'Apple Pay:",
+      "initPaymentSheetError": "Erreur initPaymentSheet:",
+      "initializationError": "Erreur dans initializePaymentSheet:",
+      "invalidSecretData": "Données du secret invalides",
+      "paymentCreationError": "Erreur lors de la création du paiement",
+      "presentationError": "Erreur de présentation:",
+      "handlePaymentError": "Erreur dans handlePayment:",
+      "paymentErrorTitle": "Erreur de paiement",
+      "paymentErrorMessage": "Une erreur est survenue lors du paiement"
+    }
+  },
+
+  "secretCard": {
+    "expiresIn": "Expire dans",
+    "pricePaid": "Prix payé : {{price}} €",
+    "basePrice": "Prix de base : {{price}} €",
+    "yourEarnings": "Vos gains : {{earnings}} €",
+    "price": "Prix : {{price}} €",
+    "timeAgo": {
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "days": "Il y a {{count}} jour",
+      "days_plural": "Il y a {{count}} jours",
+      "weeks": "Il y a {{count}} semaine",
+      "weeks_plural": "Il y a {{count}} semaines",
+      "months": "Il y a {{count}} mois",
+      "years": "Il y a {{count}} an",
+      "years_plural": "Il y a {{count}} ans"
+    }
+  },
+
+  "stripeVerification": {
+    "bankAccountSetup": {
+      "title": "Configuration du compte bancaire",
+      "description": "Votre compte bancaire sera configuré automatiquement lors de la publication de votre premier secret.",
+      "publishSecret": "Publier un secret"
+    },
+    "identityVerification": {
+      "title": "Vérification d'identité",
+      "description": "Pour finaliser la configuration de votre compte Stripe, nous avons besoin d'une photo de votre pièce d'identité. Ne tardez pas si vous voulez pouvoir continuer à recevoir des paiements et à les transférer sur votre compte",
+      "documentSelected": "Document sélectionné : {{name}}",
+      "chooseDocument": "Choisir un document",
+      "submit": "Soumettre"
+    },
+    "accountConfigured": {
+      "title": "Compte Stripe configuré",
+      "description": "Votre compte bancaire est actif. Vous pouvez réinitialiser ou gérer votre compte Stripe si nécessaire.",
+      "resetAccount": "Réinitialiser le compte Stripe",
+      "manageAccount": "Gérer mon compte"
+    },
+    "success": {
+      "title": "Succès",
+      "documentSubmitted": "Votre document d'identité a été soumis avec succès. Nous vérifions actuellement vos informations."
+    },
+    "errors": {
+      "title": "Erreur",
+      "generic": "Une erreur est survenue",
+      "selectDocument": "Veuillez sélectionner un document",
+      "uploadError": "Erreur d'upload:",
+      "uploadFailed": "Une erreur est survenue lors de l'upload",
+      "verificationFailed": "Échec de la vérification"
+    },
+    "logs": {
+      "userCancelled": "User cancelled image picker"
+    }
+  },
+
+  "notifications": {
+    "alerts": {
+      "simulatorWarning": "Les notifications ne fonctionnent pas sur simulateur",
+      "disabled": {
+        "title": "Notifications désactivées",
+        "message": "Voulez-vous activer les notifications dans les paramètres ?",
+        "no": "Non",
+        "openSettings": "Ouvrir les paramètres"
+      }
+    },
+    "test": {
+      "title": "Notifications activées",
+      "body": "Vous recevrez désormais des notifications de l'application"
+    },
+    "errors": {
+      "permissionCheck": "Erreur de vérification des permissions:",
+      "tokenRetrieval": "Erreur lors de l'obtention du token:",
+      "sending": "Erreur lors de l'envoi de la notification:",
+      "activation": "Erreur d'activation:"
+    },
+    "logs": {
+      "devModePermission": "Mode développement: autorisation simulateur",
+      "existingStatus": "Status existant:",
+      "newStatus": "Nouveau status:",
+      "testSent": "Notification test envoyée:"
+    }
+  },
+
+  "cardData": {
   "errors": {
-    "loading": "Error loading conversations:",
-    "deletion": "Error during deletion:"
-  }
-},
-"chat": {
-  "defaultUser": "Utilisateur",
-  "profilePicture": "Photo de profil",
-  "participants": "{{count}} participants",
-  "expiresIn": "Expire dans",
-  "expired": "Expiré",
-  "timeLeft": "{{days}}j {{hours}}h {{minutes}}m",
-  "noMessages": "Aucun message",
-  "newMessages": "Nouveaux messages",
-  "send": "Envoyer",
-  "message": "Message",
-  "postedBy": "Posté par {{name}}",
-  "postedByDefault": "Posté par Utilisateur",
-  "selectedImage": "Image sélectionnée",
-  "errors": {
-    "resizing": "Erreur lors du redimensionnement:",
-    "saveScrollPosition": "Erreur lors de la sauvegarde de la position:",
-    "loadScrollPosition": "Erreur lors du chargement de la position:",
-    "restoreScrollPosition": "Erreur lors de la restauration de la position:",
-    "reloadConversation": "Erreur lors du rechargement de la conversation:",
-    "missingCreatedAt": "Message sans createdAt:",
-    "missingConversationId": "ID de conversation manquant",
-    "missingUserInfo": "Informations utilisateur manquantes",
-    "unsupportedImageFormat": "Format d'image non supporté",
+    "axiosInitError": "Erreur d'initialisation axios:",
+    "axiosNotInitialized": "Instance Axios non initialisée",
+    "secretCreation": "Erreur création secret:",
+    "secretCreationGeneric": "Erreur lors de la création du secret",
+    "stripeRefresh": "Erreur rafraîchissement Stripe:",
+    "stripeRefreshGeneric": "Erreur lors du rafraîchissement de la configuration Stripe",
+    "stripeReturn": "Erreur de retour Stripe:",
+    "stripeReset": "Erreur réinitialisation compte Stripe:",
+    "stripeResetGeneric": "Erreur lors de la réinitialisation du compte Stripe",
+    "stripeDelete": "Erreur suppression compte Stripe:",
+    "stripeDeleteFundsAvailable": "Impossible de supprimer le compte. Des fonds sont encore disponibles.",
+    "stripeDeleteGeneric": "Erreur lors de la suppression du compte Stripe",
+    "invalidDataFromApi": "Données invalides reçues depuis l'API",
+    "fetchingSecrets": "Erreur lors de la récupération des secrets :",
+    "fetchingUserSecrets": "Erreur récupération secrets et comptage:",
+    "missingSecretOrPaymentId": "Secret ID et Payment ID sont requis",
+    "noConversationIdReceived": "Aucun ID de conversation reçu",
+    "purchaseErrorDetails": "Détails de l'erreur:",
+    "fetchingPurchasedSecrets": "Erreur lors de la récupération des secrets achetés:",
+    "sendingMessage": "Erreur lors de l'envoi du message:",
+    "fetchingMessages": "Erreur lors de la récupération des messages:",
+    "fetchingConversations": "Erreur lors de la récupération des conversations:",
+    "shareLinkUnavailable": "Lien de partage non disponible",
+    "sharing": "Erreur lors du partage:",
     "imageUpload": "Erreur lors de l'upload de l'image:",
-    "imageUploadFailed": "Échec de l'upload de l'image",
-    "sendMessage": "Erreur lors de l'envoi du message:",
-    "imageSelection": "Erreur lors de la sélection d'image:"
+    "refreshingUnreadCounts": "Erreur lors du rafraîchissement des compteurs non lus:",
+    "markingAsRead": "Erreur lors du marquage comme lu",
+    "refreshingCounters": "Erreur lors du rafraîchissement des compteurs:"
   },
-  "messageFailed": "Échec",
-  "retry": "Renvoyer",
-  "sending": "Envoi...",
-  "messageImage": "Image du message"
-},
-
-"dateTime": {
-  "today": "Aujourd'hui",
-  "yesterday": "Hier",
-  "at": "à",
-  "expired": "Expiré",
-  "expiresIn": "Expire dans",
-  "justNow": "À l'instant",
-  "minutesAgo": "Il y a {{count}} minute",
-  "minutesAgo_plural": "Il y a {{count}} minutes",
-  "hoursAgo": "Il y a {{count}} heure",
-  "hoursAgo_plural": "Il y a {{count}} heures",
-  "daysAgo": "Il y a {{count}} jour",
-  "daysAgo_plural": "Il y a {{count}} jours"
-},
-
-"profile": {
-  "title": "Mon Profil",
-  "loading": "Chargement...",
-  "emptyList": "Wow mais c'est désert ici",
-  "tabs": {
-    "yourSecrets": "Vos hushy",
-    "othersSecrets": "Ceux des autres"
+  "logs": {
+    "secretCreationResponse": "Réponse création secret:",
+    "stripeRefreshResponse": "Réponse rafraîchissement Stripe:",
+    "attemptingPurchase": "Tentative d'achat du secret:",
+    "messagesReceived": "Messages reçus:",
+    "userDataNull": "getUserConversations: userData is null, returning empty array",
+    "userDataNullSkippingUpdate": "refreshUnreadCounts: userData is null, skipping update",
+    "updatingCounters": "Mise à jour des compteurs (avec cache local):",
+    "searchingSecret": "Recherche du secret avec ID:",
+    "responseReceived": "Réponse reçue:",
+    "soughtSecret": "Secret recherché:"
   },
-  "stats": {
-    "secrets": "Secrets",
-    "followers": "Abonnés",
-    "following": "Abonnements"
+  "stripe": {
+    "configComplete": "Compte Stripe complètement configuré",
+    "configInProgress": "Configuration du compte Stripe en cours",
+    "noAccount": "Aucun compte Stripe associé",
+    "unknownStatus": "Statut inconnu",
+    "configSuccessful": "Compte Stripe configuré avec succès",
+    "resetSuccess": "Compte Stripe réinitialisé avec succès",
+    "deleteSuccess": "Compte Stripe supprimé avec succès"
   },
-  "seeMore": "Voir plus",
-  "seeLess": "Voir moins",
-  "defaultName": "Utilisateur",
-  "profilePictureAlt": "Photo de profil de {{name}}",
-  "dummyText": "Le Lorem Ipsum est simplement du faux texte employé dans la composition et la mise en page avant impression. Le Lorem Ipsum est le faux texte standard de l'imprimerie depuis les années 1500, quand un imprimeur anonyme assembla ensemble des morceaux de texte pour réaliser un livre spécimen de polices de texte. Il n'a pas fait que survivre cinq siècles, mais s'est aussi adapté à la bureautique informatique, sans que son contenu n'en soit modifié",
-  "imagePicker": {
-    "canceled": "Upload annulé par l'utilisateur",
-    "noImageSelected": "Aucune image sélectionnée"
-  },
-  "errors": {
-    "title": "Erreur",
-    "loadingData": "Erreur chargement données:",
-    "fullError": "Erreur complète:",
-    "unableToChangeProfilePicture": "Impossible de changer la photo de profil"
+  "share": {
+    "messageIOS": "🔐 Découvre mon secret sur Hushy !\n\n{link}",
+    "messageAndroid": "🔐 Découvre mon secret sur Hushy !\n\n{link}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy",
+    "title": "Partager un secret",
+    "subject": "Un secret à partager sur Hushy",
+    "confidentialSecret": "Secret confidentiel 🔐",
+    "dialogTitle": "Partager ce secret confidentiel"
   }
 },
 

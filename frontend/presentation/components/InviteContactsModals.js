@@ -3,8 +3,10 @@ import { Modal, View, Text, TouchableOpacity, FlatList, StyleSheet, Share, Alert
 import { Box, Button, VStack, HStack, Checkbox, Divider } from 'native-base';
 import { styles as globalStyles } from '../../infrastructure/theme/styles';
 import LinearGradient from 'react-native-linear-gradient';
+import { useTranslation } from 'react-i18next';
 
 const InviteContactsModal = ({ isVisible, onClose, contacts }) => {
+  const { t } = useTranslation();
   const [selectedContacts, setSelectedContacts] = useState([]);
   
   const toggleContactSelection = (contactId) => {
@@ -27,18 +29,21 @@ const InviteContactsModal = ({ isVisible, onClose, contacts }) => {
       }
       
       // Préparer le message d'invitation
-      const message = `Hey ! Je t'invite à rejoindre Hushy, une super app pour partager des secrets ! Télécharge-la maintenant : https://hushy.app`;
+      const message = t('inviteContacts.invitationMessage');
       
       // Partager l'invitation
       await Share.share({
         message,
-        title: 'Invitation à Hushy'
+        title: t('inviteContacts.invitationTitle')
       });
       
       onClose();
     } catch (error) {
-      console.error('Erreur lors de l\'invitation:', error);
-      Alert.alert('Erreur', 'Impossible d\'envoyer les invitations');
+      console.error(t('inviteContacts.errors.invitationError'), error);
+      Alert.alert(
+        t('inviteContacts.errors.title'), 
+        t('inviteContacts.errors.unableToSendInvitations')
+      );
     }
   };
   
@@ -52,9 +57,9 @@ const InviteContactsModal = ({ isVisible, onClose, contacts }) => {
       <Box flex={1} bg="rgba(0,0,0,0.5)" justifyContent="center" alignItems="center">
         <Box width="90%" bg="white" borderRadius={10} p={4}>
           <VStack space={4}>
-            <Text style={globalStyles.h3}>Inviter des contacts</Text>
+            <Text style={globalStyles.h3}>{t('inviteContacts.title')}</Text>
             <Text style={globalStyles.caption}>
-              Aucun de vos contacts n'utilise encore Hushy. Invitez-les à rejoindre l'application !
+              {t('inviteContacts.noContactsUsingApp')}
             </Text>
             
             <FlatList
@@ -82,7 +87,7 @@ const InviteContactsModal = ({ isVisible, onClose, contacts }) => {
             
             <HStack space={2} justifyContent="center">
               <Button variant="ghost" onPress={onClose}>
-                <Text>Annuler</Text>
+                <Text>{t('inviteContacts.cancel')}</Text>
               </Button>
               
               <View style={localStyles.buttonContainer}>
@@ -98,7 +103,7 @@ const InviteContactsModal = ({ isVisible, onClose, contacts }) => {
                       style={localStyles.gradientButton}
                     >
                       <Text style={[globalStyles.cta, { color: 'white' }]}>
-                        Inviter (0)
+                        {t('inviteContacts.inviteWithCount', { count: 0 })}
                       </Text>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -114,7 +119,7 @@ const InviteContactsModal = ({ isVisible, onClose, contacts }) => {
                       style={localStyles.gradientButton}
                     >
                       <Text style={[globalStyles.cta, { color: 'white' }]}>
-                        Inviter ({selectedContacts.length})
+                        {t('inviteContacts.inviteWithCount', { count: selectedContacts.length })}
                       </Text>
                     </LinearGradient>
                   </TouchableOpacity>

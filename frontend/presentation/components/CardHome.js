@@ -3,17 +3,18 @@ import { styles } from '../../infrastructure/theme/styles';
 import { Box, Text, HStack, VStack, Image } from 'native-base';
 import { BlurView } from '@react-native-community/blur';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
-import { faPaperPlane } from '@fortawesome/free-solid-svg-icons'; // Importer l'icône "share"
+import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { View, Platform, Alert, Share, Linking } from 'react-native';
 import BlurredTextComponent from './SelectiveBlurText';
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
-
-
-
+import { useTranslation } from 'react-i18next';
+import { useDateFormatter } from '../../utils/dateFormatters'; // Ajustez le chemin selon votre structure
 
 export default function CardHome({ cardData }) {
-  const { data } = useCardData(); // Accéder aux données via le contexte
+  const { t } = useTranslation();
+  const dateFormatter = useDateFormatter();
+  const { data } = useCardData();
   const [isSingleLine, setIsSingleLine] = useState(true);
   const [textHeight, setTextHeight] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
@@ -26,22 +27,12 @@ export default function CardHome({ cardData }) {
     // autres propriétés nécessaires
   };
 
-
   useEffect(() => {
     const calculateTimeLeft = () => {
-      if (!safeCardData.expiresAt) return 'N/A';
+      if (!safeCardData.expiresAt) return t('cardHome.notAvailable');
 
-      const expirationDate = new Date(safeCardData.expiresAt);
-      const now = new Date();
-      const difference = expirationDate - now;
-
-      if (difference <= 0) return 'Expiré';
-
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((difference / 1000 / 60) % 60);
-
-      return `${days}j ${hours}h ${minutes}m`;
+      const timeLeftFormatted = dateFormatter.formatTimeLeft(safeCardData.expiresAt);
+      return timeLeftFormatted;
     };
 
     setTimeLeft(calculateTimeLeft());
@@ -50,8 +41,7 @@ export default function CardHome({ cardData }) {
     }, 60000);
 
     return () => clearInterval(timer);
-  }, [safeCardData.expiresAt]);
-
+  }, [safeCardData.expiresAt, dateFormatter]);
 
   useEffect(() => {
     const checkContentLength = () => {
@@ -62,31 +52,27 @@ export default function CardHome({ cardData }) {
     checkContentLength();
   }, [safeCardData.content]);
 
-
   const profilePictureUrl = safeCardData.user.profilePicture;
 
-
   if (!data || data.length === 0) {
-    return <Text>No data available</Text>;
+    return <Text>{t('cardHome.noData')}</Text>;
   }
 
   const handleRevealSecret = () => {
-    console.log('Secret revealed!');
+    console.log(t('cardHome.logs.secretRevealed'));
   };
 
   const handleShare = async () => {
     try {
       await handleShareSecret(cardData);
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de partager le secret.');
+      Alert.alert(t('cardHome.errors.title'), t('cardHome.errors.unableToShare'));
     }
   };
 
   const handleTextLayout = (event) => {
     setTextHeight(event.nativeEvent.layout.height);
   };
-
-
 
   return (
     <Box
@@ -109,10 +95,10 @@ export default function CardHome({ cardData }) {
           {/* Texte aligné à gauche */}
           <VStack flex={1} mr={2} ml={2} >
             <Text left={2} style={styles.caption}>
-              Posté par {safeCardData.user.name || 'Anonyme'}
+              {t('cardHome.postedBy', { name: safeCardData.user.name || t('cardHome.anonymous') })}
             </Text>
             <Text color='#FF78B2' left={2} mt={1} style={styles.littleCaption}>
-              Expire dans {timeLeft}
+              {t('cardHome.expiresIn')} {timeLeft}
             </Text>
           </VStack>
           {/* Image alignée à droite */}
@@ -120,32 +106,32 @@ export default function CardHome({ cardData }) {
             source={{
               uri: profilePictureUrl
             }}
-            alt={data[0]?.title || 'Carte'}
-            width={35} // Ajustez la taille de l'image ici
-            height={35} // Ajustez la taille de l'image ici
-            borderRadius="full" // Rendre l'image ronde
+            alt={t('cardHome.profilePicture', { name: safeCardData.user.name || t('cardHome.anonymous') })}
+            width={35}
+            height={35}
+            borderRadius="full"
           />
         </HStack>
 
         {/* Wrapper for the text with blur effect */}
         <Box
           marginLeft={4}
-          flex={1} // Ajout
+          flex={1}
           height="auto"
           position="relative"
           overflow="hidden"
-          justifyContent="center" // Centre verticalement les enfants
-          alignItems="center" // Centre horizontalement les enfants
+          justifyContent="center"
+          alignItems="center"
         >
           <BlurredTextComponent
-            content={cardData.content || 'Aucune description disponible.'}
+            content={cardData.content || t('cardHome.noDescriptionAvailable')}
             style={{ width: '90%', paddingBottom: 5, marginTop: 5, marginLeft: 4 }}
             textStyle={styles.h3}
             breakAtLine={8}
-            visibleWords={3}  // Montre les 3 premiers mots
+            visibleWords={3}
           />
-
         </Box>
+        
         {/* Section des statistiques */}
         <HStack
           style={{
@@ -158,18 +144,16 @@ export default function CardHome({ cardData }) {
           mt="auto"
         >
           <Text ml={4} style={[styles.caption, styles.ctalittle]} >
-            {cardData.label || 'Label indisponible'}
+            {cardData.label || t('cardHome.labelUnavailable')}
           </Text>
           <FontAwesomeIcon
             icon={faPaperPlane}
             color="black"
             size={20}
-            onPress={handleShare} // Appeler la fonction de partage
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} // Zone de toucher étendue
-
+            onPress={handleShare}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           />
         </HStack>
-
       </VStack>
     </Box>
   );

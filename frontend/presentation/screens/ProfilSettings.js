@@ -15,10 +15,10 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import StripeVerificationModal from '../components/StripeVerificationModal';
 import Contacts from 'react-native-contacts';
 import NotificationService from '../Notifications/NotificationService';
-
-
+import { useTranslation } from 'react-i18next';
 
 export default function Profile({ navigation }) {
+    const { t } = useTranslation();
     const { userData, isLoadingUserData, updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount, getContacts, updateContactsAccess, contactsAccessEnabled } = useContext(AuthContext);
     const [selectedField, setSelectedField] = useState(null);
     const [tempValue, setTempValue] = useState('');
@@ -36,7 +36,6 @@ export default function Profile({ navigation }) {
     const [keyboardHeight, setKeyboardHeight] = useState(0);
     const { height: windowHeight } = useWindowDimensions();
     const [actionSheetPosition] = useState(new Animated.Value(0));
-
 
     useEffect(() => {
         const keyboardWillShowListener = Keyboard.addListener(
@@ -70,12 +69,11 @@ export default function Profile({ navigation }) {
 
     const AnimatedActionsheetContent = Animated.createAnimatedComponent(Actionsheet.Content);
 
-
     const [isLoading, setIsLoading] = useState(false);
 
     if (userData) {
         const { profilePicture, ...userDataWithoutPicture } = userData;
-        console.log('Données utilisateur :', userDataWithoutPicture);
+        console.log(t('settings.userDataLog'), userDataWithoutPicture);
     }
 
     const truncateText = (text, maxLength) => {
@@ -83,10 +81,9 @@ export default function Profile({ navigation }) {
         return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
     };
 
-
     const saveChanges = async () => {
-        console.log('Selected Field:', selectedField);
-        console.log('Input Value:', inputValue); // Ajoutez ce log pour déboguer
+        console.log(t('settings.selectedFieldLog'), selectedField);
+        console.log(t('settings.inputValueLog'), inputValue);
 
         // Utilisez la valeur correcte en fonction du type de champ
         const valueToUpdate = selectedField === 'birthdate' ? tempValue : inputValue;
@@ -96,7 +93,7 @@ export default function Profile({ navigation }) {
             [selectedField]: valueToUpdate
         };
 
-        console.log('Données à mettre à jour avant envoi:', updatedData); // Pour déboguer
+        console.log(t('settings.dataToUpdateLog'), updatedData);
 
         const result = await updateUserData(updatedData);
         setMessage(result.message);
@@ -110,7 +107,6 @@ export default function Profile({ navigation }) {
         setShowDatePicker(false);
         setTempValue(currentDate.toISOString().split('T')[0]);
     };
-
 
     useEffect(() => {
         const syncNotificationState = async () => {
@@ -164,16 +160,15 @@ export default function Profile({ navigation }) {
                 }
             }
         } catch (error) {
-            console.error("Erreur toggleNotifications:", error);
+            console.error(t('settings.errors.toggleNotificationsError'), error);
             // En cas d'erreur, revenir à l'état précédent
             setNotificationsEnabled(!newNotifState);
             Alert.alert(
-                "Erreur",
-                "Un problème est survenu lors de la mise à jour des préférences de notification"
+                t('settings.errors.title'),
+                t('settings.errors.notificationUpdateError')
             );
         }
     };
-
 
     const toggleContacts = async () => {
         try {
@@ -186,12 +181,12 @@ export default function Profile({ navigation }) {
             if (!success) {
                 // Revenir à l'état précédent si l'API échoue
                 setContactsEnabled(contactsEnabled);
-                Alert.alert("Erreur", "Impossible de mettre à jour les préférences de contacts");
+                Alert.alert(t('settings.errors.title'), t('settings.errors.contactsUpdateError'));
             }
         } catch (error) {
-            console.error("Erreur toggleContacts:", error);
+            console.error(t('settings.errors.toggleContactsError'), error);
             setContactsEnabled(contactsEnabled); // Revenir à l'état précédent
-            Alert.alert("Erreur", "Un problème est survenu");
+            Alert.alert(t('settings.errors.title'), t('settings.errors.genericError'));
         }
     };
 
@@ -216,25 +211,25 @@ export default function Profile({ navigation }) {
     const handleDownloadUserData = async () => {
         try {
             const response = await downloadUserData();
-            console.log('Données reçues:', response);
+            console.log(t('settings.dataReceivedLog'), response);
 
             // Utiliser la méthode setString de @react-native-clipboard/clipboard
             Clipboard.setString(JSON.stringify(response, null, 2));
 
             Alert.alert(
-                "Succès",
-                "Les données ont été copiées dans votre presse-papier",
-                [{ text: "OK" }]
+                t('settings.success'),
+                t('settings.dataCopiedToClipboard'),
+                [{ text: t('settings.ok') }]
             );
 
-            setMessage('Données téléchargées avec succès');
+            setMessage(t('settings.dataDownloadSuccess'));
             setIsSuccess(true);
         } catch (error) {
-            console.error('Erreur:', error);
+            console.error(t('settings.errors.genericLog'), error);
             Alert.alert(
-                "Erreur",
-                "Une erreur est survenue lors du téléchargement des données",
-                [{ text: "OK" }]
+                t('settings.errors.title'),
+                t('settings.errors.dataDownloadError'),
+                [{ text: t('settings.ok') }]
             );
             setIsSuccess(false);
         }
@@ -242,25 +237,25 @@ export default function Profile({ navigation }) {
 
     const handleClearUserData = async () => {
         Alert.alert(
-            "Confirmation",
-            "Êtes-vous sûr de vouloir effacer vos données ?",
+            t('settings.confirmation'),
+            t('settings.clearDataConfirmation'),
             [
                 {
-                    text: "Annuler",
+                    text: t('settings.cancel'),
                     style: "cancel"
                 },
                 {
-                    text: "Effacer",
+                    text: t('settings.clear'),
                     style: "destructive",
                     onPress: async () => {
                         try {
                             await clearUserData();
-                            Alert.alert("Succès", "Vos données ont été effacées");
-                            setMessage('Données effacées avec succès');
+                            Alert.alert(t('settings.success'), t('settings.dataClearedSuccess'));
+                            setMessage(t('settings.dataClearedSuccess'));
                             setIsSuccess(true);
                         } catch (error) {
-                            console.error('Erreur:', error);
-                            Alert.alert("Erreur", "Une erreur est survenue");
+                            console.error(t('settings.errors.genericLog'), error);
+                            Alert.alert(t('settings.errors.title'), t('settings.errors.genericError'));
                             setIsSuccess(false);
                         }
                     }
@@ -271,27 +266,27 @@ export default function Profile({ navigation }) {
 
     const handleDeleteUserAccount = async () => {
         Alert.alert(
-            "Confirmation",
-            "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.",
+            t('settings.confirmation'),
+            t('settings.deleteAccountConfirmation'),
             [
                 {
-                    text: "Annuler",
+                    text: t('settings.cancel'),
                     style: "cancel"
                 },
                 {
-                    text: "Supprimer",
+                    text: t('settings.delete'),
                     style: "destructive",
                     onPress: async () => {
                         try {
                             await deleteUserAccount();
-                            Alert.alert("Succès", "Votre compte a été supprimé");
-                            setMessage('Compte supprimé avec succès');
+                            Alert.alert(t('settings.success'), t('settings.accountDeletedSuccess'));
+                            setMessage(t('settings.accountDeletedSuccess'));
                             setIsSuccess(true);
                             // Navigation vers l'écran de connexion ou autre
                             navigation.navigate('Login');
                         } catch (error) {
-                            console.error('Erreur:', error);
-                            Alert.alert("Erreur", "Une erreur est survenue");
+                            console.error(t('settings.errors.genericLog'), error);
+                            Alert.alert(t('settings.errors.title'), t('settings.errors.genericError'));
                             setIsSuccess(false);
                         }
                     }
@@ -300,18 +295,17 @@ export default function Profile({ navigation }) {
         );
     };
 
-
     const handleResetStripeAccount = async () => {
         Alert.alert(
-            "Réinitialiser le compte Stripe",
-            "Êtes-vous sûr de vouloir réinitialiser votre compte Stripe ? Vous devrez refaire le processus d'onboarding.",
+            t('settings.resetStripeAccount'),
+            t('settings.resetStripeConfirmation'),
             [
                 {
-                    text: "Annuler",
+                    text: t('settings.cancel'),
                     style: "cancel"
                 },
                 {
-                    text: "Réinitialiser",
+                    text: t('settings.reset'),
                     style: "destructive",
                     onPress: async () => {
                         try {
@@ -319,10 +313,10 @@ export default function Profile({ navigation }) {
 
                             if (result.success) {
                                 Alert.alert(
-                                    "Succès",
-                                    "Votre compte Stripe a été réinitialisé. Vous allez être redirigé vers l'onboarding.",
+                                    t('settings.success'),
+                                    t('settings.stripeResetSuccess'),
                                     [{
-                                        text: 'OK',
+                                        text: t('settings.ok'),
                                         onPress: () => {
                                             if (result.url) {
                                                 // Rediriger vers l'URL d'onboarding si disponible
@@ -334,17 +328,17 @@ export default function Profile({ navigation }) {
                                 setStripeModalVisible(false);
                             } else {
                                 Alert.alert(
-                                    "Erreur",
-                                    result.message || "Erreur lors de la réinitialisation du compte Stripe",
-                                    [{ text: 'OK' }]
+                                    t('settings.errors.title'),
+                                    result.message || t('settings.errors.stripeResetError'),
+                                    [{ text: t('settings.ok') }]
                                 );
                             }
                         } catch (error) {
-                            console.error('Erreur de réinitialisation du compte Stripe:', error);
+                            console.error(t('settings.errors.stripeResetErrorLog'), error);
                             Alert.alert(
-                                'Erreur',
-                                'Une erreur est survenue lors de la réinitialisation',
-                                [{ text: 'OK' }]
+                                t('settings.errors.title'),
+                                t('settings.errors.stripeResetError'),
+                                [{ text: t('settings.ok') }]
                             );
                         }
                     }
@@ -353,23 +347,20 @@ export default function Profile({ navigation }) {
         );
     };
 
-
-
-    const handleLogoutno = async () => {
+    const handleLogout = async () => {
         try {
             await logout();
             resetReadStatus(); // Réinitialise markedAsReadConversations
             setUnreadCountsMap({}); // Réinitialisez également les compteurs
             setTotalUnreadCount(0);
         } catch (error) {
-            console.error('Erreur de déconnexion:', error);
+            console.error(t('settings.errors.logoutErrorLog'), error);
             Alert.alert(
-                "Erreur",
-                "Une erreur est survenue lors de la déconnexion"
+                t('settings.errors.title'),
+                t('settings.errors.logoutError')
             );
         }
     };
-
 
     const openEditModal = (field, currentValue) => {
         if (field === 'income') {
@@ -384,20 +375,18 @@ export default function Profile({ navigation }) {
         }
     };
 
-
-
     if (!userData) {
         return <TypewriterLoader />;
     }
 
     const fieldMappings = {
-        name: { label: 'Nom', icon: faUser, truncateLength: 10 },
-        email: { label: 'Adresse e-mail', icon: faEnvelope, truncateLength: 10 },
-        password: { label: 'Mot de passe', icon: faLock, value: '*********' },
-        phone: { label: 'Numéro de téléphone', icon: faPhone, truncateLength: 10 },
-        birthdate: { label: 'Date de naissance', icon: faBirthdayCake, truncateLength: 10 },
+        name: { label: t('settings.fields.name'), icon: faUser, truncateLength: 10 },
+        email: { label: t('settings.fields.email'), icon: faEnvelope, truncateLength: 10 },
+        password: { label: t('settings.fields.password'), icon: faLock, value: '*********' },
+        phone: { label: t('settings.fields.phone'), icon: faPhone, truncateLength: 10 },
+        birthdate: { label: t('settings.fields.birthdate'), icon: faBirthdayCake, truncateLength: 10 },
         income: {
-            label: 'Vos revenus',
+            label: t('settings.fields.income'),
             icon: faDollarSign,
             truncateLength: 15,
             getValue: (userData) => {
@@ -411,27 +400,26 @@ export default function Profile({ navigation }) {
             }
         },
         bank: {
-            label: 'Compte bancaire',
+            label: t('settings.fields.bank'),
             icon: faBuildingColumns,
             truncateLength: 20,
             getValue: (userData) => {
                 if (!userData?.stripeAccountStatus || userData.stripeAccountStatus !== 'active') {
-                    return 'Non configuré';
+                    return t('settings.notConfigured');
                 }
-                return userData.stripeExternalAccount || 'Non configuré';
+                return userData.stripeExternalAccount || t('settings.notConfigured');
             }
         },
-        notifs: { label: 'Mes notifications', icon: faBell, truncateLength: 10 },
-        contacts: { label: 'Mes contacts', icon: faUserGroup, truncateLength: 10 },
-        abonnements: { label: 'Mes abonnements', icon: faPerson, truncateLength: 10 },
+        notifs: { label: t('settings.fields.notifications'), icon: faBell, truncateLength: 10 },
+        contacts: { label: t('settings.fields.contacts'), icon: faUserGroup, truncateLength: 10 },
+        abonnements: { label: t('settings.fields.subscriptions'), icon: faPerson, truncateLength: 10 },
     };
 
     const accountFieldMapping = {
-        download: { label: 'Télécharger les données' },
-        clear: { label: 'Effacer les données' },
-        delete: { label: 'Supprimer mon compte' },
+        download: { label: t('settings.account.downloadData') },
+        clear: { label: t('settings.account.clearData') },
+        delete: { label: t('settings.account.deleteAccount') },
     };
-
 
     return (
         <Background>
@@ -452,7 +440,7 @@ export default function Profile({ navigation }) {
 
                                     {/* Texte */}
                                     <Text style={styles.h3} width='auto' textAlign="center">
-                                        Vos paramètres
+                                        {t('settings.title')}
                                     </Text>
 
                                     {/* Icône Settings */}
@@ -473,9 +461,8 @@ export default function Profile({ navigation }) {
                                     style={[styles.cardStyle, customStyles.shadowBox]}
                                 >
                                     <VStack backgroundColor="white">
-                                        <Text paddingBottom={1} style={styles.h5}>Général</Text>
+                                        <Text paddingBottom={1} style={styles.h5}>{t('settings.generalSection')}</Text>
                                     </VStack>
-
 
                                     <VStack justifyContent="space-between">
                                         {Object.keys(fieldMappings).map((key, index) => {
@@ -485,10 +472,10 @@ export default function Profile({ navigation }) {
                                                 : key === 'income' || key === 'bank'
                                                     ? field.getValue(userData)
                                                     : key === 'notifs'
-                                                        ? (notificationsEnabled ? 'Activé' : 'Désactivé')
+                                                        ? (notificationsEnabled ? t('settings.enabled') : t('settings.disabled'))
                                                         : key === 'contacts'
-                                                            ? (contactsEnabled ? 'Activé' : 'Désactivé')
-                                                            : truncateText(userData?.[key] || 'Non renseigné', field.truncateLength || 15);
+                                                            ? (contactsEnabled ? t('settings.enabled') : t('settings.disabled'))
+                                                            : truncateText(userData?.[key] || t('settings.notSpecified'), field.truncateLength || 15);
 
                                             // Vérifie si c'est le dernier élément
                                             const isLast = index === Object.keys(fieldMappings).length - 1;
@@ -516,9 +503,9 @@ export default function Profile({ navigation }) {
                                                             <Text style={[styles.h5]} isTruncated>{field.label}</Text>
                                                             <Text style={[styles.caption]} color="#94A3B8">
                                                                 {key === 'notifs'
-                                                                    ? (notificationsEnabled ? 'Activé' : 'Désactivé')
+                                                                    ? (notificationsEnabled ? t('settings.enabled') : t('settings.disabled'))
                                                                     : key === 'contacts'
-                                                                        ? (contactsEnabled ? 'Activé' : 'Désactivé')
+                                                                        ? (contactsEnabled ? t('settings.enabled') : t('settings.disabled'))
                                                                         : truncateText(value, field.truncateLength || 15)}
                                                             </Text>
                                                         </HStack>
@@ -557,14 +544,14 @@ export default function Profile({ navigation }) {
                                     style={[styles.cardStyle, customStyles.shadowBox]}
                                 >
                                     <VStack backgroundColor="white">
-                                        <Text paddingBottom={1} style={styles.h5}>Données</Text>
+                                        <Text paddingBottom={1} style={styles.h5}>{t('settings.dataSection')}</Text>
                                     </VStack>
                                     <VStack justifyContent="space-between">
                                         {Object.keys(accountFieldMapping).map((key, index) => {
                                             const field = accountFieldMapping[key];
                                             const value = key === 'password'
                                                 ? field.value
-                                                : userData?.[key] || 'Non renseigné'; // Priorité à une valeur spécifique (ex: password)
+                                                : userData?.[key] || t('settings.notSpecified'); // Priorité à une valeur spécifique (ex: password)
 
                                             // Vérifie si c'est le dernier élément
                                             const isLast = index === Object.keys(accountFieldMapping).length - 1;
@@ -582,7 +569,7 @@ export default function Profile({ navigation }) {
                                                             await handleDeleteUserAccount();
                                                         }
                                                     } catch (error) {
-                                                        console.error('Error:', error);
+                                                        console.error(t('settings.errors.genericLog'), error);
                                                     }
                                                 }}>
                                                     <HStack
@@ -601,7 +588,6 @@ export default function Profile({ navigation }) {
                                             );
                                         })}
                                     </VStack>
-
                                 </Box>
 
                                 <Box
@@ -617,17 +603,15 @@ export default function Profile({ navigation }) {
                                     style={[styles.cardStyle, customStyles.shadowBox]}
                                 >
                                     {/* Déconnexion */}
-                                    <Pressable onPress={handleLogoutno}>
+                                    <Pressable onPress={handleLogout}>
                                         <HStack justifyContent="start" px={4} >
-                                            <Text style={styles.h5} color="#FF78B2" fontSize="md">Déconnexion</Text>
+                                            <Text style={styles.h5} color="#FF78B2" fontSize="md">{t('settings.logout')}</Text>
                                         </HStack>
                                     </Pressable>
                                 </Box>
-
                             </VStack>
                         </Box>
                     </ScrollView>
-
                 </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
 
@@ -658,20 +642,18 @@ export default function Profile({ navigation }) {
                         marginBottom: actionSheetPosition,
                     }}
                 >
-
                     <VStack width="100%" space={4} px={4}>
                         {selectedField === 'abonnements' && (!userData?.subscriptions || userData.subscriptions === 0) ? (
                             <>
                                 <Text style={styles.h4} textAlign="center">
-                                    Mes abonnements
+                                    {t('settings.mySubscriptions')}
                                 </Text>
                                 <Text
                                     style={styles.caption}
                                     color="#94A3B8"
                                     textAlign="center"
                                 >
-                                    Vous n'avez pas encore d'abonnements.
-                                    Découvrez nos offres pour enrichir votre expérience.
+                                    {t('settings.noSubscriptionsYet')}
                                 </Text>
                                 <Button
                                     onPress={() => {
@@ -682,14 +664,14 @@ export default function Profile({ navigation }) {
                                     borderRadius="full"
                                 >
                                     <Text color="white" style={styles.cta}>
-                                        Voir les abonnements
+                                        {t('settings.viewSubscriptions')}
                                     </Text>
                                 </Button>
                             </>
                         ) : (
                             <>
                                 <Text style={styles.h4} textAlign="center">
-                                    Modifier votre {fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}
+                                    {t('settings.editField', { field: fieldMappings[selectedField]?.label?.toLowerCase() || t('settings.information') })}
                                 </Text>
 
                                 <Box width="100%">
@@ -715,7 +697,7 @@ export default function Profile({ navigation }) {
                                         )
                                     ) : (
                                         <Input
-                                            placeholder={`Modifier votre ${fieldMappings[selectedField]?.label?.toLowerCase() || 'information'}`}
+                                            placeholder={t('settings.editFieldPlaceholder', { field: fieldMappings[selectedField]?.label?.toLowerCase() || t('settings.information') })}
                                             value={inputValue}
                                             onChangeText={(text) => {
                                                 setInputValue(text);
@@ -743,15 +725,15 @@ export default function Profile({ navigation }) {
                                     }}
                                 >
                                     <Text color="white" style={styles.cta}>
-                                        Enregistrer
+                                        {t('settings.save')}
                                     </Text>
                                 </Button>
                             </>
                         )}
                     </VStack>
-                    </AnimatedActionsheetContent>
-                    </Actionsheet>
-        </Background >
+                </AnimatedActionsheetContent>
+            </Actionsheet>
+        </Background>
     );
 };
 

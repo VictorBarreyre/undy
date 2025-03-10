@@ -6,8 +6,10 @@ import { styles as globalStyles } from '../../infrastructure/theme/styles';
 import { HStack, Box, VStack, Input, Icon } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faSearch, faChevronLeft } from '@fortawesome/free-solid-svg-icons';
+import { useTranslation } from 'react-i18next';
 
 const ContactsList = ({ navigation, onSelectContact }) => {
+  const { t } = useTranslation();
   const [contacts, setContacts] = useState([]);
   const [filteredContacts, setFilteredContacts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,7 +27,7 @@ const ContactsList = ({ navigation, onSelectContact }) => {
         setContacts(sortedContacts);
         setFilteredContacts(sortedContacts);
       } catch (error) {
-        console.error('Erreur lors du chargement des contacts:', error);
+        console.error(t('contacts.errors.loading'), error);
       } finally {
         setLoading(false);
       }
@@ -79,7 +81,7 @@ const ContactsList = ({ navigation, onSelectContact }) => {
     return (
       <Background>
         <View style={localStyles.centered}>
-          <Text style={globalStyles.h4}>Chargement des contacts...</Text>
+          <Text style={globalStyles.h4}>{t('contacts.loading')}</Text>
         </View>
       </Background>
     );
@@ -94,7 +96,7 @@ const ContactsList = ({ navigation, onSelectContact }) => {
           </TouchableOpacity>
 
           <Text style={globalStyles.h3} width='auto' textAlign="center">
-            Contacts
+            {t('contacts.title')}
           </Text>
           
           {/* Élément vide pour équilibrer le header */}
@@ -117,7 +119,7 @@ const ContactsList = ({ navigation, onSelectContact }) => {
           />
           <Input
             flex={1}
-            placeholder="Rechercher un contact"
+            placeholder={t('contacts.searchPlaceholder')}
             variant="unstyled"
             fontSize="14"
             value={searchQuery}
@@ -133,7 +135,7 @@ const ContactsList = ({ navigation, onSelectContact }) => {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={localStyles.centered}>
-              <Text style={globalStyles.h4}>Aucun contact trouvé</Text>
+              <Text style={globalStyles.h4}>{t('contacts.noContactsFound')}</Text>
             </View>
           }
         />

@@ -2,9 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 import { AuthContext } from './AuthContext';
 import { Platform, Share } from 'react-native';
-
-
-
+import i18n from 'i18next'; // Import direct de i18n
 
 const CardDataContext = createContext();
 
@@ -35,8 +33,6 @@ export const CardDataProvider = ({ children }) => {
   const { userData } = useContext(AuthContext);
   const [markedAsReadConversations, setMarkedAsReadConversations] = useState({});
 
-
-
   useEffect(() => {
     const initAxios = async () => {
       try {
@@ -48,18 +44,17 @@ export const CardDataProvider = ({ children }) => {
           setData([]);
         }
       } catch (error) {
-        console.error('Erreur d\'initialisation axios:', error);
+        console.error(i18n.t('cardData.errors.axiosInitError'), error);
         setIsLoadingData(false);
       }
     };
     initAxios();
   }, [isLoggedIn]);
 
-
   const handlePostSecret = async ({ selectedLabel, secretText, price, expiresIn = 7 }) => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     try {
       const response = await instance.post('/api/secrets/createsecrets', {
@@ -69,7 +64,7 @@ export const CardDataProvider = ({ children }) => {
         expiresIn
       });
 
-      console.log('Réponse création secret:', response.data);
+      console.log(i18n.t('cardData.logs.secretCreationResponse'), response.data);
 
       // Le reste de votre code reste identique
       if (response.data.stripeOnboardingUrl) {
@@ -90,21 +85,20 @@ export const CardDataProvider = ({ children }) => {
         message: response.data.message
       };
     } catch (error) {
-      console.error('Erreur création secret:', error?.response?.data || error.message);
-      throw new Error(error?.response?.data?.message || 'Erreur lors de la création du secret');
+      console.error(i18n.t('cardData.errors.secretCreation'), error?.response?.data || error.message);
+      throw new Error(error?.response?.data?.message || i18n.t('cardData.errors.secretCreationGeneric'));
     }
   };
-
 
   const handleStripeOnboardingRefresh = async () => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     try {
       const response = await instance.post('/api/secrets/stripe/refresh-onboarding');
 
-      console.log('Réponse rafraîchissement Stripe:', response.data);
+      console.log(i18n.t('cardData.logs.stripeRefreshResponse'), response.data);
 
       // Nouvelle logique basée sur le statut
       switch (response.data.status) {
@@ -113,7 +107,7 @@ export const CardDataProvider = ({ children }) => {
             success: true,
             verified: true,
             stripeStatus: 'active',
-            message: 'Compte Stripe complètement configuré'
+            message: i18n.t('cardData.stripe.configComplete')
           };
 
         case 'pending':
@@ -122,7 +116,7 @@ export const CardDataProvider = ({ children }) => {
             verified: false,
             stripeOnboardingUrl: response.data.url,
             stripeStatus: 'pending',
-            message: 'Configuration du compte Stripe en cours'
+            message: i18n.t('cardData.stripe.configInProgress')
           };
 
         case 'no_account':
@@ -130,21 +124,20 @@ export const CardDataProvider = ({ children }) => {
             success: false,
             verified: false,
             needsRegistration: true,
-            message: 'Aucun compte Stripe associé'
+            message: i18n.t('cardData.stripe.noAccount')
           };
 
         default:
           return {
             success: false,
-            message: 'Statut inconnu'
+            message: i18n.t('cardData.stripe.unknownStatus')
           };
       }
     } catch (error) {
-      console.error('Erreur rafraîchissement Stripe:', error?.response?.data || error.message);
-      throw new Error(error?.response?.data?.message || 'Erreur lors du rafraîchissement de la configuration Stripe');
+      console.error(i18n.t('cardData.errors.stripeRefresh'), error?.response?.data || error.message);
+      throw new Error(error?.response?.data?.message || i18n.t('cardData.errors.stripeRefreshGeneric'));
     }
   };
-
 
   const handleStripeReturn = async (url) => {
     try {
@@ -159,17 +152,17 @@ export const CardDataProvider = ({ children }) => {
 
         return {
           success: true,
-          message: 'Compte Stripe configuré avec succès',
+          message: i18n.t('cardData.stripe.configSuccessful'),
           stripeStatus
         };
       } else {
         return {
           success: false,
-          message: 'Configuration Stripe en cours'
+          message: i18n.t('cardData.stripe.configInProgress')
         };
       }
     } catch (error) {
-      console.error('Erreur de retour Stripe:', error);
+      console.error(i18n.t('cardData.errors.stripeReturn'), error);
       return {
         success: false,
         message: error.message
@@ -180,7 +173,7 @@ export const CardDataProvider = ({ children }) => {
   const resetStripeAccount = async () => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
 
     try {
@@ -189,49 +182,47 @@ export const CardDataProvider = ({ children }) => {
       if (response.data.success) {
         return {
           success: true,
-          message: 'Compte Stripe réinitialisé avec succès',
+          message: i18n.t('cardData.stripe.resetSuccess'),
           status: response.data.status,
-          url: response.data.stripeOnboardingUrl // Si vous avez besoin de rediriger vers l'onboarding
+          url: response.data.stripeOnboardingUrl
         };
       } else {
         return {
           success: false,
-          message: response.data.message || 'Erreur lors de la réinitialisation du compte'
+          message: response.data.message || i18n.t('cardData.errors.stripeResetGeneric')
         };
       }
     } catch (error) {
-      console.error('Erreur réinitialisation compte Stripe:', error);
+      console.error(i18n.t('cardData.errors.stripeReset'), error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Erreur lors de la réinitialisation du compte Stripe'
+        message: error.response?.data?.message || i18n.t('cardData.errors.stripeResetGeneric')
       };
     }
   };
 
-
   const deleteStripeAccount = async () => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
 
     try {
-
       const response = await instance.delete('/api/secrets/stripe/delete-account');
 
       return {
         success: true,
-        message: 'Compte Stripe supprimé avec succès',
+        message: i18n.t('cardData.stripe.deleteSuccess'),
         status: response.data.status
       };
     } catch (error) {
-      console.error('Erreur suppression compte Stripe:', error);
+      console.error(i18n.t('cardData.errors.stripeDelete'), error);
 
       // Gérer spécifiquement l'erreur de solde non nul
       if (error.response?.data?.availableBalance || error.response?.data?.pendingBalance) {
         return {
           success: false,
-          message: 'Impossible de supprimer le compte. Des fonds sont encore disponibles.',
+          message: i18n.t('cardData.errors.stripeDeleteFundsAvailable'),
           availableBalance: error.response.data.availableBalance,
           pendingBalance: error.response.data.pendingBalance
         };
@@ -239,44 +230,42 @@ export const CardDataProvider = ({ children }) => {
 
       return {
         success: false,
-        message: error.response?.data?.message || 'Erreur lors de la suppression du compte Stripe',
+        message: error.response?.data?.message || i18n.t('cardData.errors.stripeDeleteGeneric'),
         error: error.response?.data || error.message
       };
     }
   };
 
   const fetchUnpurchasedSecrets = async (forceFetch = false) => {
-
     if (!forceFetch && lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)) {
       return data;
     }
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     setIsLoadingData(true);
     try {
       const response = await instance.get('/api/secrets/unpurchased');
       if (response.data && response.data.secrets) {
         setData(response.data.secrets);
-        setLastFetchTime(Date.now()); // Ajoutez cette ligne
+        setLastFetchTime(Date.now());
       } else {
-        console.error('Données invalides reçues depuis l\'API');
+        console.error(i18n.t('cardData.errors.invalidDataFromApi'));
         setData([]);
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des secrets :', error);
+      console.error(i18n.t('cardData.errors.fetchingSecrets'), error);
       setData([]);
     } finally {
       setIsLoadingData(false);
     }
   };
 
-
   const fetchAllSecrets = async () => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     setIsLoadingData(true);
     try {
@@ -284,11 +273,11 @@ export const CardDataProvider = ({ children }) => {
       if (response.data && Array.isArray(response.data)) {
         setData(response.data);
       } else {
-        console.error('Données invalides reçues depuis l\'API');
+        console.error(i18n.t('cardData.errors.invalidDataFromApi'));
         setData([]);
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des secrets :', error);
+      console.error(i18n.t('cardData.errors.fetchingSecrets'), error);
       setData([]);
     } finally {
       setIsLoadingData(false);
@@ -298,7 +287,7 @@ export const CardDataProvider = ({ children }) => {
   const fetchUserSecretsWithCount = async () => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     try {
       const { data } = await instance.get('/api/secrets/user-secrets-with-count');
@@ -314,7 +303,7 @@ export const CardDataProvider = ({ children }) => {
         count: typeof data.count === 'number' ? data.count : 0
       };
     } catch (error) {
-      console.error('Erreur récupération secrets et comptage:', error.message);
+      console.error(i18n.t('cardData.errors.fetchingUserSecrets'), error.message);
       return { secrets: [], count: 0 };
     }
   };
@@ -322,14 +311,14 @@ export const CardDataProvider = ({ children }) => {
   const purchaseAndAccessConversation = async (secretId, price, paymentId) => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     if (!secretId || !paymentId) {
-      throw new Error('Secret ID et Payment ID sont requis');
+      throw new Error(i18n.t('cardData.errors.missingSecretOrPaymentId'));
     }
 
     try {
-      console.log('Attempting to purchase secret:', { secretId, paymentId });
+      console.log(i18n.t('cardData.logs.attemptingPurchase'), { secretId, paymentId });
 
       const purchaseResponse = await instance.post(
         `/api/secrets/${secretId}/purchase`,
@@ -337,11 +326,11 @@ export const CardDataProvider = ({ children }) => {
       );
 
       if (!purchaseResponse.data.conversationId) {
-        throw new Error('Aucun ID de conversation reçu');
+        throw new Error(i18n.t('cardData.errors.noConversationIdReceived'));
       }
 
       setData(currentData => currentData.filter(secret => secret._id !== secretId));
-      setLastFetchTime(null); // Forcer un rafraîchissement au prochain focus
+      setLastFetchTime(null);
 
       const conversationResponse = await instance.get(
         `/api/secrets/conversations/secret/${secretId}`
@@ -352,7 +341,7 @@ export const CardDataProvider = ({ children }) => {
         conversation: conversationResponse.data
       };
     } catch (error) {
-      console.error('Détails de l\'erreur:', {
+      console.error(i18n.t('cardData.errors.purchaseErrorDetails'), {
         message: error.message,
         response: error.response?.data,
         secretId,
@@ -365,7 +354,7 @@ export const CardDataProvider = ({ children }) => {
   const fetchPurchasedSecrets = async () => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     try {
       const response = await instance.get('/api/secrets/purchased');
@@ -378,7 +367,7 @@ export const CardDataProvider = ({ children }) => {
 
       return purchasedWithPrices;
     } catch (error) {
-      console.error('Erreur lors de la récupération des secrets achetés:', error);
+      console.error(i18n.t('cardData.errors.fetchingPurchasedSecrets'), error);
       return [];
     }
   };
@@ -386,11 +375,9 @@ export const CardDataProvider = ({ children }) => {
   const handleAddMessage = async (conversationId, content) => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
 
-    // Si content est un string, on l'envoie directement
-    // Si c'est un objet (cas d'une image), on l'envoie tel quel
     const messageData = typeof content === 'string'
       ? { content }
       : content;
@@ -405,28 +392,23 @@ export const CardDataProvider = ({ children }) => {
         return response.data;
       }
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du message:', error.response?.data || error.message);
+      console.error(i18n.t('cardData.errors.sendingMessage'), error.response?.data || error.message);
       throw error;
     }
   };
 
-  // Fonction corrigée - À remplacer dans votre fichier CardDataContext.js
-
   const getConversationMessages = async (conversationId) => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     try {
-      // URL CORRIGÉE: l'API attend /messages à la fin
       const response = await instance.get(
         `/api/secrets/conversations/${conversationId}/messages`
       );
 
-      // Log pour débug
-      console.log("Messages reçus:", JSON.stringify(response.data, null, 2));
+      console.log(i18n.t('cardData.logs.messagesReceived'), JSON.stringify(response.data, null, 2));
 
-      // S'assurer que chaque message a les informations du sender
       const messages = response.data.messages.map(msg => ({
         ...msg,
         sender: msg.sender ? {
@@ -440,22 +422,21 @@ export const CardDataProvider = ({ children }) => {
         conversationId: response.data.conversationId
       };
     } catch (error) {
-      console.error('Erreur lors de la récupération des messages:', error);
+      console.error(i18n.t('cardData.errors.fetchingMessages'), error);
       throw error;
     }
   };
 
-
   const getUserConversations = async () => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     try {
       const response = await instance.get('/api/secrets/conversations');
 
       if (!userData) {
-        console.log('getUserConversations: userData is null, returning empty array');
+        console.log(i18n.t('cardData.logs.userDataNull'));
         return [];
       }
 
@@ -483,8 +464,8 @@ export const CardDataProvider = ({ children }) => {
 
       return normalizedConversations;
     } catch (error) {
-      console.error('Erreur lors de la récupération des conversations:', error);
-      return []; // Retourne un tableau vide en cas d'erreur
+      console.error(i18n.t('cardData.errors.fetchingConversations'), error);
+      return [];
     }
   };
 
@@ -492,35 +473,35 @@ export const CardDataProvider = ({ children }) => {
     try {
       if (secret?.shareLink) {
         const shareMessage = Platform.select({
-          ios: `🔐 Découvre mon secret sur Hushy !\n\n${secret.shareLink}`,
-          android: `🔐 Découvre mon secret sur Hushy !\n\n${secret.shareLink}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy`
+          ios: i18n.t('cardData.share.messageIOS', { link: secret.shareLink }),
+          android: i18n.t('cardData.share.messageAndroid', { link: secret.shareLink })
         });
 
         const shareOptions = {
           message: shareMessage,
           url: secret.shareLink,
-          title: "Partager un secret",
-          subject: "Un secret à partager sur Hushy",
-          activityItemSources: [ // iOS uniquement
+          title: i18n.t('cardData.share.title'),
+          subject: i18n.t('cardData.share.subject'),
+          activityItemSources: [
             {
               placeholderItem: { type: 'text/plain', content: shareMessage },
               item: {
                 default: { type: 'text/plain', content: shareMessage }
               },
               subject: {
-                default: "Un secret à partager sur Hushy"
+                default: i18n.t('cardData.share.subject')
               },
               linkMetadata: {
                 originalUrl: secret.shareLink,
                 url: secret.shareLink,
-                title: "Secret confidentiel 🔐"
+                title: i18n.t('cardData.share.confidentialSecret')
               }
             }
           ]
         };
 
         const shareResult = await Share.share(shareOptions, {
-          dialogTitle: 'Partager ce secret confidentiel',
+          dialogTitle: i18n.t('cardData.share.dialogTitle'),
           excludedActivityTypes: [
             'com.apple.UIKit.activity.Print',
             'com.apple.UIKit.activity.AssignToContact'
@@ -529,10 +510,10 @@ export const CardDataProvider = ({ children }) => {
 
         return shareResult;
       } else {
-        throw new Error('Lien de partage non disponible');
+        throw new Error(i18n.t('cardData.errors.shareLinkUnavailable'));
       }
     } catch (error) {
-      console.error('Erreur lors du partage:', error);
+      console.error(i18n.t('cardData.errors.sharing'), error);
       throw error;
     }
   };
@@ -540,16 +521,16 @@ export const CardDataProvider = ({ children }) => {
   const getSharedSecret = async (secretId) => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     try {
-      console.log("Recherche du secret avec ID:", secretId);
+      console.log(i18n.t('cardData.logs.searchingSecret'), secretId);
       const response = await instance.get(`/api/secrets/shared/${secretId}`);
-      console.log("Réponse reçue:", response.data);
+      console.log(i18n.t('cardData.logs.responseReceived'), response.data);
       return response.data;
     } catch (error) {
-      console.log("Secret recherché:", secretId);
-      console.log("Erreur complète:", error.response?.data);
+      console.log(i18n.t('cardData.logs.soughtSecret'), secretId);
+      console.log(i18n.t('cardData.errors.fullError'), error.response?.data);
       throw error;
     }
   };
@@ -557,27 +538,25 @@ export const CardDataProvider = ({ children }) => {
   const uploadImage = async (imageData) => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error('Axios instance not initialized');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
 
     try {
       const response = await instance.post('/api/upload', { image: imageData });
       return response.data;
     } catch (error) {
-      console.error('Erreur lors de l\'upload de l\'image:', error);
+      console.error(i18n.t('cardData.errors.imageUpload'), error);
       throw error;
     }
   };
 
   const refreshUnreadCounts = async () => {
-
     if (!userData) {
-      console.log('refreshUnreadCounts: userData is null, skipping update');
+      console.log(i18n.t('cardData.logs.userDataNullSkippingUpdate'));
       setUnreadCountsMap({});
       setTotalUnreadCount(0);
       return { countsMap: {}, total: 0 };
     }
-
 
     try {
       const conversations = await getUserConversations();
@@ -608,7 +587,7 @@ export const CardDataProvider = ({ children }) => {
         total += count;
       });
       
-      console.log("Mise à jour des compteurs (avec cache local):", { 
+      console.log(i18n.t('cardData.logs.updatingCounters'), { 
         countsMap,
         total,
         markedAsRead: Object.keys(markedAsReadConversations)
@@ -619,14 +598,11 @@ export const CardDataProvider = ({ children }) => {
       
       return { countsMap, total };
     } catch (error) {
-      console.error('Erreur lors du rafraîchissement des compteurs non lus:', error);
+      console.error(i18n.t('cardData.errors.refreshingUnreadCounts'), error);
       return { countsMap: {}, total: 0 };
     }
   };
-  
-  
 
-  // Modifier la fonction markConversationAsRead
   const markConversationAsRead = async (conversationId, userToken) => {
     const instance = getAxiosInstance();
     
@@ -659,31 +635,29 @@ export const CardDataProvider = ({ children }) => {
       
       return true;
     } catch (error) {
-      console.error('Erreur lors du marquage comme lu', error);
+      console.error(i18n.t('cardData.errors.markingAsRead'), error);
       throw error;
     }
   };
 
-
   const resetReadStatus = () => {
     setMarkedAsReadConversations({});
   };
-  
 
-useEffect(() => {
-  if (isLoggedIn && userData) {
-    // Rafraîchissez les compteurs lorsque l'utilisateur se connecte
-    const updateCounts = async () => {
-      try {
-        await refreshUnreadCounts();
-      } catch (error) {
-        console.error('Erreur lors du rafraîchissement des compteurs:', error);
-      }
-    };
-    
-    updateCounts();
-  }
-}, [isLoggedIn, userData]);
+  useEffect(() => {
+    if (isLoggedIn && userData) {
+      // Rafraîchissez les compteurs lorsque l'utilisateur se connecte
+      const updateCounts = async () => {
+        try {
+          await refreshUnreadCounts();
+        } catch (error) {
+          console.error(i18n.t('cardData.errors.refreshingCounters'), error);
+        }
+      };
+      
+      updateCounts();
+    }
+  }, [isLoggedIn, userData]);
 
   return (
     <CardDataContext.Provider value={{
@@ -692,7 +666,7 @@ useEffect(() => {
       handlePostSecret,
       handleStripeOnboardingRefresh,
       fetchAllSecrets,
-      fetchUnpurchasedSecrets, // Ajouter la nouvelle fonction au contexte
+      fetchUnpurchasedSecrets,
       fetchUserSecretsWithCount,
       purchaseAndAccessConversation,
       fetchPurchasedSecrets,

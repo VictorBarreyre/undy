@@ -10,6 +10,7 @@ import CardHome from '../components/CardHome';
 import { styles } from '../../infrastructure/theme/styles';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
+import { useTranslation } from 'react-i18next';
 
 const customStyles = StyleSheet.create({
     shadowBox: {
@@ -22,6 +23,7 @@ const customStyles = StyleSheet.create({
 });
 
 const SharedSecretScreen = ({ route }) => {
+    const { t } = useTranslation();
     const { secretId } = route.params;
     const [secretData, setSecretData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -51,8 +53,11 @@ const SharedSecretScreen = ({ route }) => {
                     });
                 }
             } catch (error) {
-                console.error('Erreur:', error);
-                Alert.alert('Erreur', 'Impossible de charger le secret.');
+                console.error(t('sharedSecret.errors.fetchError'), error);
+                Alert.alert(
+                    t('sharedSecret.errors.title'), 
+                    t('sharedSecret.errors.unableToLoad')
+                );
             } finally {
                 setLoading(false);
             }
@@ -89,7 +94,7 @@ const SharedSecretScreen = ({ route }) => {
                 });
             });
         } catch (error) {
-            console.error('Erreur lors de l\'achat:', error);
+            console.error(t('sharedSecret.errors.purchaseError'), error);
             setLoading(false);
             setIsTransitioning(false);
             fadeAnim.setValue(1);
@@ -97,7 +102,7 @@ const SharedSecretScreen = ({ route }) => {
     };
 
     if (loading || isTransitioning) {
-        return <TypewriterLoader text="Undy..." />;
+        return <TypewriterLoader text={t('sharedSecret.loading')} />;
     }
 
     return (
@@ -124,7 +129,6 @@ const SharedSecretScreen = ({ route }) => {
                             <Pressable
                                 style={{ position: 'absolute', left: 0, padding: 10, zIndex: 50 }}
                                 onPress={() => {
-                                 
                                     navigation.navigate('MainApp');
                                 }}
                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}  // Augmente la zone de touch
@@ -140,10 +144,10 @@ const SharedSecretScreen = ({ route }) => {
                                 alignItems="center"
                             >
                                 <Text style={styles.h3}>
-                                    Découvrez le hushy 🔐
+                                    {t('sharedSecret.title')}
                                 </Text>
                                 <Text style={styles.h5}>
-                                    et accédez à la conversation !
+                                    {t('sharedSecret.subtitle')}
                                 </Text>
                             </VStack>
                         </HStack>
@@ -155,7 +159,6 @@ const SharedSecretScreen = ({ route }) => {
                         backgroundColor="white"
                         marginTop={2}
                         paddingTop={1}
-
                         style={customStyles.shadowBox}
                     >
                         <VStack
@@ -179,7 +182,7 @@ const SharedSecretScreen = ({ route }) => {
                                 secret={secretData}
                                 onPaymentSuccess={handlePaymentSuccess}
                                 onPaymentError={(error) => {
-                                    console.error('Erreur de paiement:', error);
+                                    console.error(t('sharedSecret.errors.paymentError'), error);
                                     setLoading(false);
                                     setIsTransitioning(false);
                                     fadeAnim.setValue(1);

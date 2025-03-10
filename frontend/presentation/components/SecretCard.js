@@ -5,6 +5,8 @@ import { styles } from '../../infrastructure/theme/styles';
 import { StyleSheet, Platform } from 'react-native';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
+import { useTranslation } from 'react-i18next';
+import { useDateFormatter } from '../../utils/dateFormatters'; // Ajustez le chemin selon votre structure
 
 const calculatePrices = (originalPrice) => {
     const buyerMargin = 0.10; // 10% pour l'acheteur
@@ -21,6 +23,8 @@ const calculatePrices = (originalPrice) => {
 };
 
 const SecretCard = ({ secret, isPurchased = false }) => {
+    const { t } = useTranslation();
+    const dateFormatter = useDateFormatter();
     const { userData } = useContext(AuthContext);
     const [timeLeft, setTimeLeft] = useState('');
     const priceDetails = calculatePrices(secret.price);
@@ -29,29 +33,24 @@ const SecretCard = ({ secret, isPurchased = false }) => {
         const diffTime = Date.now() - new Date(createdAt);
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-        if (diffDays === 0) return "Aujourd'hui";
-        if (diffDays === 1) return "Hier";
-        if (diffDays < 7) return `Il y a ${diffDays} jours`;
-        if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} semaine${Math.floor(diffDays / 7) > 1 ? 's' : ''}`;
-        if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
-        return `Il y a ${Math.floor(diffDays / 365)} an${Math.floor(diffDays / 365) > 1 ? 's' : ''}`;
+        if (diffDays === 0) return t('secretCard.timeAgo.today');
+        if (diffDays === 1) return t('secretCard.timeAgo.yesterday');
+        if (diffDays < 7) return t('secretCard.timeAgo.days', { count: diffDays });
+        if (diffDays < 30) {
+            const weeks = Math.floor(diffDays / 7);
+            return t('secretCard.timeAgo.weeks', { count: weeks });
+        }
+        if (diffDays < 365) {
+            const months = Math.floor(diffDays / 30);
+            return t('secretCard.timeAgo.months', { count: months });
+        }
+        const years = Math.floor(diffDays / 365);
+        return t('secretCard.timeAgo.years', { count: years });
     };
 
     useEffect(() => {
         const calculateTimeLeft = () => {
-            const expirationDate = new Date(secret.expiresAt);
-            const now = new Date();
-            const difference = expirationDate - now;
-
-            if (difference <= 0) {
-                return 'Expiré';
-            }
-
-            const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-            const minutes = Math.floor((difference / 1000 / 60) % 60);
-
-            return `${days}j ${hours}h ${minutes}m`;
+            return dateFormatter.formatTimeLeft(secret.expiresAt);
         };
 
         setTimeLeft(calculateTimeLeft());
@@ -60,13 +59,15 @@ const SecretCard = ({ secret, isPurchased = false }) => {
         }, 60000);
 
         return () => clearInterval(timer);
-    }, [secret.expiresAt]);
+    }, [secret.expiresAt, dateFormatter]);
 
     const renderPriceInfo = () => {
         // Si c'est un secret acheté
         if (isPurchased) {
             return (
-                <Text style={styles.caption}>Prix payé : {priceDetails.buyerPrice} €</Text>
+                <Text style={styles.caption}>
+                    {t('secretCard.pricePaid', { price: priceDetails.buyerPrice })}
+                </Text>
             );
         }
 
@@ -77,10 +78,10 @@ const SecretCard = ({ secret, isPurchased = false }) => {
                     <Text style={styles.caption}>{secret.label}</Text>
                     <VStack alignItems="end">
                         <Text style={[styles.littleCaption, { color: '#94A3B8' }]}>
-                            Prix de base : {priceDetails.originalPrice} €
+                            {t('secretCard.basePrice', { price: priceDetails.originalPrice })}
                         </Text>
                         <Text style={[styles.littleCaption, { color: '#94A3B8' }]}>
-                            Vos gains : {priceDetails.sellerEarnings} €
+                            {t('secretCard.yourEarnings', { earnings: priceDetails.sellerEarnings })}
                         </Text>
                     </VStack>
                 </HStack>
@@ -91,7 +92,9 @@ const SecretCard = ({ secret, isPurchased = false }) => {
         return (
             <HStack justifyContent="space-between">
                 <Text style={styles.caption}>{secret.label}</Text>
-                <Text style={styles.caption}>Prix : {priceDetails.buyerPrice} €</Text>
+                <Text style={styles.caption}>
+                    {t('secretCard.price', { price: priceDetails.buyerPrice })}
+                </Text>
             </HStack>
         );
     };
@@ -117,7 +120,7 @@ const SecretCard = ({ secret, isPurchased = false }) => {
                     <VStack>
                         <Text color="#94A3B8" style={styles.caption}>{getTimeAgo(secret.createdAt)}</Text>
                         <Text color="#FF78B2" mt={1} style={styles.littleCaption}>
-                            Expire dans {timeLeft}
+                            {t('secretCard.expiresIn')} {timeLeft}
                         </Text>
                     </VStack>
                     <FontAwesomeIcon

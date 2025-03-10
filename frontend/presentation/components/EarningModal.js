@@ -4,6 +4,7 @@ import { ScrollView, Alert } from 'react-native';
 import { useStripe } from '@stripe/stripe-react-native';
 import { styles } from '../../infrastructure/theme/styles';
 import { getAxiosInstance } from '../../data/api/axiosInstance';
+import { useTranslation } from 'react-i18next';
 
 const EarningsActionSheet = ({
     isOpen,
@@ -11,6 +12,7 @@ const EarningsActionSheet = ({
     userData,
     navigation
 }) => {
+    const { t } = useTranslation();
     const [transactions, setTransactions] = useState([]);
     const [transactionStats, setTransactionStats] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -20,7 +22,6 @@ const EarningsActionSheet = ({
         userData?.stripeAccountId &&
         userData?.stripeOnboardingComplete;
 
-
     useEffect(() => {
         const fetchTransactions = async () => {
             const instance = getAxiosInstance();
@@ -29,7 +30,7 @@ const EarningsActionSheet = ({
                 const response = await instance.get('/api/users/transactions');
                 const data = response.data;
 
-                console.log('tout les data ', data)
+                console.log(t('earnings.logs.allData'), data);
 
                 // Filtrer uniquement les transactions de type 'payment' et avec netAmount positif
                 const totalEarnings = data.transactions
@@ -37,7 +38,7 @@ const EarningsActionSheet = ({
                     .reduce((total, transaction) =>
                         total + (transaction.netAmount || 0), 0);
 
-                console.log('tout le fric ', totalEarnings)
+                console.log(t('earnings.logs.totalMoney'), totalEarnings);
 
                 setTransactionStats({
                     ...data.stats,
@@ -47,7 +48,7 @@ const EarningsActionSheet = ({
                 setTransactions(data.transactions);
 
             } catch (error) {
-                console.error('Erreur:', error);
+                console.error(t('earnings.errors.generic'), error);
             } finally {
                 setIsLoading(false);
             }
@@ -57,7 +58,6 @@ const EarningsActionSheet = ({
             fetchTransactions();
         }
     }, [isOpen, isConfigured]);
-
 
     const handleTransferFunds = async () => {
         const instance = getAxiosInstance();
@@ -80,21 +80,21 @@ const EarningsActionSheet = ({
             });
 
             if (error) {
-                console.error('Erreur lors de l\'initialisation du formulaire de paiement :', error);
+                console.error(t('earnings.errors.paymentSheetInit'), error);
                 return;
             }
 
             const { error: presentError } = await presentPaymentSheet();
 
             if (presentError) {
-                console.error('Erreur lors de la présentation du formulaire de paiement :', presentError);
+                console.error(t('earnings.errors.paymentSheetPresent'), presentError);
                 return;
             }
 
-            console.log('Virement effectué avec succès !');
+            console.log(t('earnings.logs.transferSuccess'));
             onClose();
         } catch (error) {
-            console.error('Erreur lors du virement des fonds :', error);
+            console.error(t('earnings.errors.transferFunds'), error);
         }
     };
 
@@ -111,7 +111,7 @@ const EarningsActionSheet = ({
                 {!isConfigured ? (
                     <VStack space={4} px={4} width="97%" alignItems="center">
                         <Text style={styles.h4} textAlign="center">
-                            Détails des revenus
+                            {t('earnings.title')}
                         </Text>
                         <Text
                             style={styles.caption}
@@ -119,7 +119,7 @@ const EarningsActionSheet = ({
                             textAlign="center"
                             mb={2}
                         >
-                            Vous n'avez pas encore généré de revenus. Commencez à vendre vos secrets pour gagner de l'argent.
+                            {t('earnings.noEarningsYet')}
                         </Text>
                         <Button
                             onPress={() => {
@@ -130,18 +130,18 @@ const EarningsActionSheet = ({
                             borderRadius="full"
                         >
                             <Text color="white" style={styles.cta}>
-                                Publier un secret
+                                {t('earnings.publishSecret')}
                             </Text>
                         </Button>
                     </VStack>
                 ) : (
                     <VStack space={4} width="97%" >
                         <Text style={styles.h4} textAlign="center">
-                            Détails des revenus
+                            {t('earnings.title')}
                         </Text>
 
                         {isLoading ? (
-                            <Text textAlign="center">Chargement des transactions...</Text>
+                            <Text textAlign="center">{t('earnings.loadingTransactions')}</Text>
                         ) : (
                             <>
                                 <ScrollView
@@ -164,10 +164,10 @@ const EarningsActionSheet = ({
                                             >
                                                 <HStack justifyContent="space-between" alignItems="center" mb={2}>
                                                     <Text fontWeight="bold" color="black">
-                                                        {transaction.type === 'transfer' ? 'Transfert' : 'Vente'}
+                                                        {transaction.type === 'transfer' ? t('earnings.transfer') : t('earnings.sale')}
                                                     </Text>
                                                     <Text color={transaction.status === 'succeeded' ? '#40D861' : '#FF78B2'}>
-                                                        {transaction.status === 'succeeded' ? 'Réussi' : 'En attente'}
+                                                        {transaction.status === 'succeeded' ? t('earnings.succeeded') : t('earnings.pending')}
                                                     </Text>
                                                 </HStack>
 
@@ -211,21 +211,21 @@ const EarningsActionSheet = ({
                                 >
                                     <VStack space={3}>
                                         <HStack justifyContent="space-between">
-                                            <Text style={styles.caption}>Total gagné</Text>
+                                            <Text style={styles.caption}>{t('earnings.totalEarned')}</Text>
                                             <Text fontWeight="bold">
                                                 {(transactionStats.totalEarnings || 0).toFixed(2)} €
                                             </Text>
                                         </HStack>
 
                                         <HStack justifyContent="space-between">
-                                            <Text style={styles.caption}>Disponible</Text>
+                                            <Text style={styles.caption}>{t('earnings.available')}</Text>
                                             <Text color="#40D861">
                                                 {(transactionStats.availableBalance || 0).toFixed(2)} €
                                             </Text>
                                         </HStack>
 
                                         <HStack justifyContent="space-between">
-                                            <Text style={styles.caption}>En attente</Text>
+                                            <Text style={styles.caption}>{t('earnings.pending')}</Text>
                                             <Text color="#FF78B2">
                                                 {(transactionStats.pendingBalance || 0).toFixed(2)} €
                                             </Text>
@@ -233,7 +233,7 @@ const EarningsActionSheet = ({
                                     </VStack>
                                 </Box>
                                 <Text mt={2} mb={2} style={styles.h4} textAlign="center">
-                                    Revenus disponibles : {userData.totalEarnings} €
+                                    {t('earnings.availableEarnings')}: {userData.totalEarnings} €
                                 </Text>
                             </>
                         )}
@@ -251,11 +251,10 @@ const EarningsActionSheet = ({
                             <Text
                                 color="white"
                                 style={styles.cta}
-
                             >
                                 {!transactionStats.availableBalance || transactionStats.availableBalance <= 0
-                                    ? "Aucun fonds disponible"
-                                    : "Récupérer les fonds"
+                                    ? t('earnings.noAvailableFunds')
+                                    : t('earnings.retrieveFunds')
                                 }
                             </Text>
                         </Button>
