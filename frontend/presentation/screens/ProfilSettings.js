@@ -179,23 +179,29 @@ export default function Profile({ navigation }) {
             
             if (permissionResult.granted) {
               // Permission accordée, activer les contacts
-              setContactsEnabled(true);
               const success = await updateContactsAccess(true);
               
-              if (!success) {
+              if (success) {
+                // Mettre à jour l'état local uniquement si l'API réussit
+                setContactsEnabled(true);
+              } else {
                 // Revenir à l'état précédent si l'API échoue
-                setContactsEnabled(false);
                 Alert.alert(t('settings.errors.title'), t('settings.errors.contactsUpdateError'));
               }
+            } else if (permissionResult.needsSettings) {
+              // L'utilisateur a été redirigé vers les paramètres, ne rien faire de plus
+              console.log('Utilisateur renvoyé vers les paramètres');
             }
-            // Si permission non accordée ou redirection vers paramètres, ne rien faire
+            // Si permission non accordée, ne rien faire
           } else {
             // Cas de désactivation des contacts
-            setContactsEnabled(false);
             const success = await updateContactsAccess(false);
             
-            if (!success) {
-              setContactsEnabled(true);
+            if (success) {
+              // Mettre à jour l'état local uniquement si l'API réussit
+              setContactsEnabled(false);
+            } else {
+              // En cas d'échec, revenir à l'état précédent
               Alert.alert(t('settings.errors.title'), t('settings.errors.contactsUpdateError'));
             }
           }
@@ -205,6 +211,7 @@ export default function Profile({ navigation }) {
         }
       };
 
+      
     useEffect(() => {
         setContactsEnabled(contactsAccessEnabled);
     }, [contactsAccessEnabled]);

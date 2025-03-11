@@ -5,6 +5,7 @@ import { DeviceEventEmitter, Alert, PermissionsAndroid, Platform, Linking } from
 import Contacts from 'react-native-contacts';
 import { useCardData } from './CardDataContexte';
 import i18n from 'i18next'; // Importation directe de i18n
+import ContactsPermissionModal from '../../presentation/components/ContactsPermissionsModal';
 
 
 export const AuthContext = createContext();
@@ -15,6 +16,8 @@ export const AuthProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [isLoadingUserData, setIsLoadingUserData] = useState(true);
   const [contactsAccessEnabled, setContactsAccessEnabled] = useState(false);
+  const [contactsPermissionModalVisible, setContactsPermissionModalVisible] = useState(false);
+  const [contactPermissionResolve, setContactPermissionResolve] = useState(null);
 
   useEffect(() => {
     const initAxios = async () => {
@@ -595,109 +598,133 @@ export const AuthProvider = ({ children }) => {
     console.log('[AuthProvider] Vérification et demande de permission contacts');
     
     try {
-      // Vérifier d'abord le statut actuel de la permission
       let permissionStatus;
       
       if (Platform.OS === 'ios') {
         permissionStatus = await Contacts.checkPermission();
         console.log(`[AuthProvider] iOS permission status: ${permissionStatus}`);
         
-        // Si refusé sur iOS, proposer d'aller dans les paramètres
-        if (permissionStatus === 'denied') {
-          return new Promise((resolve) => {
-            Alert.alert(
-              "Accès aux contacts nécessaire",
-              "Vous avez précédemment refusé l'accès aux contacts. Veuillez l'activer manuellement dans les paramètres de votre téléphone.",
-              [
-                { 
-                  text: "Annuler", 
-                  style: "cancel",
-                  onPress: () => resolve({ granted: false, needsSettings: true })
-                },
-                { 
-                  text: "Ouvrir les paramètres", 
-                  onPress: () => {
-                    Linking.openSettings();
-                    resolve({ granted: false, needsSettings: true });
+        switch (permissionStatus) {
+          case 'authorized':
+            return { granted: true, needsSettings: false };
+          
+          case 'denied':
+            return new Promise((resolve) => {
+              Alert.alert(
+                "Accès aux contacts bloqué",
+                "Vous avez précédemment refusé l'accès aux contacts. Voulez-vous ouvrir les paramètres ?",
+                [
+                  { 
+                    text: "Annuler", 
+                    style: "cancel",
+                    onPress: () => resolve({ granted: false, needsSettings: false })
+                  },
+                  { 
+                    text: "Paramètres", 
+                    onPress: () => {
+                      Linking.openSettings();
+                      resolve({ granted: false, needsSettings: true });
+                    }
                   }
-                }
-              ]
-            );
-          });
+                ]
+              );
+            });
+          
+          case 'undetermined':
+            return new Promise((resolve) => {
+              setContactPermissionResolve(() => resolve);
+              setContactsPermissionModalVisible(true);
+            });
         }
       } else {
+        // Pour Android
         permissionStatus = await PermissionsAndroid.check(
           PermissionsAndroid.PERMISSIONS.READ_CONTACTS
         );
+        
+        if (permissionStatus === PermissionsAndroid.RESULTS.GRANTED) {
+          return { granted: true, needsSettings: false };
+        }
+        
+        // Si la permission n'est pas accordée, demander à l'utilisateur
+        return new Promise((resolve) => {
+          setContactPermissionResolve(() => resolve);
+          setContactsPermissionModalVisible(true);
+        });
       }
-      
-      // Si la permission est déjà accordée
-      if (permissionStatus === 'authorized' || 
-          permissionStatus === PermissionsAndroid.RESULTS.GRANTED ||
-          permissionStatus === true) {
-        return { granted: true, needsSettings: false };
-      }
-      
-      // Demander la permission si elle n'est pas déjà accordée
-      return new Promise((resolve) => {
-        Alert.alert(
-          i18n.t('auth.permissions.contactsAccess.title'),
-          i18n.t('auth.permissions.contactsAccess.message'),
-          [
-            { 
-              text: i18n.t('auth.permissions.contactsAccess.cancel'), 
-              style: "cancel",
-              onPress: () => resolve({ granted: false, needsSettings: false })
-            },
-            {
-              text: i18n.t('auth.permissions.contactsAccess.ok'),
-              onPress: async () => {
-                let permission;
-                
-                // Demander la permission selon la plateforme
-                if (Platform.OS === 'ios') {
-                  permission = await Contacts.requestPermission();
-                } else {
-                  permission = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
-                    {
-                      title: i18n.t('auth.permissions.contactsAccess.title'),
-                      message: i18n.t('auth.permissions.contactsAccess.message'),
-                      buttonPositive: i18n.t('auth.permissions.contactsAccess.ok')
-                    }
-                  );
-                }
-                
-                const isGranted = permission === 'authorized' || 
-                                  permission === PermissionsAndroid.RESULTS.GRANTED;
-                
-                // Si l'utilisateur a refusé, proposer d'aller dans les paramètres
-                if (!isGranted && Platform.OS === 'ios' && permission === 'denied') {
-                  Alert.alert(
-                    "Accès aux contacts nécessaire",
-                    "Vous avez refusé l'accès aux contacts. Veuillez l'activer manuellement dans les paramètres de votre téléphone.",
-                    [
-                      { text: "Annuler", style: "cancel" },
-                      { 
-                        text: "Ouvrir les paramètres", 
-                        onPress: () => Linking.openSettings()
-                      }
-                    ]
-                  );
-                  resolve({ granted: false, needsSettings: true });
-                } else {
-                  resolve({ granted: isGranted, needsSettings: false });
-                }
-              }
-            }
-          ]
-        );
-      });
     } catch (error) {
       console.error('[AuthProvider] Erreur lors de la vérification/demande de permission:', error);
       return { granted: false, needsSettings: false, error };
     }
   };
+
+  const handlePermissionModalClose = () => {
+    setContactsPermissionModalVisible(false);
+    if (contactPermissionResolve) {
+      contactPermissionResolve({ granted: false, needsSettings: false });
+      setContactPermissionResolve(null);
+    }
+  };
+
+  const handleRequestPermission = async () => {
+    try {
+      let permission;
+      
+      if (Platform.OS === 'ios') {
+        permission = await Contacts.requestPermission();
+      } else {
+        permission = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
+          {
+            title: "Permission de lecture des contacts",
+            message: "Cette application nécessite l'accès à vos contacts.",
+            buttonPositive: "Autoriser"
+          }
+        );
+      }
+      
+      const isGranted = 
+        permission === 'authorized' || 
+        permission === PermissionsAndroid.RESULTS.GRANTED;
+      
+      setContactsPermissionModalVisible(false);
+      
+      if (contactPermissionResolve) {
+        contactPermissionResolve({ 
+          granted: isGranted, 
+          needsSettings: !isGranted 
+        });
+        setContactPermissionResolve(null);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la demande de permission:', error);
+      
+      setContactsPermissionModalVisible(false);
+      
+      if (contactPermissionResolve) {
+        contactPermissionResolve({ 
+          granted: false, 
+          needsSettings: false 
+        });
+        setContactPermissionResolve(null);
+      }
+    }
+  };
+
+  const handleOpenSettings = () => {
+    setContactsPermissionModalVisible(false);
+    
+    if (contactPermissionResolve) {
+      contactPermissionResolve({ 
+        granted: false, 
+        needsSettings: true 
+      });
+      setContactPermissionResolve(null);
+    }
+    
+    Linking.openSettings();
+  };
+
 
 // Dans AuthContext.js
 const getContacts = async () => {
@@ -767,6 +794,12 @@ const getContacts = async () => {
       }}
     >
       {children}
+      <ContactsPermissionModal
+        visible={contactsPermissionModalVisible}
+        onClose={handlePermissionModalClose}
+        onOpenSettings={handleOpenSettings}
+        onRequestPermission={handleRequestPermission}
+      />
     </AuthContext.Provider>
   );
 };

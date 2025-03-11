@@ -54,8 +54,6 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   };
 
   const handleButtonClickType = async (buttonName) => {
-    console.log(`[FilterBar] Bouton ${buttonName} cliqué, accès contacts: ${contactsAccessEnabled}`);
-    
     if (buttonName === t('filter.contacts')) {
       // Utiliser la fonction centralisée pour vérifier et demander la permission
       const permissionResult = await checkAndRequestContactsPermission();
