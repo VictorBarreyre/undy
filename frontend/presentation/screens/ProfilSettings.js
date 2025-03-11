@@ -174,35 +174,34 @@ export default function Profile({ navigation }) {
         try {
           // Si on veut activer les contacts
           if (!contactsEnabled) {
-            // Utiliser la fonction centralisée pour vérifier et demander la permission
-            const permissionResult = await checkAndRequestContactsPermission();
+            // Vérifier explicitement la permission système
+            const permissionStatus = await Contacts.checkPermission();
             
-            if (permissionResult.granted) {
-              // Permission accordée, activer les contacts
+            const isPermissionGranted = Platform.OS === 'ios' 
+              ? permissionStatus === 'authorized'
+              : permissionStatus === true || permissionStatus === PermissionsAndroid.RESULTS.GRANTED;
+            
+            if (isPermissionGranted) {
               const success = await updateContactsAccess(true);
-              
               if (success) {
-                // Mettre à jour l'état local uniquement si l'API réussit
                 setContactsEnabled(true);
-              } else {
-                // Revenir à l'état précédent si l'API échoue
-                Alert.alert(t('settings.errors.title'), t('settings.errors.contactsUpdateError'));
               }
-            } else if (permissionResult.needsSettings) {
-              // L'utilisateur a été redirigé vers les paramètres, ne rien faire de plus
-              console.log('Utilisateur renvoyé vers les paramètres');
-            }
-            // Si permission non accordée, ne rien faire
-          } else {
-            // Cas de désactivation des contacts
-            const success = await updateContactsAccess(false);
-            
-            if (success) {
-              // Mettre à jour l'état local uniquement si l'API réussit
-              setContactsEnabled(false);
             } else {
-              // En cas d'échec, revenir à l'état précédent
-              Alert.alert(t('settings.errors.title'), t('settings.errors.contactsUpdateError'));
+              // Demander la permission si elle n'est pas déjà accordée
+              const permissionResult = await checkAndRequestContactsPermission();
+              
+              if (permissionResult.granted) {
+                const success = await updateContactsAccess(true);
+                if (success) {
+                  setContactsEnabled(true);
+                }
+              }
+            }
+          } else {
+            // Désactivation des contacts
+            const success = await updateContactsAccess(false);
+            if (success) {
+              setContactsEnabled(false);
             }
           }
         } catch (error) {
@@ -211,10 +210,36 @@ export default function Profile({ navigation }) {
         }
       };
 
+      useEffect(() => {
+        // Vérifie systématiquement la permission avant de considérer les contacts comme activés
+        const checkContactsPermission = async () => {
+          try {
+            if (contactsAccessEnabled) {
+              const permissionStatus = await Contacts.checkPermission();
+              
+              // Sur iOS, vérifiez explicitement le statut 'authorized'
+              const isPermissionGranted = Platform.OS === 'ios' 
+                ? permissionStatus === 'authorized'
+                : permissionStatus === true || permissionStatus === PermissionsAndroid.RESULTS.GRANTED;
+              
+              // Si la permission n'est pas accordée, désactiver l'accès aux contacts
+              if (!isPermissionGranted) {
+                setContactsEnabled(false);
+                await updateContactsAccess(false);
+              } else {
+                setContactsEnabled(true);
+              }
+            } else {
+              setContactsEnabled(false);
+            }
+          } catch (error) {
+            console.error('Erreur lors de la vérification des permissions de contacts:', error);
+            setContactsEnabled(false);
+          }
+        };
       
-    useEffect(() => {
-        setContactsEnabled(contactsAccessEnabled);
-    }, [contactsAccessEnabled]);
+        checkContactsPermission();
+      }, [contactsAccessEnabled]);
 
     const handleContactsPress = async () => {
         if (!contactsEnabled) {
