@@ -309,8 +309,8 @@ export default {
     "mySubscriptions": "Mes abonnements",
     "noSubscriptionsYet": "Vous n'avez pas encore d'abonnements. Découvrez nos offres pour enrichir votre expérience.",
     "viewSubscriptions": "Voir les abonnements",
-    "editField": "Modifier votre {field}",
-    "editFieldPlaceholder": "Modifier votre {field}",
+    "editField": "Modifier votre {{field}}",
+    "editFieldPlaceholder": "Modifier votre {{field}}",
     "information": "information",
     "save": "Enregistrer",
     "fields": {
@@ -615,8 +615,8 @@ export default {
     "deleteSuccess": "Compte Stripe supprimé avec succès"
   },
   "share": {
-    "messageIOS": "🔐 Découvre mon secret sur Hushy !\n\n{link}",
-    "messageAndroid": "🔐 Découvre mon secret sur Hushy !\n\n{link}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy",
+    "messageIOS": "🔐 Découvre mon secret sur Hushy !\n\n{{link}}",
+    "messageAndroid": "🔐 Découvre mon secret sur Hushy !\n\n{{link}}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy",
     "title": "Partager un secret",
     "subject": "Un secret à partager sur Hushy",
     "confidentialSecret": "Secret confidentiel 🔐",

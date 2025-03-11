@@ -312,8 +312,8 @@ export default {
     "mySubscriptions": "My Subscriptions",
     "noSubscriptionsYet": "You don't have any subscriptions yet. Discover our offers to enhance your experience.",
     "viewSubscriptions": "View Subscriptions",
-    "editField": "Edit your {field}",
-    "editFieldPlaceholder": "Edit your {field}",
+    "editField": "Edit your {{field}}",
+    "editFieldPlaceholder": "Edit your {{field}}",
     "information": "information",
     "save": "Save",
     "fields": {
@@ -618,8 +618,8 @@ export default {
     "deleteSuccess": "Stripe account successfully deleted"
   },
   "share": {
-    "messageIOS": "🔐 Discover my secret on Hushy!\n\n{link}",
-    "messageAndroid": "🔐 Discover my secret on Hushy!\n\n{link}\n\nDownload the app: https://play.google.com/store/apps/details?id=com.hushy",
+    "messageIOS": "🔐 Discover my secret on Hushy!\n\n{{link}}",
+    "messageAndroid": "🔐 Discover my secret on Hushy!\n\n{{link}}\n\nDownload the app: https://play.google.com/store/apps/details?id=com.hushy",
     "title": "Share a secret",
     "subject": "A secret to share on Hushy",
     "confidentialSecret": "Confidential secret 🔐",
