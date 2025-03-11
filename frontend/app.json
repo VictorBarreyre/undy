@@ -11,53 +11,52 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-  "plugins": [
-  [
-    "expo-notifications",
-    {
-      "icon": "./assets/notification-icon.png",
-      "color": "#ffffff"
-    }
-  ]
-],
     "scheme": "hushy",
-  "ios": {
-  "supportsTablet": true,
-  "bundleIdentifier": "com.anonymous.frontend",
-  "associatedDomains": [
-    "applinks:hushy.app",
-    "webcredentials:hushy.app"
-  ],
-  "scheme": "hushy",
-  "infoPlist": {
-    "CFBundleURLTypes": [{
-      "CFBundleURLSchemes": ["hushy"]
-    }]
-  }
-},
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff"
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.hushy.app",
+      "associatedDomains": [
+        "applinks:hushy.app",
+        "webcredentials:hushy.app"
+      ],
+      "infoPlist": {
+        "CFBundleURLTypes": [{
+          "CFBundleURLSchemes": ["hushy"]
+        }]
+      }
+    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.frontend",
+      "package": "com.hushy.android",
       "intentFilters": [
         {
           "action": "VIEW",
           "autoVerify": true,
           "data": [
             {
-              "scheme": "hushy",
-              "host": "profile"
+              "scheme": "https",
+              "host": "hushy.app"
             },
             {
               "scheme": "hushy",
-              "host": "stripe-return"
+              "host": "*"
             }
           ],
           "category": [
-            "CATEGORY_BROWSABLE",
-            "CATEGORY_DEFAULT"
+            "BROWSABLE",
+            "DEFAULT"
           ]
         }
       ]

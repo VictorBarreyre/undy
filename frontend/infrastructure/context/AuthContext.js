@@ -1,10 +1,11 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
-import { DeviceEventEmitter, Alert, PermissionsAndroid, Platform } from 'react-native';
+import { DeviceEventEmitter, Alert, PermissionsAndroid, Platform, Linking } from 'react-native';
 import Contacts from 'react-native-contacts';
 import { useCardData } from './CardDataContexte';
 import i18n from 'i18next'; // Importation directe de i18n
+
 
 export const AuthContext = createContext();
 
@@ -228,7 +229,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateUserData = async (updatedData) => {
+  const updateUserData = async (updatedData, isContactsUpdate = false) => {
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error(i18n.t('auth.errors.axiosNotInitialized'));
@@ -241,24 +242,25 @@ export const AuthProvider = ({ children }) => {
           changedFields[key] = updatedData[key];
         }
       });
-
+  
       if (Object.keys(changedFields).length === 0) {
         return { success: true, message: i18n.t('auth.success.noChangeNeeded') };
       }
-
+  
       // Ajouter l'ID pour l'identification
       changedFields._id = userData._id;
-
+  
       const response = await instance.put('/api/users/profile', changedFields);
-
+  
       // Mettre à jour le state local avec toutes les données
       setUserData({ ...userData, ...response.data });
       await AsyncStorage.setItem('userData', JSON.stringify({ ...userData, ...response.data }));
-
-      if (updatedData.contacts !== undefined) {
+  
+      // Ne mettre à jour contactsAccessEnabled que si ce n'est pas déjà un appel depuis updateContactsAccess
+      if (updatedData.contacts !== undefined && !isContactsUpdate) {
         setContactsAccessEnabled(updatedData.contacts);
       }
-
+  
       return { success: true, message: i18n.t('auth.success.profileUpdated') };
     } catch (error) {
       console.error(i18n.t('auth.errors.updatingUserData'), error);
@@ -266,106 +268,56 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
- // Dans AuthContext.js, modifiez la fonction updateContactsAccess comme suit:
 
-const updateContactsAccess = async (enabled) => {
-  console.log(`[AuthProvider] Début updateContactsAccess avec enabled=${enabled}`);
-  
-  try {
-    if (enabled) {
-      // Si on active, vérifier d'abord si la permission est déjà accordée
-      let permissionStatus;
-      
-      if (Platform.OS === 'ios') {
-        permissionStatus = await Contacts.checkPermission();
-        console.log(`[AuthProvider] iOS permission status: ${permissionStatus}`);
-      } else {
-        permissionStatus = await PermissionsAndroid.check(
-          PermissionsAndroid.PERMISSIONS.READ_CONTACTS
-        );
-        console.log(`[AuthProvider] Android permission status: ${permissionStatus}`);
-      }
-      
-      // Si la permission n'est pas déjà accordée, on la demande
-      if (permissionStatus !== 'authorized' && 
-          permissionStatus !== PermissionsAndroid.RESULTS.GRANTED && 
-          permissionStatus !== true) {
+  const updateContactsAccess = async (enabled) => {
+    console.log(`[AuthProvider] Début updateContactsAccess avec enabled=${enabled}`);
+    
+    try {
+      if (enabled) {
+        // Vérifier et demander la permission si nécessaire
+        const permissionResult = await checkAndRequestContactsPermission();
         
-        let newPermissionStatus;
-        
-        if (Platform.OS === 'ios') {
-          newPermissionStatus = await Contacts.requestPermission();
-        } else {
-          newPermissionStatus = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
-            {
-              title: i18n.t('auth.permissions.contactsAccess.title'),
-              message: i18n.t('auth.permissions.contactsAccess.message'),
-              buttonPositive: i18n.t('auth.permissions.contactsAccess.ok')
-            }
-          );
-        }
-        
-        console.log(`[AuthProvider] Nouvelle permission status: ${newPermissionStatus}`);
-        
-        // Vérifier si la permission a bien été accordée
-        if (newPermissionStatus !== 'authorized' && 
-            newPermissionStatus !== PermissionsAndroid.RESULTS.GRANTED && 
-            newPermissionStatus !== true) {
-          console.log('[AuthProvider] Permission refusée par l\'utilisateur');
+        if (!permissionResult.granted) {
+          console.log('[AuthProvider] Permission non accordée');
           return false;
         }
-      }
-      
-      // Tenter de récupérer les contacts pour vérifier l'accès
-      try {
-        const contacts = await Contacts.getAll();
-        console.log(`[AuthProvider] ${contacts.length} contacts récupérés`);
         
-        // Mise à jour du backend
-        const result = await updateUserData({ contacts: true });
+        // Tenter de récupérer les contacts pour vérifier l'accès
+        try {
+          const contacts = await Contacts.getAll();
+          console.log(`[AuthProvider] ${contacts.length} contacts récupérés`);
+          
+          // Passer isContactsUpdate=true pour éviter la récursion
+          const result = await updateUserData({ contacts: true }, true);
+          
+          if (result.success) {
+            // Mettre à jour l'état local manuellement
+            setContactsAccessEnabled(true);
+            
+            return true;
+          }
+          
+          return false;
+        } catch (contactError) {
+          console.error('[AuthProvider] Erreur lors de la récupération des contacts:', contactError);
+          return false;
+        }
+      } else {
+        // Même approche pour désactiver
+        const result = await updateUserData({ contacts: false }, true);
         
         if (result.success) {
-          // Mettre à jour l'état local SEULEMENT si l'API a réussi
-          setContactsAccessEnabled(true);
-          
-          // Mise à jour immédiate du userData pour éviter le décalage
-          setUserData(prevData => ({
-            ...prevData,
-            contacts: true
-          }));
-          
+          setContactsAccessEnabled(false);
           return true;
         }
         
         return false;
-      } catch (contactError) {
-        console.error('[AuthProvider] Erreur lors de la récupération des contacts:', contactError);
-        return false;
       }
-    } else {
-      // Si on désactive, mettre à jour le backend
-      const result = await updateUserData({ contacts: false });
-      
-      if (result.success) {
-        setContactsAccessEnabled(false);
-        
-        // Mise à jour immédiate du userData
-        setUserData(prevData => ({
-          ...prevData,
-          contacts: false
-        }));
-        
-        return true;
-      }
-      
+    } catch (error) {
+      console.error('[AuthProvider] Erreur dans updateContactsAccess:', error);
       return false;
     }
-  } catch (error) {
-    console.error('[AuthProvider] Erreur dans updateContactsAccess:', error);
-    return false;
-  }
-};
+  };
 
   useEffect(() => {
     if (userData) {
@@ -639,41 +591,142 @@ const updateContactsAccess = async (enabled) => {
     }
   };
 
-  const getContacts = async () => {
+  const checkAndRequestContactsPermission = async () => {
+    console.log('[AuthProvider] Vérification et demande de permission contacts');
+    
     try {
-      let permission;
-
-      // Gérer les permissions selon la plateforme
+      // Vérifier d'abord le statut actuel de la permission
+      let permissionStatus;
+      
       if (Platform.OS === 'ios') {
-        permission = await Contacts.requestPermission();
+        permissionStatus = await Contacts.checkPermission();
+        console.log(`[AuthProvider] iOS permission status: ${permissionStatus}`);
+        
+        // Si refusé sur iOS, proposer d'aller dans les paramètres
+        if (permissionStatus === 'denied') {
+          return new Promise((resolve) => {
+            Alert.alert(
+              "Accès aux contacts nécessaire",
+              "Vous avez précédemment refusé l'accès aux contacts. Veuillez l'activer manuellement dans les paramètres de votre téléphone.",
+              [
+                { 
+                  text: "Annuler", 
+                  style: "cancel",
+                  onPress: () => resolve({ granted: false, needsSettings: true })
+                },
+                { 
+                  text: "Ouvrir les paramètres", 
+                  onPress: () => {
+                    Linking.openSettings();
+                    resolve({ granted: false, needsSettings: true });
+                  }
+                }
+              ]
+            );
+          });
+        }
       } else {
-        permission = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
-          {
-            title: i18n.t('auth.permissions.contactsAccess.title'),
-            message: i18n.t('auth.permissions.contactsAccess.message'),
-            buttonPositive: i18n.t('auth.permissions.contactsAccess.ok')
-          }
+        permissionStatus = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.READ_CONTACTS
         );
       }
-
-      if (permission === 'authorized' || permission === PermissionsAndroid.RESULTS.GRANTED) {
-        // Récupérer tous les contacts
-        const contacts = await Contacts.getAll();
-        console.log('Contacts:', contacts);
-        return contacts;
-      } else {
+      
+      // Si la permission est déjà accordée
+      if (permissionStatus === 'authorized' || 
+          permissionStatus === PermissionsAndroid.RESULTS.GRANTED ||
+          permissionStatus === true) {
+        return { granted: true, needsSettings: false };
+      }
+      
+      // Demander la permission si elle n'est pas déjà accordée
+      return new Promise((resolve) => {
         Alert.alert(
-          i18n.t('auth.alerts.permissionDenied.title'),
-          i18n.t('auth.alerts.permissionDenied.message')
+          i18n.t('auth.permissions.contactsAccess.title'),
+          i18n.t('auth.permissions.contactsAccess.message'),
+          [
+            { 
+              text: i18n.t('auth.permissions.contactsAccess.cancel'), 
+              style: "cancel",
+              onPress: () => resolve({ granted: false, needsSettings: false })
+            },
+            {
+              text: i18n.t('auth.permissions.contactsAccess.ok'),
+              onPress: async () => {
+                let permission;
+                
+                // Demander la permission selon la plateforme
+                if (Platform.OS === 'ios') {
+                  permission = await Contacts.requestPermission();
+                } else {
+                  permission = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
+                    {
+                      title: i18n.t('auth.permissions.contactsAccess.title'),
+                      message: i18n.t('auth.permissions.contactsAccess.message'),
+                      buttonPositive: i18n.t('auth.permissions.contactsAccess.ok')
+                    }
+                  );
+                }
+                
+                const isGranted = permission === 'authorized' || 
+                                  permission === PermissionsAndroid.RESULTS.GRANTED;
+                
+                // Si l'utilisateur a refusé, proposer d'aller dans les paramètres
+                if (!isGranted && Platform.OS === 'ios' && permission === 'denied') {
+                  Alert.alert(
+                    "Accès aux contacts nécessaire",
+                    "Vous avez refusé l'accès aux contacts. Veuillez l'activer manuellement dans les paramètres de votre téléphone.",
+                    [
+                      { text: "Annuler", style: "cancel" },
+                      { 
+                        text: "Ouvrir les paramètres", 
+                        onPress: () => Linking.openSettings()
+                      }
+                    ]
+                  );
+                  resolve({ granted: false, needsSettings: true });
+                } else {
+                  resolve({ granted: isGranted, needsSettings: false });
+                }
+              }
+            }
+          ]
         );
-        return [];
-      }
+      });
     } catch (error) {
-      console.error(i18n.t('auth.errors.retrievingContacts'), error);
-      return [];
+      console.error('[AuthProvider] Erreur lors de la vérification/demande de permission:', error);
+      return { granted: false, needsSettings: false, error };
     }
   };
+
+// Dans AuthContext.js
+const getContacts = async () => {
+  try {
+    // Vérifier d'abord les permissions
+    const permissionStatus = await Contacts.checkPermission();
+    
+    // Si la permission n'est pas déjà accordée
+    if (permissionStatus !== 'authorized') {
+      // Au lieu de demander directement la permission (qui afficherait la boîte de dialogue système),
+      // utiliser notre fonction centralisée pour gérer la demande de manière élégante
+      const permissionResult = await checkAndRequestContactsPermission();
+      
+      // Si la permission n'a pas été accordée après notre flux personnalisé
+      if (!permissionResult.granted) {
+        // Retourner un tableau vide au lieu d'essayer d'accéder aux contacts
+        return [];
+      }
+    }
+
+    // Ce code ne s'exécute que si la permission est déjà accordée ou vient d'être accordée
+    const contacts = await Contacts.getAll();
+    console.log('Contacts:', contacts);
+    return contacts;
+  } catch (error) {
+    console.error(i18n.t('auth.errors.retrievingContacts'), error);
+    return [];
+  }
+};
 
   // Fonction pour récupérer un contact par son ID
   const getContactById = async (contactId) => {
@@ -685,6 +738,9 @@ const updateContactsAccess = async (enabled) => {
       return null;
     }
   };
+
+
+
 
   return (
     <AuthContext.Provider
@@ -704,6 +760,7 @@ const updateContactsAccess = async (enabled) => {
         deleteUserAccount,
         getContacts,
         getContactById,
+        checkAndRequestContactsPermission,
         contactsAccessEnabled,
         updateContactsAccess,
         getContactsWithAppStatus

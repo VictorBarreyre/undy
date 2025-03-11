@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Box, Button, Checkbox, Divider } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faTimes, faChevronDown } from '@fortawesome/free-solid-svg-icons';
-import { Modal, Pressable, Text, View, ScrollView, SafeAreaView, Alert, Platform,PermissionsAndroid, Linking } from 'react-native';
+import { Modal, Pressable, Text, View, ScrollView, SafeAreaView, Alert, Platform, PermissionsAndroid, Linking } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { BlurView } from '@react-native-community/blur';
@@ -11,13 +11,12 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from "@react-navigation/native";
 import InviteContactsModal from './InviteContactsModals';
 import { useTranslation } from 'react-i18next';
-import Contacts from 'react-native-contacts';
 
 
 const FilterBar = ({ onFilterChange, onTypeChange }) => {
   const { t } = useTranslation();
   const { data } = useCardData();
-  const { getContacts, userData, contactsAccessEnabled, updateContactsAccess } = useContext(AuthContext);
+  const { getContacts, userData, contactsAccessEnabled, updateContactsAccess, checkAndRequestContactsPermission } = useContext(AuthContext);
   const [activeButton, setActiveButton] = useState(t('filter.all'));
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,133 +57,34 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
     console.log(`[FilterBar] Bouton ${buttonName} cliqué, accès contacts: ${contactsAccessEnabled}`);
     
     if (buttonName === t('filter.contacts')) {
-      // Vérifier si la permission a déjà été accordée
-      try {
-        // Vérifier d'abord si la permission est déjà accordée dans le système (pas juste notre état local)
-        let permissionCheck;
-        
-        if (Platform.OS === 'ios') {
-          permissionCheck = await Contacts.checkPermission();
-        } else {
-          permissionCheck = await PermissionsAndroid.check(
-            PermissionsAndroid.PERMISSIONS.READ_CONTACTS
-          );
+      // Utiliser la fonction centralisée pour vérifier et demander la permission
+      const permissionResult = await checkAndRequestContactsPermission();
+      
+      if (permissionResult.granted) {
+        // Si la permission est accordée, mais pas activée dans notre contexte
+        if (!contactsAccessEnabled) {
+          const success = await updateContactsAccess(true);
+          console.log(`[FilterBar] Mise à jour du contexte: ${success}`);
         }
         
-        console.log(`[FilterBar] État de la permission système: ${permissionCheck}`);
+        // Charger les contacts et vérifier
+        const contactsResult = await getContactsWithAppStatus();
+        setContactsData(contactsResult.contacts || []);
         
-        // Gérer le cas où la permission a été refusée précédemment sur iOS
-  if (Platform.OS === 'ios' && permissionCheck === 'denied') {
-                      Alert.alert(
-                        t('filter.contactSettings.title'),
-                        t('filter.contactSettings.message'),
-                        [
-                          { text: t('filter.contactSettings.cancel'), style: "cancel" },
-                          { 
-                            text: t('filter.contactSettings.openSettings'), 
-                            onPress: () => {
-                              // Essayez d'abord d'ouvrir directement les paramètres de l'app
-                              Linking.openURL('app-settings:').catch(() => {
-                                // Si cela échoue, ouvrez les paramètres généraux
-                                Linking.openSettings();
-                              });
-                            } 
-                          }
-                        ]
-                      );
-                      return;
-                    }
-        
-        // Si la permission n'est pas accordée au niveau du système, la demander
-        if (!permissionCheck || permissionCheck === 'denied' || permissionCheck === false) {
-          Alert.alert(
-            t('filter.contactAccess.title'),
-            t('filter.contactAccess.message'),
-            [
-              { text: t('filter.contactAccess.cancel'), style: "cancel" },
-              {
-                text: t('filter.contactAccess.authorize'),
-                onPress: async () => {
-                  try {
-                    // Demander la permission au système
-                    let permission;
-                    if (Platform.OS === 'ios') {
-                      permission = await Contacts.requestPermission();
-                    } else {
-                      permission = await PermissionsAndroid.request(
-                        PermissionsAndroid.PERMISSIONS.READ_CONTACTS
-                      );
-                    }
-                    
-                    console.log(`[FilterBar] Résultat de la demande de permission: ${permission}`);
-                    
-                    // Vérifier si la permission a été accordée
-                    const isGranted = 
-                      permission === 'authorized' || 
-                      permission === PermissionsAndroid.RESULTS.GRANTED;
-                    
-                    if (isGranted) {
-                      // Mettre à jour l'état dans le contexte
-                      const success = await updateContactsAccess(true);
-                      console.log(`[FilterBar] Mise à jour du contexte: ${success}`);
-                      
-                      if (success) {
-                        // Charger les contacts et vérifier si certains utilisent l'app
-                        const contactsResult = await getContactsWithAppStatus();
-                        setContactsData(contactsResult.contacts || []);
-                        
-                        if (!contactsResult.hasAppUsers && contactsResult.contacts.length > 0) {
-                          setShowInviteModal(true);
-                        }
-                        
-                        // Dans tous les cas, on change le filtre actif
-                        setActiveButton(buttonName);
-                        onTypeChange(buttonName);
-                      }
-                    } else if (Platform.OS === 'ios' && permission === 'denied') {
-                      // Si l'utilisateur a refusé sur iOS, proposer d'aller dans les paramètres
-                      Alert.alert(
-                        t('filter.contactDenied.title'),
-                        t('filter.contactDenied.message'),
-                        [
-                          { text: t('filter.contactDenied.cancel'), style: "cancel" },
-                          { text: t('filter.contactDenied.openSettings'), onPress: () => Linking.openSettings() }
-                        ]
-                      );
-                    }
-                  } catch (error) {
-                    console.error('[FilterBar] Erreur lors de la demande de permission:', error);
-                  }
-                }
-              }
-            ]
-          );
-          return;
-        } else {
-          // Permission déjà accordée au niveau système mais pas dans notre contexte
-          if (!contactsAccessEnabled) {
-            const success = await updateContactsAccess(true);
-            console.log(`[FilterBar] Mise à jour du contexte pour une permission déjà accordée: ${success}`);
-          }
-          
-          // Charger les contacts et vérifier
-          const contactsResult = await getContactsWithAppStatus();
-          setContactsData(contactsResult.contacts || []);
-          
-          if (!contactsResult.hasAppUsers && contactsResult.contacts.length > 0) {
-            setShowInviteModal(true);
-          }
+        if (!contactsResult.hasAppUsers && contactsResult.contacts.length > 0) {
+          setShowInviteModal(true);
         }
-      } catch (error) {
-        console.error('[FilterBar] Erreur lors de la vérification des permissions:', error);
+      } else if (permissionResult.needsSettings) {
+        // L'utilisateur a été redirigé vers les paramètres, nous n'avons rien à faire de plus ici
+        return;
       }
+      // Sinon l'utilisateur a refusé, on continue simplement
     }
     
     // Dans tous les cas, on change le filtre actif
     setActiveButton(buttonName);
     onTypeChange(buttonName);
   };
-
 
   // Filtrer les données en fonction de l'entrée utilisateur
   useEffect(() => {
@@ -219,9 +119,9 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   }, [userData?.contacts]);
 
   const buttonTypes = [
-    t('filter.all'), 
-    t('filter.contacts'), 
-    t('filter.aroundMe'), 
+    t('filter.all'),
+    t('filter.contacts'),
+    t('filter.aroundMe'),
     t('filter.categories')
   ];
 
