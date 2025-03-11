@@ -25,7 +25,7 @@ const generateTokens = (userId) => {
 };
 
 // Dans userController.js
-const appleLogin = async (req, res) => {
+exports.appleLogin = async (req, res) => {
     try {
       const { identityToken, authorizationCode, fullName } = req.body;
       
