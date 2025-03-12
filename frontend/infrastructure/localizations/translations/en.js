@@ -215,6 +215,8 @@ export default {
     "postedBy": "Posted by {{name}}",
     "postedByDefault": "Posted by User",
     "selectedImage": "Selected image",
+    "share": "Share",
+    "shared": "Shared",
     "errors": {
       "resizing": "Error resizing image:",
       "saveScrollPosition": "Error saving scroll position:",
@@ -228,7 +230,9 @@ export default {
       "imageUpload": "Error uploading image:",
       "imageUploadFailed": "Image upload failed",
       "sendMessage": "Error sending message:",
-      "imageSelection": "Error selecting image:"
+      "imageSelection": "Error selecting image:",
+      "shareError": "Error while sharing",
+"missingSecretData": "Missing secret data"
     },
     "messageFailed": "Failed",
     "retry": "Retry",

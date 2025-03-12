@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { styles } from '../../infrastructure/theme/styles';
-import { Box, Text, HStack, VStack, Image } from 'native-base';
+import { Box, Text, HStack, VStack, Image, Pressable } from 'native-base';
 import { BlurView } from '@react-native-community/blur';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
-import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { View, Platform, Alert, Share, Linking } from 'react-native';
+import { View, Platform, Alert, Share, Linking, Animated, TouchableOpacity } from 'react-native';
 import BlurredTextComponent from './SelectiveBlurText';
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
 import { useTranslation } from 'react-i18next';
-import { useDateFormatter } from '../../utils/dateFormatters'; // Ajustez le chemin selon votre structure
+import { useDateFormatter } from '../../utils/dateFormatters';
+import LinearGradient from 'react-native-linear-gradient';// Ajustez le chemin selon votre structure
 
 export default function CardHome({ cardData }) {
   const { t } = useTranslation();
@@ -18,6 +19,11 @@ export default function CardHome({ cardData }) {
   const [isSingleLine, setIsSingleLine] = useState(true);
   const [textHeight, setTextHeight] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
+
+    // États pour le bouton de partage
+    const [isSharing, setIsSharing] = useState(false);
+    const [shareSuccess, setShareSuccess] = useState(false);
+    const shareButtonScale = useRef(new Animated.Value(1)).current;
 
   const safeCardData = {
     user: cardData.user || {},
@@ -64,9 +70,49 @@ export default function CardHome({ cardData }) {
 
   const handleShare = async () => {
     try {
-      await handleShareSecret(cardData);
+      // Animation du bouton
+      setIsSharing(true);
+      
+      // Effet de pression (scale)
+      Animated.sequence([
+        Animated.timing(shareButtonScale, {
+          toValue: 0.9,
+          duration: 100,
+          useNativeDriver: true
+        }),
+        Animated.timing(shareButtonScale, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true
+        })
+      ]).start();
+      
+      // Feedback haptique
+      ReactNativeHapticFeedback.trigger("impactLight", {
+        enableVibrateFallback: true,
+        ignoreAndroidSystemSettings: false
+      });
+      
+      const secretToShare = {
+        _id: cardData._id,
+        label: cardData.label,
+        content: cardData.content, 
+        shareLink: cardData.shareLink || `hushy://secret/${cardData._id}`
+      };
+      
+      const result = await handleShareSecret(secretToShare);
+      
+      // Gestion du succès du partage
+      if (result && result.action === Share.sharedAction) {
+        setShareSuccess(true);
+        setTimeout(() => {
+          setShareSuccess(false);
+        }, 3000);
+      }
     } catch (error) {
       Alert.alert(t('cardHome.errors.title'), t('cardHome.errors.unableToShare'));
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -146,13 +192,51 @@ export default function CardHome({ cardData }) {
           <Text ml={4} style={[styles.caption, styles.ctalittle]} >
             {cardData.label || t('cardHome.labelUnavailable')}
           </Text>
-          <FontAwesomeIcon
-            icon={faPaperPlane}
-            color="black"
-            size={20}
-            onPress={handleShare}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          />
+         {/* Bouton de partage amélioré */}
+         <Animated.View style={{ transform: [{ scale: shareButtonScale }] }}>
+            <TouchableOpacity
+              onPress={handleShare}
+              disabled={isSharing}
+              activeOpacity={0.8}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                justifyContent: 'center',
+                alignItems: 'center',
+                overflow: 'hidden',
+                ...Platform.select({
+                  ios: {
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 3,
+                  },
+                  android: {
+                    elevation: 3,
+                  }
+                })
+              }}
+            >
+              <LinearGradient
+                colors={shareSuccess ? ['#4CAF50', '#2E7D32'] : ['#FF587E', '#CC4B8D']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  bottom: 0
+                }}
+              />
+              <FontAwesomeIcon
+                icon={shareSuccess ? faCheck : faPaperPlane}
+                color="white"
+                size={18}
+              />
+            </TouchableOpacity>
+          </Animated.View>
         </HStack>
       </VStack>
     </Box>
