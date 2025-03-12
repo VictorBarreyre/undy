@@ -223,7 +223,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
         <Text style={styles.h3} textAlign="center">
         {t('swipeDeck.noSecrets')}
         </Text>
-        <Text style={styles.caption} textAlign="center" color="gray.500" mt={2}>
+        <Text style={styles.caption} textAlign="center" color="#94A3B8" mt={2}>
           {selectedFilters.length > 0
               ? t('swipeDeck.tryChangingFilters')
             : t('swipeDeck.checkBackLater')}

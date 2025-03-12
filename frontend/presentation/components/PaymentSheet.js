@@ -22,6 +22,9 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     const [applePaySupported, setApplePaySupported] = useState(false);
     const isDevMode = __DEV__;
 
+    console.log("STRIPE_PUBLISHABLE_KEY réellement utilisée:", STRIPE_PUBLISHABLE_KEY);
+
+
     // Obtenir la version de Stripe pour le diagnostic
     useEffect(() => {
         try {

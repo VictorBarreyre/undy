@@ -727,7 +727,13 @@ const sendMessage = async () => {
                 autoscrollToTopThreshold: 10,
               }}
               bounces={false}
-              ListEmptyComponent={<Text style={styles.caption}>{t('chat.noMessages')}</Text>}
+              ListEmptyComponent={() => (
+                <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
+                  <Text style={styles.caption} textAlign="center" color="#94A3B8" mt={2}>
+                    {t('chat.sayHelloToStart')}
+                  </Text>
+                </VStack>
+              )}
               onLayout={onFlatListLayout}
             />
           </Box>
