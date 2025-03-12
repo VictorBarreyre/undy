@@ -15,15 +15,15 @@ import LinearGradient from 'react-native-linear-gradient';// Ajustez le chemin s
 export default function CardHome({ cardData }) {
   const { t } = useTranslation();
   const dateFormatter = useDateFormatter();
-  const { data } = useCardData();
+  const { data, handleShareSecret } = useCardData();
   const [isSingleLine, setIsSingleLine] = useState(true);
   const [textHeight, setTextHeight] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
 
-    // États pour le bouton de partage
-    const [isSharing, setIsSharing] = useState(false);
-    const [shareSuccess, setShareSuccess] = useState(false);
-    const shareButtonScale = useRef(new Animated.Value(1)).current;
+  // États pour le bouton de partage
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+  const shareButtonScale = useRef(new Animated.Value(1)).current;
 
   const safeCardData = {
     user: cardData.user || {},
@@ -72,7 +72,7 @@ export default function CardHome({ cardData }) {
     try {
       // Animation du bouton
       setIsSharing(true);
-      
+
       // Effet de pression (scale)
       Animated.sequence([
         Animated.timing(shareButtonScale, {
@@ -86,33 +86,40 @@ export default function CardHome({ cardData }) {
           useNativeDriver: true
         })
       ]).start();
-      
+
       // Feedback haptique
       ReactNativeHapticFeedback.trigger("impactLight", {
         enableVibrateFallback: true,
         ignoreAndroidSystemSettings: false
       });
-      
+
+      // IMPORTANT: Définir secretToShare avant de l'utiliser
       const secretToShare = {
         _id: cardData._id,
         label: cardData.label,
-        content: cardData.content, 
         shareLink: cardData.shareLink || `hushy://secret/${cardData._id}`
       };
-      
+
+      console.log("Secret à partager:", secretToShare); // Vérifier l'objet
+
+      // Ensuite seulement, appeler handleShareSecret
       const result = await handleShareSecret(secretToShare);
-      
-      // Gestion du succès du partage
+
+      // Gérer le succès du partage
       if (result && result.action === Share.sharedAction) {
         setShareSuccess(true);
         setTimeout(() => {
           setShareSuccess(false);
-        }, 3000);
+        }, 2000);  // Durée plus courte pour permettre de partager à nouveau rapidement
       }
     } catch (error) {
+      console.error("Erreur lors du partage:", error);
       Alert.alert(t('cardHome.errors.title'), t('cardHome.errors.unableToShare'));
     } finally {
-      setIsSharing(false);
+      // Important: Toujours réinitialiser isSharing pour permettre de nouveaux partages
+      setTimeout(() => {
+        setIsSharing(false);
+      }, 500);  // Petit délai pour éviter les clics accidentels multiples
     }
   };
 
@@ -177,7 +184,7 @@ export default function CardHome({ cardData }) {
             visibleWords={3}
           />
         </Box>
-        
+
         {/* Section des statistiques */}
         <HStack
           style={{
@@ -192,8 +199,8 @@ export default function CardHome({ cardData }) {
           <Text ml={4} style={[styles.caption, styles.ctalittle]} >
             {cardData.label || t('cardHome.labelUnavailable')}
           </Text>
-         {/* Bouton de partage amélioré */}
-         <Animated.View style={{ transform: [{ scale: shareButtonScale }] }}>
+          {/* Bouton de partage amélioré */}
+          <Animated.View style={{ transform: [{ scale: shareButtonScale }] }}>
             <TouchableOpacity
               onPress={handleShare}
               disabled={isSharing}
@@ -230,11 +237,20 @@ export default function CardHome({ cardData }) {
                   bottom: 0
                 }}
               />
-              <FontAwesomeIcon
-                icon={shareSuccess ? faCheck : faPaperPlane}
-                color="white"
-                size={18}
-              />
+              <View style={{
+                width: '100%',
+                height: '100%',
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingBottom: 1, // Parfois un petit ajustement aide au centrage visuel
+                paddingRight: 2   // Ajustement horizontal si nécessaire
+              }}>
+                <FontAwesomeIcon
+                  icon={shareSuccess ? faCheck : faPaperPlane}
+                  color="white"
+                  size={18}
+                />
+              </View>
             </TouchableOpacity>
           </Animated.View>
         </HStack>

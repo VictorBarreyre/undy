@@ -80,20 +80,22 @@ const ChatScreen = ({ route }) => {
       // Partager le secret
       const result = await handleShareSecret(secretToShare);
 
-      // Gérer le succès du partage
-      if (result.action === Share.sharedAction) {
-        setShareSuccess(true);
+     if (result && result.action === Share.sharedAction) {
+          setShareSuccess(true);
+          setTimeout(() => {
+            setShareSuccess(false);
+          }, 2000);  // Durée plus courte pour permettre de partager à nouveau rapidement
+        }
+      } catch (error) {
+        console.error("Erreur lors du partage:", error);
+        Alert.alert(t('cardHome.errors.title'), t('cardHome.errors.unableToShare'));
+      } finally {
+        // Important: Toujours réinitialiser isSharing pour permettre de nouveaux partages
         setTimeout(() => {
-          setShareSuccess(false);
-        }, 3000);
+          setIsSharing(false);
+        }, 500);  // Petit délai pour éviter les clics accidentels multiples
       }
-
-    } catch (error) {
-      console.error(t('chat.errors.shareError'), error);
-    } finally {
-      setIsSharing(false);
-    }
-  };
+    };
 
   // État unifié pour les messages non lus
   const [unreadState, setUnreadState] = useState({
