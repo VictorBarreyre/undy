@@ -240,7 +240,7 @@ const AddSecret = () => {
                                         width="100%"
                                         marginX="auto"
                                         minHeight={boxHeight}
-                                        maxHeight={keyboardVisible ? '80%' : '100%'}
+                                        maxHeight={keyboardVisible ? '82%' : '100%'}
                                         borderRadius="lg"
                                         backgroundColor="white"
                                         marginTop={2}
@@ -442,7 +442,8 @@ const AddSecret = () => {
                                     ) : null}
 
                                     <Pressable
-                                        marginTop={7}
+                                        display={keyboardVisible ? 'none' : 'initial' }
+                                        marginTop={price ? 0 : 7}
                                         onPress={handlePress}
                                         disabled={!secretPostAvailable}
                                         style={({ pressed }) => [
@@ -465,6 +466,7 @@ const AddSecret = () => {
                                         </HStack>
                                     </Pressable>
                                 </VStack>
+                                
                             </Box>
                         }
                     />

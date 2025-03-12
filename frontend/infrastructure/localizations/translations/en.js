@@ -505,8 +505,8 @@ export default {
   "stripeVerification": {
     "bankAccountSetup": {
       "title": "Bank Account Setup",
-      "description": "Your bank account will be automatically set up when you publish your first secret.",
-      "publishSecret": "Publish a secret"
+      "description": "Your bank account will be automatically set up when you publish your first hushy.",
+      "publishSecret": "Publish a hushy"
     },
     "identityVerification": {
       "title": "Identity Verification",
