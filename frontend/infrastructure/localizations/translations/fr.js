@@ -203,7 +203,7 @@ export default {
     "expiresIn": "Expire dans",
     "expired": "Expiré",
     "timeLeft": "{{days}}j {{hours}}h {{minutes}}m",
-   "noMessagesYet": "Pas encore de messages",
+    "noMessagesYet": "Pas encore de messages",
     "sayHelloToStart": "Envoyez un message pour démarrer la conversation",
     "newMessages": "Nouveaux messages",
     "send": "Envoyer",
@@ -211,6 +211,8 @@ export default {
     "postedBy": "Posté par {{name}}",
     "postedByDefault": "Posté par Utilisateur",
     "selectedImage": "Image sélectionnée",
+    "share": "Partager",
+    "shared": "Partagé",
     "errors": {
       "resizing": "Erreur lors du redimensionnement:",
       "saveScrollPosition": "Erreur lors de la sauvegarde de la position:",
@@ -224,12 +226,15 @@ export default {
       "imageUpload": "Erreur lors de l'upload de l'image:",
       "imageUploadFailed": "Échec de l'upload de l'image",
       "sendMessage": "Erreur lors de l'envoi du message:",
-      "imageSelection": "Erreur lors de la sélection d'image:"
+      "imageSelection": "Erreur lors de la sélection d'image:",
+       "shareError": "Erreur lors du partage",
+    "missingSecretData": "Données du secret manquantes"
     },
     "messageFailed": "Échec",
     "retry": "Renvoyer",
     "sending": "Envoi...",
-    "messageImage": "Image du message"
+    "messageImage": "Image du message",
+
   },
 
   "dateTime": {
@@ -564,65 +569,65 @@ export default {
   },
 
   "cardData": {
-  "errors": {
-    "axiosInitError": "Erreur d'initialisation axios:",
-    "axiosNotInitialized": "Instance Axios non initialisée",
-    "secretCreation": "Erreur création secret:",
-    "secretCreationGeneric": "Erreur lors de la création du secret",
-    "stripeRefresh": "Erreur rafraîchissement Stripe:",
-    "stripeRefreshGeneric": "Erreur lors du rafraîchissement de la configuration Stripe",
-    "stripeReturn": "Erreur de retour Stripe:",
-    "stripeReset": "Erreur réinitialisation compte Stripe:",
-    "stripeResetGeneric": "Erreur lors de la réinitialisation du compte Stripe",
-    "stripeDelete": "Erreur suppression compte Stripe:",
-    "stripeDeleteFundsAvailable": "Impossible de supprimer le compte. Des fonds sont encore disponibles.",
-    "stripeDeleteGeneric": "Erreur lors de la suppression du compte Stripe",
-    "invalidDataFromApi": "Données invalides reçues depuis l'API",
-    "fetchingSecrets": "Erreur lors de la récupération des secrets :",
-    "fetchingUserSecrets": "Erreur récupération secrets et comptage:",
-    "missingSecretOrPaymentId": "Secret ID et Payment ID sont requis",
-    "noConversationIdReceived": "Aucun ID de conversation reçu",
-    "purchaseErrorDetails": "Détails de l'erreur:",
-    "fetchingPurchasedSecrets": "Erreur lors de la récupération des secrets achetés:",
-    "sendingMessage": "Erreur lors de l'envoi du message:",
-    "fetchingMessages": "Erreur lors de la récupération des messages:",
-    "fetchingConversations": "Erreur lors de la récupération des conversations:",
-    "shareLinkUnavailable": "Lien de partage non disponible",
-    "sharing": "Erreur lors du partage:",
-    "imageUpload": "Erreur lors de l'upload de l'image:",
-    "refreshingUnreadCounts": "Erreur lors du rafraîchissement des compteurs non lus:",
-    "markingAsRead": "Erreur lors du marquage comme lu",
-    "refreshingCounters": "Erreur lors du rafraîchissement des compteurs:"
+    "errors": {
+      "axiosInitError": "Erreur d'initialisation axios:",
+      "axiosNotInitialized": "Instance Axios non initialisée",
+      "secretCreation": "Erreur création secret:",
+      "secretCreationGeneric": "Erreur lors de la création du secret",
+      "stripeRefresh": "Erreur rafraîchissement Stripe:",
+      "stripeRefreshGeneric": "Erreur lors du rafraîchissement de la configuration Stripe",
+      "stripeReturn": "Erreur de retour Stripe:",
+      "stripeReset": "Erreur réinitialisation compte Stripe:",
+      "stripeResetGeneric": "Erreur lors de la réinitialisation du compte Stripe",
+      "stripeDelete": "Erreur suppression compte Stripe:",
+      "stripeDeleteFundsAvailable": "Impossible de supprimer le compte. Des fonds sont encore disponibles.",
+      "stripeDeleteGeneric": "Erreur lors de la suppression du compte Stripe",
+      "invalidDataFromApi": "Données invalides reçues depuis l'API",
+      "fetchingSecrets": "Erreur lors de la récupération des secrets :",
+      "fetchingUserSecrets": "Erreur récupération secrets et comptage:",
+      "missingSecretOrPaymentId": "Secret ID et Payment ID sont requis",
+      "noConversationIdReceived": "Aucun ID de conversation reçu",
+      "purchaseErrorDetails": "Détails de l'erreur:",
+      "fetchingPurchasedSecrets": "Erreur lors de la récupération des secrets achetés:",
+      "sendingMessage": "Erreur lors de l'envoi du message:",
+      "fetchingMessages": "Erreur lors de la récupération des messages:",
+      "fetchingConversations": "Erreur lors de la récupération des conversations:",
+      "shareLinkUnavailable": "Lien de partage non disponible",
+      "sharing": "Erreur lors du partage:",
+      "imageUpload": "Erreur lors de l'upload de l'image:",
+      "refreshingUnreadCounts": "Erreur lors du rafraîchissement des compteurs non lus:",
+      "markingAsRead": "Erreur lors du marquage comme lu",
+      "refreshingCounters": "Erreur lors du rafraîchissement des compteurs:"
+    },
+    "logs": {
+      "secretCreationResponse": "Réponse création secret:",
+      "stripeRefreshResponse": "Réponse rafraîchissement Stripe:",
+      "attemptingPurchase": "Tentative d'achat du secret:",
+      "messagesReceived": "Messages reçus:",
+      "userDataNull": "getUserConversations: userData is null, returning empty array",
+      "userDataNullSkippingUpdate": "refreshUnreadCounts: userData is null, skipping update",
+      "updatingCounters": "Mise à jour des compteurs (avec cache local):",
+      "searchingSecret": "Recherche du secret avec ID:",
+      "responseReceived": "Réponse reçue:",
+      "soughtSecret": "Secret recherché:"
+    },
+    "stripe": {
+      "configComplete": "Compte Stripe complètement configuré",
+      "configInProgress": "Configuration du compte Stripe en cours",
+      "noAccount": "Aucun compte Stripe associé",
+      "unknownStatus": "Statut inconnu",
+      "configSuccessful": "Compte Stripe configuré avec succès",
+      "resetSuccess": "Compte Stripe réinitialisé avec succès",
+      "deleteSuccess": "Compte Stripe supprimé avec succès"
+    },
+    "share": {
+      "messageIOS": "🔐 Découvre mon secret sur Hushy !\n\n{{link}}",
+      "messageAndroid": "🔐 Découvre mon secret sur Hushy !\n\n{{link}}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy",
+      "title": "Partager un secret",
+      "subject": "Un secret à partager sur Hushy",
+      "confidentialSecret": "Secret confidentiel 🔐",
+      "dialogTitle": "Partager ce secret confidentiel"
+    }
   },
-  "logs": {
-    "secretCreationResponse": "Réponse création secret:",
-    "stripeRefreshResponse": "Réponse rafraîchissement Stripe:",
-    "attemptingPurchase": "Tentative d'achat du secret:",
-    "messagesReceived": "Messages reçus:",
-    "userDataNull": "getUserConversations: userData is null, returning empty array",
-    "userDataNullSkippingUpdate": "refreshUnreadCounts: userData is null, skipping update",
-    "updatingCounters": "Mise à jour des compteurs (avec cache local):",
-    "searchingSecret": "Recherche du secret avec ID:",
-    "responseReceived": "Réponse reçue:",
-    "soughtSecret": "Secret recherché:"
-  },
-  "stripe": {
-    "configComplete": "Compte Stripe complètement configuré",
-    "configInProgress": "Configuration du compte Stripe en cours",
-    "noAccount": "Aucun compte Stripe associé",
-    "unknownStatus": "Statut inconnu",
-    "configSuccessful": "Compte Stripe configuré avec succès",
-    "resetSuccess": "Compte Stripe réinitialisé avec succès",
-    "deleteSuccess": "Compte Stripe supprimé avec succès"
-  },
-  "share": {
-    "messageIOS": "🔐 Découvre mon secret sur Hushy !\n\n{{link}}",
-    "messageAndroid": "🔐 Découvre mon secret sur Hushy !\n\n{{link}}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy",
-    "title": "Partager un secret",
-    "subject": "Un secret à partager sur Hushy",
-    "confidentialSecret": "Secret confidentiel 🔐",
-    "dialogTitle": "Partager ce secret confidentiel"
-  }
-},
 
 }

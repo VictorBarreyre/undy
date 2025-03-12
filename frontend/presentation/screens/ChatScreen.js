@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext, useRef, memo, useCallback } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Share } from 'react-native';
 import { Box, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown } from '@fortawesome/free-solid-svg-icons';
+import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown, faPaperPlane, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
 import { TouchableOpacity } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
@@ -21,13 +21,14 @@ import ImageManipulator from 'react-native-image-manipulator';
 import { useTranslation } from 'react-i18next';
 import { useDateFormatter } from '../../utils/dateFormatters';
 
+
 const ChatScreen = ({ route }) => {
   const { t } = useTranslation();
   const dateFormatter = useDateFormatter();
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
-  const { handleAddMessage, markConversationAsRead, uploadImage, refreshUnreadCounts } = useCardData();
+  const { handleAddMessage, markConversationAsRead, uploadImage, refreshUnreadCounts, handleShareSecret } = useCardData();
   const { userData, userToken } = useContext(AuthContext);
   const navigation = useNavigation();
   const [showTimestamps, setShowTimestamps] = useState(false);
@@ -40,6 +41,59 @@ const ChatScreen = ({ route }) => {
   const [keyboardOffset, setKeyboardOffset] = useState(Platform.OS === 'ios' ? 60 : 0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+  const shareButtonScale = useRef(new Animated.Value(1)).current;
+
+
+  const handleShare = async () => {
+    try {
+      if (!secretData) {
+        console.error(t('chat.errors.missingSecretData'));
+        return;
+      }
+
+      // Animation du bouton
+      setIsSharing(true);
+      Animated.sequence([
+        Animated.timing(shareButtonScale, {
+          toValue: 0.8,
+          duration: 100,
+          useNativeDriver: true
+        }),
+        Animated.timing(shareButtonScale, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true
+        })
+      ]).start();
+
+      // Préparer l'objet secret
+      const secretToShare = {
+        _id: secretData._id || conversation?.secret?._id,
+        label: secretData?.label,
+        content: secretData?.content,
+        shareLink: secretData?.shareLink || `hushy://secret/${secretData?._id || conversation?.secret?._id}`
+      };
+
+      // Partager le secret
+      const result = await handleShareSecret(secretToShare);
+
+      // Gérer le succès du partage
+      if (result.action === Share.sharedAction) {
+        setShareSuccess(true);
+        setTimeout(() => {
+          setShareSuccess(false);
+        }, 3000);
+      }
+
+    } catch (error) {
+      console.error(t('chat.errors.shareError'), error);
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   // État unifié pour les messages non lus
   const [unreadState, setUnreadState] = useState({
@@ -57,32 +111,32 @@ const ChatScreen = ({ route }) => {
 
 
   const prepareImageForUpload = async (imageUri) => {
-  // Définir la taille maximale
-  const MAX_WIDTH = 1200;
-  const MAX_HEIGHT = 1200;
-  
-  try {
-    // Redimensionner l'image
-    const manipResult = await ImageManipulator.manipulate(
-      imageUri,
-      [
-        {
-          resize: {
-            width: MAX_WIDTH,
-            height: MAX_HEIGHT,
+    // Définir la taille maximale
+    const MAX_WIDTH = 1200;
+    const MAX_HEIGHT = 1200;
+
+    try {
+      // Redimensionner l'image
+      const manipResult = await ImageManipulator.manipulate(
+        imageUri,
+        [
+          {
+            resize: {
+              width: MAX_WIDTH,
+              height: MAX_HEIGHT,
+            },
           },
-        },
-      ],
-      { compress: 0.7, format: 'jpeg' }
-    );
-    
-    return manipResult.uri;
-  } catch (error) {
-    console.error(t('chat.errors.resizing'), error);
-    // En cas d'erreur, retourner l'URI originale
-    return imageUri;
-  }
-};
+        ],
+        { compress: 0.7, format: 'jpeg' }
+      );
+
+      return manipResult.uri;
+    } catch (error) {
+      console.error(t('chat.errors.resizing'), error);
+      // En cas d'erreur, retourner l'URI originale
+      return imageUri;
+    }
+  };
 
   // Analyse des données de conversation pour les messages non lus
   useEffect(() => {
@@ -415,142 +469,142 @@ const ChatScreen = ({ route }) => {
     setInputContainerHeight(newHeight);
   };
 
- // Envoi de message
-const sendMessage = async () => {
-  try {
-    if (!conversationId) {
-      throw new Error(t('chat.errors.missingConversationId'));
-    }
-
-    // Vérifier s'il y a du contenu à envoyer
-    if (!message.trim() && !selectedImage) return;
-
-    if (!userData?.name) {
-      throw new Error(t('chat.errors.missingUserInfo'));
-    }
-
-    // Déterminer le type de message
-    let messageType = 'text';
-    if (selectedImage && message.trim()) {
-      messageType = 'mixed';
-    } else if (selectedImage) {
-      messageType = 'image';
-    }
-
-    // Créer un ID temporaire pour afficher immédiatement le message
-    const tempId = `temp-${Date.now()}`;
-    const messageText = message.trim() || "";
-    
-    // Ajouter immédiatement le message à l'interface avec état "en cours d'envoi"
-    setMessages(prev => [...prev, {
-      id: tempId,
-      text: messageText,
-      messageType: messageType,
-      image: selectedImage ? selectedImage.uri : "",
-      sender: 'user',
-      timestamp: new Date().toISOString(),
-      isSending: true,
-      senderInfo: {
-        id: userData?._id || "",
-        name: userData?.name || t('chat.defaultUser')
-      }
-    }]);
-
-    // Réinitialiser l'interface immédiatement pour une meilleure réactivité
-    setMessage('');
-    const imageToUpload = selectedImage;
-    setSelectedImage(null);
-    updateInputAreaHeight(false);
-
-    // Défiler vers le bas
-    requestAnimationFrame(() => {
-      if (flatListRef.current) {
-        flatListRef.current.scrollToEnd({ animated: true });
-      }
-    });
-
-    // Créer l'objet du message pour l'API
-    let messageContent = {
-      content: messageText || " ",
-      senderName: userData.name,
-      messageType: messageType
-    };
-
-    // Si une image est sélectionnée, l'uploader
-    if (imageToUpload) {
-      setIsUploading(true);
-      setUploadProgress(0);
-      
-      try {
-        // Utiliser directement la donnée base64
-        let imageData;
-        if (imageToUpload.base64) {
-          // Utiliser directement base64 au lieu de redimensionner
-          imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
-          
-          // Uploader l'image
-          const uploadResult = await uploadImage(
-            imageData, 
-            (progress) => setUploadProgress(progress)
-          );
-          
-          messageContent.image = uploadResult.url;
-        } else {
-          throw new Error(t('chat.errors.unsupportedImageFormat'));
-        }
-      } catch (uploadError) {
-        console.error(t('chat.errors.imageUpload'), uploadError);
-        
-        // Marquer le message comme échoué
-        setMessages(prev => prev.map(msg => 
-          msg.id === tempId 
-            ? { ...msg, sendFailed: true, isSending: false }
-            : msg
-        ));
-        
-        throw new Error(t('chat.errors.imageUploadFailed'));
-      } finally {
-        setIsUploading(false);
-        setUploadProgress(0);
-      }
-    }
-
-    // Envoyer le message
+  // Envoi de message
+  const sendMessage = async () => {
     try {
-      const newMessage = await handleAddMessage(conversationId, messageContent);
-      
-      // Remplacer le message temporaire par le message réel
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === tempId 
-            ? {
+      if (!conversationId) {
+        throw new Error(t('chat.errors.missingConversationId'));
+      }
+
+      // Vérifier s'il y a du contenu à envoyer
+      if (!message.trim() && !selectedImage) return;
+
+      if (!userData?.name) {
+        throw new Error(t('chat.errors.missingUserInfo'));
+      }
+
+      // Déterminer le type de message
+      let messageType = 'text';
+      if (selectedImage && message.trim()) {
+        messageType = 'mixed';
+      } else if (selectedImage) {
+        messageType = 'image';
+      }
+
+      // Créer un ID temporaire pour afficher immédiatement le message
+      const tempId = `temp-${Date.now()}`;
+      const messageText = message.trim() || "";
+
+      // Ajouter immédiatement le message à l'interface avec état "en cours d'envoi"
+      setMessages(prev => [...prev, {
+        id: tempId,
+        text: messageText,
+        messageType: messageType,
+        image: selectedImage ? selectedImage.uri : "",
+        sender: 'user',
+        timestamp: new Date().toISOString(),
+        isSending: true,
+        senderInfo: {
+          id: userData?._id || "",
+          name: userData?.name || t('chat.defaultUser')
+        }
+      }]);
+
+      // Réinitialiser l'interface immédiatement pour une meilleure réactivité
+      setMessage('');
+      const imageToUpload = selectedImage;
+      setSelectedImage(null);
+      updateInputAreaHeight(false);
+
+      // Défiler vers le bas
+      requestAnimationFrame(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({ animated: true });
+        }
+      });
+
+      // Créer l'objet du message pour l'API
+      let messageContent = {
+        content: messageText || " ",
+        senderName: userData.name,
+        messageType: messageType
+      };
+
+      // Si une image est sélectionnée, l'uploader
+      if (imageToUpload) {
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+          // Utiliser directement la donnée base64
+          let imageData;
+          if (imageToUpload.base64) {
+            // Utiliser directement base64 au lieu de redimensionner
+            imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
+
+            // Uploader l'image
+            const uploadResult = await uploadImage(
+              imageData,
+              (progress) => setUploadProgress(progress)
+            );
+
+            messageContent.image = uploadResult.url;
+          } else {
+            throw new Error(t('chat.errors.unsupportedImageFormat'));
+          }
+        } catch (uploadError) {
+          console.error(t('chat.errors.imageUpload'), uploadError);
+
+          // Marquer le message comme échoué
+          setMessages(prev => prev.map(msg =>
+            msg.id === tempId
+              ? { ...msg, sendFailed: true, isSending: false }
+              : msg
+          ));
+
+          throw new Error(t('chat.errors.imageUploadFailed'));
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }
+      }
+
+      // Envoyer le message
+      try {
+        const newMessage = await handleAddMessage(conversationId, messageContent);
+
+        // Remplacer le message temporaire par le message réel
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === tempId
+              ? {
                 ...msg,
                 id: newMessage._id,
                 image: messageContent.image || "",
                 isSending: false
               }
-            : msg
-        )
-      );
+              : msg
+          )
+        );
+      } catch (error) {
+        console.error(t('chat.errors.sendMessage'), error);
+
+        // Marquer le message comme échoué
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === tempId
+              ? { ...msg, sendFailed: true, isSending: false }
+              : msg
+          )
+        );
+
+        throw error;
+      }
+
     } catch (error) {
       console.error(t('chat.errors.sendMessage'), error);
-      
-      // Marquer le message comme échoué
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === tempId 
-            ? { ...msg, sendFailed: true, isSending: false }
-            : msg
-        )
-      );
-      
-      throw error;
     }
-
-  } catch (error) {
-    console.error(t('chat.errors.sendMessage'), error);
-  }
-};
+  };
 
   // Sélection d'image
   const handleImagePick = async () => {
@@ -857,7 +911,7 @@ const sendMessage = async () => {
                   }}
                 />
 
-            
+
                 {/* Bouton d'envoi */}
                 <TouchableOpacity
                   onPress={sendMessage}
@@ -992,24 +1046,72 @@ const sendMessage = async () => {
 
               <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
                 {/* Header */}
-                <HStack space={2} justifyContent="start">
+                <VStack space={1} justifyContent="start">
                   <Text style={styles.h5}>
-                    {secretData && secretData.user 
-                      ? t('chat.postedBy', { name: secretData.user.name }) 
+                    {secretData && secretData.user
+                      ? t('chat.postedBy', { name: secretData.user.name })
                       : t('chat.postedByDefault')}
                   </Text>
-                </HStack>
+                  <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
+                    {t('chat.expiresIn')} {timeLeft}
+                  </Text>
+                </VStack>
 
                 <Text paddingVertical={100} style={styles.h3}>
                   "{secretData?.content}"
                 </Text>
 
                 {/* Footer */}
-                <HStack justifyContent='space-between' mt={4}>
+                <HStack alignContent='center' alignItems='center' justifyContent='space-between' mt={4}>
                   <Text style={styles.caption}>{secretData?.label}</Text>
-                  <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
-                    {t('chat.expiresIn')} {timeLeft}
+                 
+
+                  {/* Bouton de partage */}
+                  <Animated.View style={{ transform: [{ scale: shareButtonScale }] }}>
+              <TouchableOpacity 
+                onPress={handleShare}
+                disabled={isSharing}
+                activeOpacity={0.8}
+                style={{
+                  width: '100%',
+                  height: 46,
+                  borderRadius: 23,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  overflow: 'hidden',
+                  marginTop: 8,
+                  paddingHorizontal: 20, // Padding horizontal
+                  paddingVertical: 2,   // Padding vertical
+                }}
+              >
+                <LinearGradient
+                  colors={shareSuccess ? ['#4CAF50', '#2E7D32'] : ['#FF587E', '#CC4B8D']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0
+                  }}
+                />
+                <HStack space={3} alignItems="center">
+                 
+                  <Text color='white' style={
+                    styles.ctalittle
+                  }>
+                    {shareSuccess ? t('chat.shared') : t('chat.share')}
                   </Text>
+
+                  <FontAwesomeIcon 
+                    icon={shareSuccess ? faCheck : faPaperPlane} 
+                    size={16} 
+                    color="white" 
+                  />
+                </HStack>
+              </TouchableOpacity>
+            </Animated.View>
                 </HStack>
               </VStack>
             </Modal.Content>
