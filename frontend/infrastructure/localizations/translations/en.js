@@ -113,8 +113,29 @@ export default {
     "logs": {
       "selectedFilters": "Selected filters:",
       "selectedType": "Selected type:"
+    },
+
+  },
+
+  "location": {
+    "alerts": {
+      "permissionDenied": {
+        "title": "Location Access Denied",
+        "message": "To see secrets around you, we need access to your location.",
+        "ok": "OK"
+      },
+      "error": {
+        "title": "Location Error",
+        "message": "Unable to get your location. Please try again."
+      }
+    },
+    "errors": {
+      "locationError": "Location error:",
+      "gettingPosition": "Error getting position:"
     }
   },
+
+
 
   "swipeDeck": {
     "noSecrets": "No secrets available",

@@ -112,6 +112,25 @@ export default {
     "logs": {
       "selectedFilters": "Filtres sélectionnés :",
       "selectedType": "Type sélectionné :"
+    },
+ 
+  },
+
+  "location": {
+    "alerts": {
+      "permissionDenied": {
+        "title": "Accès à la localisation refusé",
+        "message": "Pour voir les secrets autour de vous, nous avons besoin d'accéder à votre position.",
+        "ok": "OK"
+      },
+      "error": {
+        "title": "Erreur de localisation",
+        "message": "Impossible d'obtenir votre position. Veuillez réessayer."
+      }
+    },
+    "errors": {
+      "locationError": "Erreur de localisation:",
+      "gettingPosition": "Erreur lors de l'obtention de la position:"
     }
   },
   "swipeDeck": {

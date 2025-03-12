@@ -16,7 +16,8 @@ const {
     refreshStripeOnboarding,
     getSharedSecret,
     markConversationAsRead,
-    uploadImage
+    uploadImage, 
+    getNearbySecrets
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -51,6 +52,8 @@ router.get('/unpurchased', protect, getUnpurchasedSecrets);
 router.get('/purchased', protect, getPurchasedSecrets);
 router.get('/user-secrets-with-count', protect, getUserSecretsWithCount);
 router.get('/shared/:secretId', protect, getSharedSecret);
+router.get('/nearby', protect, getNearbySecrets);
+
 
 
 // Routes des conversations

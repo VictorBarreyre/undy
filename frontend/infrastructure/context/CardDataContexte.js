@@ -3,6 +3,8 @@ import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInsta
 import { AuthContext } from './AuthContext';
 import { Platform, Share } from 'react-native';
 import i18n from 'i18next'; // Import direct de i18n
+import Geolocation from '@react-native-community/geolocation';
+
 
 const CardDataContext = createContext();
 
@@ -659,6 +661,57 @@ export const CardDataProvider = ({ children }) => {
     }
   }, [isLoggedIn, userData]);
 
+  const fetchSecretsByLocation = async (radiusInKm = 5) => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
+    }
+    
+    try {
+      // Configurer les options de géolocalisation
+      Geolocation.setRNConfiguration({
+        skipPermissionRequests: false,
+        authorizationLevel: 'whenInUse'
+      });
+      
+      setIsLoadingData(true);
+      
+      // Obtenir la position actuelle
+      const position = await new Promise((resolve, reject) => {
+        Geolocation.getCurrentPosition(
+          pos => resolve(pos),
+          error => reject(error),
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        );
+      });
+      
+      const { latitude, longitude } = position.coords;
+      
+      // Appel à l'API avec les coordonnées
+      const response = await instance.get('/api/secrets/nearby', {
+        params: {
+          latitude,
+          longitude,
+          radius: radiusInKm
+        }
+      });
+      
+      if (response.data && response.data.secrets) {
+        setData(response.data.secrets);
+        setLastFetchTime(Date.now());
+        return response.data.secrets;
+      } else {
+        console.error(i18n.t('cardData.errors.invalidDataFromApi'));
+        return [];
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des secrets à proximité:', error);
+      return [];
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
   return (
     <CardDataContext.Provider value={{
       data,
@@ -686,7 +739,9 @@ export const CardDataProvider = ({ children }) => {
       totalUnreadCount,
       resetReadStatus,
       setUnreadCountsMap,
-      setTotalUnreadCount
+      setTotalUnreadCount,
+      fetchSecretsByLocation,
+
     }}>
       {children}
     </CardDataContext.Provider>

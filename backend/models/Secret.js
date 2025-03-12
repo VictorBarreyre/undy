@@ -29,10 +29,22 @@ const SecretSchema = new mongoose.Schema({
     required: true,
     default: () => new Date(+new Date() + 7 * 24 * 60 * 60 * 1000) // 7 jours par défaut
   },
+  
   shareLink: {
     type: String,
     unique: true,
     sparse: true // Permet d'avoir des documents sans shareLink
+  }  ,
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      required: false
+    }
   }
 },
   { timestamps: true });

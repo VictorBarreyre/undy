@@ -11,7 +11,7 @@ exports.createSecret = async (req, res) => {
     session.startTransaction();
 
     try {
-        const { label, content, price, expiresIn = 7 } = req.body;
+        const { label, content, price, expiresIn = 7, latitude, longitude } = req.body;
 
         // Validation des champs requis
         if (!label || !content || price == null) {
@@ -34,6 +34,12 @@ exports.createSecret = async (req, res) => {
             status: 'pending'
         };
 
+        if (latitude && longitude) {
+            secretData.location = {
+              type: 'Point',
+              coordinates: [parseFloat(longitude), parseFloat(latitude)]
+            };
+          }
 
         // Définir dynamiquement les URLs de retour
         const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
@@ -274,6 +280,62 @@ exports.getAllSecrets = async (req, res) => {
         res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
 };
+
+exports.getNearbySecrets = async (req, res) => {
+    try {
+      const { latitude, longitude, radius = 5 } = req.query;
+      const userId = req.user.id;
+      
+      if (!latitude || !longitude) {
+        return res.status(400).json({ message: 'Coordonnées manquantes ou invalides' });
+      }
+      
+      // Convertir en nombres
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      const rad = parseFloat(radius);
+      
+      // Vérifier la validité des nombres
+      if (isNaN(lat) || isNaN(lng) || isNaN(rad)) {
+        return res.status(400).json({ message: 'Coordonnées ou rayon invalides' });
+      }
+      
+      // Conversion km en mètres pour MongoDB
+      const maxDistance = rad * 1000;
+      
+      // Requête avec géolocalisation
+      const secrets = await Secret.find({
+        location: {
+          $near: {
+            $geometry: {
+              type: "Point",
+              coordinates: [lng, lat] // MongoDB utilise [longitude, latitude]
+            },
+            $maxDistance: maxDistance
+          }
+        },
+        purchasedBy: { $nin: [userId] }, // Ne pas inclure les secrets déjà achetés
+        user: { $ne: userId },           // Ne pas inclure les secrets créés par l'utilisateur
+        expiresAt: { $gt: new Date() }   // Ne pas inclure les secrets expirés
+      })
+      .populate('user', 'name profilePicture phone')
+      .select('label content price createdAt expiresAt user purchasedBy location shareLink')
+      .limit(50)
+      .sort({ createdAt: -1 });
+      
+      return res.status(200).json({
+        secrets,
+        totalPages: 1,
+        currentPage: 1
+      });
+    } catch (error) {
+      console.error('Erreur lors de la récupération des secrets à proximité:', error);
+      return res.status(500).json({
+        message: 'Erreur lors de la récupération des secrets à proximité',
+        error: error.message
+      });
+    }
+  };
 
 
 exports.getUnpurchasedSecrets = async (req, res) => {
