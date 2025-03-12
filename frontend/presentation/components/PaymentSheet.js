@@ -194,10 +194,10 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 console.log(`- Forçage activé: ${forceApplePay ? 'OUI' : 'NON'}`);
                 console.log(`- Activation finale: ${shouldEnableApplePay ? 'OUI' : 'NON'}`);
                 
-                // Dans les deux cas, essayons d'ajouter la configuration Apple Pay
-                // Si nous sommes en production, forçons-la même si non détectée
                 if (shouldEnableApplePay) {
                     console.log("Ajout de la configuration Apple Pay au PaymentSheet");
+                    
+                    // Configuration originale qui fait apparaître le bouton
                     paymentSheetConfig.applePay = {
                         merchantCountryCode: 'FR',
                         presentationOptions: {
@@ -205,6 +205,18 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                         }
                     };
                     paymentSheetConfig.applePayEnabled = true;
+                    
+                    // Ajouter aussi la nouvelle configuration au cas où
+                    paymentSheetConfig.platformPay = {
+                        merchantCountryCode: 'FR',
+                        applePay: {
+                            merchantIdentifier: "merchant.com.hushy.payments",
+                            presentationOptions: {
+                                requiredBillingContactFields: ['emailAddress', 'name'],
+                            }
+                        }
+                    };
+                    
                     console.log("✓ Configuration Apple Pay ajoutée avec succès");
                 } else {
                     console.log("⚠️ Apple Pay non configuré car non supporté");
