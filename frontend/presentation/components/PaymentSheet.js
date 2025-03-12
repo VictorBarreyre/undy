@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Alert, Pressable, Platform } from 'react-native';
-import { initStripe, useStripe, canMakePayments } from '@stripe/stripe-react-native';
+import { Alert, Pressable, Platform, NativeModules } from 'react-native';
+import { initStripe, useStripe } from '@stripe/stripe-react-native';
 import { HStack, Text } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUnlock } from '@fortawesome/free-solid-svg-icons';
@@ -9,51 +9,128 @@ import { DATABASE_URL } from '@env';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { useTranslation } from 'react-i18next';
+import DeviceInfo from 'react-native-device-info';
 
 const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     const { t } = useTranslation();
-    const { initPaymentSheet, presentPaymentSheet } = useStripe();
+    const stripeObj = useStripe();
+    const { initPaymentSheet, presentPaymentSheet, isPlatformPaySupported } = stripeObj;
     const [loading, setLoading] = useState(false);
     const { userToken } = useContext(AuthContext);
     const { purchaseAndAccessConversation } = useCardData();
     const [paymentDetails, setPaymentDetails] = useState(null);
     const [applePaySupported, setApplePaySupported] = useState(false);
+    const isDevMode = __DEV__;
+
+    // Obtenir la version de Stripe pour le diagnostic
+    useEffect(() => {
+        try {
+            const stripeVersion = require('@stripe/stripe-react-native/package.json').version;
+            console.log("Version de Stripe React Native:", stripeVersion);
+        } catch (e) {
+            console.log("Impossible de déterminer la version de Stripe:", e.message);
+        }
+    }, []);
+
+    // Fonction de diagnostic complète
+    const logDiagnostics = async () => {
+        console.log("\n\n======== DIAGNOSTIC COMPLET APPLEPAY ========");
+        console.log(`Environnement: ${isDevMode ? 'DÉVELOPPEMENT' : 'PRODUCTION'}`);
+        console.log(`Plateforme: ${Platform.OS} v${Platform.Version}`);
+        
+        if (Platform.OS === 'ios') {
+            // Utiliser DeviceInfo pour récupérer le vrai Bundle ID
+            const bundleId = await DeviceInfo.getBundleId();
+            console.log("Bundle ID:", bundleId);
+            console.log("Clé Stripe (premiers caractères):", STRIPE_PUBLISHABLE_KEY?.substring(0, 10) + "...");
+            console.log("Identifiant marchand configuré: merchant.com.hushy.payments");
+            
+            // Lister les méthodes disponibles dans l'objet useStripe()
+            console.log("Méthodes disponibles dans useStripe:", Object.keys(stripeObj).join(", "));
+        } else {
+            console.log("Non sur iOS, Apple Pay non applicable");
+            return;
+        }
+        
+        console.log("\n>>> INITIALISATION STRIPE ET VÉRIFICATION APPLEPAY");
+        try {
+            console.log("Tentative d'initialisation Stripe...");
+            await initStripe({
+                publishableKey: STRIPE_PUBLISHABLE_KEY,
+                merchantIdentifier: "merchant.com.hushy.payments",
+                urlScheme: "hushy",
+            });
+            console.log("✓ Initialisation Stripe réussie");
+            
+            if (typeof isPlatformPaySupported !== 'function') {
+                console.log("⚠️ ERREUR: Fonction isPlatformPaySupported non disponible!");
+                return;
+            }
+            
+            console.log("Vérification support Apple Pay...");
+            const applePaySupport = await isPlatformPaySupported();
+            console.log(`Support Apple Pay: ${applePaySupport ? 'OUI' : 'NON'}`);
+            
+        } catch (initError) {
+            console.log("⚠️ ÉCHEC initialisation Stripe ou vérification Apple Pay:");
+            console.log(`Message: ${initError.message}`);
+            console.log(`Code: ${initError.code}`);
+            console.log(`Stack: ${initError.stack}`);
+        }
+        console.log("==============================================\n\n");
+    };
+
+    // Diagnostic initial au chargement
+    useEffect(() => {
+        logDiagnostics();
+    }, []);
 
     // Vérifier si Apple Pay est disponible au chargement du composant
     useEffect(() => {
         const checkApplePaySupport = async () => {
+            console.log("\n>>> DÉMARRAGE VÉRIFICATION APPLE PAY");
+            
             try {
-                // Initialiser Stripe avant de vérifier Apple Pay
+                console.log("Initialisation Stripe pour vérification Apple Pay...");
                 await initStripe({
                     publishableKey: STRIPE_PUBLISHABLE_KEY,
                     merchantIdentifier: "merchant.com.hushy.payments",
                     urlScheme: "hushy",
                 });
+                console.log("Stripe initialisé avec succès pour la vérification");
                 
-                // Vérifier si Apple Pay est supporté
-                if (Platform.OS === 'ios' && typeof canMakePayments === 'function') {
-                    const isSupported = await canMakePayments();
-                    console.log(t('paymentSheet.logs.applePaySupported'), isSupported);
-                    setApplePaySupported(isSupported);
-                    
-                    if (isSupported) {
-                        // Vérifier les capacités spécifiques
-                        try {
-                            const details = await canMakePayments({
-                                networks: ['visa', 'mastercard'],
-                                capabilities: ['3ds']
-                            });
-                            console.log(t('paymentSheet.logs.applePayDetails'), details);
-                        } catch (detailsError) {
-                            console.log(t('paymentSheet.errors.applePayDetailsError'), detailsError);
+                if (Platform.OS === 'ios') {
+                    // Utiliser isPlatformPaySupported au lieu de canMakePaymentsAsync
+                    console.log("Vérification si Apple Pay est supporté avec isPlatformPaySupported...");
+                    if (typeof isPlatformPaySupported === 'function') {
+                        const supported = await isPlatformPaySupported();
+                        console.log(`Résultat support Apple Pay: ${supported ? 'SUPPORTÉ' : 'NON SUPPORTÉ'}`);
+                        setApplePaySupported(supported);
+                        
+                        if (!supported) {
+                            console.log("⚠️ Apple Pay n'est pas supporté sur cet appareil");
+                            if (!isDevMode) {
+                                console.log("REMARQUE: Comme nous sommes en production, nous allons essayer de forcer Apple Pay");
+                                setApplePaySupported(true);
+                                console.log("Support Apple Pay forcé à TRUE en mode production");
+                            }
                         }
+                    } else {
+                        console.log("⚠️ isPlatformPaySupported n'est pas une fonction disponible");
+                        console.log("Méthodes disponibles:", Object.keys(stripeObj).join(", "));
                     }
                 } else {
-                    console.log(t('paymentSheet.logs.applePayUnavailable'));
+                    console.log("Apple Pay n'est pas disponible (non iOS)");
+                    console.log(`Plateforme: ${Platform.OS}`);
                 }
             } catch (error) {
-                console.log(t('paymentSheet.errors.applePayCheckError'), error);
+                console.log("⚠️ ERREUR lors de la vérification du support Apple Pay:");
+                console.log(`Message: ${error.message}`);
+                console.log(`Code: ${error.code}`);
+                console.log(`Stack: ${error.stack}`);
             }
+            
+            console.log("<<< FIN VÉRIFICATION APPLE PAY\n");
         };
         
         checkApplePaySupport();
@@ -77,9 +154,7 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
 
     const initializePaymentSheet = async (clientSecret) => {
         try {
-            console.log(t('paymentSheet.logs.initializationStart'));
-            
-            // On suppose que Stripe est déjà initialisé dans l'useEffect
+            console.log("\n>>> DÉBUT INITIALISATION PAYMENTSHEET");
             
             // Configuration de base pour la feuille de paiement
             const paymentSheetConfig = {
@@ -106,36 +181,68 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
                 }
             };
             
-            // Ajouter la configuration Apple Pay uniquement si supporté
-            if (Platform.OS === 'ios' && applePaySupported) {
-                paymentSheetConfig.applePay = {
-                    merchantCountryCode: 'FR'
-                };
-                paymentSheetConfig.applePayEnabled = true;
+            // Ajouter la configuration Apple Pay
+            if (Platform.OS === 'ios') {
+                // En mode production, toujours activer Apple Pay
+                // En mode développement, l'activer uniquement si détecté comme supporté
+                const forceApplePay = !isDevMode;
+                const shouldEnableApplePay = applePaySupported || forceApplePay;
+                
+                console.log(`Configuration Apple Pay - Statut:`);
+                console.log(`- Mode: ${isDevMode ? 'Développement' : 'Production'}`);
+                console.log(`- Support détecté: ${applePaySupported ? 'OUI' : 'NON'}`);
+                console.log(`- Forçage activé: ${forceApplePay ? 'OUI' : 'NON'}`);
+                console.log(`- Activation finale: ${shouldEnableApplePay ? 'OUI' : 'NON'}`);
+                
+                // Dans les deux cas, essayons d'ajouter la configuration Apple Pay
+                // Si nous sommes en production, forçons-la même si non détectée
+                if (shouldEnableApplePay) {
+                    console.log("Ajout de la configuration Apple Pay au PaymentSheet");
+                    paymentSheetConfig.applePay = {
+                        merchantCountryCode: 'FR',
+                        presentationOptions: {
+                            requiredBillingContactFields: ['emailAddress', 'name'],
+                        }
+                    };
+                    paymentSheetConfig.applePayEnabled = true;
+                    console.log("✓ Configuration Apple Pay ajoutée avec succès");
+                } else {
+                    console.log("⚠️ Apple Pay non configuré car non supporté");
+                }
             } else {
-                console.log(t('paymentSheet.logs.applePayNotConfigured'));
+                console.log("Non iOS, pas de configuration Apple Pay");
             }
             
             // Ajouter Google Pay pour Android
             if (Platform.OS === 'android') {
+                console.log("Ajout de la configuration Google Pay pour Android");
                 paymentSheetConfig.googlePay = {
                     merchantCountryCode: 'FR',
-                    testEnv: true
+                    testEnv: isDevMode
                 };
             }
             
-            console.log(t('paymentSheet.logs.paymentSheetConfig'), JSON.stringify(paymentSheetConfig, null, 2));
+            console.log("Configuration finale PaymentSheet:");
+            console.log(JSON.stringify(paymentSheetConfig, null, 2));
             
+            console.log("Initialisation de la feuille de paiement...");
             const { error } = await initPaymentSheet(paymentSheetConfig);
 
             if (error) {
-                console.log(t('paymentSheet.errors.initPaymentSheetError'), JSON.stringify(error, null, 2));
+                console.log("⚠️ ERREUR initialisation PaymentSheet:");
+                console.log(`Message: ${error.message}`);
+                console.log(`Code: ${error.code}`);
+                console.log(JSON.stringify(error, null, 2));
                 throw error;
             }
 
-            console.log(t('paymentSheet.logs.initializationSuccess'));
+            console.log("✓ PaymentSheet initialisé avec succès");
+            console.log("<<< FIN INITIALISATION PAYMENTSHEET\n");
         } catch (error) {
-            console.log(t('paymentSheet.errors.initializationError'), error);
+            console.log("⚠️ ERREUR FATALE initialisation PaymentSheet:");
+            console.log(`Message: ${error.message}`);
+            console.log(`Code: ${error.code}`);
+            console.log(`Stack: ${error.stack}`);
             throw error;
         }
     };
@@ -143,14 +250,15 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     const handlePayment = async () => {
         try {
             setLoading(true);
-            console.log(t('paymentSheet.logs.paymentProcessStart'));
+            console.log("\n>>> DÉBUT PROCESSUS DE PAIEMENT");
             
             // Vérifier que secret existe et a un _id
             if (!secret || !secret._id) {
+                console.log("⚠️ Données secret invalides:", secret);
                 throw new Error(t('paymentSheet.errors.invalidSecretData'));
             }
     
-            console.log(t('paymentSheet.logs.creatingPaymentIntent', { secretId: secret._id }));
+            console.log(`Création d'intention de paiement pour le secret: ${secret._id}`);
             const response = await fetch(`${DATABASE_URL}/api/secrets/${secret._id}/create-payment-intent`, {
                 method: 'POST',
                 headers: {
@@ -161,19 +269,20 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
     
             if (!response.ok) {
                 const errorText = await response.text();
+                console.log(`⚠️ Échec API avec statut: ${response.status}`);
+                console.log(`Réponse d'erreur: ${errorText}`);
                 throw new Error(errorText || t('paymentSheet.errors.paymentCreationError'));
             }
     
-            console.log(t('paymentSheet.logs.apiResponseReceived'));
-            const { 
-                clientSecret, 
-                paymentId, 
-                buyerTotal 
-            } = await response.json();
+            console.log("Réponse API reçue avec succès");
+            const data = await response.json();
+            const { clientSecret, paymentId, buyerTotal } = data;
 
-            console.log(t('paymentSheet.logs.clientSecretReceived', { paymentId }));
+            console.log(`Client secret reçu pour le paiement ID: ${paymentId}`);
+            console.log(`Structure des données reçues: ${Object.keys(data).join(', ')}`);
             
             // Réinitialiser Stripe pour s'assurer que tout est frais
+            console.log("Réinitialisation de Stripe avant présentation de la feuille de paiement");
             await initStripe({
                 publishableKey: STRIPE_PUBLISHABLE_KEY,
                 merchantIdentifier: "merchant.com.hushy.payments",
@@ -182,26 +291,34 @@ const PaymentSheet = ({ secret, onPaymentSuccess, onPaymentError }) => {
             
             await initializePaymentSheet(clientSecret);
     
-            console.log(t('paymentSheet.logs.presentingPaymentSheet'));
+            console.log("Présentation de la feuille de paiement à l'utilisateur");
             const { error: presentError } = await presentPaymentSheet();
     
             if (presentError) {
-                console.log(t('paymentSheet.errors.presentationError'), JSON.stringify(presentError, null, 2));
+                console.log("⚠️ Erreur présentation PaymentSheet:");
+                console.log(`Message: ${presentError.message}`);
+                console.log(`Code: ${presentError.code}`);
+                console.log(JSON.stringify(presentError, null, 2));
                 
                 // Différencier les annulations volontaires des autres erreurs
                 if (presentError.code === 'Canceled') {
-                    console.log(t('paymentSheet.logs.paymentCanceled'));
+                    console.log("Paiement annulé par l'utilisateur - ce n'est pas une erreur");
                     return;
                 }
                 throw presentError;
             }
     
-            console.log(t('paymentSheet.logs.paymentSuccess'));
+            console.log("✓ Paiement complété avec succès");
             // Uniquement appeler onPaymentSuccess si le paiement est réellement effectué
             onPaymentSuccess(paymentId);
+            console.log("<<< FIN PROCESSUS DE PAIEMENT\n");
     
         } catch (error) {
-            console.log(t('paymentSheet.errors.handlePaymentError'), error);
+            console.log("⚠️ ERREUR dans le processus de paiement:");
+            console.log(`Message: ${error.message}`);
+            console.log(`Code: ${error.code}`);
+            console.log(`Stack: ${error.stack}`);
+            
             // Ne pas afficher d'alerte si c'est une annulation volontaire
             if (error.code !== 'Canceled') {
                 Alert.alert(
