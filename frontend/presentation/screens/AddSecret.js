@@ -1,11 +1,11 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Background } from '../../navigation/Background'; // Assurez-vous que ce chemin est correct
+import { Background } from '../../navigation/Background';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
-import { Box, Text, HStack, VStack, Image, Select, Input, CheckIcon } from 'native-base';
-import { Alert, Pressable, Dimensions, StyleSheet, Linking, KeyboardAvoidingView, Keyboard, Platform, TouchableWithoutFeedback, FlatList, Share } from 'react-native';
+import { Box, Text, HStack, VStack, Image, Select, Input } from 'native-base';
+import { Alert, Pressable, Dimensions, StyleSheet, Linking, KeyboardAvoidingView, Keyboard, Platform, TouchableWithoutFeedback, FlatList } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
-import { FontAwesome } from '@expo/vector-icons'; // Assurez-vous que FontAwesome est disponible
+import { FontAwesome } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -13,17 +13,23 @@ const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 const AddSecret = () => {
     const { t } = useTranslation();
-    const { userData } = useContext(AuthContext); // Utilisation correcte de useContext
-    const { data, handlePostSecret, handleStripeOnboardingRefresh, handleStripeReturn } = useCardData();
+    const { userData } = useContext(AuthContext);
+    const {
+        data,
+        handlePostSecret,
+        handleStripeOnboardingRefresh,
+        handleStripeReturn,
+        handleShareSecret
+    } = useCardData();
+
     const [secretText, setSecretText] = useState('');
-    const [selectedLabel, setSelectedLabel] = useState(''); // État pour la sélection du label
-    const [price, setPrice] = useState(''); // État pour le prix
-    const [secretPostAvailable, setSecretPostAvailable] = useState('false')
+    const [selectedLabel, setSelectedLabel] = useState('');
+    const [price, setPrice] = useState('');
+    const [secretPostAvailable, setSecretPostAvailable] = useState(false);
     const [expiresIn, setExpiresIn] = useState(7);
     const [buttonMessage, setButtonMessage] = useState(t('addSecret.postSecret'));
     const [boxHeight, setBoxHeight] = useState('70%');
-    const [alertStep, setAlertStep] = useState(1);
-    const { handleShareSecret } = useCardData();
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
 
     const MIN_PRICE = 3;
     const MIN_WORDS = 2;
@@ -33,45 +39,68 @@ const AddSecret = () => {
 
     const calculatePriceAfterMargin = (originalPrice) => {
         if (!originalPrice) return 0;
-        const sellerMargin = 0.10; // 10% maintenant
+        const sellerMargin = 0.10;
         const priceNumber = Number(originalPrice);
         return (priceNumber * (1 - sellerMargin)).toFixed(2);
     };
 
+    // Keyboard event handlers
+    useEffect(() => {
+        const keyboardWillShowListener = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            (e) => {
+                setKeyboardVisible(true);
+                // Réduire la hauteur de la carte quand le clavier est visible
+                setBoxHeight('50%');
+            }
+        );
+
+        const keyboardWillHideListener = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            () => {
+                setKeyboardVisible(false);
+                // Restaurer la hauteur originale
+                setBoxHeight('70%');
+            }
+        );
+
+        return () => {
+            keyboardWillShowListener.remove();
+            keyboardWillHideListener.remove();
+        };
+    }, []);
+
+    // Deep link handler
     useEffect(() => {
         const handleDeepLink = async (event) => {
             try {
                 const url = event.url || event;
-    
+
                 if (!url) return;
-    
-                // Décodez et parsez l'URL
+
                 const fullUrl = decodeURIComponent(url);
                 const parsedUrl = new URL(fullUrl);
-    
-                // Vérifiez le schéma et le host
+
                 if (
                     parsedUrl.protocol === 'hushy:' &&
                     (parsedUrl.hostname === 'stripe-return' || parsedUrl.hostname === 'profile')
                 ) {
-                    const result = await handleStripeReturn(fullUrl);
+                    await handleStripeReturn(fullUrl);
                 }
             } catch (error) {
                 console.error(t('addSecret.errors.deepLink'), error);
                 Alert.alert(t('addSecret.errors.title'), t('addSecret.errors.unableToProcessLink'));
             }
         };
-    
-        // Écouteur d'événements pour les liens entrants
+
         const subscription = Linking.addEventListener('url', handleDeepLink);
-    
-        // Vérifier l'URL initiale au lancement
+
         Linking.getInitialURL().then(url => {
             if (url) {
                 handleDeepLink({ url });
             }
         });
-    
+
         return () => {
             subscription.remove();
         };
@@ -85,7 +114,7 @@ const AddSecret = () => {
                 price,
                 expiresIn
             });
-    
+
             if (result.requiresStripeSetup) {
                 Alert.alert(
                     t('addSecret.alerts.setupRequired.title'),
@@ -96,7 +125,7 @@ const AddSecret = () => {
                             onPress: async () => {
                                 try {
                                     const stripeStatus = await handleStripeOnboardingRefresh();
-    
+
                                     if (stripeStatus.stripeOnboardingUrl) {
                                         await Linking.openURL(stripeStatus.stripeOnboardingUrl);
                                     } else {
@@ -153,7 +182,7 @@ const AddSecret = () => {
         }
     };
 
-    // Surveille les changements dans les champs et met à jour l'état de `secretPostAvailable`
+    // Validation effect
     useEffect(() => {
         const isTextValid = secretText.trim().length > MIN_WORDS;
         const isLabelValid = selectedLabel.trim().length > 0;
@@ -174,15 +203,20 @@ const AddSecret = () => {
     }, [secretText, selectedLabel, price, t]);
 
     return (
-        <Background>   {/* KeyboardAvoidingView pour gérer le clavier */}
+        <Background>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-                {/* Fermer le clavier en cliquant en dehors */}
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <FlatList
-                        contentContainerStyle={{ flexGrow: 1, paddingBottom: 160, marginBottom: 200 }}
+                        contentContainerStyle={{
+                            flexGrow: 1,
+                            paddingBottom: keyboardVisible ? 10 : 160,
+                            marginBottom: keyboardVisible ? 10 : 200,
+                            marginTop: 20
+                        }}
                         keyboardShouldPersistTaps="handled"
                         data={[]} // Pas de données à afficher, juste pour utiliser FlatList
                         renderItem={null} // Pas de rendu d'éléments
@@ -190,9 +224,11 @@ const AddSecret = () => {
                             <Box
                                 flex={1}
                                 paddingX={5}
-                                marginBottom={10}
+                                marginBottom={keyboardVisible ? 0 : 10}
                                 style={{
-                                    minHeight: Dimensions.get('window').height * 0.635, // Remplit la hauteur de l'écran
+                                    minHeight: keyboardVisible
+                                        ? Dimensions.get('window').height * 0.5
+                                        : Dimensions.get('window').height * 0.635,
                                 }}
                             >
                                 <VStack style={styles.containerAddSecret} space={4}>
@@ -203,7 +239,8 @@ const AddSecret = () => {
                                         display="flex"
                                         width="100%"
                                         marginX="auto"
-                                        minHeight='70%'
+                                        minHeight={boxHeight}
+                                        maxHeight={keyboardVisible ? '80%' : '100%'}
                                         borderRadius="lg"
                                         backgroundColor="white"
                                         marginTop={2}
@@ -212,7 +249,9 @@ const AddSecret = () => {
                                         justifyContent="space-between"
                                         style={customStyles.shadowBox}
                                     >
+                                        {/* Reste du composant inchangé */}
                                         <VStack backgroundColor="white" height={'100%'} alignItems="center" justifyContent="space-between" alignContent='center' padding={4} space={2}>
+                                            {/* Contenu existant */}
                                             <HStack alignItems="center" justifyContent="space-between" width="97%">
                                                 <Box flex={1} mr={4} ml={2}>
                                                     <Text style={styles.h5}>
@@ -248,7 +287,9 @@ const AddSecret = () => {
                                                 />
                                             </Box>
 
+                                            {/* Reste des sélecteurs et du formulaire */}
                                             <HStack mt={6} alignItems="start" alignContent="center" justifyContent="space-between" width="95%" space={2}>
+                                                {/* Code des sélecteurs de catégorie, prix et durée */}
                                                 <VStack width="30%" alignItems="left">
                                                     <Text left={2} style={styles.ctalittle}>{t('addSecret.category')}</Text>
                                                     <Select
@@ -399,6 +440,7 @@ const AddSecret = () => {
                                             {t('addSecret.youWillReceive', { amount: calculatePriceAfterMargin(price) })}
                                         </Text>
                                     ) : null}
+
                                     <Pressable
                                         marginTop={7}
                                         onPress={handlePress}
@@ -438,7 +480,7 @@ const customStyles = StyleSheet.create({
         flex: 1,
         height: SCREEN_HEIGHT,
         width: '100%',
-        justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
+        justifyContent: 'space-between',
         alignItems: 'center',
     },
 
