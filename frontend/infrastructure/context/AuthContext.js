@@ -793,18 +793,71 @@ const requestLocationPermission = async () => {
     setLocationPermission(status);
     
     if (status === 'granted') {
-      // Mettre à jour la préférence utilisateur en DB
-      await updateUserData({
-        location: true
-      });
+      await updateUserData({ location: true });
       setLocationEnabled(true);
       return { granted: true };
     } else {
-      return { granted: false };
+      return new Promise((resolve) => {
+        Alert.alert(
+          t('location.alerts.permissionDenied.title'), 
+          t('location.alerts.permissionDenied.message'), 
+          [
+            {
+              text: t('location.alerts.permissionDenied.cancel'),
+              style: 'cancel',
+              onPress: () => resolve({ granted: false, needsSettings: false })
+            },
+            {
+              text: t('location.alerts.permissionDenied.retry'),
+              onPress: async () => {
+                // Tenter à nouveau de demander la permission
+                const retryResult = await Location.requestForegroundPermissionsAsync();
+                
+                if (retryResult.status === 'granted') {
+                  await updateUserData({ location: true });
+                  setLocationEnabled(true);
+                  resolve({ granted: true });
+                } else {
+                  // Si refusé à nouveau, proposer d'aller dans les paramètres
+                  Alert.alert(
+                    t('location.alerts.permissionDenied.retryFailed.title'),
+                    t('location.alerts.permissionDenied.retryFailed.message'),
+                    [
+                      {
+                        text: t('location.alerts.permissionDenied.cancel'),
+                        style: 'cancel',
+                        onPress: () => resolve({ granted: false, needsSettings: false })
+                      },
+                      {
+                        text: t('location.alerts.permissionDenied.openSettings'),
+                        onPress: () => {
+                          Linking.openSettings();
+                          resolve({ granted: false, needsSettings: true });
+                        }
+                      }
+                    ]
+                  );
+                }
+              }
+            },
+            {
+              text: t('location.alerts.permissionDenied.openSettings'),
+              onPress: () => {
+                Linking.openSettings();
+                resolve({ granted: false, needsSettings: true });
+              }
+            }
+          ]
+        );
+      });
     }
   } catch (error) {
     console.error(t('location.errors.permissionError'), error);
-    return { granted: false, error: error.message };
+    return { 
+      granted: false, 
+      error: error.message,
+      needsSettings: false 
+    };
   }
 };
 

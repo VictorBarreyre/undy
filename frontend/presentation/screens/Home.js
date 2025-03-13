@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Alert } from 'react-native';
 import { Box, VStack, Text, HStack } from 'native-base';
-import * as Location from 'expo-location';
 import SwipeDeck from '../components/SwipeDeck';
 import FilterBar from '../components/Filter.bar';
 import { styles } from '../../infrastructure/theme/styles';
@@ -11,11 +10,14 @@ import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { useTranslation } from 'react-i18next';
-import { Linking } from 'react-native';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Home = ({ navigation }) => {
   const { t } = useTranslation();
+  const { 
+    requestLocationPermission, 
+    checkLocationPermission 
+  } = useContext(AuthContext);
   const { getContacts, userData } = useContext(AuthContext);
   const { data, fetchUnpurchasedSecrets, fetchSecretsByLocation } = useCardData();
   
@@ -33,86 +35,43 @@ const Home = ({ navigation }) => {
     [t('filter.following')]: t('home.sourceTexts.fromFollowing')
   };
 
-// Fonction pour demander la permission de localisation
-const requestLocationPermission = async () => {
-  try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    
-    if (status === 'granted') {
-      return true;
-    } else {
-      Alert.alert(
-        t('location.alerts.permissionDenied.title'),
-        t('location.alerts.permissionDenied.message'),
-        [{ text: t('location.alerts.permissionDenied.ok') }]
-      );
-      return false;
-    }
-  } catch (error) {
-    console.error(t('location.errors.permissionError'), error);
-    return false;
-  }
-};
-
-// Fonction pour obtenir la position actuelle
-const getCurrentPosition = async () => {
-  try {
-    const position = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced
-    });
-    setUserLocation(position);
-    return position;
-  } catch (error) {
-    console.error(t('location.errors.gettingPosition'), error);
-    throw error;
-  }
-};
-
-// Dans Home.js, ajoutez cet effet
-useEffect(() => {
-  const checkLocation = async () => {
-    // Vérifiez si c'est la première fois que l'application est lancée
-    const isFirstLaunch = await AsyncStorage.getItem('isFirstLaunch') === null;
-    
-    if (isFirstLaunch) {
-      // Marquer que ce n'est plus la première exécution
-      await AsyncStorage.setItem('isFirstLaunch', 'false');
+  // Effet pour la première vérification de localisation
+  useEffect(() => {
+    const checkLocation = async () => {
+      const isFirstLaunch = await AsyncStorage.getItem('isFirstLaunch') === null;
       
-      // Demander la permission uniquement à la première exécution
-      Alert.alert(
-        t('location.alerts.welcome.title'),
-        t('location.alerts.welcome.message'),
-        [
-          {
-            text: t('location.alerts.welcome.no'),
-            style: 'cancel'
-          },
-          {
-            text: t('location.alerts.welcome.yes'),
-            onPress: async () => {
-              try {
+      if (isFirstLaunch) {
+        await AsyncStorage.setItem('isFirstLaunch', 'false');
+        
+        Alert.alert(
+          t('location.alerts.welcome.title'),
+          t('location.alerts.welcome.message'),
+          [
+            {
+              text: t('location.alerts.welcome.no'),
+              style: 'cancel'
+            },
+            {
+              text: t('location.alerts.welcome.yes'),
+              onPress: async () => {
                 await requestLocationPermission();
-              } catch (error) {
-                console.error(t('location.errors.permissionError'), error);
               }
             }
-          }
-        ]
-      );
-    }
-  };
-  
-  checkLocation();
-}, []);
+          ]
+        );
+      }
+    };
+    
+    checkLocation();
+  }, []);
 
-  // Effet pour charger les contacts quand le filtre "Contacts" est activé
+  // Effet pour charger les contacts
   useEffect(() => {
     const loadContacts = async () => {
       if (activeType === t('filter.contacts') && !isContactsLoaded) {
         try {
           const contacts = await getContacts();
           if (contacts && contacts.length > 0) {
-            // Extraire les numéros de téléphone et éliminer les caractères non numériques
             const phoneNumbers = contacts.flatMap(contact =>
               contact.phoneNumbers.map(phone => phone.number.replace(/\D/g, ''))
             );
@@ -134,39 +93,29 @@ useEffect(() => {
   };
 
   const handleTypeChange = async (type) => {
+    setActiveType(type);
+  
     if (type === t('filter.aroundMe')) {
       try {
-        const { granted } = await requestLocationPermission();
+        // Utiliser directement la méthode du contexte
+        const { granted, needsSettings } = await requestLocationPermission();
         
         if (!granted) {
-          Alert.alert(
-            t('location.alerts.permissionDenied.title'), 
-            t('location.alerts.permissionDenied.message'), 
-            [
-              {
-                text: t('location.alerts.permissionDenied.cancel'),
-                onPress: () => {
-                  // Revenir au filtre "Tous"
-                  setActiveType(t('filter.all'));
-                },
-                style: 'cancel'
-              },
-              {
-                text: t('location.alerts.permissionDenied.openSettings'),
-                onPress: () => {
-                  // Ouvrir les paramètres de l'appareil
-                  Linking.openSettings();
-                  
-                  // Revenir au filtre "Tous"
-                  setActiveType(t('filter.all'));
-                }
-              }
-            ]
-          );
+          if (needsSettings) {
+            // Si l'utilisateur a choisi d'aller dans les paramètres
+            setActiveType(t('filter.all'));
+          }
+        } else {
+          // Permission accordée, charger les secrets à proximité
+          await fetchSecretsByLocation(locationRadius);
         }
       } catch (error) {
         console.error('Location permission error:', error);
+        setActiveType(t('filter.all'));
       }
+    } else {
+      // Pour les autres types de filtres
+      await fetchUnpurchasedSecrets(true);
     }
   };
 
