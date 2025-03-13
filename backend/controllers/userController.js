@@ -680,8 +680,10 @@ exports.updateUserProfile = async (req, res) => {
             user.birthdate = req.body.birthdate || user.birthdate;
             user.phone = req.body.phone || user.phone;
             user.notifs = req.body.notifs !== undefined ? req.body.notifs : user.notifs;
-            user.contacts = req.body.contacts !== undefined ? req.body.contacts : user.contacts;
-            user.subscriptions = req.body.subscriptions !== undefined ? req.body.subscriptions : user.subscriptions;
+            if (req.body.contacts !== undefined) {
+                user.contacts = !!req.body.contacts; // Forcer en booléen
+              }
+             user.subscriptions = req.body.subscriptions !== undefined ? req.body.subscriptions : user.subscriptions;
             if (req.body.location !== undefined) {
                 user.location = !!req.body.location; // Forcer en booléen
               }
