@@ -251,7 +251,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   ];
 
   return (
-    <Box width="100%" paddingY={2} marginLeft={4}>
+    <Box width="100%" paddingTop={1} paddingBottom={2} marginLeft={8}>
       <View style={{ flexDirection: 'row', width: '100%' }}>
         <View style={styles.containerFilter}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollContainer}>

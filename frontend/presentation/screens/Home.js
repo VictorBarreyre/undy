@@ -157,11 +157,11 @@ const Home = ({ navigation }) => {
           // Charger les secrets à proximité
           await fetchSecretsByLocation(locationRadius);
         } else {
-          // La permission n'est pas accordée, mais cette situation ne devrait pas arriver
-          // puisque FilterBar gère déjà cette logique
+     
           console.log("Permission non accordée, mais FilterBar aurait dû gérer cela");
         }
       } catch (error) {
+        setFilteredData([]);
         console.error('Erreur de localisation:', error);
       }
     } else {
