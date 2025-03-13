@@ -104,8 +104,7 @@ export default {
     "sourceTexts": {
       "everyone": "De tout le monde",
       "fromContacts": "De vos contacts",
-      "fromFollowing": "Des personnes que vous suivez",
-      "fromNearby": "Autour de vous"
+      "fromFollowing": "Des personnes que vous suivez"
     },
     "errors": {
       "contactsLoading": "Erreur lors du chargement des contacts:"
@@ -113,44 +112,8 @@ export default {
     "logs": {
       "selectedFilters": "Filtres sélectionnés :",
       "selectedType": "Type sélectionné :"
-    },
- 
-  },
-
-"location": {
-  "alerts": {
-    "welcome": {
-      "title": "Accès à la localisation",
-      "message": "Hushy peut utiliser votre localisation pour vous montrer des secrets à proximité. Souhaitez-vous activer cette fonctionnalité ?",
-      "yes": "Oui, activer",
-      "no": "Non, merci",
-    },
-    "permissionDenied": {
-      "title": "Accès à la localisation refusé",
-      "message": "Pour utiliser le filtre \"Autour de moi\", vous devez autoriser l'accès à votre position.",
-         "cancel": "Annuler",
-        "openSettings": "Ouvrir les paramètres"
-    },
-    "shareLocation": {
-      "title": "Partager votre position",
-      "message": "Voulez-vous partager votre position avec ce secret ? Cela permettra aux utilisateurs proches de le découvrir plus facilement.",
-      "yes": "Partager",
-      "no": "Ne pas partager"
     }
   },
-  "errors": {
-    "permissionError": "Erreur de permission de localisation:",
-    "locationError": "Erreur de localisation:",
-    "gettingPosition": "Erreur lors de l'obtention de la position:",
-    "fetchingNearbySecrets": "Erreur lors de la récupération des secrets à proximité:",
-    "permissionCheckError": "Erreur lors de la vérification des permissions de localisation:",
-    "accessUpdateError": "Erreur lors de la mise à jour de l'accès à la localisation:"
-  },
-  "logs": {
-    "permissionDenied": "Permission de localisation refusée"
-  }
-},
-
   "swipeDeck": {
     "noSecrets": "Aucun secret disponible",
     "tryChangingFilters": "Essayez de modifier vos filtres",
@@ -265,7 +228,7 @@ export default {
       "sendMessage": "Erreur lors de l'envoi du message:",
       "imageSelection": "Erreur lors de la sélection d'image:",
        "shareError": "Erreur lors du partage",
-    "missingSecretData": "Données du secret manquantes"
+       "missingSecretData": "Données du secret manquantes"
     },
     "messageFailed": "Échec",
     "retry": "Renvoyer",
@@ -325,7 +288,11 @@ export default {
     "dataSection": "Données",
     "logout": "Déconnexion",
     "enabled": "Activé",
-    "disabled": "Désactivé",
+  "enabledFeminin": "Activée",
+  "enabledFemininePlural": "Activées",
+  "disabled": "Désactivé",
+  "disabledFeminin": "Désactivée",
+  "disabledFemininePlural": "Désactivées",
     "notSpecified": "Non renseigné",
     "notConfigured": "Non configuré",
     "userDataLog": "Données utilisateur :",
@@ -366,8 +333,8 @@ export default {
       "bank": "Compte bancaire",
       "notifications": "Mes notifications",
       "contacts": "Mes contacts",
-      "location": "Ma géolocalisation",
-      "subscriptions": "Mes abonnements"
+      "subscriptions": "Mes abonnements",
+      "location": "Ma position"
     },
     "account": {
       "downloadData": "Télécharger les données",
@@ -383,8 +350,6 @@ export default {
       "genericError": "Un problème est survenu",
       "genericLog": "Erreur:",
       "dataDownloadError": "Une erreur est survenue lors du téléchargement des données",
-       "toggleLocationError": "Erreur lors de la modification des paramètres de localisation:",
-    "locationUpdateError": "Impossible de mettre à jour les préférences de localisation",
       "stripeResetErrorLog": "Erreur de réinitialisation du compte Stripe:",
       "stripeResetError": "Erreur lors de la réinitialisation du compte Stripe",
       "logoutErrorLog": "Erreur de déconnexion:",
@@ -637,8 +602,7 @@ export default {
       "imageUpload": "Erreur lors de l'upload de l'image:",
       "refreshingUnreadCounts": "Erreur lors du rafraîchissement des compteurs non lus:",
       "markingAsRead": "Erreur lors du marquage comme lu",
-      "refreshingCounters": "Erreur lors du rafraîchissement des compteurs:",
-      "fullError": "Erreur complète:"
+      "refreshingCounters": "Erreur lors du rafraîchissement des compteurs:"
     },
     "logs": {
       "secretCreationResponse": "Réponse création secret:",
@@ -670,5 +634,20 @@ export default {
       "dialogTitle": "Partager ce secret confidentiel"
     }
   },
+  "permissions": {
+  "contactsNeededTitle": "Accès aux contacts requis",
+  "contactsNeededMessage": "Cette application a besoin d'accéder à vos contacts pour afficher leur contenu.",
+  "contactsSettingsMessage": "Veuillez activer l'accès aux contacts dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
+  "locationNeededTitle": "Accès à la position requis",
+  "locationNeededMessage": "Cette application a besoin d'accéder à votre position pour afficher du contenu près de vous.",
+  "locationSettingsMessage": "Veuillez activer l'accès à la position dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
+  "notificationsNeededTitle": "Accès aux notifications requis",
+  "notificationsNeededMessage": "Cette application a besoin de vous envoyer des notifications. Veuillez les activer dans les paramètres de votre appareil.",
+  "cancel": "Annuler",
+  "openSettings": "Ouvrir les Paramètres",
+  "allow": "Autoriser",
+  "ok": "OK",
+  "errorTitle": "Erreur de permission"
+}
 
 }

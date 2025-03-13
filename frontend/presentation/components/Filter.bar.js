@@ -11,21 +11,20 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from "@react-navigation/native";
 import InviteContactsModal from './InviteContactsModals';
 import { useTranslation } from 'react-i18next';
-
+import * as Location from 'expo-location';
+import Contacts from 'react-native-contacts';
 
 const FilterBar = ({ onFilterChange, onTypeChange }) => {
   const { t } = useTranslation();
   const { data } = useCardData();
-  const { getContacts, userData, contactsAccessEnabled, updateContactsAccess, checkAndRequestContactsPermission } = useContext(AuthContext);
+  const { getContacts, userData } = useContext(AuthContext);
   const [activeButton, setActiveButton] = useState(t('filter.all'));
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredResults, setFilteredResults] = useState([]);
   const [isOverlayVisible, setOverlayVisible] = useState(false);
-  const [userContacts, setUserContacts] = useState([]);
-  const [hasContactPermission, setHasContactPermission] = useState(userData?.contacts || false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
   const [contactsData, setContactsData] = useState([]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const navigation = useNavigation();
 
@@ -41,47 +40,192 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
     onFilterChange(updatedFilters);
   };
 
-  const getContactsWithAppStatus = async () => {
+  // Nouvelle fonction pour vérifier les permissions de contacts
+  const checkContactsPermission = async () => {
     try {
-      const contacts = await getContacts();
-      // Assuming a function or property that checks if contacts use the app
-      const hasAppUsers = contacts.some(contact => contact.usesApp === true);
-      return { contacts, hasAppUsers };
+      let permissionStatus;
+      
+      if (Platform.OS === 'ios') {
+        permissionStatus = await Contacts.checkPermission();
+        return permissionStatus === 'authorized';
+      } else {
+        permissionStatus = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.READ_CONTACTS
+        );
+        return permissionStatus === PermissionsAndroid.RESULTS.GRANTED;
+      }
     } catch (error) {
-      console.error('Error checking contacts:', error);
-      return { contacts: [], hasAppUsers: false };
+      console.error('Erreur lors de la vérification des permissions de contacts:', error);
+      return false;
     }
   };
 
+  // Nouvelle fonction pour vérifier les permissions de localisation
+  const checkLocationPermission = async () => {
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.error('Erreur lors de la vérification des permissions de localisation:', error);
+      return false;
+    }
+  };
+
+  // Fonction pour ouvrir les paramètres système
+  const openSettings = () => {
+    Linking.openSettings();
+  };
+
+  // Fonction pour demander la permission de contacts et gérer le résultat
+  const requestContactsPermission = async () => {
+    try {
+      let permissionStatus;
+      
+      if (Platform.OS === 'ios') {
+        permissionStatus = await Contacts.requestPermission();
+        
+        if (permissionStatus === 'authorized') {
+          handleContactsPermissionSuccess();
+        } else {
+          showContactsPermissionAlert();
+        }
+      } else {
+        permissionStatus = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
+          {
+            title: t('permissions.contactsTitle'),
+            message: t('permissions.contactsMessage'),
+            buttonPositive: t('permissions.allow')
+          }
+        );
+        
+        if (permissionStatus === PermissionsAndroid.RESULTS.GRANTED) {
+          handleContactsPermissionSuccess();
+        } else {
+          showContactsPermissionAlert();
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la demande de permission de contacts:', error);
+      showContactsPermissionAlert();
+    }
+  };
+
+  // Fonction pour demander la permission de localisation et gérer le résultat
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status === 'granted') {
+        handleLocationPermissionSuccess();
+      } else {
+        showLocationPermissionAlert();
+      }
+    } catch (error) {
+      console.error('Erreur lors de la demande de permission de localisation:', error);
+      showLocationPermissionAlert();
+    }
+  };
+
+  // Actions à effectuer lorsque la permission de contacts est accordée
+  const handleContactsPermissionSuccess = async () => {
+    try {
+      // Charger les contacts
+      const contacts = await getContacts();
+      setContactsData(contacts);
+      
+      // Vérifier si des contacts utilisent l'application
+      const hasAppUsers = contacts.some(contact => contact.usesApp === true);
+      
+      if (!hasAppUsers && contacts.length > 0) {
+        setShowInviteModal(true);
+      }
+      
+      // Activer le filtre
+      setActiveButton(t('filter.contacts'));
+      onTypeChange(t('filter.contacts'));
+    } catch (error) {
+      console.error('Erreur lors du chargement des contacts:', error);
+      Alert.alert(
+        t('permissions.errorTitle'),
+        t('permissions.contactsLoadError'),
+        [{ text: t('permissions.ok') }]
+      );
+    }
+  };
+
+  // Actions à effectuer lorsque la permission de localisation est accordée
+  const handleLocationPermissionSuccess = () => {
+    // Activer le filtre
+    setActiveButton(t('filter.aroundMe'));
+    onTypeChange(t('filter.aroundMe'));
+  };
+
+  // Alerte pour informer l'utilisateur que l'accès aux contacts est nécessaire
+  const showContactsPermissionAlert = () => {
+    Alert.alert(
+      t('permissions.contactsNeededTitle'),
+      t('permissions.contactsNeededMessage'),
+      [
+        { 
+          text: t('permissions.cancel'), 
+          style: 'cancel' 
+        },
+        { 
+          text: t('permissions.openSettings'), 
+          onPress: openSettings 
+        }
+      ]
+    );
+  };
+
+  // Alerte pour informer l'utilisateur que l'accès à la localisation est nécessaire
+  const showLocationPermissionAlert = () => {
+    Alert.alert(
+      t('permissions.locationNeededTitle'),
+      t('permissions.locationNeededMessage'),
+      [
+        { 
+          text: t('permissions.cancel'), 
+          style: 'cancel' 
+        },
+        { 
+          text: t('permissions.openSettings'), 
+          onPress: openSettings 
+        }
+      ]
+    );
+  };
+
+  // Fonction pour gérer le clic sur un bouton de type
   const handleButtonClickType = async (buttonName) => {
     if (buttonName === t('filter.contacts')) {
-      // Utiliser la fonction centralisée pour vérifier et demander la permission
-      const permissionResult = await checkAndRequestContactsPermission();
+      // Vérifier si la permission est déjà accordée
+      const hasPermission = await checkContactsPermission();
       
-      if (permissionResult.granted) {
-        // Si la permission est accordée, mais pas activée dans notre contexte
-        if (!contactsAccessEnabled) {
-          const success = await updateContactsAccess(true);
-          console.log(`[FilterBar] Mise à jour du contexte: ${success}`);
-        }
-        
-        // Charger les contacts et vérifier
-        const contactsResult = await getContactsWithAppStatus();
-        setContactsData(contactsResult.contacts || []);
-        
-        if (!contactsResult.hasAppUsers && contactsResult.contacts.length > 0) {
-          setShowInviteModal(true);
-        }
-      } else if (permissionResult.needsSettings) {
-        // L'utilisateur a été redirigé vers les paramètres, nous n'avons rien à faire de plus ici
-        return;
+      if (hasPermission) {
+        handleContactsPermissionSuccess();
+      } else {
+        // Demander la permission
+        requestContactsPermission();
       }
-      // Sinon l'utilisateur a refusé, on continue simplement
+    } 
+    else if (buttonName === t('filter.aroundMe')) {
+      // Vérifier si la permission est déjà accordée
+      const hasPermission = await checkLocationPermission();
+      
+      if (hasPermission) {
+        handleLocationPermissionSuccess();
+      } else {
+        // Demander la permission
+        requestLocationPermission();
+      }
+    } 
+    else {
+      // Pour les autres boutons, simplement changer l'état actif
+      setActiveButton(buttonName);
+      onTypeChange(buttonName);
     }
-    
-    // Dans tous les cas, on change le filtre actif
-    setActiveButton(buttonName);
-    onTypeChange(buttonName);
   };
 
   // Filtrer les données en fonction de l'entrée utilisateur
@@ -98,23 +242,6 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
       setFilteredResults(results);
     }
   }, [searchQuery, data]);
-
-  // Charger les contacts si l'utilisateur a déjà accordé l'autorisation
-  useEffect(() => {
-    const loadContacts = async () => {
-      if (userData?.contacts) {
-        try {
-          const contacts = await getContacts();
-          setUserContacts(contacts);
-          setHasContactPermission(true);
-        } catch (error) {
-          console.error('Erreur lors du chargement des contacts:', error);
-        }
-      }
-    };
-
-    loadContacts();
-  }, [userData?.contacts]);
 
   const buttonTypes = [
     t('filter.all'),

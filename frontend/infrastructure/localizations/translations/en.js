@@ -322,7 +322,11 @@ export default {
     "dataSection": "Data",
     "logout": "Logout",
     "enabled": "Enabled",
+    "enabledFeminin": "Enabled",    
+    "enabledFemininePlural": "Enabled",  
     "disabled": "Disabled",
+    "disabledFeminin": "Disabled",  
+    "disabledFemininePlural": "Disabled", 
     "notSpecified": "Not specified",
     "notConfigured": "Not configured",
     "userDataLog": "User data:",
@@ -665,6 +669,21 @@ export default {
       "confidentialSecret": "Confidential secret 🔐",
       "dialogTitle": "Share this confidential secret"
     }
-  }
+  },
+  "permissions": {
+  "contactsNeededTitle": "Contacts Access Required",
+  "contactsNeededMessage": "This app needs access to your contacts to show content from them.",
+  "contactsSettingsMessage": "Please enable contacts access in your device settings to use this feature.",
+  "locationNeededTitle": "Location Access Required",
+  "locationNeededMessage": "This app needs access to your location to show content near you.",
+  "locationSettingsMessage": "Please enable location access in your device settings to use this feature.",
+  "notificationsNeededTitle": "Notifications Access Required",
+  "notificationsNeededMessage": "This app needs to send you notifications. Please enable them in your device settings.",
+  "cancel": "Cancel",
+  "openSettings": "Open Settings",
+  "allow": "Allow",
+  "ok": "OK",
+  "errorTitle": "Permission Error"
+}
 
 }

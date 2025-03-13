@@ -625,19 +625,19 @@ export const AuthProvider = ({ children }) => {
           case 'authorized':
             return { granted: true, needsSettings: false };
           
-          case 'denied':
+          default:
             return new Promise((resolve) => {
               Alert.alert(
-                "Accès aux contacts bloqué",
-                "Vous avez précédemment refusé l'accès aux contacts. Voulez-vous ouvrir les paramètres ?",
+                t('permissions.contactsNeededTitle'),
+                t('permissions.contactsNeededMessage'),
                 [
                   { 
-                    text: "Annuler", 
+                    text: t('permissions.cancel'), 
                     style: "cancel",
                     onPress: () => resolve({ granted: false, needsSettings: false })
                   },
                   { 
-                    text: "Paramètres", 
+                    text: t('permissions.openSettings'), 
                     onPress: () => {
                       Linking.openSettings();
                       resolve({ granted: false, needsSettings: true });
@@ -645,12 +645,6 @@ export const AuthProvider = ({ children }) => {
                   }
                 ]
               );
-            });
-          
-          case 'undetermined':
-            return new Promise((resolve) => {
-              setContactPermissionResolve(() => resolve);
-              setContactsPermissionModalVisible(true);
             });
         }
       } else {
@@ -663,10 +657,40 @@ export const AuthProvider = ({ children }) => {
           return { granted: true, needsSettings: false };
         }
         
-        // Si la permission n'est pas accordée, demander à l'utilisateur
+        // Si la permission n'est pas accordée, on demande d'abord via la boîte de dialogue système
+        const requestResult = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
+          {
+            title: t('permissions.contactsTitle'),
+            message: t('permissions.contactsMessage'),
+            buttonPositive: t('permissions.allow')
+          }
+        );
+        
+        if (requestResult === PermissionsAndroid.RESULTS.GRANTED) {
+          return { granted: true, needsSettings: false };
+        }
+        
+        // Si l'utilisateur a refusé, proposer d'aller dans les paramètres
         return new Promise((resolve) => {
-          setContactPermissionResolve(() => resolve);
-          setContactsPermissionModalVisible(true);
+          Alert.alert(
+            t('permissions.contactsNeededTitle'),
+            t('permissions.contactsNeededMessage'),
+            [
+              { 
+                text: t('permissions.cancel'), 
+                style: "cancel",
+                onPress: () => resolve({ granted: false, needsSettings: false })
+              },
+              { 
+                text: t('permissions.openSettings'), 
+                onPress: () => {
+                  Linking.openSettings();
+                  resolve({ granted: false, needsSettings: true });
+                }
+              }
+            ]
+          );
         });
       }
     } catch (error) {
@@ -788,39 +812,46 @@ const getContacts = async () => {
 const checkLocationPermission = async () => {
   try {
     const { status } = await Location.getForegroundPermissionsAsync();
-    setLocationPermission(status);
-    return status;
+    return status === 'granted';
   } catch (error) {
     console.error(t('location.errors.permissionCheckError'), error);
-    return 'error';
+    return false;
   }
 };
 
-// Fonction pour demander la permission de géolocalisation
 const requestLocationPermission = async () => {
   console.log('[Location] Début de demande de permission');
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
     console.log(`[Location] Statut de permission: ${status}`);
     
-    setLocationPermission(status);
-    
     if (status === 'granted') {
-      console.log('[Location] Permission accordée, mise à jour des données utilisateur');
-      await updateUserData({ location: true });
-      setLocationEnabled(true);
-      
       return { granted: true };
     } else {
-      console.log('[Location] Permission refusée');
-      setLocationEnabled(false);
-      await updateUserData({ location: false });
-      
-      return { granted: false };
+      // Si l'utilisateur refuse, proposer les paramètres système
+      return new Promise((resolve) => {
+        Alert.alert(
+          t('permissions.locationNeededTitle'),
+          t('permissions.locationNeededMessage'),
+          [
+            { 
+              text: t('permissions.cancel'), 
+              style: "cancel",
+              onPress: () => resolve({ granted: false, needsSettings: false })
+            },
+            { 
+              text: t('permissions.openSettings'), 
+              onPress: () => {
+                Linking.openSettings();
+                resolve({ granted: false, needsSettings: true });
+              }
+            }
+          ]
+        );
+      });
     }
   } catch (error) {
     console.error('[Location] Erreur de permission:', error);
-    setLocationEnabled(false);
     return { 
       granted: false, 
       error: error.message 
@@ -828,38 +859,7 @@ const requestLocationPermission = async () => {
   }
 };
 
-// Dans updateLocationAccess
-const updateLocationAccess = async (enabled) => {
-  console.log(`[Location] Tentative de mise à jour: ${enabled}`);
-  try {
-    if (enabled) {
-      const status = await checkLocationPermission();
-      console.log(`[Location] Statut de permission avant activation: ${status}`);
-      
-      if (status !== 'granted') {
-        const permissionResult = await requestLocationPermission();
-        console.log('[Location] Résultat de demande de permission:', permissionResult);
-        if (!permissionResult.granted) {
-          console.log('[Location] Permission non accordée');
-          return false;
-        }
-      }
-    }
-    
-    console.log(`[Location] Mise à jour des données utilisateur avec location: ${enabled}`);
-    const updateResult = await updateUserData({
-      location: enabled
-    });
-    
-    console.log('[Location] Résultat de mise à jour:', updateResult);
-    
-    setLocationEnabled(enabled);
-    return true;
-  } catch (error) {
-    console.error('[Location] Erreur de mise à jour:', error);
-    return false;
-  }
-};
+
 
 useEffect(() => {
   if (userData) {
@@ -895,7 +895,6 @@ useEffect(() => {
         getContactsWithAppStatus,
         requestLocationPermission,
         checkLocationPermission,
-        updateLocationAccess,
         locationEnabled
       }}
     >

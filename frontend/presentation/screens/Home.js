@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Linking, Platform, PermissionsAndroid } from 'react-native';
 import { Box, VStack, Text, HStack } from 'native-base';
 import SwipeDeck from '../components/SwipeDeck';
 import FilterBar from '../components/Filter.bar';
@@ -11,14 +11,11 @@ import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 
 const Home = ({ navigation }) => {
   const { t } = useTranslation();
-  const { 
-    requestLocationPermission, 
-    checkLocationPermission 
-  } = useContext(AuthContext);
-  const { getContacts, userData, updateLocationAccess } = useContext(AuthContext);
+  const { getContacts, userData } = useContext(AuthContext);
   const { data, fetchUnpurchasedSecrets, fetchSecretsByLocation } = useCardData();
   
   const [selectedFilters, setSelectedFilters] = useState([]);
@@ -35,9 +32,59 @@ const Home = ({ navigation }) => {
     [t('filter.following')]: t('home.sourceTexts.fromFollowing')
   };
 
+  // Fonction pour vérifier les permissions de localisation
+  const checkLocationPermission = async () => {
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.error('Erreur lors de la vérification des permissions de localisation:', error);
+      return false;
+    }
+  };
+
+  // Fonction pour demander la permission de localisation
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status === 'granted') {
+        // Permission accordée, récupérer la localisation
+        const location = await Location.getCurrentPositionAsync({});
+        setUserLocation(location);
+        return true;
+      } else {
+        // Permission refusée, proposer les paramètres
+        showLocationPermissionAlert();
+        return false;
+      }
+    } catch (error) {
+      console.error('Erreur lors de la demande de permission de localisation:', error);
+      return false;
+    }
+  };
+
+  // Alerte pour informer l'utilisateur que l'accès à la localisation est nécessaire
+  const showLocationPermissionAlert = () => {
+    Alert.alert(
+      t('permissions.locationNeededTitle'),
+      t('permissions.locationNeededMessage'),
+      [
+        { 
+          text: t('permissions.cancel'), 
+          style: 'cancel' 
+        },
+        { 
+          text: t('permissions.openSettings'), 
+          onPress: () => Linking.openSettings() 
+        }
+      ]
+    );
+  };
+
   // Effet pour la première vérification de localisation
   useEffect(() => {
-    const checkLocation = async () => {
+    const checkFirstLaunch = async () => {
       const isFirstLaunch = await AsyncStorage.getItem('isFirstLaunch') === null;
       
       if (isFirstLaunch) {
@@ -62,7 +109,7 @@ const Home = ({ navigation }) => {
       }
     };
     
-    checkLocation();
+    checkFirstLaunch();
   }, []);
 
   // Effet pour charger les contacts
@@ -93,23 +140,29 @@ const Home = ({ navigation }) => {
   };
 
   const handleTypeChange = async (type) => {
+    // Cette fonction est maintenant simplifiée car la logique de permissions
+    // est gérée directement dans le FilterBar
     setActiveType(type);
   
     if (type === t('filter.aroundMe')) {
       try {
-        // Utiliser updateLocationAccess qui gère la permission et l'état
-        const success = await updateLocationAccess(true);
+        // Vérifier si la permission est déjà accordée
+        const hasPermission = await checkLocationPermission();
         
-        if (success) {
-          // Permission accordée, charger les secrets à proximité
+        if (hasPermission) {
+          // Si permission accordée, récupérer la localisation actuelle
+          const location = await Location.getCurrentPositionAsync({});
+          setUserLocation(location);
+          
+          // Charger les secrets à proximité
           await fetchSecretsByLocation(locationRadius);
         } else {
-          // Revenir au filtre "Tous"
-          setActiveType(t('filter.all'));
+          // La permission n'est pas accordée, mais cette situation ne devrait pas arriver
+          // puisque FilterBar gère déjà cette logique
+          console.log("Permission non accordée, mais FilterBar aurait dû gérer cela");
         }
       } catch (error) {
-        console.error('Location permission error:', error);
-        setActiveType(t('filter.all'));
+        console.error('Erreur de localisation:', error);
       }
     } else {
       // Pour les autres types de filtres
