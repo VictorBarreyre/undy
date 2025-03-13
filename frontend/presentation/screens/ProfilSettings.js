@@ -212,43 +212,27 @@ export default function Profile({ navigation }) {
     };
 
     const toggleLocation = async () => {
+        console.log('[Profile] Toggle location déclenché');
         try {
-            const newLocationState = !locationEnabled;
-
-            // Mettre à jour l'état local immédiatement pour une meilleure UX
-            setLocationEnabled(newLocationState);
-
-            if (newLocationState) {
-                // Vérifier les permissions avant d'activer
-                const status = await checkLocationPermission();
-
-                if (status !== 'granted') {
-                    const permissionResult = await requestLocationPermission();
-                    if (!permissionResult.granted) {
-                        // Si la permission n'est pas accordée, revenir à l'état précédent
-                        setLocationEnabled(false);
-                        return;
-                    }
-                }
-            }
-
-            // Mettre à jour l'accès
-            const success = await updateLocationAccess(newLocationState);
-
-            if (!success) {
-                // En cas d'échec, revenir à l'état précédent
-                setLocationEnabled(!newLocationState);
-            }
-        } catch (error) {
-            console.error(t('settings.errors.toggleLocationError'), error);
-            // En cas d'erreur, revenir à l'état précédent
+          const newLocationState = !locationEnabled;
+          console.log(`[Profile] Nouvel état: ${newLocationState}`);
+      
+          const success = await updateLocationAccess(newLocationState);
+          console.log(`[Profile] Mise à jour réussie: ${success}`);
+      
+          if (!success) {
+            console.log('[Profile] Échec de la mise à jour, restauration de l\'état précédent');
             setLocationEnabled(!newLocationState);
+            
             Alert.alert(
-                t('settings.errors.title'),
-                t('settings.errors.locationUpdateError')
+              t('settings.errors.title'),
+              t('settings.errors.locationUpdateError')
             );
+          }
+        } catch (error) {
+          console.error('[Profile] Erreur de toggle:', error);
         }
-    };
+      };
 
     useEffect(() => {
         // Vérifie systématiquement la permission avant de considérer les contacts comme activés

@@ -18,7 +18,7 @@ const Home = ({ navigation }) => {
     requestLocationPermission, 
     checkLocationPermission 
   } = useContext(AuthContext);
-  const { getContacts, userData } = useContext(AuthContext);
+  const { getContacts, userData, updateLocationAccess } = useContext(AuthContext);
   const { data, fetchUnpurchasedSecrets, fetchSecretsByLocation } = useCardData();
   
   const [selectedFilters, setSelectedFilters] = useState([]);
@@ -97,17 +97,15 @@ const Home = ({ navigation }) => {
   
     if (type === t('filter.aroundMe')) {
       try {
-        // Utiliser directement la méthode du contexte
-        const { granted, needsSettings } = await requestLocationPermission();
+        // Utiliser updateLocationAccess qui gère la permission et l'état
+        const success = await updateLocationAccess(true);
         
-        if (!granted) {
-          if (needsSettings) {
-            // Si l'utilisateur a choisi d'aller dans les paramètres
-            setActiveType(t('filter.all'));
-          }
-        } else {
+        if (success) {
           // Permission accordée, charger les secrets à proximité
           await fetchSecretsByLocation(locationRadius);
+        } else {
+          // Revenir au filtre "Tous"
+          setActiveType(t('filter.all'));
         }
       } catch (error) {
         console.error('Location permission error:', error);

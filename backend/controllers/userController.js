@@ -682,6 +682,10 @@ exports.updateUserProfile = async (req, res) => {
             user.notifs = req.body.notifs !== undefined ? req.body.notifs : user.notifs;
             user.contacts = req.body.contacts !== undefined ? req.body.contacts : user.contacts;
             user.subscriptions = req.body.subscriptions !== undefined ? req.body.subscriptions : user.subscriptions;
+            if (req.body.location !== undefined) {
+                user.location = !!req.body.location; // Forcer en booléen
+              }
+        
 
             const updatedUser = await user.save();
 
@@ -697,6 +701,7 @@ exports.updateUserProfile = async (req, res) => {
                 phone: updatedUser.phone,
                 notifs: updatedUser.notifs,
                 contacts: updatedUser.contacts,
+                location: updatedUser.location, 
                 subscriptions: updatedUser.subscriptions,
                 token: accessToken, // Utiliser le nouvel access token
             });

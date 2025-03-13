@@ -57,6 +57,11 @@ const UserSchema = new mongoose.Schema({
         required: false,
         default: 0,
     },
+    location: {
+        type: Boolean,
+        required: false,
+        default: false // Désactivé par défaut
+      },
     hasSubscriptions: {
         type: Number,
         required: false,

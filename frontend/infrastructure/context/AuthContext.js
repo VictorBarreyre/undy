@@ -238,42 +238,52 @@ export const AuthProvider = ({ children }) => {
       throw error;
     }
   };
-
   const updateUserData = async (updatedData, isContactsUpdate = false) => {
+    console.log('[Location] Données de mise à jour:', updatedData);
+    
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error(i18n.t('auth.errors.axiosNotInitialized'));
     }
+    
     try {
-      // Ne prendre que les champs qui ont changé
       const changedFields = {};
       Object.keys(updatedData).forEach(key => {
-        if (userData[key] !== updatedData[key]) {
+        // Ajouter une condition spécifique pour contacts et location
+        if (key === 'contacts' || key === 'location') {
+          changedFields[key] = updatedData[key];
+        } else if (userData[key] !== updatedData[key]) {
           changedFields[key] = updatedData[key];
         }
       });
+  
+      console.log('[Location] Champs modifiés:', changedFields);
   
       if (Object.keys(changedFields).length === 0) {
         return { success: true, message: i18n.t('auth.success.noChangeNeeded') };
       }
   
-      // Ajouter l'ID pour l'identification
       changedFields._id = userData._id;
   
       const response = await instance.put('/api/users/profile', changedFields);
+  
+      console.log('[Location] Réponse du serveur:', response.data);
   
       // Mettre à jour le state local avec toutes les données
       setUserData({ ...userData, ...response.data });
       await AsyncStorage.setItem('userData', JSON.stringify({ ...userData, ...response.data }));
   
-      // Ne mettre à jour contactsAccessEnabled que si ce n'est pas déjà un appel depuis updateContactsAccess
-      if (updatedData.contacts !== undefined && !isContactsUpdate) {
+      // Mise à jour spécifique pour contacts et location
+      if (updatedData.contacts !== undefined) {
         setContactsAccessEnabled(updatedData.contacts);
+      }
+      if (updatedData.location !== undefined) {
+        setLocationEnabled(updatedData.location);
       }
   
       return { success: true, message: i18n.t('auth.success.profileUpdated') };
     } catch (error) {
-      console.error(i18n.t('auth.errors.updatingUserData'), error);
+      console.error('[Location] Erreur de mise à jour:', error);
       return { success: false, message: i18n.t('auth.errors.profileUpdateFailed') };
     }
   };
@@ -788,152 +798,76 @@ const checkLocationPermission = async () => {
 
 // Fonction pour demander la permission de géolocalisation
 const requestLocationPermission = async () => {
+  console.log('[Location] Début de demande de permission');
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
+    console.log(`[Location] Statut de permission: ${status}`);
+    
     setLocationPermission(status);
     
     if (status === 'granted') {
+      console.log('[Location] Permission accordée, mise à jour des données utilisateur');
       await updateUserData({ location: true });
       setLocationEnabled(true);
+      
       return { granted: true };
     } else {
-      return new Promise((resolve) => {
-        Alert.alert(
-          t('location.alerts.permissionDenied.title'), 
-          t('location.alerts.permissionDenied.message'), 
-          [
-            {
-              text: t('location.alerts.permissionDenied.cancel'),
-              style: 'cancel',
-              onPress: () => resolve({ granted: false, needsSettings: false })
-            },
-            {
-              text: t('location.alerts.permissionDenied.retry'),
-              onPress: async () => {
-                // Tenter à nouveau de demander la permission
-                const retryResult = await Location.requestForegroundPermissionsAsync();
-                
-                if (retryResult.status === 'granted') {
-                  await updateUserData({ location: true });
-                  setLocationEnabled(true);
-                  resolve({ granted: true });
-                } else {
-                  // Si refusé à nouveau, proposer d'aller dans les paramètres
-                  Alert.alert(
-                    t('location.alerts.permissionDenied.retryFailed.title'),
-                    t('location.alerts.permissionDenied.retryFailed.message'),
-                    [
-                      {
-                        text: t('location.alerts.permissionDenied.cancel'),
-                        style: 'cancel',
-                        onPress: () => resolve({ granted: false, needsSettings: false })
-                      },
-                      {
-                        text: t('location.alerts.permissionDenied.openSettings'),
-                        onPress: () => {
-                          Linking.openSettings();
-                          resolve({ granted: false, needsSettings: true });
-                        }
-                      }
-                    ]
-                  );
-                }
-              }
-            },
-            {
-              text: t('location.alerts.permissionDenied.openSettings'),
-              onPress: () => {
-                Linking.openSettings();
-                resolve({ granted: false, needsSettings: true });
-              }
-            }
-          ]
-        );
-      });
+      console.log('[Location] Permission refusée');
+      setLocationEnabled(false);
+      await updateUserData({ location: false });
+      
+      return { granted: false };
     }
   } catch (error) {
-    console.error(t('location.errors.permissionError'), error);
+    console.error('[Location] Erreur de permission:', error);
+    setLocationEnabled(false);
     return { 
       granted: false, 
-      error: error.message,
-      needsSettings: false 
+      error: error.message 
     };
   }
 };
 
-// Fonction pour mettre à jour l'accès à la localisation
+// Dans updateLocationAccess
 const updateLocationAccess = async (enabled) => {
+  console.log(`[Location] Tentative de mise à jour: ${enabled}`);
   try {
-    console.log("[AuthProvider] updateLocationAccess - État actuel:", { 
-      locationEnabled, 
-      enabled,
-      locationPermission
-    });
-    
     if (enabled) {
-      // Si on active, vérifier d'abord la permission
       const status = await checkLocationPermission();
-      console.log("[AuthProvider] updateLocationAccess - Statut de permission:", status);
+      console.log(`[Location] Statut de permission avant activation: ${status}`);
       
       if (status !== 'granted') {
         const permissionResult = await requestLocationPermission();
-        console.log("[AuthProvider] updateLocationAccess - Résultat de la demande:", permissionResult);
-        if (!permissionResult.granted) return false;
-      }
-      
-      // Si la permission est accordée, récupérer et afficher la position actuelle
-      try {
-        const currentPosition = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced
-        });
-        
-        console.log("[AuthProvider] Position actuelle:", {
-          latitude: currentPosition.coords.latitude,
-          longitude: currentPosition.coords.longitude,
-          altitude: currentPosition.coords.altitude,
-          accuracy: currentPosition.coords.accuracy,
-          timestamp: new Date(currentPosition.timestamp).toLocaleString()
-        });
-        
-        // Optionnel: Récupérer l'adresse (géocodage inverse)
-        try {
-          const reverseGeocode = await Location.reverseGeocodeAsync({
-            latitude: currentPosition.coords.latitude,
-            longitude: currentPosition.coords.longitude
-          });
-          
-          if (reverseGeocode && reverseGeocode.length > 0) {
-            console.log("[AuthProvider] Adresse:", {
-              street: reverseGeocode[0].street,
-              city: reverseGeocode[0].city,
-              region: reverseGeocode[0].region,
-              country: reverseGeocode[0].country,
-              postalCode: reverseGeocode[0].postalCode
-            });
-          }
-        } catch (geocodeError) {
-          console.error("[AuthProvider] Erreur de géocodage inverse:", geocodeError);
+        console.log('[Location] Résultat de demande de permission:', permissionResult);
+        if (!permissionResult.granted) {
+          console.log('[Location] Permission non accordée');
+          return false;
         }
-      } catch (positionError) {
-        console.error("[AuthProvider] Erreur lors de la récupération de la position:", positionError);
       }
     }
     
-    // Mettre à jour en DB
+    console.log(`[Location] Mise à jour des données utilisateur avec location: ${enabled}`);
     const updateResult = await updateUserData({
       location: enabled
     });
-    console.log("[AuthProvider] updateLocationAccess - Résultat de la mise à jour:", updateResult);
+    
+    console.log('[Location] Résultat de mise à jour:', updateResult);
     
     setLocationEnabled(enabled);
-    console.log("[AuthProvider] updateLocationAccess - Nouvel état:", enabled);
     return true;
   } catch (error) {
-    console.error(t('location.errors.accessUpdateError'), error);
+    console.error('[Location] Erreur de mise à jour:', error);
     return false;
   }
 };
 
+useEffect(() => {
+  if (userData) {
+    // Synchroniser locationEnabled avec la valeur de userData
+    const newLocationEnabled = userData.location || false;
+    setLocationEnabled(newLocationEnabled);
+  }
+}, [userData]);
   
 
 
