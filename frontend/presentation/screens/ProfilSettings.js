@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { VStack, Box, Text, Button, Pressable, Actionsheet, Input, HStack, Spinner } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Linking, Animated, StyleSheet, ScrollView, Platform, Alert, Switch as RNSwitch, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Dimensions, useWindowDimensions } from 'react-native';
+import { Linking, Animated, StyleSheet, ScrollView, Platform, Alert, Switch as RNSwitch, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -17,6 +17,8 @@ import Contacts from 'react-native-contacts';
 import * as Location from 'expo-location';
 import NotificationService from '../Notifications/NotificationService';
 import { useTranslation } from 'react-i18next';
+import Clipboard from '@react-native-clipboard/clipboard';
+
 
 export default function Profile({ navigation }) {
     const { t } = useTranslation();
@@ -96,7 +98,7 @@ export default function Profile({ navigation }) {
             } catch (error) {
                 console.error('Erreur lors de la vérification des permissions de localisation:', error);
             }
-            
+
             // Vérifier l'état des permissions de notification
             try {
                 const hasPermission = await NotificationService.checkPermissions();
@@ -107,11 +109,11 @@ export default function Profile({ navigation }) {
         };
 
         checkPermissions();
-        
+
         // Vérifier les permissions toutes les 2 secondes lorsque l'écran est visible
         // Cela permet de rafraîchir le statut après le retour des paramètres système
         const permissionCheckInterval = setInterval(checkPermissions, 2000);
-        
+
         return () => {
             clearInterval(permissionCheckInterval);
         };
@@ -171,27 +173,27 @@ export default function Profile({ navigation }) {
 
     const getStatusText = (key, isEnabled) => {
         if (!isEnabled) {
-          // Pour les états désactivés
-          switch (key) {
-            case 'notifs':
-              return t('settings.disabledFemininePlural');  // "Désactivées"
-            case 'location':
-              return t('settings.disabledFeminin');  // "Désactivée"
-            default:
-              return t('settings.disabled');  // "Désactivé"
-          }
+            // Pour les états désactivés
+            switch (key) {
+                case 'notifs':
+                    return t('settings.disabledFemininePlural');  // "Désactivées"
+                case 'location':
+                    return t('settings.disabledFeminin');  // "Désactivée"
+                default:
+                    return t('settings.disabled');  // "Désactivé"
+            }
         } else {
-          // Pour les états activés
-          switch (key) {
-            case 'notifs':
-              return t('settings.enabledFemininePlural');  // "Activées"
-            case 'location':
-              return t('settings.enabledFeminin');  // "Activée"
-            default:
-              return t('settings.enabled');  // "Activé"
-          }
+            // Pour les états activés
+            switch (key) {
+                case 'notifs':
+                    return t('settings.enabledFemininePlural');  // "Activées"
+                case 'location':
+                    return t('settings.enabledFeminin');  // "Activée"
+                default:
+                    return t('settings.enabled');  // "Activé"
+            }
         }
-      };
+    };
 
     // Nouvelle fonction pour gérer les notifications - redirige vers les paramètres système
     const handleNotificationsSettings = () => {
@@ -199,13 +201,13 @@ export default function Profile({ navigation }) {
             t('permissions.notificationsNeededTitle'),
             t('permissions.notificationsNeededMessage'),
             [
-                { 
-                    text: t('permissions.cancel'), 
-                    style: 'cancel' 
+                {
+                    text: t('permissions.cancel'),
+                    style: 'cancel'
                 },
-                { 
-                    text: t('permissions.openSettings'), 
-                    onPress: () => Linking.openSettings() 
+                {
+                    text: t('permissions.openSettings'),
+                    onPress: () => Linking.openSettings()
                 }
             ]
         );
@@ -217,13 +219,13 @@ export default function Profile({ navigation }) {
             t('permissions.contactsNeededTitle'),
             t('permissions.contactsSettingsMessage'),
             [
-                { 
-                    text: t('permissions.cancel'), 
-                    style: 'cancel' 
+                {
+                    text: t('permissions.cancel'),
+                    style: 'cancel'
                 },
-                { 
-                    text: t('permissions.openSettings'), 
-                    onPress: () => Linking.openSettings() 
+                {
+                    text: t('permissions.openSettings'),
+                    onPress: () => Linking.openSettings()
                 }
             ]
         );
@@ -235,13 +237,13 @@ export default function Profile({ navigation }) {
             t('permissions.locationNeededTitle'),
             t('permissions.locationSettingsMessage'),
             [
-                { 
-                    text: t('permissions.cancel'), 
-                    style: 'cancel' 
+                {
+                    text: t('permissions.cancel'),
+                    style: 'cancel'
                 },
-                { 
-                    text: t('permissions.openSettings'), 
-                    onPress: () => Linking.openSettings() 
+                {
+                    text: t('permissions.openSettings'),
+                    onPress: () => Linking.openSettings()
                 }
             ]
         );
@@ -258,7 +260,7 @@ export default function Profile({ navigation }) {
         }
     };
 
-    
+
 
     const handleDownloadUserData = async () => {
         try {
@@ -559,14 +561,14 @@ export default function Profile({ navigation }) {
                                                         <HStack flex={1} justifyContent="space-between" px={4}>
                                                             <Text style={[styles.h5]} isTruncated>{field.label}</Text>
                                                             <Text style={[styles.caption]} color="#94A3B8">
-  {key === 'notifs'
-    ? getStatusText('notifs', notificationsEnabled)
-    : key === 'contacts'
-      ? getStatusText('contacts', contactsPermissionStatus)
-      : key === 'location'
-        ? getStatusText('location', locationPermissionStatus)
-        : truncateText(value, field.truncateLength || 15)}
-</Text>
+                                                                {key === 'notifs'
+                                                                    ? getStatusText('notifs', notificationsEnabled)
+                                                                    : key === 'contacts'
+                                                                        ? getStatusText('contacts', contactsPermissionStatus)
+                                                                        : key === 'location'
+                                                                            ? getStatusText('location', locationPermissionStatus)
+                                                                            : truncateText(value, field.truncateLength || 15)}
+                                                            </Text>
                                                         </HStack>
                                                         <FontAwesome name="chevron-right" size={14} color="#94A3B8" />
                                                     </HStack>
@@ -775,47 +777,47 @@ export default function Profile({ navigation }) {
                                 </Button>
                             </>
                         )}
-                        </VStack>
-                    </AnimatedActionsheetContent>
-                </Actionsheet>
-            </Background>
-        );
-    };
-    
-    const customStyles = StyleSheet.create({
-        container: {
-            display: 'flex',
-            flex: 1,
-            height: 'auto',
-            width: '100%',
-            justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
-            alignItems: 'start',
-            alignContent: 'start'
-        },
-    
-        datePicker: {
-            width: '100%',
-            backgroundColor: 'white',
-            borderRadius: 8,
-            overflow: 'hidden',
-            ...Platform.select({
-                ios: {
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 4,
-                },
-                android: {
-                    elevation: 4,
-                },
-            }),
-        },
-    
-        shadowBox: {
-            shadowColor: 'violet',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 5,
-            elevation: 5
-        },
-    });
+                    </VStack>
+                </AnimatedActionsheetContent>
+            </Actionsheet>
+        </Background>
+    );
+};
+
+const customStyles = StyleSheet.create({
+    container: {
+        display: 'flex',
+        flex: 1,
+        height: 'auto',
+        width: '100%',
+        justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
+        alignItems: 'start',
+        alignContent: 'start'
+    },
+
+    datePicker: {
+        width: '100%',
+        backgroundColor: 'white',
+        borderRadius: 8,
+        overflow: 'hidden',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 4,
+            },
+        }),
+    },
+
+    shadowBox: {
+        shadowColor: 'violet',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 5
+    },
+});
