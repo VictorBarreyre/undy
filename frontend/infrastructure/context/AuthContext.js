@@ -6,6 +6,10 @@ import Contacts from 'react-native-contacts';
 import { useCardData } from './CardDataContexte';
 import i18n from 'i18next'; // Importation directe de i18n
 import ContactsPermissionModal from '../../presentation/components/ContactsPermissionsModal';
+import { useTranslation } from 'react-i18next';
+import * as Location from 'expo-location'; // Ajoutez cette ligne
+
+
 
 
 export const AuthContext = createContext();
@@ -18,6 +22,9 @@ export const AuthProvider = ({ children }) => {
   const [contactsAccessEnabled, setContactsAccessEnabled] = useState(false);
   const [contactsPermissionModalVisible, setContactsPermissionModalVisible] = useState(false);
   const [contactPermissionResolve, setContactPermissionResolve] = useState(null);
+  const [locationPermission, setLocationPermission] = useState(null);
+  const [locationEnabled, setLocationEnabled] = useState(userData?.location || false);
+  const { t } = useTranslation(); // Déclarez le hook ici
 
   useEffect(() => {
     const initAxios = async () => {
@@ -767,6 +774,114 @@ const getContacts = async () => {
   };
 
 
+// Fonction pour vérifier l'état actuel de la permission
+const checkLocationPermission = async () => {
+  try {
+    const { status } = await Location.getForegroundPermissionsAsync();
+    setLocationPermission(status);
+    return status;
+  } catch (error) {
+    console.error(t('location.errors.permissionCheckError'), error);
+    return 'error';
+  }
+};
+
+// Fonction pour demander la permission de géolocalisation
+const requestLocationPermission = async () => {
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    setLocationPermission(status);
+    
+    if (status === 'granted') {
+      // Mettre à jour la préférence utilisateur en DB
+      await updateUserData({
+        location: true
+      });
+      setLocationEnabled(true);
+      return { granted: true };
+    } else {
+      return { granted: false };
+    }
+  } catch (error) {
+    console.error(t('location.errors.permissionError'), error);
+    return { granted: false, error: error.message };
+  }
+};
+
+// Fonction pour mettre à jour l'accès à la localisation
+const updateLocationAccess = async (enabled) => {
+  try {
+    console.log("[AuthProvider] updateLocationAccess - État actuel:", { 
+      locationEnabled, 
+      enabled,
+      locationPermission
+    });
+    
+    if (enabled) {
+      // Si on active, vérifier d'abord la permission
+      const status = await checkLocationPermission();
+      console.log("[AuthProvider] updateLocationAccess - Statut de permission:", status);
+      
+      if (status !== 'granted') {
+        const permissionResult = await requestLocationPermission();
+        console.log("[AuthProvider] updateLocationAccess - Résultat de la demande:", permissionResult);
+        if (!permissionResult.granted) return false;
+      }
+      
+      // Si la permission est accordée, récupérer et afficher la position actuelle
+      try {
+        const currentPosition = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced
+        });
+        
+        console.log("[AuthProvider] Position actuelle:", {
+          latitude: currentPosition.coords.latitude,
+          longitude: currentPosition.coords.longitude,
+          altitude: currentPosition.coords.altitude,
+          accuracy: currentPosition.coords.accuracy,
+          timestamp: new Date(currentPosition.timestamp).toLocaleString()
+        });
+        
+        // Optionnel: Récupérer l'adresse (géocodage inverse)
+        try {
+          const reverseGeocode = await Location.reverseGeocodeAsync({
+            latitude: currentPosition.coords.latitude,
+            longitude: currentPosition.coords.longitude
+          });
+          
+          if (reverseGeocode && reverseGeocode.length > 0) {
+            console.log("[AuthProvider] Adresse:", {
+              street: reverseGeocode[0].street,
+              city: reverseGeocode[0].city,
+              region: reverseGeocode[0].region,
+              country: reverseGeocode[0].country,
+              postalCode: reverseGeocode[0].postalCode
+            });
+          }
+        } catch (geocodeError) {
+          console.error("[AuthProvider] Erreur de géocodage inverse:", geocodeError);
+        }
+      } catch (positionError) {
+        console.error("[AuthProvider] Erreur lors de la récupération de la position:", positionError);
+      }
+    }
+    
+    // Mettre à jour en DB
+    const updateResult = await updateUserData({
+      location: enabled
+    });
+    console.log("[AuthProvider] updateLocationAccess - Résultat de la mise à jour:", updateResult);
+    
+    setLocationEnabled(enabled);
+    console.log("[AuthProvider] updateLocationAccess - Nouvel état:", enabled);
+    return true;
+  } catch (error) {
+    console.error(t('location.errors.accessUpdateError'), error);
+    return false;
+  }
+};
+
+  
 
 
   return (
@@ -790,7 +905,11 @@ const getContacts = async () => {
         checkAndRequestContactsPermission,
         contactsAccessEnabled,
         updateContactsAccess,
-        getContactsWithAppStatus
+        getContactsWithAppStatus,
+        requestLocationPermission,
+        checkLocationPermission,
+        updateLocationAccess,
+        locationEnabled
       }}
     >
       {children}

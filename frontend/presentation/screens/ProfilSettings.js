@@ -1,11 +1,11 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { VStack, Box, Text, Button, Pressable, Actionsheet, Input, HStack, Spinner } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Linking,Animated, StyleSheet, ScrollView, Platform, Alert, Switch as RNSwitch, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Dimensions, useWindowDimensions } from 'react-native';
+import { Linking, Animated, StyleSheet, ScrollView, Platform, Alert, Switch as RNSwitch, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, Dimensions, useWindowDimensions } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faUser, faEnvelope, faLock, faDollarSign, faBirthdayCake, faPhone, faBuildingColumns, faBell, faPerson, faUserGroup } from '@fortawesome/free-solid-svg-icons';
+import { faUser, faEnvelope, faLock, faDollarSign, faBirthdayCake, faPhone, faBuildingColumns, faBell, faPerson, faUserGroup,faLocationDot } from '@fortawesome/free-solid-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 import TypewriterLoader from '../components/TypewriterLoader';
@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 
 export default function Profile({ navigation }) {
     const { t } = useTranslation();
-    const { userData, isLoadingUserData, updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount, getContacts, updateContactsAccess, contactsAccessEnabled, checkAndRequestContactsPermission } = useContext(AuthContext);
+    const { userData, isLoadingUserData, updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount, getContacts, updateContactsAccess, contactsAccessEnabled, checkAndRequestContactsPermission, checkLocationPermission, requestLocationPermission, updateLocationAccess } = useContext(AuthContext);
     const [selectedField, setSelectedField] = useState(null);
     const [tempValue, setTempValue] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
@@ -29,6 +29,7 @@ export default function Profile({ navigation }) {
     const [isSuccess, setIsSuccess] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(userData?.notifs || false);
     const [contactsEnabled, setContactsEnabled] = useState(userData?.contacts || false);
+    const [locationEnabled, setLocationEnabled] = useState(userData?.location || false);
     const [inputValue, setInputValue] = useState('')
     const [earningsModalVisible, setEarningsModalVisible] = useState(false);
     const { resetStripeAccount, resetReadStatus, unreadCountsMap, setUnreadCountsMap, setTotalUnreadCount } = useCardData();
@@ -172,96 +173,135 @@ export default function Profile({ navigation }) {
 
     const toggleContacts = async () => {
         try {
-          // Si on veut activer les contacts
-          if (!contactsEnabled) {
-            // Vérifier explicitement la permission système
-            const permissionStatus = await Contacts.checkPermission();
-            
-            const isPermissionGranted = Platform.OS === 'ios' 
-              ? permissionStatus === 'authorized'
-              : permissionStatus === true || permissionStatus === PermissionsAndroid.RESULTS.GRANTED;
-            
-            if (isPermissionGranted) {
-              const success = await updateContactsAccess(true);
-              if (success) {
-                setContactsEnabled(true);
-              }
-            } else {
-              // Demander la permission si elle n'est pas déjà accordée
-              const permissionResult = await checkAndRequestContactsPermission();
-              
-              if (permissionResult.granted) {
-                const success = await updateContactsAccess(true);
-                if (success) {
-                  setContactsEnabled(true);
-                }
-              }
-            }
-          } else {
-            // Désactivation des contacts
-            const success = await updateContactsAccess(false);
-            if (success) {
-              setContactsEnabled(false);
-            }
-          }
-        } catch (error) {
-          console.error('[Profile] Erreur dans toggleContacts:', error);
-          Alert.alert(t('settings.errors.title'), t('settings.errors.genericError'));
-        }
-      };
+            // Si on veut activer les contacts
+            if (!contactsEnabled) {
+                // Vérifier explicitement la permission système
+                const permissionStatus = await Contacts.checkPermission();
 
-      useEffect(() => {
+                const isPermissionGranted = Platform.OS === 'ios'
+                    ? permissionStatus === 'authorized'
+                    : permissionStatus === true || permissionStatus === PermissionsAndroid.RESULTS.GRANTED;
+
+                if (isPermissionGranted) {
+                    const success = await updateContactsAccess(true);
+                    if (success) {
+                        setContactsEnabled(true);
+                    }
+                } else {
+                    // Demander la permission si elle n'est pas déjà accordée
+                    const permissionResult = await checkAndRequestContactsPermission();
+
+                    if (permissionResult.granted) {
+                        const success = await updateContactsAccess(true);
+                        if (success) {
+                            setContactsEnabled(true);
+                        }
+                    }
+                }
+            } else {
+                // Désactivation des contacts
+                const success = await updateContactsAccess(false);
+                if (success) {
+                    setContactsEnabled(false);
+                }
+            }
+        } catch (error) {
+            console.error('[Profile] Erreur dans toggleContacts:', error);
+            Alert.alert(t('settings.errors.title'), t('settings.errors.genericError'));
+        }
+    };
+
+    const toggleLocation = async () => {
+        try {
+            const newLocationState = !locationEnabled;
+
+            // Mettre à jour l'état local immédiatement pour une meilleure UX
+            setLocationEnabled(newLocationState);
+
+            if (newLocationState) {
+                // Vérifier les permissions avant d'activer
+                const status = await checkLocationPermission();
+
+                if (status !== 'granted') {
+                    const permissionResult = await requestLocationPermission();
+                    if (!permissionResult.granted) {
+                        // Si la permission n'est pas accordée, revenir à l'état précédent
+                        setLocationEnabled(false);
+                        return;
+                    }
+                }
+            }
+
+            // Mettre à jour l'accès
+            const success = await updateLocationAccess(newLocationState);
+
+            if (!success) {
+                // En cas d'échec, revenir à l'état précédent
+                setLocationEnabled(!newLocationState);
+            }
+        } catch (error) {
+            console.error(t('settings.errors.toggleLocationError'), error);
+            // En cas d'erreur, revenir à l'état précédent
+            setLocationEnabled(!newLocationState);
+            Alert.alert(
+                t('settings.errors.title'),
+                t('settings.errors.locationUpdateError')
+            );
+        }
+    };
+
+    useEffect(() => {
         // Vérifie systématiquement la permission avant de considérer les contacts comme activés
         const checkContactsPermission = async () => {
-          try {
-            if (contactsAccessEnabled) {
-              const permissionStatus = await Contacts.checkPermission();
-              
-              // Sur iOS, vérifiez explicitement le statut 'authorized'
-              const isPermissionGranted = Platform.OS === 'ios' 
-                ? permissionStatus === 'authorized'
-                : permissionStatus === true || permissionStatus === PermissionsAndroid.RESULTS.GRANTED;
-              
-              // Si la permission n'est pas accordée, désactiver l'accès aux contacts
-              if (!isPermissionGranted) {
+            try {
+                if (contactsAccessEnabled) {
+                    const permissionStatus = await Contacts.checkPermission();
+
+                    // Sur iOS, vérifiez explicitement le statut 'authorized'
+                    const isPermissionGranted = Platform.OS === 'ios'
+                        ? permissionStatus === 'authorized'
+                        : permissionStatus === true || permissionStatus === PermissionsAndroid.RESULTS.GRANTED;
+
+                    // Si la permission n'est pas accordée, désactiver l'accès aux contacts
+                    if (!isPermissionGranted) {
+                        setContactsEnabled(false);
+                        await updateContactsAccess(false);
+                    } else {
+                        setContactsEnabled(true);
+                    }
+                } else {
+                    setContactsEnabled(false);
+                }
+            } catch (error) {
+                console.error('Erreur lors de la vérification des permissions de contacts:', error);
                 setContactsEnabled(false);
-                await updateContactsAccess(false);
-              } else {
-                setContactsEnabled(true);
-              }
-            } else {
-              setContactsEnabled(false);
             }
-          } catch (error) {
-            console.error('Erreur lors de la vérification des permissions de contacts:', error);
-            setContactsEnabled(false);
-          }
         };
-      
+
         checkContactsPermission();
-      }, [contactsAccessEnabled]);
+    }, [contactsAccessEnabled]);
 
     const handleContactsPress = async () => {
         if (!contactsEnabled) {
-          // Si les contacts ne sont pas activés, vérifier la permission
-          const permissionResult = await checkAndRequestContactsPermission();
-          
-          if (permissionResult.granted) {
-            // Activer les contacts et naviguer si l'activation réussit
-            setContactsEnabled(true);
-            const success = await updateContactsAccess(true);
-            
-            if (success) {
-              navigation.navigate('Contacts');
-            } else {
-              setContactsEnabled(false);
+            // Si les contacts ne sont pas activés, vérifier la permission
+            const permissionResult = await checkAndRequestContactsPermission();
+
+            if (permissionResult.granted) {
+                // Activer les contacts et naviguer si l'activation réussit
+                setContactsEnabled(true);
+                const success = await updateContactsAccess(true);
+
+                if (success) {
+                    navigation.navigate('Contacts');
+                } else {
+                    setContactsEnabled(false);
+                }
             }
-          }
         } else {
-          // Si les contacts sont déjà activés, naviguer directement
-          navigation.navigate('Contacts');
+            // Si les contacts sont déjà activés, naviguer directement
+            navigation.navigate('Contacts');
         }
-      };
+    };
 
     const handleDownloadUserData = async () => {
         try {
@@ -467,6 +507,7 @@ export default function Profile({ navigation }) {
         },
         notifs: { label: t('settings.fields.notifications'), icon: faBell, truncateLength: 10 },
         contacts: { label: t('settings.fields.contacts'), icon: faUserGroup, truncateLength: 10 },
+        location: { label: t('settings.fields.location'), icon: faLocationDot, truncateLength: 10 },
         abonnements: { label: t('settings.fields.subscriptions'), icon: faPerson, truncateLength: 10 },
     };
 
@@ -564,15 +605,34 @@ export default function Profile({ navigation }) {
                                                                         : truncateText(value, field.truncateLength || 15)}
                                                             </Text>
                                                         </HStack>
-                                                        {key === 'notifs' || key === 'contacts' ? (
+                                                        {key === 'notifs' || key === 'contacts' || key === 'location' ? (
                                                             <RNSwitch
-                                                                value={key === 'notifs' ? notificationsEnabled : contactsEnabled}
-                                                                onValueChange={key === 'notifs' ? toggleNotifications : toggleContacts}
+                                                                value={
+                                                                    key === 'notifs'
+                                                                        ? notificationsEnabled
+                                                                        : key === 'contacts'
+                                                                            ? contactsEnabled
+                                                                            : locationEnabled
+                                                                }
+                                                                onValueChange={
+                                                                    key === 'notifs'
+                                                                        ? toggleNotifications
+                                                                        : key === 'contacts'
+                                                                            ? toggleContacts
+                                                                            : toggleLocation
+                                                                }
                                                                 trackColor={{
                                                                     false: "#E2E8F0",
                                                                     true: "#E2E8F0"
                                                                 }}
-                                                                thumbColor={(key === 'notifs' ? notificationsEnabled : contactsEnabled) ? "#83D9FF" : "#FF78B2"}
+                                                                thumbColor={
+                                                                    (key === 'notifs'
+                                                                        ? notificationsEnabled
+                                                                        : key === 'contacts'
+                                                                            ? contactsEnabled
+                                                                            : locationEnabled)
+                                                                        ? "#83D9FF" : "#FF78B2"
+                                                                }
                                                                 ios_backgroundColor="#E2E8F0"
                                                                 style={{ transform: [{ scale: 0.7 }] }}
                                                             />

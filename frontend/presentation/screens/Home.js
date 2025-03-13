@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Alert } from 'react-native';
 import { Box, VStack, Text, HStack } from 'native-base';
-import Geolocation from '@react-native-community/geolocation';
+import * as Location from 'expo-location';
 import SwipeDeck from '../components/SwipeDeck';
 import FilterBar from '../components/Filter.bar';
 import { styles } from '../../infrastructure/theme/styles';
@@ -11,6 +11,8 @@ import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { useTranslation } from 'react-i18next';
+import { Linking } from 'react-native';
+
 
 const Home = ({ navigation }) => {
   const { t } = useTranslation();
@@ -31,39 +33,77 @@ const Home = ({ navigation }) => {
     [t('filter.following')]: t('home.sourceTexts.fromFollowing')
   };
 
-  // Fonction pour demander la permission de localisation
-  const requestLocationPermission = () => {
-    return new Promise((resolve) => {
-      Geolocation.requestAuthorization(
-        () => resolve(true),
-        () => {
-          Alert.alert(
-            t('location.alerts.permissionDenied.title'),
-            t('location.alerts.permissionDenied.message'),
-            [{ text: t('location.alerts.permissionDenied.ok') }]
-          );
-          resolve(false);
-        }
+// Fonction pour demander la permission de localisation
+const requestLocationPermission = async () => {
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    
+    if (status === 'granted') {
+      return true;
+    } else {
+      Alert.alert(
+        t('location.alerts.permissionDenied.title'),
+        t('location.alerts.permissionDenied.message'),
+        [{ text: t('location.alerts.permissionDenied.ok') }]
       );
-    });
-  };
+      return false;
+    }
+  } catch (error) {
+    console.error(t('location.errors.permissionError'), error);
+    return false;
+  }
+};
 
-  // Fonction pour obtenir la position actuelle
-  const getCurrentPosition = () => {
-    return new Promise((resolve, reject) => {
-      Geolocation.getCurrentPosition(
-        position => {
-          setUserLocation(position);
-          resolve(position);
-        },
-        error => {
-          console.error(t('location.errors.gettingPosition'), error);
-          reject(error);
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-      );
+// Fonction pour obtenir la position actuelle
+const getCurrentPosition = async () => {
+  try {
+    const position = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced
     });
+    setUserLocation(position);
+    return position;
+  } catch (error) {
+    console.error(t('location.errors.gettingPosition'), error);
+    throw error;
+  }
+};
+
+// Dans Home.js, ajoutez cet effet
+useEffect(() => {
+  const checkLocation = async () => {
+    // Vérifiez si c'est la première fois que l'application est lancée
+    const isFirstLaunch = await AsyncStorage.getItem('isFirstLaunch') === null;
+    
+    if (isFirstLaunch) {
+      // Marquer que ce n'est plus la première exécution
+      await AsyncStorage.setItem('isFirstLaunch', 'false');
+      
+      // Demander la permission uniquement à la première exécution
+      Alert.alert(
+        t('location.alerts.welcome.title'),
+        t('location.alerts.welcome.message'),
+        [
+          {
+            text: t('location.alerts.welcome.no'),
+            style: 'cancel'
+          },
+          {
+            text: t('location.alerts.welcome.yes'),
+            onPress: async () => {
+              try {
+                await requestLocationPermission();
+              } catch (error) {
+                console.error(t('location.errors.permissionError'), error);
+              }
+            }
+          }
+        ]
+      );
+    }
   };
+  
+  checkLocation();
+}, []);
 
   // Effet pour charger les contacts quand le filtre "Contacts" est activé
   useEffect(() => {
@@ -94,39 +134,39 @@ const Home = ({ navigation }) => {
   };
 
   const handleTypeChange = async (type) => {
-    setActiveType(type);
-    console.log(t('home.logs.selectedType'), type);
-    
-    // Gestion spécifique pour le type "Autour de moi"
     if (type === t('filter.aroundMe')) {
       try {
-        const hasPermission = await requestLocationPermission();
-        if (hasPermission) {
-          const position = await getCurrentPosition();
-          // Chargement des secrets à proximité
-          await fetchSecretsByLocation(locationRadius);
-        } else {
-          // Si permission refusée, revenir au type "Tous"
-          setActiveType(t('filter.all'));
+        const { granted } = await requestLocationPermission();
+        
+        if (!granted) {
+          Alert.alert(
+            t('location.alerts.permissionDenied.title'), 
+            t('location.alerts.permissionDenied.message'), 
+            [
+              {
+                text: t('location.alerts.permissionDenied.cancel'),
+                onPress: () => {
+                  // Revenir au filtre "Tous"
+                  setActiveType(t('filter.all'));
+                },
+                style: 'cancel'
+              },
+              {
+                text: t('location.alerts.permissionDenied.openSettings'),
+                onPress: () => {
+                  // Ouvrir les paramètres de l'appareil
+                  Linking.openSettings();
+                  
+                  // Revenir au filtre "Tous"
+                  setActiveType(t('filter.all'));
+                }
+              }
+            ]
+          );
         }
       } catch (error) {
-        console.error(t('location.errors.locationError'), error);
-        setActiveType(t('filter.all'));
-        Alert.alert(
-          t('location.alerts.error.title'),
-          t('location.alerts.error.message')
-        );
+        console.error('Location permission error:', error);
       }
-    } else if (type === t('filter.contacts')) {
-      // Gestion des contacts
-      if (!isContactsLoaded) {
-        setIsContactsLoaded(false);
-      }
-      // Charger tous les secrets pour filtrer par contacts côté client
-      await fetchUnpurchasedSecrets(true);
-    } else {
-      // Pour les autres types, utiliser la requête standard
-      await fetchUnpurchasedSecrets(true);
     }
   };
 

@@ -206,8 +206,8 @@ export default function CardHome({ cardData }) {
               disabled={isSharing}
               activeOpacity={0.8}
               style={{
-                width: 38,
-                height: 38,
+                width: 35,
+                height: 35,
                 borderRadius: 19,
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -248,7 +248,7 @@ export default function CardHome({ cardData }) {
                 <FontAwesomeIcon
                   icon={shareSuccess ? faCheck : faPaperPlane}
                   color="white"
-                  size={18}
+                  size={16}
                 />
               </View>
             </TouchableOpacity>

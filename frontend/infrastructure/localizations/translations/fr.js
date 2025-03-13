@@ -104,7 +104,8 @@ export default {
     "sourceTexts": {
       "everyone": "De tout le monde",
       "fromContacts": "De vos contacts",
-      "fromFollowing": "Des personnes que vous suivez"
+      "fromFollowing": "Des personnes que vous suivez",
+      "fromNearby": "Autour de vous"
     },
     "errors": {
       "contactsLoading": "Erreur lors du chargement des contacts:"
@@ -116,23 +117,40 @@ export default {
  
   },
 
-  "location": {
-    "alerts": {
-      "permissionDenied": {
-        "title": "Accès à la localisation refusé",
-        "message": "Pour voir les secrets autour de vous, nous avons besoin d'accéder à votre position.",
-        "ok": "OK"
-      },
-      "error": {
-        "title": "Erreur de localisation",
-        "message": "Impossible d'obtenir votre position. Veuillez réessayer."
-      }
+"location": {
+  "alerts": {
+    "welcome": {
+      "title": "Accès à la localisation",
+      "message": "Hushy peut utiliser votre localisation pour vous montrer des secrets à proximité. Souhaitez-vous activer cette fonctionnalité ?",
+      "yes": "Oui, activer",
+      "no": "Non, merci",
     },
-    "errors": {
-      "locationError": "Erreur de localisation:",
-      "gettingPosition": "Erreur lors de l'obtention de la position:"
+    "permissionDenied": {
+      "title": "Accès à la localisation refusé",
+      "message": "Pour utiliser le filtre \"Autour de moi\", vous devez autoriser l'accès à votre position.",
+         "cancel": "Annuler",
+        "openSettings": "Ouvrir les paramètres"
+    },
+    "shareLocation": {
+      "title": "Partager votre position",
+      "message": "Voulez-vous partager votre position avec ce secret ? Cela permettra aux utilisateurs proches de le découvrir plus facilement.",
+      "yes": "Partager",
+      "no": "Ne pas partager"
     }
   },
+  "errors": {
+    "permissionError": "Erreur de permission de localisation:",
+    "locationError": "Erreur de localisation:",
+    "gettingPosition": "Erreur lors de l'obtention de la position:",
+    "fetchingNearbySecrets": "Erreur lors de la récupération des secrets à proximité:",
+    "permissionCheckError": "Erreur lors de la vérification des permissions de localisation:",
+    "accessUpdateError": "Erreur lors de la mise à jour de l'accès à la localisation:"
+  },
+  "logs": {
+    "permissionDenied": "Permission de localisation refusée"
+  }
+},
+
   "swipeDeck": {
     "noSecrets": "Aucun secret disponible",
     "tryChangingFilters": "Essayez de modifier vos filtres",
@@ -348,6 +366,7 @@ export default {
       "bank": "Compte bancaire",
       "notifications": "Mes notifications",
       "contacts": "Mes contacts",
+      "location": "Ma géolocalisation",
       "subscriptions": "Mes abonnements"
     },
     "account": {
@@ -364,6 +383,8 @@ export default {
       "genericError": "Un problème est survenu",
       "genericLog": "Erreur:",
       "dataDownloadError": "Une erreur est survenue lors du téléchargement des données",
+       "toggleLocationError": "Erreur lors de la modification des paramètres de localisation:",
+    "locationUpdateError": "Impossible de mettre à jour les préférences de localisation",
       "stripeResetErrorLog": "Erreur de réinitialisation du compte Stripe:",
       "stripeResetError": "Erreur lors de la réinitialisation du compte Stripe",
       "logoutErrorLog": "Erreur de déconnexion:",
@@ -616,7 +637,8 @@ export default {
       "imageUpload": "Erreur lors de l'upload de l'image:",
       "refreshingUnreadCounts": "Erreur lors du rafraîchissement des compteurs non lus:",
       "markingAsRead": "Erreur lors du marquage comme lu",
-      "refreshingCounters": "Erreur lors du rafraîchissement des compteurs:"
+      "refreshingCounters": "Erreur lors du rafraîchissement des compteurs:",
+      "fullError": "Erreur complète:"
     },
     "logs": {
       "secretCreationResponse": "Réponse création secret:",

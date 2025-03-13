@@ -21,7 +21,6 @@
     "@react-native-community/blur": "^4.4.1",
     "@react-native-community/clipboard": "^1.5.1",
     "@react-native-community/datetimepicker": "8.0.1",
-    "@react-native-community/geolocation": "^3.4.0",
     "@react-native-community/netinfo": "11.3.1",
     "@react-native-community/push-notification-ios": "^1.11.0",
     "@react-native-google-signin/google-signin": "^13.1.0",
@@ -72,7 +71,8 @@
     "react-native-svg": "15.2.0",
     "react-native-swiper": "^1.6.0",
     "react-native-web": "~0.19.10",
-    "styled-components": "^6.1.13"
+    "styled-components": "^6.1.13",
+    "expo-location": "~17.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

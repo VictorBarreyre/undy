@@ -12,15 +12,22 @@
       "backgroundColor": "#ffffff"
     },
     "scheme": "hushy",
-    "plugins": [
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#ffffff"
-        }
-      ]
-    ],
+   "plugins": [
+  [
+    "expo-notifications",
+    {
+      "icon": "./assets/notification-icon.png",
+      "color": "#ffffff"
+    }
+  ],
+  [
+    "expo-location",
+    {
+      "locationAlwaysAndWhenInUsePermission": "Allow Hushy to use your location to find secrets around you.",
+      "locationWhenInUsePermission": "Allow Hushy to use your location to find secrets around you."
+    }
+  ]
+],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hushy.app",

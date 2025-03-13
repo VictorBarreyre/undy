@@ -105,7 +105,8 @@ export default {
     "sourceTexts": {
       "everyone": "From everyone",
       "fromContacts": "From your contacts",
-      "fromFollowing": "From people you follow"
+      "fromFollowing": "From people you follow",
+      "fromNearby": "From nearby"
     },
     "errors": {
       "contactsLoading": "Error loading contacts:"
@@ -119,19 +120,29 @@ export default {
 
   "location": {
     "alerts": {
-      "permissionDenied": {
-        "title": "Location Access Denied",
-        "message": "To see secrets around you, we need access to your location.",
-        "ok": "OK"
+      "welcome": {
+        "title": "Location Access",
+        "message": "Hushy can use your location to show you nearby secrets. Would you like to enable this feature?",
+        "yes": "Yes, enable",
+        "no": "No, thanks"
       },
-      "error": {
-        "title": "Location Error",
-        "message": "Unable to get your location. Please try again."
+      "shareLocation": {
+        "title": "Share Your Location",
+        "message": "Would you like to share your location with this secret? This will allow users nearby to discover it more easily.",
+        "yes": "Share",
+        "no": "Don't share"
       }
     },
     "errors": {
+      "permissionError": "Location permission error:",
       "locationError": "Location error:",
-      "gettingPosition": "Error getting position:"
+      "gettingPosition": "Error getting position:",
+      "fetchingNearbySecrets": "Error fetching nearby secrets:",
+      "permissionCheckError": "Error checking location permissions:",
+      "accessUpdateError": "Error updating location access:"
+    },
+    "logs": {
+      "permissionDenied": "Location permission denied"
     }
   },
 
@@ -253,7 +264,7 @@ export default {
       "sendMessage": "Error sending message:",
       "imageSelection": "Error selecting image:",
       "shareError": "Error while sharing",
-"missingSecretData": "Missing secret data"
+      "missingSecretData": "Missing secret data"
     },
     "messageFailed": "Failed",
     "retry": "Retry",
@@ -352,7 +363,8 @@ export default {
       "bank": "Bank account",
       "notifications": "My notifications",
       "contacts": "My contacts",
-      "subscriptions": "My subscriptions"
+      "subscriptions": "My subscriptions",
+      "location": "My location"
     },
     "account": {
       "downloadData": "Download data",
@@ -371,7 +383,9 @@ export default {
       "stripeResetErrorLog": "Error resetting Stripe account:",
       "stripeResetError": "Error resetting Stripe account",
       "logoutErrorLog": "Logout error:",
-      "logoutError": "An error occurred during logout"
+      "logoutError": "An error occurred during logout",
+      "toggleLocationError": "Error toggling location settings:",
+      "locationUpdateError": "Unable to update location preferences"
     }
   },
   "sharedSecret": {
@@ -591,66 +605,66 @@ export default {
   },
 
   "cardData": {
-  "errors": {
-    "axiosInitError": "Axios initialization error:",
-    "axiosNotInitialized": "Axios instance not initialized",
-    "secretCreation": "Secret creation error:",
-    "secretCreationGeneric": "Error creating secret",
-    "stripeRefresh": "Stripe refresh error:",
-    "stripeRefreshGeneric": "Error refreshing Stripe configuration",
-    "stripeReturn": "Stripe return error:",
-    "stripeReset": "Stripe account reset error:",
-    "stripeResetGeneric": "Error resetting Stripe account",
-    "stripeDelete": "Stripe account deletion error:",
-    "stripeDeleteFundsAvailable": "Unable to delete account. Funds are still available.",
-    "stripeDeleteGeneric": "Error deleting Stripe account",
-    "invalidDataFromApi": "Invalid data received from API",
-    "fetchingSecrets": "Error fetching secrets:",
-    "fetchingUserSecrets": "Error fetching user secrets and count:",
-    "missingSecretOrPaymentId": "Secret ID and Payment ID are required",
-    "noConversationIdReceived": "No conversation ID received",
-    "purchaseErrorDetails": "Error details:",
-    "fetchingPurchasedSecrets": "Error fetching purchased secrets:",
-    "sendingMessage": "Error sending message:",
-    "fetchingMessages": "Error fetching messages:",
-    "fetchingConversations": "Error fetching conversations:",
-    "shareLinkUnavailable": "Share link unavailable",
-    "sharing": "Error sharing:",
-    "imageUpload": "Error uploading image:",
-    "refreshingUnreadCounts": "Error refreshing unread counts:",
-    "markingAsRead": "Error marking as read",
-    "refreshingCounters": "Error refreshing counters:",
-    "fullError": "Full error:"
-  },
-  "logs": {
-    "secretCreationResponse": "Secret creation response:",
-    "stripeRefreshResponse": "Stripe refresh response:",
-    "attemptingPurchase": "Attempting to purchase secret:",
-    "messagesReceived": "Messages received:",
-    "userDataNull": "getUserConversations: userData is null, returning empty array",
-    "userDataNullSkippingUpdate": "refreshUnreadCounts: userData is null, skipping update",
-    "updatingCounters": "Updating counters (with local cache):",
-    "searchingSecret": "Searching for secret with ID:",
-    "responseReceived": "Response received:",
-    "soughtSecret": "Sought secret:"
-  },
-  "stripe": {
-    "configComplete": "Stripe account fully configured",
-    "configInProgress": "Stripe account configuration in progress",
-    "noAccount": "No Stripe account associated",
-    "unknownStatus": "Unknown status",
-    "configSuccessful": "Stripe account successfully configured",
-    "resetSuccess": "Stripe account successfully reset",
-    "deleteSuccess": "Stripe account successfully deleted"
-  },
-  "share": {
-    "messageIOS": "🔐 Discover my secret on Hushy!\n\n{{link}}",
-    "messageAndroid": "🔐 Discover my secret on Hushy!\n\n{{link}}\n\nDownload the app: https://play.google.com/store/apps/details?id=com.hushy",
-    "title": "Share a secret",
-    "subject": "A secret to share on Hushy",
-    "confidentialSecret": "Confidential secret 🔐",
-    "dialogTitle": "Share this confidential secret"
+    "errors": {
+      "axiosInitError": "Axios initialization error:",
+      "axiosNotInitialized": "Axios instance not initialized",
+      "secretCreation": "Secret creation error:",
+      "secretCreationGeneric": "Error creating secret",
+      "stripeRefresh": "Stripe refresh error:",
+      "stripeRefreshGeneric": "Error refreshing Stripe configuration",
+      "stripeReturn": "Stripe return error:",
+      "stripeReset": "Stripe account reset error:",
+      "stripeResetGeneric": "Error resetting Stripe account",
+      "stripeDelete": "Stripe account deletion error:",
+      "stripeDeleteFundsAvailable": "Unable to delete account. Funds are still available.",
+      "stripeDeleteGeneric": "Error deleting Stripe account",
+      "invalidDataFromApi": "Invalid data received from API",
+      "fetchingSecrets": "Error fetching secrets:",
+      "fetchingUserSecrets": "Error fetching user secrets and count:",
+      "missingSecretOrPaymentId": "Secret ID and Payment ID are required",
+      "noConversationIdReceived": "No conversation ID received",
+      "purchaseErrorDetails": "Error details:",
+      "fetchingPurchasedSecrets": "Error fetching purchased secrets:",
+      "sendingMessage": "Error sending message:",
+      "fetchingMessages": "Error fetching messages:",
+      "fetchingConversations": "Error fetching conversations:",
+      "shareLinkUnavailable": "Share link unavailable",
+      "sharing": "Error sharing:",
+      "imageUpload": "Error uploading image:",
+      "refreshingUnreadCounts": "Error refreshing unread counts:",
+      "markingAsRead": "Error marking as read",
+      "refreshingCounters": "Error refreshing counters:",
+      "fullError": "Full error:"
+    },
+    "logs": {
+      "secretCreationResponse": "Secret creation response:",
+      "stripeRefreshResponse": "Stripe refresh response:",
+      "attemptingPurchase": "Attempting to purchase secret:",
+      "messagesReceived": "Messages received:",
+      "userDataNull": "getUserConversations: userData is null, returning empty array",
+      "userDataNullSkippingUpdate": "refreshUnreadCounts: userData is null, skipping update",
+      "updatingCounters": "Updating counters (with local cache):",
+      "searchingSecret": "Searching for secret with ID:",
+      "responseReceived": "Response received:",
+      "soughtSecret": "Sought secret:"
+    },
+    "stripe": {
+      "configComplete": "Stripe account fully configured",
+      "configInProgress": "Stripe account configuration in progress",
+      "noAccount": "No Stripe account associated",
+      "unknownStatus": "Unknown status",
+      "configSuccessful": "Stripe account successfully configured",
+      "resetSuccess": "Stripe account successfully reset",
+      "deleteSuccess": "Stripe account successfully deleted"
+    },
+    "share": {
+      "messageIOS": "🔐 Discover my secret on Hushy!\n\n{{link}}",
+      "messageAndroid": "🔐 Discover my secret on Hushy!\n\n{{link}}\n\nDownload the app: https://play.google.com/store/apps/details?id=com.hushy",
+      "title": "Share a secret",
+      "subject": "A secret to share on Hushy",
+      "confidentialSecret": "Confidential secret 🔐",
+      "dialogTitle": "Share this confidential secret"
+    }
   }
-}
 
 }

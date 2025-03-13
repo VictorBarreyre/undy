@@ -3,7 +3,7 @@ import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInsta
 import { AuthContext } from './AuthContext';
 import { Platform, Share } from 'react-native';
 import i18n from 'i18next'; // Import direct de i18n
-import Geolocation from '@react-native-community/geolocation';
+import * as Location from 'expo-location';
 
 
 const CardDataContext = createContext();
@@ -34,6 +34,8 @@ export const CardDataProvider = ({ children }) => {
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const { userData } = useContext(AuthContext);
   const [markedAsReadConversations, setMarkedAsReadConversations] = useState({});
+  const [lastUpdateTime, setLastUpdateTime] = useState(null);
+
 
   useEffect(() => {
     const initAxios = async () => {
@@ -53,18 +55,52 @@ export const CardDataProvider = ({ children }) => {
     initAxios();
   }, [isLoggedIn]);
 
-  const handlePostSecret = async ({ selectedLabel, secretText, price, expiresIn = 7 }) => {
+  const getCurrentLocation = async () => {
+    try {
+      // Demander la permission
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        console.log(i18n.t('location.logs.permissionDenied'));
+        return null;
+      }
+      
+      // Obtenir la position
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced
+      });
+      
+      return {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude
+      };
+    } catch (error) {
+      console.error(i18n.t('location.errors.gettingPosition'), error);
+      return null;
+    }
+  };
+
+  const handlePostSecret = async ({ selectedLabel, secretText, price, expiresIn = 7, latitude, longitude }) => {
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     try {
-      const response = await instance.post('/api/secrets/createsecrets', {
+      // Inclure les coordonnées dans la requête si elles sont disponibles
+      const requestData = {
         label: selectedLabel,
         content: secretText,
         price: parseFloat(price),
         expiresIn
-      });
+      };
+      
+      // Ajouter les coordonnées seulement si elles sont définies
+      if (latitude !== undefined && longitude !== undefined) {
+        requestData.latitude = latitude;
+        requestData.longitude = longitude;
+      }
+      
+      const response = await instance.post('/api/secrets/createsecrets', requestData);
 
       console.log(i18n.t('cardData.logs.secretCreationResponse'), response.data);
 
@@ -446,7 +482,7 @@ export const CardDataProvider = ({ children }) => {
       const normalizedConversations = (response.data || []).map(conv => {
         // Création d'un objet conversation normalisé
         const normalizedConv = { ...conv };
-        
+
         // Obtenir l'ID utilisateur correctement
         const userIdStr = userData?._id?.toString() || '';
 
@@ -562,18 +598,18 @@ export const CardDataProvider = ({ children }) => {
 
     try {
       const conversations = await getUserConversations();
-      
+
       // Créer une map des compteurs non lus
       const countsMap = {};
       let total = 0;
-      
+
       conversations.forEach(conv => {
         // Si la conversation a été marquée comme lue localement, forcer à 0
         if (markedAsReadConversations[conv._id]) {
           countsMap[conv._id] = 0;
           return;
         }
-        
+
         // Sinon, utiliser la valeur de l'API
         let count = 0;
         if (typeof conv.unreadCount === 'number') {
@@ -584,20 +620,20 @@ export const CardDataProvider = ({ children }) => {
             ? (conv.unreadCount.get(userIdStr) || 0)
             : (conv.unreadCount?.[userIdStr] || 0);
         }
-        
+
         countsMap[conv._id] = count;
         total += count;
       });
-      
-      console.log(i18n.t('cardData.logs.updatingCounters'), { 
+
+      console.log(i18n.t('cardData.logs.updatingCounters'), {
         countsMap,
         total,
         markedAsRead: Object.keys(markedAsReadConversations)
       });
-      
+
       setUnreadCountsMap(countsMap);
       setTotalUnreadCount(total);
-      
+
       return { countsMap, total };
     } catch (error) {
       console.error(i18n.t('cardData.errors.refreshingUnreadCounts'), error);
@@ -607,25 +643,25 @@ export const CardDataProvider = ({ children }) => {
 
   const markConversationAsRead = async (conversationId, userToken) => {
     const instance = getAxiosInstance();
-    
+
     if (!conversationId) return;
-  
+
     try {
       // Marquer localement immédiatement
       setMarkedAsReadConversations(prev => ({
         ...prev,
         [conversationId]: true
       }));
-      
+
       // Mettre à jour les compteurs locaux immédiatement
       setUnreadCountsMap(prev => ({
         ...prev,
         [conversationId]: 0
       }));
-      
+
       // Recalculer le total immédiatement
       setTotalUnreadCount(prev => prev - (unreadCountsMap[conversationId] || 0));
-      
+
       // Appel API en arrière-plan
       if (userToken) {
         await instance.patch(
@@ -634,7 +670,7 @@ export const CardDataProvider = ({ children }) => {
           { headers: { Authorization: `Bearer ${userToken}` } }
         );
       }
-      
+
       return true;
     } catch (error) {
       console.error(i18n.t('cardData.errors.markingAsRead'), error);
@@ -648,10 +684,12 @@ export const CardDataProvider = ({ children }) => {
 
   useEffect(() => {
     if (isLoggedIn && userData) {
-      // Rafraîchissez les compteurs lorsque l'utilisateur se connecte
       const updateCounts = async () => {
         try {
-          await refreshUnreadCounts();
+          if (lastUpdateTime === null || Date.now() - lastUpdateTime > 30000) { 
+            await refreshUnreadCounts();
+            setLastUpdateTime(Date.now());
+          }
         } catch (error) {
           console.error(i18n.t('cardData.errors.refreshingCounters'), error);
         }
@@ -659,34 +697,24 @@ export const CardDataProvider = ({ children }) => {
       
       updateCounts();
     }
-  }, [isLoggedIn, userData]);
+  }, [isLoggedIn, userData, lastUpdateTime]);
 
   const fetchSecretsByLocation = async (radiusInKm = 5) => {
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
-    
+
     try {
-      // Configurer les options de géolocalisation
-      Geolocation.setRNConfiguration({
-        skipPermissionRequests: false,
-        authorizationLevel: 'whenInUse'
-      });
-      
       setIsLoadingData(true);
-      
-      // Obtenir la position actuelle
-      const position = await new Promise((resolve, reject) => {
-        Geolocation.getCurrentPosition(
-          pos => resolve(pos),
-          error => reject(error),
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-        );
+
+      // Utiliser la position actuelle pour récupérer les secrets à proximité
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced
       });
-      
+
       const { latitude, longitude } = position.coords;
-      
+
       // Appel à l'API avec les coordonnées
       const response = await instance.get('/api/secrets/nearby', {
         params: {
@@ -695,17 +723,19 @@ export const CardDataProvider = ({ children }) => {
           radius: radiusInKm
         }
       });
-      
+
       if (response.data && response.data.secrets) {
         setData(response.data.secrets);
         setLastFetchTime(Date.now());
         return response.data.secrets;
       } else {
         console.error(i18n.t('cardData.errors.invalidDataFromApi'));
+        setData([]);
         return [];
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des secrets à proximité:', error);
+      console.error(i18n.t('location.errors.fetchingNearbySecrets'), error);
+      setData([]);
       return [];
     } finally {
       setIsLoadingData(false);
@@ -741,7 +771,7 @@ export const CardDataProvider = ({ children }) => {
       setUnreadCountsMap,
       setTotalUnreadCount,
       fetchSecretsByLocation,
-
+      getCurrentLocation,
     }}>
       {children}
     </CardDataContext.Provider>
