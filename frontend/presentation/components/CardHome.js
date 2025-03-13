@@ -60,7 +60,7 @@ export default function CardHome({ cardData }) {
 
   const profilePictureUrl = safeCardData.user.profilePicture;
 
-  if (!data || data.length === 0) {
+  if (!cardData) {
     return <Text>{t('cardHome.noData')}</Text>;
   }
 

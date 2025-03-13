@@ -104,7 +104,8 @@ export default {
     "sourceTexts": {
       "everyone": "De tout le monde",
       "fromContacts": "De vos contacts",
-      "fromFollowing": "Des personnes que vous suivez"
+      "fromFollowing": "Des personnes que vous suivez",
+       "fromNearby": "Autour de vous"
     },
     "errors": {
       "contactsLoading": "Erreur lors du chargement des contacts:"
@@ -227,8 +228,8 @@ export default {
       "imageUploadFailed": "Échec de l'upload de l'image",
       "sendMessage": "Erreur lors de l'envoi du message:",
       "imageSelection": "Erreur lors de la sélection d'image:",
-       "shareError": "Erreur lors du partage",
-       "missingSecretData": "Données du secret manquantes"
+      "shareError": "Erreur lors du partage",
+      "missingSecretData": "Données du secret manquantes"
     },
     "messageFailed": "Échec",
     "retry": "Renvoyer",
@@ -288,11 +289,11 @@ export default {
     "dataSection": "Données",
     "logout": "Déconnexion",
     "enabled": "Activé",
-  "enabledFeminin": "Activée",
-  "enabledFemininePlural": "Activées",
-  "disabled": "Désactivé",
-  "disabledFeminin": "Désactivée",
-  "disabledFemininePlural": "Désactivées",
+    "enabledFeminin": "Activée",
+    "enabledFemininePlural": "Activées",
+    "disabled": "Désactivé",
+    "disabledFeminin": "Désactivée",
+    "disabledFemininePlural": "Désactivées",
     "notSpecified": "Non renseigné",
     "notConfigured": "Non configuré",
     "userDataLog": "Données utilisateur :",
@@ -635,19 +636,19 @@ export default {
     }
   },
   "permissions": {
-  "contactsNeededTitle": "Accès aux contacts requis",
-  "contactsNeededMessage": "Cette application a besoin d'accéder à vos contacts pour afficher leur contenu.",
-  "contactsSettingsMessage": "Veuillez activer l'accès aux contacts dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
-  "locationNeededTitle": "Accès à la position requis",
-  "locationNeededMessage": "Cette application a besoin d'accéder à votre position pour afficher du contenu près de vous.",
-  "locationSettingsMessage": "Veuillez activer l'accès à la position dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
-  "notificationsNeededTitle": "Accès aux notifications requis",
-  "notificationsNeededMessage": "Cette application a besoin de vous envoyer des notifications. Veuillez les activer dans les paramètres de votre appareil.",
-  "cancel": "Annuler",
-  "openSettings": "Ouvrir les Paramètres",
-  "allow": "Autoriser",
-  "ok": "OK",
-  "errorTitle": "Erreur de permission"
-}
+    "contactsNeededTitle": "Accès aux contacts requis",
+    "contactsNeededMessage": "Cette application a besoin d'accéder à vos contacts pour afficher leur contenu.",
+    "contactsSettingsMessage": "Veuillez activer l'accès aux contacts dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
+    "locationNeededTitle": "Accès à la position requis",
+    "locationNeededMessage": "Cette application a besoin d'accéder à votre position pour afficher du contenu près de vous.",
+    "locationSettingsMessage": "Veuillez activer l'accès à la position dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
+    "notificationsNeededTitle": "Accès aux notifications requis",
+    "notificationsNeededMessage": "Cette application a besoin de vous envoyer des notifications. Veuillez les activer dans les paramètres de votre appareil.",
+    "cancel": "Annuler",
+    "openSettings": "Ouvrir les Paramètres",
+    "allow": "Autoriser",
+    "ok": "OK",
+    "errorTitle": "Erreur de permission"
+  }
 
 }

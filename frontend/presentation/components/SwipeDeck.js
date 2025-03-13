@@ -174,7 +174,9 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   };
 
   const renderCards = () => {
-    if (filteredData.length === 0) return null;
+    if (filteredData.length === 0) {
+      return null;  // Ceci sera géré par la condition qui suit plus bas
+    }
 
     const cardsToRender = Math.min(5, filteredData.length);
 
@@ -217,7 +219,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   };
 
 
-  if (hasAttemptedRefresh && filteredData.length === 0) {
+  if (filteredData.length === 0) {
     return (
       <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
         <Text style={styles.h3} textAlign="center">
