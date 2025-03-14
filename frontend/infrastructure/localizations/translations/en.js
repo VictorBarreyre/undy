@@ -118,6 +118,8 @@ export default {
 
   },
 
+  
+
   "location": {
     "alerts": {
       "welcome": {
@@ -145,19 +147,18 @@ export default {
       "permissionDenied": "Location permission denied"
     }
   },
-
-
-
-  "swipeDeck": {
-    "noSecrets": "No secrets available",
-    "tryChangingFilters": "Try changing your filters",
-    "checkBackLater": "Check back later to discover new secrets",
-    "errors": {
-      "initialLoading": "Initial loading error:",
-      "purchase": "Error during purchase:",
-      "payment": "Payment error:"
-    }
-  },
+"swipeDeck": {
+  "noSecrets": "No secrets available",
+  "tryChangingFilters": "Try changing your filters",
+  "checkBackLater": "Check back later to discover new secrets",
+  "noContactsUsingApp": "None of your contacts are using Hushy yet",
+  "noSecretsNearby": "No secrets available nearby",
+  "errors": {
+    "initialLoading": "Initial loading error:",
+    "purchase": "Error during purchase:",
+    "payment": "Payment error:"
+  }
+},
   "addSecret": {
     "addHushy": "Add a hushy",
     "postedBy": "Posted by",

@@ -115,16 +115,18 @@ export default {
       "selectedType": "Type sélectionné :"
     }
   },
-  "swipeDeck": {
-    "noSecrets": "Aucun secret disponible",
-    "tryChangingFilters": "Essayez de modifier vos filtres",
-    "checkBackLater": "Revenez plus tard pour découvrir de nouveaux secrets",
-    "errors": {
-      "initialLoading": "Erreur de chargement initial:",
-      "purchase": "Erreur lors de l'achat:",
-      "payment": "Erreur de paiement:"
-    }
-  },
+"swipeDeck": {
+  "noSecrets": "Aucun secret disponible",
+  "tryChangingFilters": "Essayez de modifier vos filtres",
+  "checkBackLater": "Revenez plus tard pour découvrir de nouveaux secrets",
+  "noContactsUsingApp": "Aucun de vos contacts n'utilise encore Hushy",
+  "noSecretsNearby": "Aucun secret disponible autour de vous",
+  "errors": {
+    "initialLoading": "Erreur de chargement initial:",
+    "purchase": "Erreur lors de l'achat:",
+    "payment": "Erreur de paiement:"
+  }
+},
   "addSecret": {
     "addHushy": "Ajouter un hushy",
     "postedBy": "Posté par",
