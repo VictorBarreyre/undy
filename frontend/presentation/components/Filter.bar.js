@@ -14,11 +14,11 @@ import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location';
 import Contacts from 'react-native-contacts';
 
-const FilterBar = ({ onFilterChange, onTypeChange }) => {
+const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
   const { t } = useTranslation();
-  const { data } = useCardData();
+  const { data, fetchUnpurchasedSecrets, fetchSecretsByLocation } = useCardData();
   const { getContacts, userData } = useContext(AuthContext);
-  const [activeButton, setActiveButton] = useState(t('filter.all'));
+  // Utiliser activeButton passé par le parent au lieu d'un état local
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredResults, setFilteredResults] = useState([]);
@@ -31,6 +31,11 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
   const labels = [...new Set(data.map((card) => card.label?.trim()).filter(Boolean))];
 
+  // Effet pour synchroniser avec activeButton du parent
+  useEffect(() => {
+    console.log(`FilterBar: activeButton mis à jour: ${activeButton}`);
+  }, [activeButton]);
+
   const handleCheckboxChange = (value) => {
     const updatedFilters = selectedFilters.includes(value)
       ? selectedFilters.filter((filter) => filter !== value)
@@ -40,7 +45,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
     onFilterChange(updatedFilters);
   };
 
-  // Nouvelle fonction pour vérifier les permissions de contacts
+  // Fonction pour vérifier les permissions de contacts
   const checkContactsPermission = async () => {
     try {
       let permissionStatus;
@@ -60,7 +65,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
     }
   };
 
-  // Nouvelle fonction pour vérifier les permissions de localisation
+  // Fonction pour vérifier les permissions de localisation
   const checkLocationPermission = async () => {
     try {
       const { status } = await Location.getForegroundPermissionsAsync();
@@ -130,6 +135,7 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   // Actions à effectuer lorsque la permission de contacts est accordée
   const handleContactsPermissionSuccess = async () => {
     try {
+      console.log("Permission de contacts accordée, chargement...");
       // Charger les contacts
       const contacts = await getContacts();
       setContactsData(contacts);
@@ -141,9 +147,9 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
         setShowInviteModal(true);
       }
       
-      // Activer le filtre
-      setActiveButton(t('filter.contacts'));
+      // Notifier le parent du changement de type (pas besoin de manipuler activeButton ici)
       onTypeChange(t('filter.contacts'));
+      console.log("Notification de changement vers contacts envoyée au parent");
     } catch (error) {
       console.error('Erreur lors du chargement des contacts:', error);
       Alert.alert(
@@ -155,10 +161,20 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   };
 
   // Actions à effectuer lorsque la permission de localisation est accordée
-  const handleLocationPermissionSuccess = () => {
-    // Activer le filtre
-    setActiveButton(t('filter.aroundMe'));
-    onTypeChange(t('filter.aroundMe'));
+  const handleLocationPermissionSuccess = async () => {
+    try {
+      console.log("Permission de localisation accordée");
+      // Notifier le parent du changement de type
+      onTypeChange(t('filter.aroundMe'));
+      console.log("Notification de changement vers aroundMe envoyée au parent");
+    } catch (error) {
+      console.error('Erreur lors de la gestion de la permission de localisation:', error);
+      Alert.alert(
+        t('permissions.errorTitle'),
+        t('permissions.locationError'),
+        [{ text: t('permissions.ok') }]
+      );
+    }
   };
 
   // Alerte pour informer l'utilisateur que l'accès aux contacts est nécessaire
@@ -199,6 +215,13 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
 
   // Fonction pour gérer le clic sur un bouton de type
   const handleButtonClickType = async (buttonName) => {
+    console.log(`Clic sur le bouton: ${buttonName}`);
+    
+    if (buttonName === activeButton) {
+      console.log("Ce filtre est déjà actif, aucune action");
+      return; // Éviter les actions répétées si le bouton est déjà actif
+    }
+    
     if (buttonName === t('filter.contacts')) {
       // Vérifier si la permission est déjà accordée
       const hasPermission = await checkContactsPermission();
@@ -222,9 +245,9 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
       }
     } 
     else {
-      // Pour les autres boutons, simplement changer l'état actif
-      setActiveButton(buttonName);
+      // Pour les autres boutons, simplement notifier le parent
       onTypeChange(buttonName);
+      console.log(`Notification de changement vers ${buttonName} envoyée au parent`);
     }
   };
 
@@ -251,16 +274,17 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
   ];
 
   return (
-    <Box width="100%" paddingTop={1} paddingBottom={2} marginLeft={8}>
-      <View style={{ flexDirection: 'row', width: '100%' }}>
+    <Box width="100%" paddingTop={1} paddingBottom={2} >
+      <View style={{ flexDirection: 'row', width: '100%'}}>
         <View style={styles.containerFilter}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollContainer}>
+          <ScrollView paddingLeft={6} horizontal showsHorizontalScrollIndicator={false} style={styles.scrollContainer}>
             {buttonTypes.map((type) => {
               if (type === t('filter.categories')) {
                 return (
                   <Button
                     key={type}
-                    marginRight={16}
+                    marginRight={4}
+                    marginLeft={3}
                     variant="secondary"
                     style={[
                       activeButton === type ? styles.activeButton : styles.inactiveButton,
@@ -293,7 +317,8 @@ const FilterBar = ({ onFilterChange, onTypeChange }) => {
               return (
                 <Pressable
                   key={type}
-                  marginRight={12}
+                  marginRight={4}
+                  marginLeft={12}
                   onPress={() => handleButtonClickType(type)}
                 >
                   {activeButton === type ? (

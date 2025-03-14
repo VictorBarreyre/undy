@@ -24,6 +24,7 @@ const Home = ({ navigation }) => {
   const [isContactsLoaded, setIsContactsLoaded] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [locationRadius, setLocationRadius] = useState(5); // km
+  const [isDataLoading, setIsDataLoading] = useState(false); // Ajout pour suivre l'état de chargement
 
   const typeTexts = {
     [t('filter.all')]: t('home.sourceTexts.everyone'),
@@ -110,6 +111,9 @@ const Home = ({ navigation }) => {
     };
     
     checkFirstLaunch();
+
+    // Chargement initial des données
+    fetchUnpurchasedSecrets(true);
   }, []);
 
   // Effet pour charger les contacts
@@ -117,6 +121,7 @@ const Home = ({ navigation }) => {
     const loadContacts = async () => {
       if (activeType === t('filter.contacts') && !isContactsLoaded) {
         try {
+          console.log("Chargement des contacts...");
           const contacts = await getContacts();
           if (contacts && contacts.length > 0) {
             const phoneNumbers = contacts.flatMap(contact =>
@@ -124,6 +129,7 @@ const Home = ({ navigation }) => {
             );
             setUserContacts(phoneNumbers);
             setIsContactsLoaded(true);
+            console.log(`${phoneNumbers.length} contacts chargés`);
           }
         } catch (error) {
           console.error(t('home.errors.contactsLoading'), error);
@@ -137,15 +143,25 @@ const Home = ({ navigation }) => {
   const handleFilterChange = (filters) => {
     setSelectedFilters(filters);
     console.log(t('home.logs.selectedFilters'), filters);
+    // Ajouté pour recharger les données lorsque les filtres catégories changent
+    if (activeType === t('filter.all')) {
+      fetchUnpurchasedSecrets(true);
+    }
   };
 
   const handleTypeChange = async (type) => {
-    // Cette fonction est maintenant simplifiée car la logique de permissions
-    // est gérée directement dans le FilterBar
+    console.log(`Changement de type de filtre: ${type} (était: ${activeType})`);
+    
+    if (type === activeType) {
+      console.log("Même type de filtre - aucune action nécessaire");
+      return; // Éviter les doubles appels si le même filtre est sélectionné
+    }
+    
     setActiveType(type);
+    setIsDataLoading(true); // Indique que le chargement des données est en cours
   
-    if (type === t('filter.aroundMe')) {
-      try {
+    try {
+      if (type === t('filter.aroundMe')) {
         // Vérifier si la permission est déjà accordée
         const hasPermission = await checkLocationPermission();
         
@@ -153,20 +169,28 @@ const Home = ({ navigation }) => {
           // Si permission accordée, récupérer la localisation actuelle
           const location = await Location.getCurrentPositionAsync({});
           setUserLocation(location);
+          console.log("Localisation obtenue:", location.coords.latitude, location.coords.longitude);
           
           // Charger les secrets à proximité
           await fetchSecretsByLocation(locationRadius);
+          console.log(`Secrets chargés dans un rayon de ${locationRadius}km`);
         } else {
-     
-          console.log("Permission non accordée, mais FilterBar aurait dû gérer cela");
+          console.log("Permission de localisation non accordée");
         }
-      } catch (error) {
-        setFilteredData([]);
-        console.error('Erreur de localisation:', error);
+      } else if (type === t('filter.contacts')) {
+        // Le chargement des contacts est géré par le useEffect ci-dessus
+        // On charge les données mais elles seront filtrées par SwipeDeck
+        await fetchUnpurchasedSecrets(true);
+        console.log("Données chargées pour filtre contacts");
+      } else {
+        // Pour les autres types de filtres (all, following)
+        await fetchUnpurchasedSecrets(true);
+        console.log(`Données chargées pour filtre ${type}`);
       }
-    } else {
-      // Pour les autres types de filtres
-      await fetchUnpurchasedSecrets(true);
+    } catch (error) {
+      console.error('Erreur lors du changement de filtre:', error);
+    } finally {
+      setIsDataLoading(false); // Chargement terminé
     }
   };
 
@@ -175,7 +199,8 @@ const Home = ({ navigation }) => {
       <Box alignItems='center' alignContent='center' paddingTop={2} width="100%">
         <FilterBar 
           onTypeChange={handleTypeChange} 
-          onFilterChange={handleFilterChange} 
+          onFilterChange={handleFilterChange}
+          activeButton={activeType} // Passe le bouton actif au composant FilterBar
         />
       </Box>
       <VStack style={styles.containerHome} space={4}>
@@ -199,6 +224,7 @@ const Home = ({ navigation }) => {
             activeType={activeType}
             userContacts={userContacts}
             userLocation={userLocation}
+            isDataLoading={isDataLoading}
             style={styles.swipper}
           />
         </Box>

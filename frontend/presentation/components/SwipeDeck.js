@@ -10,14 +10,12 @@ import TypewriterSpinner from './TypewriterSpinner';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 
-
-
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 300;
 
-const SwipeDeck = ({ selectedFilters = [] }) => {
+const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocation, isDataLoading }) => {
   const { data, purchaseAndAccessConversation, isLoadingData, fetchUnpurchasedSecrets } = useCardData();
   const { isLoggedIn } = useContext(AuthContext);
   const position = useRef(new Animated.ValueXY()).current;
@@ -26,12 +24,12 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
   const [currentItem, setCurrentItem] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasAttemptedRefresh, setHasAttemptedRefresh] = useState(false);
-  const didInitialFetch = useRef(false);
   const navigation = useNavigation();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const { t } = useTranslation();
-
+  const prevActiveType = useRef(activeType);
+  const prevSelectedFilters = useRef(selectedFilters);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -41,13 +39,14 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     }, [])
   );
 
+  // Effet pour charger les données initiales quand l'utilisateur est connecté
   useEffect(() => {
     const loadInitialData = async () => {
-      // Toujours charger les données dès que l'utilisateur est connecté
-      if (isLoggedIn) {
+      if (isLoggedIn && data.length === 0 && !isDataLoading) {
         try {
           setIsLoading(true);
           await fetchUnpurchasedSecrets();
+          console.log("Chargement initial des données effectué");
         } catch (error) {
           console.error(t('swipeDeck.errors.initialLoading'), error);
         } finally {
@@ -57,48 +56,77 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     };
   
     loadInitialData();
-  }, [isLoggedIn]); // Retirez data.length des dépendances
+  }, [isLoggedIn, data.length, isDataLoading]);
 
+  // Effet pour détecter les changements de filtres et réinitialiser l'index
+  useEffect(() => {
+    const hasActiveTypeChanged = prevActiveType.current !== activeType;
+    const hasSelectedFiltersChanged = JSON.stringify(prevSelectedFilters.current) !== JSON.stringify(selectedFilters);
+    
+    if (hasActiveTypeChanged || hasSelectedFiltersChanged) {
+      console.log(`Filtres changés - activeType: ${activeType}, selectedFilters: ${selectedFilters.join(', ')}`);
+      console.log(`Réinitialisation de l'index (était: ${currentIndex})`);
+      setCurrentIndex(0); // Réinitialiser l'index lorsque les filtres changent
+      position.setValue({ x: 0, y: 0 }); // Réinitialiser la position
+      
+      // Mettre à jour les références
+      prevActiveType.current = activeType;
+      prevSelectedFilters.current = [...selectedFilters];
+    }
+  }, [activeType, selectedFilters]);
 
+  // Effet pour filtrer les données en fonction des filtres et des types
   useEffect(() => {
     const processData = () => {
-      const filtered = selectedFilters.length > 0
-        ? data.filter((card) => selectedFilters.includes(card.label))
-        : data;
+      console.log(`Traitement des données: ${data.length} éléments, activeType: ${activeType}`);
+      
+      let filtered = [...data]; // Créer une copie pour éviter de modifier l'original
+
+      // D'abord appliquer les filtres de catégorie
+      if (selectedFilters.length > 0) {
+        filtered = filtered.filter((card) => {
+          return card.label && selectedFilters.includes(card.label);
+        });
+        console.log(`Après filtre par catégorie: ${filtered.length} éléments`);
+      }
+
+      // Puis appliquer les filtres par type
+      if (activeType === t('filter.contacts') && userContacts && userContacts.length > 0) {
+        filtered = filtered.filter((card) => {
+          // S'assurer que les numéros de téléphone sont dans un format standard pour la comparaison
+          if (!card.user || !card.user.phoneNumber) return false;
+          const cardPhoneNumber = card.user.phoneNumber.replace(/\D/g, '');
+          return userContacts.includes(cardPhoneNumber);
+        });
+        console.log(`Après filtre contacts: ${filtered.length} éléments`);
+      } else if (activeType === t('filter.aroundMe') && userLocation) {
+        // Les données devraient déjà être filtrées par localisation via l'API
+        console.log(`Données de localisation: ${filtered.length} éléments proches`);
+      }
 
       setFilteredData(filtered);
       if (filtered.length > 0) {
+        // Utiliser 0 comme index après un changement de filtre
         const actualIndex = currentIndex % filtered.length;
         setCurrentItem(filtered[actualIndex]);
+        console.log(`Élément courant défini: ${filtered[actualIndex]?.label || 'Sans étiquette'}`);
+      } else {
+        setCurrentItem(null);
+        console.log("Aucun élément disponible après filtrage");
       }
       setIsLoading(false);
     };
 
+    // Effectuer le filtrage uniquement si les données sont disponibles et pas en cours de chargement
     if (!isLoadingData && data.length > 0) {
       processData();
+    } else if (!isLoadingData && data.length === 0) {
+      setFilteredData([]);
+      setCurrentItem(null);
+      setIsLoading(false);
+      console.log("Aucune donnée disponible");
     }
-  }, [selectedFilters, data, currentIndex, isLoadingData]);
-
-  // Deuxième useEffect
-  useEffect(() => {
-    const attemptInitialFetch = async () => {
-      if (!didInitialFetch.current && !isLoadingData && filteredData.length === 0) {
-        try {
-          setIsLoading(true);
-          await fetchUnpurchasedSecrets();
-          didInitialFetch.current = true;
-        } catch (error) {
-          console.error(t('swipeDeck.errors.initialLoading'), error);
-        } finally {
-          setIsLoading(false);
-          setHasAttemptedRefresh(true);
-        }
-      }
-    };
-
-    attemptInitialFetch();
-  }, [isLoadingData, filteredData.length]);
-
+  }, [selectedFilters, data, currentIndex, isLoadingData, activeType, userContacts, userLocation, t]);
 
   const getCardHeight = () => {
     switch (true) {
@@ -145,8 +173,8 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       if (filteredData.length > 0) {
         const nextItemIndex = newIndex % filteredData.length;
         setCurrentItem(filteredData[nextItemIndex]);
+        console.log(`Passage à l'élément suivant, index: ${nextItemIndex}`);
       }
-
 
       return newIndex;
     });
@@ -181,11 +209,10 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     const cardsToRender = Math.min(5, filteredData.length);
 
     return [...Array(cardsToRender)].map((_, i) => {
-      // Calcul inverse pour garder la dernière carte en premier
+      // Calcul de l'index actuel
       const cardIndex = (currentIndex + i) % filteredData.length;
       const card = filteredData[cardIndex];
       const isCurrentCard = i === 0;
-
 
       if (!card) return null;
 
@@ -196,15 +223,13 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
         : [
           styles.cardStyle,
           {
-            marginTop: 0, // Annule la marge par défa
+            marginTop: 0, // Annule la marge par défaut
             position: 'absolute',
             height: cardHeight,
-            top: 25 * i, // Changement clé : utiliser i directement
+            top: 25 * i, // Utiliser i directement pour l'échelonnage
             transform: [{ scale: 1 - (0.05 * i) }],
           }
         ];
-
-
 
       return (
         <Animated.View
@@ -218,7 +243,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
     }).reverse();
   };
 
-
+  // Afficher un message si aucune donnée n'est disponible après filtrage
   if (filteredData.length === 0) {
     return (
       <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
@@ -228,17 +253,31 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
         <Text style={styles.caption} textAlign="center" color="#94A3B8" mt={2}>
           {selectedFilters.length > 0
               ? t('swipeDeck.tryChangingFilters')
-            : t('swipeDeck.checkBackLater')}
+            : activeType === t('filter.contacts')
+              ? t('swipeDeck.noContactsUsingApp')
+              : activeType === t('filter.aroundMe')
+                ? t('swipeDeck.noSecretsNearby') 
+                : t('swipeDeck.checkBackLater')}
         </Text>
       </VStack>
     );
+  }
+
+  // Afficher un indicateur de chargement pendant le chargement des données
+  if (isLoading || isDataLoading) {
+    return <TypewriterSpinner text="hushy..." />;
+  }
+
+  // Afficher un indicateur pendant la transition (achat)
+  if (isTransitioning) {
+    return <TypewriterSpinner text="hushy..." />;
   }
 
   const handlePaymentSuccess = async (paymentId) => {
     try {
       setIsTransitioning(true); // Démarre la transition
 
-      // Fade out animation
+      // Animation de fondu
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 300,
@@ -246,7 +285,7 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       }).start(async () => {
         setIsLoading(true);
 
-        // Une fois le fade out terminé, on procède à l'achat
+        // Une fois le fondu terminé, procéder à l'achat
         const { conversationId, conversation } = await purchaseAndAccessConversation(
           currentItem._id,
           currentItem.price,
@@ -268,43 +307,33 @@ const SwipeDeck = ({ selectedFilters = [] }) => {
       console.error(t('swipeDeck.errors.purchase'), error);
       setIsLoading(false);
       setIsTransitioning(false);
-      // Reset de l'animation en cas d'erreur
+      // Réinitialiser l'animation en cas d'erreur
       fadeAnim.setValue(1);
     }
   };
 
-  if (isLoading) {
-    return <TypewriterSpinner text="hushy..." />;
-  }
-
-  if (isTransitioning) {
-    return <TypewriterSpinner text="hushy..." />;
-  }
-
-
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-
       <VStack style={styles.container}>
         <Box style={styles.cardContainer}>
           {renderCards()}
         </Box>
-        <PaymentSheet
-          secret={currentItem}
-          onPaymentSuccess={handlePaymentSuccess}
-          onPaymentError={(error) => {
-            console.error(t('swipeDeck.errors.payment'), error);
-            setIsLoading(false);
-            setIsTransitioning(false);
-            fadeAnim.setValue(1);
-          }}
-        />
+        {currentItem && (
+          <PaymentSheet
+            secret={currentItem}
+            onPaymentSuccess={handlePaymentSuccess}
+            onPaymentError={(error) => {
+              console.error(t('swipeDeck.errors.payment'), error);
+              setIsLoading(false);
+              setIsTransitioning(false);
+              fadeAnim.setValue(1);
+            }}
+          />
+        )}
       </VStack>
     </Animated.View>
-
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -312,22 +341,20 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     width: '100%',
-    justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
+    justifyContent: 'space-between',
     alignItems: 'center',
-
   },
 
   cardContainer: {
-    position: 'relative', // Conserve les cartes avec position absolue à l'intérieur
+    position: 'relative',
     width: '100%',
-    height: '92%', // modifie la taille des cartes pour espace ac cta à jour avec cardStyle
-
+    height: '92%',
   },
 
   cardStyle: {
     width: SCREEN_WIDTH * 0.9,
     position: 'absolute',
-    height: SCREEN_HEIGHT * 0.45, //    justifyContent: 'center',
+    height: SCREEN_HEIGHT * 0.45,
     alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 10,
@@ -336,7 +363,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 5,
-
   },
 
   h3: {
@@ -352,8 +378,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontFamily: 'SF-Pro-Display-Medium',
   },
-
-
 });
 
 export default SwipeDeck;
