@@ -12,7 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import InviteContactsModal from './InviteContactsModals';
 import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location';
-import Contacts from 'react-native-contacts';
+import * as ExpoContacts from 'expo-contacts';
 
 const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
   const { t } = useTranslation();
@@ -48,17 +48,8 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
   // Fonction pour vérifier les permissions de contacts
   const checkContactsPermission = async () => {
     try {
-      let permissionStatus;
-      
-      if (Platform.OS === 'ios') {
-        permissionStatus = await Contacts.checkPermission();
-        return permissionStatus === 'authorized';
-      } else {
-        permissionStatus = await PermissionsAndroid.check(
-          PermissionsAndroid.PERMISSIONS.READ_CONTACTS
-        );
-        return permissionStatus === PermissionsAndroid.RESULTS.GRANTED;
-      }
+      const { status } = await ExpoContacts.getPermissionsAsync();
+      return status === 'granted';
     } catch (error) {
       console.error('Erreur lors de la vérification des permissions de contacts:', error);
       return false;
@@ -84,31 +75,12 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
   // Fonction pour demander la permission de contacts et gérer le résultat
   const requestContactsPermission = async () => {
     try {
-      let permissionStatus;
+      const { status } = await ExpoContacts.requestPermissionsAsync();
       
-      if (Platform.OS === 'ios') {
-        permissionStatus = await Contacts.requestPermission();
-        
-        if (permissionStatus === 'authorized') {
-          handleContactsPermissionSuccess();
-        } else {
-          showContactsPermissionAlert();
-        }
+      if (status === 'granted') {
+        handleContactsPermissionSuccess();
       } else {
-        permissionStatus = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
-          {
-            title: t('permissions.contactsTitle'),
-            message: t('permissions.contactsMessage'),
-            buttonPositive: t('permissions.allow')
-          }
-        );
-        
-        if (permissionStatus === PermissionsAndroid.RESULTS.GRANTED) {
-          handleContactsPermissionSuccess();
-        } else {
-          showContactsPermissionAlert();
-        }
+        showContactsPermissionAlert();
       }
     } catch (error) {
       console.error('Erreur lors de la demande de permission de contacts:', error);

@@ -2,14 +2,12 @@ import React, { createContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 import { DeviceEventEmitter, Alert, PermissionsAndroid, Platform, Linking } from 'react-native';
-import Contacts from 'react-native-contacts';
+import * as ExpoContacts from 'expo-contacts'; // Remplacé par expo-contacts
 import { useCardData } from './CardDataContexte';
 import i18n from 'i18next'; // Importation directe de i18n
 import ContactsPermissionModal from '../../presentation/components/ContactsPermissionsModal';
 import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location'; // Ajoutez cette ligne
-
-
 
 
 export const AuthContext = createContext();
@@ -304,8 +302,8 @@ export const AuthProvider = ({ children }) => {
         
         // Tenter de récupérer les contacts pour vérifier l'accès
         try {
-          const contacts = await Contacts.getAll();
-          console.log(`[AuthProvider] ${contacts.length} contacts récupérés`);
+          const { data } = await ExpoContacts.getContactsAsync();
+          console.log(`[AuthProvider] ${data.length} contacts récupérés`);
           
           // Passer isContactsUpdate=true pour éviter la récursion
           const result = await updateUserData({ contacts: true }, true);
@@ -351,22 +349,11 @@ export const AuthProvider = ({ children }) => {
     
     try {
       // Vérifier d'abord si la permission est accordée au niveau système
-      let permissionCheck;
+      const { status } = await ExpoContacts.getPermissionsAsync();
       
-      if (Platform.OS === 'ios') {
-        permissionCheck = await Contacts.checkPermission();
-      } else {
-        permissionCheck = await PermissionsAndroid.check(
-          PermissionsAndroid.PERMISSIONS.READ_CONTACTS
-        );
-      }
+      console.log(`[AuthProvider] Permission check: ${status}`);
       
-      console.log(`[AuthProvider] Permission check: ${permissionCheck}`);
-      
-      const isGranted = 
-        permissionCheck === 'authorized' || 
-        permissionCheck === PermissionsAndroid.RESULTS.GRANTED ||
-        permissionCheck === true;
+      const isGranted = status === 'granted';
         
       if (!isGranted) {
         console.log('[AuthProvider] Permission non accordée, retour sans contacts');
@@ -374,7 +361,15 @@ export const AuthProvider = ({ children }) => {
       }
       
       // Récupérer les contacts du téléphone
-      const phoneContacts = await Contacts.getAll();
+      const { data: phoneContacts } = await ExpoContacts.getContactsAsync({
+        fields: [
+          ExpoContacts.Fields.ID,
+          ExpoContacts.Fields.Name,
+          ExpoContacts.Fields.FirstName,
+          ExpoContacts.Fields.LastName,
+          ExpoContacts.Fields.PhoneNumbers
+        ]
+      });
       console.log(`[AuthProvider] ${phoneContacts.length} contacts récupérés`);
       
       if (!phoneContacts || phoneContacts.length === 0) {
@@ -388,8 +383,8 @@ export const AuthProvider = ({ children }) => {
         }
         
         return contact.phoneNumbers.map(phone => ({
-          contactId: contact.recordID,
-          contactName: `${contact.givenName || ''} ${contact.familyName || ''}`.trim() || 'Sans nom',
+          contactId: contact.id, // Modifié: ExpoContacts utilise id au lieu de recordID
+          contactName: contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'Sans nom',
           phoneNumber: phone.number.replace(/\D/g, '')
         }));
       }).filter(entry => entry.phoneNumber && entry.phoneNumber.length > 0);
@@ -615,89 +610,49 @@ export const AuthProvider = ({ children }) => {
     console.log('[AuthProvider] Vérification et demande de permission contacts');
     
     try {
-      let permissionStatus;
+      // Vérifier la permission avec expo-contacts
+      const { status: permissionStatus } = await ExpoContacts.getPermissionsAsync();
+      console.log(`[AuthProvider] Permission status: ${permissionStatus}`);
       
-      if (Platform.OS === 'ios') {
-        permissionStatus = await Contacts.checkPermission();
-        console.log(`[AuthProvider] iOS permission status: ${permissionStatus}`);
-        
-        switch (permissionStatus) {
-          case 'authorized':
-            return { granted: true, needsSettings: false };
-          
-          default:
-            return new Promise((resolve) => {
-              Alert.alert(
-                t('permissions.contactsNeededTitle'),
-                t('permissions.contactsNeededMessage'),
-                [
-                  { 
-                    text: t('permissions.cancel'), 
-                    style: "cancel",
-                    onPress: () => resolve({ granted: false, needsSettings: false })
-                  },
-                  { 
-                    text: t('permissions.openSettings'), 
-                    onPress: () => {
-                      Linking.openSettings();
-                      resolve({ granted: false, needsSettings: true });
-                    }
-                  }
-                ]
-              );
-            });
-        }
-      } else {
-        // Pour Android
-        permissionStatus = await PermissionsAndroid.check(
-          PermissionsAndroid.PERMISSIONS.READ_CONTACTS
-        );
-        
-        if (permissionStatus === PermissionsAndroid.RESULTS.GRANTED) {
-          return { granted: true, needsSettings: false };
-        }
-        
-        // Si la permission n'est pas accordée, on demande d'abord via la boîte de dialogue système
-        const requestResult = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
-          {
-            title: t('permissions.contactsTitle'),
-            message: t('permissions.contactsMessage'),
-            buttonPositive: t('permissions.allow')
-          }
-        );
-        
-        if (requestResult === PermissionsAndroid.RESULTS.GRANTED) {
-          return { granted: true, needsSettings: false };
-        }
-        
-        // Si l'utilisateur a refusé, proposer d'aller dans les paramètres
-        return new Promise((resolve) => {
-          Alert.alert(
-            t('permissions.contactsNeededTitle'),
-            t('permissions.contactsNeededMessage'),
-            [
-              { 
-                text: t('permissions.cancel'), 
-                style: "cancel",
-                onPress: () => resolve({ granted: false, needsSettings: false })
-              },
-              { 
-                text: t('permissions.openSettings'), 
-                onPress: () => {
-                  Linking.openSettings();
-                  resolve({ granted: false, needsSettings: true });
-                }
-              }
-            ]
-          );
-        });
+      if (permissionStatus === 'granted') {
+        return { granted: true, needsSettings: false };
       }
+      
+      // Si la permission n'est pas accordée, demander via expo-contacts
+      const { status: requestStatus } = await ExpoContacts.requestPermissionsAsync();
+      console.log(`[AuthProvider] Request status: ${requestStatus}`);
+      
+      if (requestStatus === 'granted') {
+        return { granted: true, needsSettings: false };
+      }
+      
+      // Si l'utilisateur a refusé, proposer d'aller dans les paramètres
+      return new Promise((resolve) => {
+        Alert.alert(
+          t('permissions.contactsNeededTitle'),
+          t('permissions.contactsNeededMessage'),
+          [
+            { 
+              text: t('permissions.cancel'), 
+              style: "cancel",
+              onPress: () => resolve({ granted: false, needsSettings: false })
+            },
+            { 
+              text: t('permissions.openSettings'), 
+              onPress: () => {
+                Linking.openSettings();
+                resolve({ granted: false, needsSettings: true });
+              }
+            }
+          ]
+        );
+      });
     } catch (error) {
       console.error('[AuthProvider] Erreur lors de la vérification/demande de permission:', error);
       return { granted: false, needsSettings: false, error };
     }
   };
+  
 
   const handlePermissionModalClose = () => {
     setContactsPermissionModalVisible(false);
@@ -709,24 +664,9 @@ export const AuthProvider = ({ children }) => {
 
   const handleRequestPermission = async () => {
     try {
-      let permission;
-      
-      if (Platform.OS === 'ios') {
-        permission = await Contacts.requestPermission();
-      } else {
-        permission = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
-          {
-            title: "Permission de lecture des contacts",
-            message: "Cette application nécessite l'accès à vos contacts.",
-            buttonPositive: "Autoriser"
-          }
-        );
-      }
-      
-      const isGranted = 
-        permission === 'authorized' || 
-        permission === PermissionsAndroid.RESULTS.GRANTED;
+      // Utiliser expo-contacts pour demander la permission
+      const { status } = await ExpoContacts.requestPermissionsAsync();
+      const isGranted = status === 'granted';
       
       setContactsPermissionModalVisible(false);
       
@@ -770,26 +710,34 @@ export const AuthProvider = ({ children }) => {
 // Dans AuthContext.js
 const getContacts = async () => {
   try {
-    // Vérifier d'abord les permissions
-    const permissionStatus = await Contacts.checkPermission();
+    // Vérifier d'abord les permissions avec expo-contacts
+    const { status } = await ExpoContacts.getPermissionsAsync();
     
     // Si la permission n'est pas déjà accordée
-    if (permissionStatus !== 'authorized') {
-      // Au lieu de demander directement la permission (qui afficherait la boîte de dialogue système),
-      // utiliser notre fonction centralisée pour gérer la demande de manière élégante
+    if (status !== 'granted') {
+      // Utiliser notre fonction centralisée pour gérer la demande
       const permissionResult = await checkAndRequestContactsPermission();
       
-      // Si la permission n'a pas été accordée après notre flux personnalisé
+      // Si la permission n'a pas été accordée
       if (!permissionResult.granted) {
-        // Retourner un tableau vide au lieu d'essayer d'accéder aux contacts
         return [];
       }
     }
 
     // Ce code ne s'exécute que si la permission est déjà accordée ou vient d'être accordée
-    const contacts = await Contacts.getAll();
-    console.log('Contacts:', contacts);
-    return contacts;
+    const { data } = await ExpoContacts.getContactsAsync({
+      fields: [
+        ExpoContacts.Fields.ID,
+        ExpoContacts.Fields.Name,
+        ExpoContacts.Fields.FirstName,
+        ExpoContacts.Fields.LastName,
+        ExpoContacts.Fields.PhoneNumbers,
+        ExpoContacts.Fields.Emails,
+        ExpoContacts.Fields.Image
+      ]
+    });
+    console.log('Contacts:', data);
+    return data;
   } catch (error) {
     console.error(i18n.t('auth.errors.retrievingContacts'), error);
     return [];
@@ -799,14 +747,25 @@ const getContacts = async () => {
   // Fonction pour récupérer un contact par son ID
   const getContactById = async (contactId) => {
     try {
-      const contact = await Contacts.getContactById(contactId);
-      return contact;
+      const { data } = await ExpoContacts.getContactsAsync({
+        id: contactId,
+        fields: [
+          ExpoContacts.Fields.ID,
+          ExpoContacts.Fields.Name,
+          ExpoContacts.Fields.FirstName,
+          ExpoContacts.Fields.LastName,
+          ExpoContacts.Fields.PhoneNumbers,
+          ExpoContacts.Fields.Emails,
+          ExpoContacts.Fields.Image
+        ]
+      });
+      
+      return data[0] || null; // Retourner le premier contact s'il existe
     } catch (error) {
       console.error(i18n.t('auth.errors.retrievingContact'), error);
       return null;
     }
   };
-
 
 // Fonction pour vérifier l'état actuel de la permission
 const checkLocationPermission = async () => {

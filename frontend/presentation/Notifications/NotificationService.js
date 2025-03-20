@@ -2,6 +2,10 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform, Alert, Linking } from 'react-native';
 import i18n from 'i18next'; // Importez i18n directement pour accéder aux traductions
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const ALERT_SHOWN_SIMULATOR = 'notification_alert_shown_simulator';
+const ALERT_SHOWN_PERMISSION = 'notification_alert_shown_permission';
 
 class NotificationService {
     constructor() {
@@ -29,13 +33,25 @@ class NotificationService {
         }
     }
 
-    async checkPermissions() {
+    async checkPermissions(forceAlert = false) {
         if (!Device.isDevice) {
             if (__DEV__) {
                 console.log(i18n.t('notifications.logs.devModePermission'));
                 return true;
             }
-            Alert.alert(i18n.t('notifications.alerts.simulatorWarning'));
+            
+            // Vérifier si l'alerte a déjà été affichée pour simulateur
+            const alertShown = !forceAlert && await AsyncStorage.getItem(ALERT_SHOWN_SIMULATOR) === 'true';
+            if (!alertShown) {
+                Alert.alert(i18n.t('notifications.alerts.simulatorWarning'), null, [
+                    {
+                        text: "OK",
+                        onPress: async () => {
+                            await AsyncStorage.setItem(ALERT_SHOWN_SIMULATOR, 'true');
+                        }
+                    }
+                ]);
+            }
             return false;
         }
     
@@ -51,20 +67,30 @@ class NotificationService {
             console.log(i18n.t('notifications.logs.newStatus'), status);
     
             if (status !== 'granted') {
-                Alert.alert(
-                    i18n.t('notifications.alerts.disabled.title'),
-                    i18n.t('notifications.alerts.disabled.message'),
-                    [
-                        {
-                            text: i18n.t('notifications.alerts.disabled.no'),
-                            style: "cancel"
-                        },
-                        {
-                            text: i18n.t('notifications.alerts.disabled.openSettings'),
-                            onPress: () => Linking.openSettings()
-                        }
-                    ]
-                );
+                // Vérifier si l'alerte a déjà été affichée pour permissions
+                const alertShown = !forceAlert && await AsyncStorage.getItem(ALERT_SHOWN_PERMISSION) === 'true';
+                if (!alertShown) {
+                    Alert.alert(
+                        i18n.t('notifications.alerts.disabled.title'),
+                        i18n.t('notifications.alerts.disabled.message'),
+                        [
+                            {
+                                text: i18n.t('notifications.alerts.disabled.no'),
+                                style: "cancel",
+                                onPress: async () => {
+                                    await AsyncStorage.setItem(ALERT_SHOWN_PERMISSION, 'true');
+                                }
+                            },
+                            {
+                                text: i18n.t('notifications.alerts.disabled.openSettings'),
+                                onPress: async () => {
+                                    await AsyncStorage.setItem(ALERT_SHOWN_PERMISSION, 'true');
+                                    Linking.openSettings();
+                                }
+                            }
+                        ]
+                    );
+                }
                 return false;
             }
     
