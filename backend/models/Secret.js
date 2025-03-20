@@ -34,7 +34,7 @@ const SecretSchema = new mongoose.Schema({
     type: String,
     unique: true,
     sparse: true // Permet d'avoir des documents sans shareLink
-  }  ,
+  },
   location: {
     type: {
       type: String,
@@ -47,9 +47,12 @@ const SecretSchema = new mongoose.Schema({
     }
   }
 },
-  { timestamps: true });
+{ timestamps: true });
 
 // Nettoyage automatique
 SecretSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+// Ajouter l'index géospatial
+SecretSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('Secret', SecretSchema);
