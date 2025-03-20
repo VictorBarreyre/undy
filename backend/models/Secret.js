@@ -37,25 +37,29 @@ const SecretSchema = new mongoose.Schema({
   },
   location: {
     type: {
-        type: String,
-        enum: ['Point'],
-        default: 'Point'
+      type: String,
+      enum: ['Point'],
+      default: 'Point',
+      required: function() { 
+        return this.location && this.location.coordinates; 
+      }
     },
     coordinates: {
-        type: [Number],
-        validate: {
-            validator: function(v) {
-                return v.length === 2 && 
-                       v[0] >= -180 && v[0] <= 180 && 
-                       v[1] >= -90 && v[1] <= 90;
-            },
-            message: props => `Coordonnées invalides: ${props.value}`
+      type: [Number], 
+      validate: {
+        validator: function(v) {
+          return v.length === 2 && 
+                 v[0] >= -180 && v[0] <= 180 && // longitude 
+                 v[1] >= -90 && v[1] <= 90;     // latitude
         },
-        required: false  // Optionnel si la location n'est pas toujours requise
+        message: props => `Coordonnées invalides: ${props.value}`
+      },
+      required: function() { 
+        return this.location && this.location.type === 'Point'; 
+      }
     }
-}
-},
-{ timestamps: true });
+  }
+}, { timestamps: true });
 
 // Nettoyage automatique
 SecretSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

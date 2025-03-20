@@ -11,11 +11,18 @@ exports.createSecret = async (req, res) => {
     session.startTransaction();
 
     try {
-        const { label, content, price, expiresIn = 7, location, latitude, longitude } = req.body;
+        const { label, content, price, expiresIn = 7, location } = req.body;
 
         // Validation des champs requis
         if (!label || !content || price == null) {
-            return res.status(400).json({ message: 'Tous les champs sont requis.' });
+            return res.status(400).json({ 
+                message: 'Tous les champs sont requis.',
+                missingFields: {
+                    label: !label,
+                    content: !content,
+                    price: price == null
+                }
+            });
         }
 
         // Trouver l'utilisateur avec les champs Stripe
@@ -24,6 +31,7 @@ exports.createSecret = async (req, res) => {
             return res.status(404).json({ message: "Utilisateur introuvable." });
         }
 
+        // Configuration de base du secret
         const secretData = {
             label,
             content,
@@ -32,56 +40,39 @@ exports.createSecret = async (req, res) => {
             expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
             status: 'pending'
         };
-        
-        // Ajouter la location uniquement si les coordonnées sont valides
-        if (latitude && longitude) {
-            const lat = parseFloat(latitude);
-            const lng = parseFloat(longitude);
+
+        // Gestion détaillée de la localisation
+        if (location && location.type === 'Point' && location.coordinates) {
+            const [lng, lat] = location.coordinates;
             
-            if (!isNaN(lat) && !isNaN(lng)) {
+            // Validation géographique stricte
+            if (
+                Array.isArray(location.coordinates) && 
+                location.coordinates.length === 2 &&
+                typeof lng === 'number' && 
+                typeof lat === 'number' &&
+                lng >= -180 && lng <= 180 &&
+                lat >= -90 && lat <= 90
+            ) {
                 secretData.location = {
                     type: 'Point',
                     coordinates: [lng, lat]
                 };
+                console.log('Location validée:', secretData.location);
+            } else {
+                console.warn('Coordonnées géographiques invalides:', location.coordinates);
             }
-        } else if (location && location.type === 'Point' && location.coordinates) {
-            // Validation supplémentaire de l'objet location
-            secretData.location = location;
         }
-
-        if (location) {
-            // Validation stricte de l'objet location
-            if (!location.type || !location.coordinates) {
-              return res.status(400).json({ 
-                message: 'Objet location incomplet',
-                locationReceived: location 
-              });
-            }
-          
-            // Validation des coordonnées
-            if (!Array.isArray(location.coordinates) || 
-                location.coordinates.length !== 2 || 
-                location.coordinates.some(coord => typeof coord !== 'number')) {
-              return res.status(400).json({ 
-                message: 'Coordonnées invalides',
-                coordinates: location.coordinates 
-              });
-            }
-          
-            secretData.location = location;
-          }
 
         // Définir dynamiquement les URLs de retour
         const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
         const refreshUrl = `${baseReturnUrl}/stripe/refresh`;
         const returnUrl = `${baseReturnUrl}/stripe/return`;
 
-        console.log(baseReturnUrl)
-
-        // Si l'utilisateur n'a pas de compte Stripe, en créer un
-        if (!user.stripeAccountId) {
-            try {
-                // Créer le compte Stripe Connect
+        // Gestion du compte Stripe
+        const handleStripeAccount = async () => {
+            // Si l'utilisateur n'a pas de compte Stripe, en créer un
+            if (!user.stripeAccountId) {
                 const account = await stripe.accounts.create({
                     type: 'express',
                     country: 'FR',
@@ -97,7 +88,6 @@ exports.createSecret = async (req, res) => {
                     }
                 });
 
-                // Créer le lien d'onboarding
                 const accountLink = await stripe.accountLinks.create({
                     account: account.id,
                     refresh_url: refreshUrl,
@@ -105,117 +95,85 @@ exports.createSecret = async (req, res) => {
                     type: 'account_onboarding',
                 });
 
-                // Mettre à jour l'utilisateur avec les informations Stripe
                 user.stripeAccountId = account.id;
                 user.stripeAccountStatus = 'pending';
                 user.stripeOnboardingComplete = false;
                 user.lastStripeOnboardingUrl = accountLink.url;
                 await user.save({ session });
 
-                // Créer le secret
-                const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
-                const secret = await Secret.create([{
-                    label,
-                    content,
-                    price,
-                    user: req.user.id,
-                    expiresAt,
-                    status: 'pending' // Le secret est en attente de la configuration Stripe
-                }], { session });
-
-                const shareLink = `hushy://secret/${secret[0]._id}`;
-                await Secret.findByIdAndUpdate(secret[0]._id, { shareLink }, { session });
-
-
-                await session.commitTransaction();
-
-                // Retourner les informations nécessaires au frontend
-                return res.status(201).json({
-                    message: 'Secret créé. Configuration du compte de paiement requise.',
-                    secret: {
-                        ...secret[0]._doc,
-                        shareLink // Inclure le lien de partage dans la réponse
-                    },
-                    stripeOnboardingUrl: accountLink.url,
-                    stripeStatus: 'pending'
-                });
-            } catch (error) {
-                await session.abortTransaction();
-                console.error('Erreur création compte Stripe:', error);
-                return res.status(500).json({
-                    message: 'Erreur lors de la création du compte de paiement',
-                    error: error.message
-                });
+                return {
+                    requiresStripeSetup: true,
+                    accountLink
+                };
             }
-        }
 
-        // Vérifier si l'onboarding est complet pour les utilisateurs ayant déjà un compte Stripe
-        if (!user.stripeOnboardingComplete || user.stripeAccountStatus !== 'active') {
-            const accountLink = await stripe.accountLinks.create({
-                account: user.stripeAccountId,
-                refresh_url: refreshUrl,
-                return_url: returnUrl,
-                type: 'account_onboarding',
-            });
+            // Vérifier si l'onboarding est complet
+            if (!user.stripeOnboardingComplete || user.stripeAccountStatus !== 'active') {
+                const accountLink = await stripe.accountLinks.create({
+                    account: user.stripeAccountId,
+                    refresh_url: refreshUrl,
+                    return_url: returnUrl,
+                    type: 'account_onboarding',
+                });
 
-            // Créer le secret en statut pending
-            const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
+                return {
+                    requiresStripeSetup: true,
+                    accountLink
+                };
+            }
+
+            return { requiresStripeSetup: false };
+        };
+
+        // Créer le secret
+        const createSecretWithStatus = async (stripeStatus) => {
             const secret = await Secret.create([{
-                label,
-                content,
-                price,
-                user: req.user.id,
-                expiresAt,
-                status: 'pending'
+                ...secretData,
+                status: stripeStatus.requiresStripeSetup ? 'pending' : 'active'
             }], { session });
 
             const shareLink = `hushy://secret/${secret[0]._id}`;
             await Secret.findByIdAndUpdate(secret[0]._id, { shareLink }, { session });
 
-            await session.commitTransaction();
-
-            return res.status(201).json({
-                message: 'Secret créé. Veuillez compléter la configuration de votre compte.',
+            return {
                 secret: {
                     ...secret[0]._doc,
-                    shareLink // Inclure le lien de partage dans la réponse
+                    shareLink
                 },
-                stripeOnboardingUrl: accountLink.url,
-                stripeStatus: user.stripeAccountStatus
-            });
-        }
+                stripeStatus
+            };
+        };
 
-        // Si tout est configuré, créer le secret normalement
-        const expiresAt = new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000);
-        const secret = await Secret.create([{
-            label,
-            content,
-            price,
-            user: req.user.id,
-            expiresAt,
-            status: 'active'
-        }], { session });
-
-        const shareLink = `hushy://secret/${secret[0]._id}`;
-        await Secret.findByIdAndUpdate(secret[0]._id, { shareLink }, { session });
+        // Exécuter la logique de création de secret
+        const stripeStatus = await handleStripeAccount();
+        const result = await createSecretWithStatus(stripeStatus);
 
         await session.commitTransaction();
 
-        res.status(201).json({
-            message: 'Secret créé avec succès',
-            secret: {
-                ...secret[0]._doc,
-                shareLink // Inclure le lien de partage dans la réponse
-            },
-            stripeStatus: 'active'
-        });
+        // Préparer la réponse
+        const response = {
+            message: stripeStatus.requiresStripeSetup 
+                ? 'Secret créé. Configuration du compte de paiement requise.' 
+                : 'Secret créé avec succès',
+            ...result
+        };
+
+        if (stripeStatus.requiresStripeSetup && stripeStatus.accountLink) {
+            response.stripeOnboardingUrl = stripeStatus.accountLink.url;
+        }
+
+        return res.status(201).json(response);
 
     } catch (error) {
         await session.abortTransaction();
-        console.error('Erreur création secret:', error);
+        console.error('Erreur détaillée lors de la création du secret:', {
+            message: error.message,
+            stack: error.stack,
+            body: req.body
+        });
         res.status(500).json({
-            message: 'Erreur serveur.',
-            error: error.message
+            message: 'Erreur serveur lors de la création du secret',
+            details: error.message
         });
     } finally {
         session.endSession();
