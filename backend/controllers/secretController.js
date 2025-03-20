@@ -337,7 +337,7 @@ exports.getUnpurchasedSecrets = async (req, res) => {
             expiresAt: { $gt: new Date() } // Ne pas inclure les secrets expirés
         })
             .populate('user', 'name profilePicture')
-            .select('label content price createdAt expiresAt user purchasedBy')
+            .select('label content price createdAt expiresAt user purchasedBy location')
             .limit(limit * 1)
             .skip((page - 1) * limit)
             .sort({ createdAt: -1 }) // Les plus récents d'abord

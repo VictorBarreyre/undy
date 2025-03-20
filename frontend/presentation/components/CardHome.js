@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useDateFormatter } from '../../utils/dateFormatters';
 import LinearGradient from 'react-native-linear-gradient';// Ajustez le chemin selon votre structure
 
+
 export default function CardHome({ cardData }) {
   const { t } = useTranslation();
   const dateFormatter = useDateFormatter();
@@ -30,8 +31,27 @@ export default function CardHome({ cardData }) {
     content: cardData.content || '',
     label: cardData.label || '',
     expiresAt: cardData.expiresAt,
-    // autres propriétés nécessaires
+    location: cardData.location || null  // Ajoutez cette ligne
   };
+  
+  // Puis dans votre fonction formatLocation
+  const formatLocation = () => {
+    // Utilisez cardData au lieu de safeCardData
+    if (cardData.location?.coordinates) {
+      const [longitude, latitude] = cardData.location.coordinates;
+      
+      // Formater les coordonnées géographiques
+      const formattedLng = longitude.toFixed(4);
+      const formattedLat = latitude.toFixed(4);
+  
+      return `${formattedLat}°N, ${formattedLng}°E`;
+    }
+    return t('cardHome.locationNotShared');
+  };
+  
+  // Ajoutez des logs de débogage
+  console.log("Location dans cardData:", cardData.location);
+  console.log("Location dans safeCardData:", safeCardData.location);
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -153,6 +173,13 @@ export default function CardHome({ cardData }) {
             <Text color='#FF78B2' left={2} mt={1} style={styles.littleCaption}>
               {t('cardHome.expiresIn')} {timeLeft}
             </Text>
+
+            {cardData.location?.coordinates && (
+              <Text color='#94A3B8' left={2} mt={1} style={styles.littleCaption}>
+                {t('cardHome.postedFrom')}: {formatLocation()}
+              </Text>
+            )}
+
           </VStack>
           {/* Image alignée à droite */}
           <Image
