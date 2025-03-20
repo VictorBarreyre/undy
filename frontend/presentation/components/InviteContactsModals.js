@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Modal, View, Text, TouchableOpacity, FlatList, StyleSheet, Share, Alert } from 'react-native';
 import { Box, Button, VStack, HStack, Checkbox, Divider } from 'native-base';
 import { styles as globalStyles } from '../../infrastructure/theme/styles';
@@ -7,8 +7,9 @@ import { useTranslation } from 'react-i18next';
 
 const InviteContactsModal = ({ isVisible, onClose, contacts }) => {
   const { t } = useTranslation();
+  console.log("Contacts reçus dans InviteContactsModal:", contacts?.slice(0, 3)); // Afficher les 3 premiers seulement
   const [selectedContacts, setSelectedContacts] = useState([]);
-  
+
   const toggleContactSelection = (contactId) => {
     if (selectedContacts.includes(contactId)) {
       setSelectedContacts(prev => prev.filter(id => id !== contactId));
@@ -16,12 +17,23 @@ const InviteContactsModal = ({ isVisible, onClose, contacts }) => {
       setSelectedContacts(prev => [...prev, contactId]);
     }
   };
-  
+
+  const sortedContacts = useMemo(() => {
+    // Créer une copie pour ne pas modifier l'original
+    if (!contacts || contacts.length === 0) return [];
+    
+    return [...contacts].sort((a, b) => {
+      const nameA = (a.name || a.contactName || `${a.firstName || ''} ${a.lastName || ''}`.trim() || '').toLowerCase();
+      const nameB = (b.name || b.contactName || `${b.firstName || ''} ${b.lastName || ''}`.trim() || '').toLowerCase();
+      return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+    });
+  }, [contacts]);
+
   const inviteContacts = async () => {
     try {
       // Récupérer les contacts sélectionnés
       const contactsToInvite = contacts.filter(
-        contact => selectedContacts.includes(contact.contactId)
+        contact => selectedContacts.includes(contact.id || contact.contactId)
       );
       
       if (contactsToInvite.length === 0) {
@@ -46,7 +58,7 @@ const InviteContactsModal = ({ isVisible, onClose, contacts }) => {
       );
     }
   };
-  
+
   return (
     <Modal
       visible={isVisible}
@@ -61,21 +73,23 @@ const InviteContactsModal = ({ isVisible, onClose, contacts }) => {
             <Text style={globalStyles.caption}>
               {t('inviteContacts.noContactsUsingApp')}
             </Text>
-            
+
             <FlatList
-              data={contacts}
-              keyExtractor={item => item.contactId}
+              data={sortedContacts}
+              keyExtractor={item => item.id || item.contactId} // Utilise id ou contactId
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  onPress={() => toggleContactSelection(item.contactId)}
+                  onPress={() => toggleContactSelection(item.id || item.contactId)}
                   style={localStyles.contactItem}
                 >
                   <HStack space={3} alignItems="center" justifyContent="space-between">
-                    <Text style={globalStyles.h5}>{item.contactName}</Text>
+                    <Text style={globalStyles.h5}>
+                      {item.name || item.contactName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Sans nom'}
+                    </Text>
                     <Checkbox
-                      isChecked={selectedContacts.includes(item.contactId)}
-                      onChange={() => toggleContactSelection(item.contactId)}
-                      value={item.contactId}
+                      isChecked={selectedContacts.includes(item.id || item.contactId)}
+                      onChange={() => toggleContactSelection(item.id || item.contactId)}
+                      value={item.id || item.contactId}
                       colorScheme="pink"
                     />
                   </HStack>
@@ -84,16 +98,16 @@ const InviteContactsModal = ({ isVisible, onClose, contacts }) => {
               ItemSeparatorComponent={() => <Divider />}
               style={{ maxHeight: 300 }}
             />
-            
+
             <HStack space={2} justifyContent="center">
               <Button variant="ghost" onPress={onClose}>
                 <Text>{t('inviteContacts.cancel')}</Text>
               </Button>
-              
+
               <View style={localStyles.buttonContainer}>
                 {selectedContacts.length === 0 ? (
-                  <TouchableOpacity 
-                    disabled={true} 
+                  <TouchableOpacity
+                    disabled={true}
                     style={[localStyles.buttonWrapper, { opacity: 0.5 }]}
                   >
                     <LinearGradient
@@ -108,8 +122,8 @@ const InviteContactsModal = ({ isVisible, onClose, contacts }) => {
                     </LinearGradient>
                   </TouchableOpacity>
                 ) : (
-                  <TouchableOpacity 
-                    onPress={inviteContacts} 
+                  <TouchableOpacity
+                    onPress={inviteContacts}
                     style={localStyles.buttonWrapper}
                   >
                     <LinearGradient

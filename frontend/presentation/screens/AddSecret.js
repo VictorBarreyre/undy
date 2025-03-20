@@ -2,11 +2,13 @@ import React, { useState, useContext, useEffect } from 'react';
 import { Background } from '../../navigation/Background';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
-import { Box, Text, HStack, VStack, Image, Select, Input } from 'native-base';
+import { Box, Text, HStack, VStack, Image, Select, Input, Checkbox } from 'native-base';
 import { Alert, Pressable, Dimensions, StyleSheet, Linking, KeyboardAvoidingView, Keyboard, Platform, TouchableWithoutFeedback, FlatList } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
 import { FontAwesome } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import * as Location from 'expo-location';
+
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -19,7 +21,10 @@ const AddSecret = () => {
         handlePostSecret,
         handleStripeOnboardingRefresh,
         handleStripeReturn,
-        handleShareSecret
+        handleShareSecret,
+        checkLocationPermission,
+        requestLocationPermission,
+        getCurrentLocation
     } = useCardData();
 
     const [secretText, setSecretText] = useState('');
@@ -30,6 +35,12 @@ const AddSecret = () => {
     const [buttonMessage, setButtonMessage] = useState(t('addSecret.postSecret'));
     const [boxHeight, setBoxHeight] = useState('70%');
     const [keyboardVisible, setKeyboardVisible] = useState(false);
+    const [includeLocation, setIncludeLocation] = useState(false);
+    const [userLocation, setUserLocation] = useState(null);
+    const [locationAvailable, setLocationAvailable] = useState(false);
+    const [locationInfo, setLocationInfo] = useState(null);
+
+
 
     const MIN_PRICE = 3;
     const MIN_WORDS = 2;
@@ -42,6 +53,49 @@ const AddSecret = () => {
         const sellerMargin = 0.10;
         const priceNumber = Number(originalPrice);
         return (priceNumber * (1 - sellerMargin)).toFixed(2);
+    };
+
+    useEffect(() => {
+        const checkLocationAvailability = async () => {
+            try {
+                const { status } = await Location.getForegroundPermissionsAsync();
+                const isAvailable = status === 'granted';
+                setLocationAvailable(isAvailable);
+
+                // Si la localisation est disponible, cochez automatiquement la case
+                if (isAvailable) {
+                    setIncludeLocation(true);
+                    const position = await getCurrentLocation();
+                    if (position) {
+                        setUserLocation(position);
+                        await getLocationInfo(position.latitude, position.longitude);
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur lors de la vérification de la disponibilité de la localisation:', error);
+            }
+        };
+
+        checkLocationAvailability();
+    }, []);
+
+    const getLocationInfo = async (latitude, longitude) => {
+        try {
+            const geoData = await Location.reverseGeocodeAsync({
+                latitude,
+                longitude
+            });
+
+            if (geoData && geoData.length > 0) {
+                const { city, region, country } = geoData[0];
+                setLocationInfo({ city, region, country });
+                return { city, region, country };
+            }
+            return null;
+        } catch (error) {
+            console.error('Erreur lors de la géolocalisation inverse:', error);
+            return null;
+        }
     };
 
     // Keyboard event handlers
@@ -106,14 +160,52 @@ const AddSecret = () => {
         };
     }, [handleStripeReturn, t]);
 
+    const handleLocationToggle = async (isChecked) => {
+        setIncludeLocation(isChecked);
+
+        if (isChecked && !userLocation) {
+            try {
+                const position = await getCurrentLocation();
+                if (position) {
+                    setUserLocation(position);
+                    // Obtenir les informations de localisation
+                    await getLocationInfo(position.latitude, position.longitude);
+                } else {
+                    setIncludeLocation(false);
+                    Alert.alert(
+                        t('location.errors.title'),
+                        t('location.errors.gettingPosition'),
+                        [{ text: t('permissions.ok') }]
+                    );
+                }
+            } catch (error) {
+                console.error('Erreur lors de l\'obtention de la position:', error);
+                setIncludeLocation(false);
+                Alert.alert(
+                    t('location.errors.title'),
+                    t('location.errors.gettingPosition'),
+                    [{ text: t('permissions.ok') }]
+                );
+            }
+        }
+    };
+
     const handlePress = async () => {
         try {
-            const result = await handlePostSecret({
+            const secretData = {
                 selectedLabel,
                 secretText,
                 price,
                 expiresIn
-            });
+            };
+
+            // Ajouter les coordonnées si l'option est activée et qu'on a une position
+            if (includeLocation && userLocation) {
+                secretData.latitude = userLocation.latitude;
+                secretData.longitude = userLocation.longitude;
+            }
+
+            const result = await handlePostSecret(secretData);
 
             if (result.requiresStripeSetup) {
                 Alert.alert(
@@ -252,21 +344,34 @@ const AddSecret = () => {
                                         {/* Reste du composant inchangé */}
                                         <VStack backgroundColor="white" height={'100%'} alignItems="center" justifyContent="space-between" alignContent='center' padding={4} space={2}>
                                             {/* Contenu existant */}
-                                            <HStack alignItems="center" justifyContent="space-between" width="97%">
-                                                <Box flex={1} mr={4} ml={2}>
-                                                    <Text style={styles.h5}>
-                                                        {t('addSecret.postedBy')} {userData?.name || t('addSecret.noDescriptionAvailable')}
-                                                    </Text>
-                                                </Box>
-                                                <Image
-                                                    src={userData?.profilePicture}
-                                                    alt={`${userData?.name || 'User'}'s profile picture`}
-                                                    width={45}
-                                                    height={45}
-                                                    borderRadius="full"
-                                                />
-                                            </HStack>
 
+                                            <VStack space={1}>
+                                                <HStack ml={2} mt={2} width="95%" alignItems="center" justifyContent="space-between">
+                                                    <Text style={styles.caption}>
+                                                        {t('location.shareLocation.title')}
+                                                    </Text>
+                                                    <Checkbox
+                                                        value="includeLocation"
+                                                        isChecked={includeLocation}
+                                                        onChange={handleLocationToggle}
+                                                        isDisabled={!locationAvailable}
+                                                        colorScheme="pink"
+                                                        _checked={{
+                                                            bg: '#FF78B2',
+                                                            borderColor: '#FF78B2',
+                                                            _icon: { color: 'white' },
+                                                        }}
+                                                    />
+                                                </HStack>
+
+                                                {includeLocation && userLocation && (
+                                                    <Text ml={2} style={[styles.littleCaption]} color="#94A3B8" textAlign="left" width="95%" mt={1}>
+                                                        {locationInfo ?
+                                                            `${locationInfo.city || ''} ${locationInfo.region ? `, ${locationInfo.region}` : ''} ${locationInfo.country ? `, ${locationInfo.country}` : ''}` :
+                                                            t('location.shareLocation.enabled')}
+                                                    </Text>
+                                                )}
+                                            </VStack>
                                             <Box ml={2} width="95%">
                                                 <Input
                                                     value={secretText}
@@ -442,7 +547,7 @@ const AddSecret = () => {
                                     ) : null}
 
                                     <Pressable
-                                        display={keyboardVisible ? 'none' : 'initial' }
+                                        display={keyboardVisible ? 'none' : 'initial'}
                                         marginTop={price ? 0 : 7}
                                         onPress={handlePress}
                                         disabled={!secretPostAvailable}
@@ -466,7 +571,7 @@ const AddSecret = () => {
                                         </HStack>
                                     </Pressable>
                                 </VStack>
-                                
+
                             </Box>
                         }
                     />

@@ -118,9 +118,16 @@ export default {
 
   },
 
-  
 
   "location": {
+    "shareLocation": {
+      "title": "Share location with this secret",
+      "enabled": "Your location will be included",
+      "disabled": "Your location will not be shared"
+    },
+    "errors": {
+      "title": "Location Error"
+    },
     "alerts": {
       "welcome": {
         "title": "Location Access",

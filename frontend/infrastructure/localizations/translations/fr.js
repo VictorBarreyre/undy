@@ -464,6 +464,14 @@ export default {
   },
 
   "location": {
+    "shareLocation": {
+      "title": "Partager ma position avec ce secret",
+      "enabled": "Votre position sera incluse",
+      "disabled": "Votre position ne sera pas partagée"
+    },
+    "errors": {
+      "title": "Erreur de localisation"
+    },
   "alerts": {
     "welcome": {
       "title": "Accès à la localisation",

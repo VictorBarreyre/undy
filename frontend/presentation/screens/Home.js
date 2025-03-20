@@ -83,36 +83,8 @@ const Home = ({ navigation }) => {
     );
   };
 
-  // Effet pour la première vérification de localisation
   useEffect(() => {
-    const checkFirstLaunch = async () => {
-      const isFirstLaunch = await AsyncStorage.getItem('isFirstLaunch') === null;
-      
-      if (isFirstLaunch) {
-        await AsyncStorage.setItem('isFirstLaunch', 'false');
-        
-        Alert.alert(
-          t('location.alerts.welcome.title'),
-          t('location.alerts.welcome.message'),
-          [
-            {
-              text: t('location.alerts.welcome.no'),
-              style: 'cancel'
-            },
-            {
-              text: t('location.alerts.welcome.yes'),
-              onPress: async () => {
-                await requestLocationPermission();
-              }
-            }
-          ]
-        );
-      }
-    };
-    
-    checkFirstLaunch();
-
-    // Chargement initial des données
+    // Chargement initial des données uniquement
     fetchUnpurchasedSecrets(true);
   }, []);
 
