@@ -368,6 +368,7 @@ const AddSecret = () => {
                                                         onChange={handleLocationToggle}
                                                         isDisabled={!locationAvailable}
                                                         colorScheme="pink"
+                                                        aria-label={t('location.shareLocation.accessibility')}
                                                         _checked={{
                                                             bg: '#FF78B2',
                                                             borderColor: '#FF78B2',

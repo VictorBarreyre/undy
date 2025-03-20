@@ -88,18 +88,18 @@ export const CardDataProvider = ({ children }) => {
     try {
       // Convertir explicitement price en nombre
       const numericPrice = parseFloat(secretData.price);
-
+      
       // Préparer les données de base de la requête
-      const payload = {
+      const payload = {  // Renommez cette variable en payload pour éviter la confusion
         label: secretData.selectedLabel,
         content: secretData.secretText,
         price: numericPrice,
         expiresIn: secretData.expiresIn
       };
-
+      
       // Transférer directement l'objet location s'il existe
       if (secretData.location) {
-        payload.location = secretData.location;
+        payload.location = secretData.location;  // Utilisez payload au lieu de requestData
         console.log('Sending location object:', payload.location);
       }
       // Pour compatibilité avec le backend qui attend aussi latitude/longitude
@@ -107,14 +107,14 @@ export const CardDataProvider = ({ children }) => {
         payload.latitude = parseFloat(secretData.latitude);
         payload.longitude = parseFloat(secretData.longitude);
       }
-
+      
       // Log des données avant envoi
       console.log('Données envoyées à l\'API:', payload);
-
-      const response = await instance.post('/api/secrets/createsecrets', requestData);
-
+      
+      const response = await instance.post('/api/secrets/createsecrets', payload);
+      
       console.log(i18n.t('cardData.logs.secretCreationResponse'), response.data);
-
+  
       // Le reste de votre code reste identique
       if (response.data.stripeOnboardingUrl) {
         return {
@@ -126,7 +126,7 @@ export const CardDataProvider = ({ children }) => {
           message: response.data.message
         };
       }
-
+  
       return {
         success: true,
         requiresStripeSetup: false,
@@ -139,6 +139,7 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
+  
   const handleStripeOnboardingRefresh = async () => {
     const instance = getAxiosInstance();
     if (!instance) {

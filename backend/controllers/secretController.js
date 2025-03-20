@@ -11,7 +11,7 @@ exports.createSecret = async (req, res) => {
     session.startTransaction();
 
     try {
-        const { label, content, price, expiresIn = 7, latitude, longitude } = req.body;
+        const { label, content, price, expiresIn = 7, location, latitude, longitude } = req.body;
 
         // Validation des champs requis
         if (!label || !content || price == null) {
@@ -29,6 +29,7 @@ exports.createSecret = async (req, res) => {
             label,
             content,
             price,
+            
             user: req.user.id,
             expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
             status: 'pending'
