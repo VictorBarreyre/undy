@@ -201,8 +201,20 @@ const AddSecret = () => {
 
             // Ajouter les coordonnées si l'option est activée et qu'on a une position
             if (includeLocation && userLocation) {
-                secretData.latitude = userLocation.latitude;
-                secretData.longitude = userLocation.longitude;
+                const lat = parseFloat(userLocation.latitude);
+                const lng = parseFloat(userLocation.longitude);
+                
+                // Pour le débogage
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    secretData.location = {
+                        type: 'Point',
+                        coordinates: [lng, lat]  // longitude d'abord, puis latitude
+                    };
+                    
+                    console.log('Location object:', secretData.location);
+                } else {
+                    console.error('Coordonnées invalides:', userLocation);
+                }
             }
 
             const result = await handlePostSecret(secretData);

@@ -829,6 +829,34 @@ useEffect(() => {
 }, [userData]);
   
 
+const getCurrentLocation = async () => {
+  try {
+    // Vérifier si la permission est déjà accordée
+    const hasPermission = await checkLocationPermission();
+    
+    if (!hasPermission) {
+      // Demander la permission
+      const result = await requestLocationPermission();
+      if (!result.granted) {
+        return null;
+      }
+    }
+    
+    // Obtenir la position
+    const location = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
+    
+    return {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude
+    };
+  } catch (error) {
+    console.error('Erreur lors de l\'obtention de la position:', error);
+    return null;
+  }
+};
+
 
   return (
     <AuthContext.Provider
@@ -854,7 +882,8 @@ useEffect(() => {
         getContactsWithAppStatus,
         requestLocationPermission,
         checkLocationPermission,
-        locationEnabled
+        locationEnabled,
+        getCurrentLocation
       }}
     >
       {children}

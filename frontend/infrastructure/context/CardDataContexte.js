@@ -59,17 +59,17 @@ export const CardDataProvider = ({ children }) => {
     try {
       // Demander la permission
       const { status } = await Location.requestForegroundPermissionsAsync();
-      
+
       if (status !== 'granted') {
         console.log(i18n.t('location.logs.permissionDenied'));
         return null;
       }
-      
+
       // Obtenir la position
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced
       });
-      
+
       return {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude
@@ -80,26 +80,37 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
-  const handlePostSecret = async ({ selectedLabel, secretText, price, expiresIn = 7, latitude, longitude }) => {
+  const handlePostSecret = async (secretData) => {
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     try {
-      // Inclure les coordonnées dans la requête si elles sont disponibles
-      const requestData = {
-        label: selectedLabel,
-        content: secretText,
-        price: parseFloat(price),
-        expiresIn
+      // Convertir explicitement price en nombre
+      const numericPrice = parseFloat(secretData.price);
+
+      // Préparer les données de base de la requête
+      const payload = {
+        label: secretData.selectedLabel,
+        content: secretData.secretText,
+        price: numericPrice,
+        expiresIn: secretData.expiresIn
       };
-      
-      // Ajouter les coordonnées seulement si elles sont définies
-      if (latitude !== undefined && longitude !== undefined) {
-        requestData.latitude = latitude;
-        requestData.longitude = longitude;
+
+      // Transférer directement l'objet location s'il existe
+      if (secretData.location) {
+        payload.location = secretData.location;
+        console.log('Sending location object:', payload.location);
       }
-      
+      // Pour compatibilité avec le backend qui attend aussi latitude/longitude
+      else if (secretData.latitude && secretData.longitude) {
+        payload.latitude = parseFloat(secretData.latitude);
+        payload.longitude = parseFloat(secretData.longitude);
+      }
+
+      // Log des données avant envoi
+      console.log('Données envoyées à l\'API:', payload);
+
       const response = await instance.post('/api/secrets/createsecrets', requestData);
 
       console.log(i18n.t('cardData.logs.secretCreationResponse'), response.data);
@@ -686,7 +697,7 @@ export const CardDataProvider = ({ children }) => {
     if (isLoggedIn && userData) {
       const updateCounts = async () => {
         try {
-          if (lastUpdateTime === null || Date.now() - lastUpdateTime > 30000) { 
+          if (lastUpdateTime === null || Date.now() - lastUpdateTime > 30000) {
             await refreshUnreadCounts();
             setLastUpdateTime(Date.now());
           }
@@ -694,7 +705,7 @@ export const CardDataProvider = ({ children }) => {
           console.error(i18n.t('cardData.errors.refreshingCounters'), error);
         }
       };
-      
+
       updateCounts();
     }
   }, [isLoggedIn, userData, lastUpdateTime]);

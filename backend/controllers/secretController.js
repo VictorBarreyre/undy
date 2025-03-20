@@ -34,12 +34,25 @@ exports.createSecret = async (req, res) => {
             status: 'pending'
         };
 
-        if (latitude && longitude) {
-            secretData.location = {
-              type: 'Point',
-              coordinates: [parseFloat(longitude), parseFloat(latitude)]
-            };
-          }
+        if (location && location.type === 'Point' && Array.isArray(location.coordinates)) {
+            secretData.location = location;
+            console.log('Using provided location object:', location);
+        } 
+        // Sinon, créer l'objet location à partir de latitude/longitude
+        else if (latitude && longitude) {
+            const lat = parseFloat(latitude);
+            const lng = parseFloat(longitude);
+            
+            if (!isNaN(lat) && !isNaN(lng)) {
+                secretData.location = {
+                    type: 'Point',
+                    coordinates: [lng, lat]
+                };
+                console.log('Created location from coordinates:', secretData.location);
+            } else {
+                console.warn('Invalid coordinates received:', { latitude, longitude });
+            }
+        }
 
         // Définir dynamiquement les URLs de retour
         const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
