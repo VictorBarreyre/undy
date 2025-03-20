@@ -377,6 +377,9 @@ export default {
   },
 
   "cardHome": {
+    "postedFrom": "à",
+  "unknownLocation": "Lieu inconnu",
+  "locationError": "Localisation non disponible",
     "postedBy": "Posté par {{name}}",
     "expiresIn": "Expire dans",
     "noData": "Aucune donnée disponible",

@@ -11,6 +11,8 @@ import ReactNativeHapticFeedback from "react-native-haptic-feedback";
 import { useTranslation } from 'react-i18next';
 import { useDateFormatter } from '../../utils/dateFormatters';
 import LinearGradient from 'react-native-linear-gradient';// Ajustez le chemin selon votre structure
+import * as Location from 'expo-location';
+
 
 
 export default function CardHome({ cardData }) {
@@ -20,6 +22,8 @@ export default function CardHome({ cardData }) {
   const [isSingleLine, setIsSingleLine] = useState(true);
   const [textHeight, setTextHeight] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
+  const [locationName, setLocationName] = useState(null);
+
 
   // États pour le bouton de partage
   const [isSharing, setIsSharing] = useState(false);
@@ -49,6 +53,37 @@ export default function CardHome({ cardData }) {
     return t('cardHome.locationNotShared');
   };
   
+  useEffect(() => {
+    const fetchLocationName = async () => {
+      if (cardData.location?.coordinates) {
+        try {
+          const [longitude, latitude] = cardData.location.coordinates;
+          const reverseGeocode = await Location.reverseGeocodeAsync({ 
+            latitude, 
+            longitude 
+          });
+
+          if (reverseGeocode && reverseGeocode.length > 0) {
+            const { city, region, country } = reverseGeocode[0];
+            
+            // Construire le nom de localisation
+            const locationParts = [
+              city || region || t('cardHome.unknownLocation'),
+              country
+            ].filter(Boolean);
+
+            setLocationName(locationParts.join(', '));
+          }
+        } catch (error) {
+          console.error('Erreur de géolocalisation inverse:', error);
+          setLocationName(t('cardHome.locationError'));
+        }
+      }
+    };
+
+    fetchLocationName();
+  }, [cardData.location]);
+
   // Ajoutez des logs de débogage
   console.log("Location dans cardData:", cardData.location);
   console.log("Location dans safeCardData:", safeCardData.location);
@@ -170,15 +205,16 @@ export default function CardHome({ cardData }) {
             <Text left={2} style={styles.caption}>
               {t('cardHome.postedBy', { name: safeCardData.user.name || t('cardHome.anonymous') })}
             </Text>
-            <Text color='#FF78B2' left={2} mt={1} style={styles.littleCaption}>
-              {t('cardHome.expiresIn')} {timeLeft}
-            </Text>
 
             {cardData.location?.coordinates && (
               <Text color='#94A3B8' left={2} mt={1} style={styles.littleCaption}>
-                {t('cardHome.postedFrom')}: {formatLocation()}
+                {t('cardHome.postedFrom')} {locationName}
               </Text>
             )}
+            
+            <Text color='#FF78B2' left={2} mt={1} style={styles.littleCaption}>
+              {t('cardHome.expiresIn')} {timeLeft}
+            </Text>
 
           </VStack>
           {/* Image alignée à droite */}

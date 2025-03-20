@@ -118,7 +118,6 @@ export default {
 
   },
 
-
   "location": {
     "shareLocation": {
       "title": "Share location with this secret",
@@ -414,6 +413,9 @@ export default {
   },
 
   "cardHome": {
+    "postedFrom": "at",
+  "unknownLocation": "Unknown location",
+  "locationError": "Location not available",
     "postedBy": "Posted by {{name}}",
     "expiresIn": "Expires in",
     "noData": "No data available",
