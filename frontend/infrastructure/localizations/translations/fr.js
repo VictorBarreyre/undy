@@ -356,7 +356,10 @@ export default {
       "stripeResetErrorLog": "Erreur de réinitialisation du compte Stripe:",
       "stripeResetError": "Erreur lors de la réinitialisation du compte Stripe",
       "logoutErrorLog": "Erreur de déconnexion:",
-      "logoutError": "Une erreur est survenue lors de la déconnexion"
+      "logoutError": "Une erreur est survenue lors de la déconnexion",
+      "toggleLocationError": "Erreur lors de l'activation/désactivation de la localisation:",
+      "locationUpdateError": "Impossible de mettre à jour les préférences de localisation",
+
     }
   },
 
@@ -459,6 +462,34 @@ export default {
       "unableToSendInvitations": "Impossible d'envoyer les invitations"
     }
   },
+
+  "location": {
+  "alerts": {
+    "welcome": {
+      "title": "Accès à la localisation",
+      "message": "Hushy peut utiliser votre position pour vous montrer les secrets à proximité. Voulez-vous activer cette fonctionnalité ?",
+      "yes": "Oui, activer",
+      "no": "Non, merci"
+    },
+    "shareLocation": {
+      "title": "Partager votre position",
+      "message": "Souhaitez-vous partager votre position avec ce secret ? Cela permettra aux utilisateurs à proximité de le découvrir plus facilement.",
+      "yes": "Partager",
+      "no": "Ne pas partager"
+    }
+  },
+  "errors": {
+    "permissionError": "Erreur de permission de localisation:",
+    "locationError": "Erreur de localisation:",
+    "gettingPosition": "Erreur lors de l'obtention de la position:",
+    "fetchingNearbySecrets": "Erreur lors de la récupération des secrets à proximité:",
+    "permissionCheckError": "Erreur lors de la vérification des permissions de localisation:",
+    "accessUpdateError": "Erreur lors de la mise à jour de l'accès à la localisation:"
+  },
+  "logs": {
+    "permissionDenied": "Permission de localisation refusée"
+  }
+},
 
   "paymentSheet": {
     "loading": "Chargement...",
@@ -578,6 +609,7 @@ export default {
 
   "cardData": {
     "errors": {
+      "fullError": "Erreur complète:",
       "axiosInitError": "Erreur d'initialisation axios:",
       "axiosNotInitialized": "Instance Axios non initialisée",
       "secretCreation": "Erreur création secret:",
@@ -639,18 +671,20 @@ export default {
   },
   "permissions": {
     "contactsNeededTitle": "Accès aux contacts requis",
-    "contactsNeededMessage": "Cette application a besoin d'accéder à vos contacts pour afficher leur contenu.",
-    "contactsSettingsMessage": "Veuillez activer l'accès aux contacts dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
-    "locationNeededTitle": "Accès à la position requis",
-    "locationNeededMessage": "Cette application a besoin d'accéder à votre position pour afficher du contenu près de vous.",
-    "locationSettingsMessage": "Veuillez activer l'accès à la position dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
-    "notificationsNeededTitle": "Accès aux notifications requis",
-    "notificationsNeededMessage": "Cette application a besoin de vous envoyer des notifications. Veuillez les activer dans les paramètres de votre appareil.",
-    "cancel": "Annuler",
-    "openSettings": "Ouvrir les Paramètres",
-    "allow": "Autoriser",
-    "ok": "OK",
-    "errorTitle": "Erreur de permission"
+  "contactsNeededMessage": "Cette application a besoin d'accéder à vos contacts pour afficher leur contenu.",
+  "contactsSettingsMessage": "Veuillez activer l'accès aux contacts dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
+  "locationNeededTitle": "Accès à la position requis",
+  "locationNeededMessage": "Cette application a besoin d'accéder à votre position pour afficher du contenu près de vous.",
+  "locationSettingsMessage": "Veuillez activer l'accès à la position dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
+  "notificationsNeededTitle": "Accès aux notifications requis",
+  "notificationsNeededMessage": "Cette application a besoin de vous envoyer des notifications. Veuillez les activer dans les paramètres de votre appareil.",
+  "cancel": "Annuler",
+  "openSettings": "Ouvrir les Paramètres",
+  "allow": "Autoriser",
+  "ok": "OK",
+  "errorTitle": "Erreur de permission",
+  "contactsLoadError": "Erreur lors du chargement des contacts.",
+  "locationError": "Erreur de localisation."
   }
 
 }
