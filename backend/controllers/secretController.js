@@ -24,19 +24,30 @@ exports.createSecret = async (req, res) => {
             return res.status(404).json({ message: "Utilisateur introuvable." });
         }
 
-        // Configuration de base du secret
         const secretData = {
             label,
             content,
             price,
             user: req.user.id,
             expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
-            status: 'pending',
-            location: {
-                type: 'Point',
-                coordinates: [longitude, latitude] // Assurez-vous que ce tableau existe TOUJOURS
-              }
+            status: 'pending'
         };
+        
+        // Ajouter la location uniquement si les coordonnées sont valides
+        if (latitude && longitude) {
+            const lat = parseFloat(latitude);
+            const lng = parseFloat(longitude);
+            
+            if (!isNaN(lat) && !isNaN(lng)) {
+                secretData.location = {
+                    type: 'Point',
+                    coordinates: [lng, lat]
+                };
+            }
+        } else if (location && location.type === 'Point' && location.coordinates) {
+            // Validation supplémentaire de l'objet location
+            secretData.location = location;
+        }
 
         if (location) {
             // Validation stricte de l'objet location

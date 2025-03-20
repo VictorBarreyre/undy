@@ -198,22 +198,28 @@ const AddSecret = () => {
                 price,
                 expiresIn
             };
-
-            // Ajouter les coordonnées si l'option est activée et qu'on a une position
+    
             if (includeLocation && userLocation) {
                 const lat = parseFloat(userLocation.latitude);
                 const lng = parseFloat(userLocation.longitude);
                 
-                // Pour le débogage
-                if (!isNaN(lat) && !isNaN(lng)) {
+                // Validation géographique stricte
+                if (
+                    !isNaN(lat) && !isNaN(lng) && 
+                    lat >= -90 && lat <= 90 && 
+                    lng >= -180 && lng <= 180
+                ) {
                     secretData.location = {
                         type: 'Point',
-                        coordinates: [lng, lat]  // longitude d'abord, puis latitude
+                        coordinates: [lng, lat]
                     };
-                    
-                    console.log('Location object:', secretData.location);
                 } else {
-                    console.error('Coordonnées invalides:', userLocation);
+                    // Gérer les coordonnées invalides
+                    Alert.alert(
+                        t('location.errors.title'),
+                        t('location.errors.invalidCoordinates')
+                    );
+                    return;
                 }
             }
 

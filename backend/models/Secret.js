@@ -37,15 +37,23 @@ const SecretSchema = new mongoose.Schema({
   },
   location: {
     type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point'
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
     },
     coordinates: {
-      type: [Number], // [longitude, latitude]
-      required: false
+        type: [Number],
+        validate: {
+            validator: function(v) {
+                return v.length === 2 && 
+                       v[0] >= -180 && v[0] <= 180 && 
+                       v[1] >= -90 && v[1] <= 90;
+            },
+            message: props => `Coordonnées invalides: ${props.value}`
+        },
+        required: false  // Optionnel si la location n'est pas toujours requise
     }
-  }
+}
 },
 { timestamps: true });
 

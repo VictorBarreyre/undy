@@ -86,60 +86,105 @@ export const CardDataProvider = ({ children }) => {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     try {
+      // Validation des données d'entrée
+      if (!secretData.selectedLabel || !secretData.secretText) {
+        throw new Error(i18n.t('cardData.errors.missingRequiredFields'));
+      }
+
       // Convertir explicitement price en nombre
       const numericPrice = parseFloat(secretData.price);
       
+      // Validation du prix
+      if (isNaN(numericPrice) || numericPrice < 3) {
+        throw new Error(i18n.t('cardData.errors.invalidPrice'));
+      }
+      
       // Préparer les données de base de la requête
-      const payload = {  // Renommez cette variable en payload pour éviter la confusion
+      const payload = {
         label: secretData.selectedLabel,
         content: secretData.secretText,
         price: numericPrice,
-        expiresIn: secretData.expiresIn
+        expiresIn: secretData.expiresIn || 7 // Valeur par défaut de 7 jours
       };
       
-      // Transférer directement l'objet location s'il existe
+      // Validation et transfert de la location
       if (secretData.location) {
-        payload.location = secretData.location;  // Utilisez payload au lieu de requestData
-        console.log('Sending location object:', payload.location);
+        // Validation stricte de l'objet location
+        if (
+          secretData.location.type === 'Point' && 
+          Array.isArray(secretData.location.coordinates) && 
+          secretData.location.coordinates.length === 2 &&
+          secretData.location.coordinates.every(coord => 
+            typeof coord === 'number' && 
+            !isNaN(coord)
+          )
+        ) {
+          payload.location = secretData.location;
+          console.log('Sending location object:', payload.location);
+        } else {
+          console.warn('Invalid location object:', secretData.location);
+        }
       }
       // Pour compatibilité avec le backend qui attend aussi latitude/longitude
       else if (secretData.latitude && secretData.longitude) {
-        payload.latitude = parseFloat(secretData.latitude);
-        payload.longitude = parseFloat(secretData.longitude);
+        const lat = parseFloat(secretData.latitude);
+        const lng = parseFloat(secretData.longitude);
+        
+        // Validation géographique
+        if (
+          !isNaN(lat) && !isNaN(lng) && 
+          lat >= -90 && lat <= 90 && 
+          lng >= -180 && lng <= 180
+        ) {
+          payload.latitude = lng;    // Attention à l'ordre longitude, latitude
+          payload.longitude = lat;
+        } else {
+          console.warn('Invalid coordinates:', { lat, lng });
+        }
       }
       
-      // Log des données avant envoi
-      console.log('Données envoyées à l\'API:', payload);
+      // Log des données avant envoi avec plus de détails
+      console.log('Données envoyées à l\'API:', JSON.stringify(payload, null, 2));
       
       const response = await instance.post('/api/secrets/createsecrets', payload);
       
       console.log(i18n.t('cardData.logs.secretCreationResponse'), response.data);
-  
-      // Le reste de votre code reste identique
-      if (response.data.stripeOnboardingUrl) {
-        return {
-          success: true,
-          requiresStripeSetup: true,
-          secret: response.data.secret,
-          stripeOnboardingUrl: response.data.stripeOnboardingUrl,
-          stripeStatus: response.data.stripeStatus,
-          message: response.data.message
-        };
-      }
-  
-      return {
+
+      // Structuration de la réponse
+      const result = {
         success: true,
-        requiresStripeSetup: false,
+        requiresStripeSetup: !!response.data.stripeOnboardingUrl,
         secret: response.data.secret,
         message: response.data.message
       };
+
+      // Ajouter conditionnellement les informations Stripe si nécessaire
+      if (response.data.stripeOnboardingUrl) {
+        result.stripeOnboardingUrl = response.data.stripeOnboardingUrl;
+        result.stripeStatus = response.data.stripeStatus;
+      }
+
+      return result;
+
     } catch (error) {
-      console.error(i18n.t('cardData.errors.secretCreation'), error?.response?.data || error.message);
-      throw new Error(error?.response?.data?.message || i18n.t('cardData.errors.secretCreationGeneric'));
+      // Logging détaillé de l'erreur
+      console.error(
+        i18n.t('cardData.errors.secretCreation'), 
+        error?.response?.data || error.message,
+        error.stack
+      );
+
+      // Génération d'un message d'erreur plus informatif
+      const errorMessage = 
+        error?.response?.data?.message || 
+        error.message || 
+        i18n.t('cardData.errors.secretCreationGeneric');
+
+      throw new Error(errorMessage);
     }
   };
 
-  
+
   const handleStripeOnboardingRefresh = async () => {
     const instance = getAxiosInstance();
     if (!instance) {
