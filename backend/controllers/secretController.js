@@ -29,31 +29,36 @@ exports.createSecret = async (req, res) => {
             label,
             content,
             price,
-            
             user: req.user.id,
             expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
-            status: 'pending'
+            status: 'pending',
+            location: {
+                type: 'Point',
+                coordinates: [longitude, latitude] // Assurez-vous que ce tableau existe TOUJOURS
+              }
         };
 
-        if (location && location.type === 'Point' && Array.isArray(location.coordinates)) {
-            secretData.location = location;
-            console.log('Using provided location object:', location);
-        } 
-        // Sinon, créer l'objet location à partir de latitude/longitude
-        else if (latitude && longitude) {
-            const lat = parseFloat(latitude);
-            const lng = parseFloat(longitude);
-            
-            if (!isNaN(lat) && !isNaN(lng)) {
-                secretData.location = {
-                    type: 'Point',
-                    coordinates: [lng, lat]
-                };
-                console.log('Created location from coordinates:', secretData.location);
-            } else {
-                console.warn('Invalid coordinates received:', { latitude, longitude });
+        if (location) {
+            // Validation stricte de l'objet location
+            if (!location.type || !location.coordinates) {
+              return res.status(400).json({ 
+                message: 'Objet location incomplet',
+                locationReceived: location 
+              });
             }
-        }
+          
+            // Validation des coordonnées
+            if (!Array.isArray(location.coordinates) || 
+                location.coordinates.length !== 2 || 
+                location.coordinates.some(coord => typeof coord !== 'number')) {
+              return res.status(400).json({ 
+                message: 'Coordonnées invalides',
+                coordinates: location.coordinates 
+              });
+            }
+          
+            secretData.location = location;
+          }
 
         // Définir dynamiquement les URLs de retour
         const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
