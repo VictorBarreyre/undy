@@ -65,10 +65,10 @@ exports.createSecret = async (req, res) => {
             }
         }
 
-        // Définir dynamiquement les URLs de retour
-        const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
-        const refreshUrl = `${baseReturnUrl}/stripe/refresh`;
-        const returnUrl = `${baseReturnUrl}/stripe/return`;
+        const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://';
+        // Ajouter des données à l'URL de retour pour permettre de reprendre le processus après Stripe
+        const refreshUrl = `${baseReturnUrl}stripe-return?action=refresh&secretPending=true`;
+        const returnUrl = `${baseReturnUrl}stripe-return?action=complete&secretPending=true`;
 
         // Gestion du compte Stripe
         const handleStripeAccount = async () => {
@@ -182,8 +182,6 @@ exports.createSecret = async (req, res) => {
 };
 
 
-// Ajouter une route pour gérer le rafraîchissement de l'onboarding si nécessaire
-// Dans votre fichier de contrôleur (secretController.js)
 exports.refreshStripeOnboarding = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('+lastStripeOnboardingUrl stripeAccountId stripeAccountStatus');
@@ -196,10 +194,10 @@ exports.refreshStripeOnboarding = async (req, res) => {
             });
         }
 
-        // Définir les URLs de retour (ce qui manquait)
-        const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://profile';
-        const refreshUrl = `${baseReturnUrl}/stripe/refresh`;
-        const returnUrl = `${baseReturnUrl}/stripe/return`;
+        // Définir les URLs de retour avec paramètres de continuité
+        const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://';
+        const refreshUrl = `${baseReturnUrl}stripe-return?action=refresh&secretPending=true`;
+        const returnUrl = `${baseReturnUrl}stripe-return?action=complete&secretPending=true`;
 
         // Vérifier le statut du compte Stripe
         const account = await stripe.accounts.retrieve(user.stripeAccountId);

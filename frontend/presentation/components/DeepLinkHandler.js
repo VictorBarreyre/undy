@@ -1,11 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useContext } from 'react';
 import { Linking, Alert } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native'; // Pour la navigation
 
-const DeepLinkHandler = () => {
+const DeepLinkHandler = ({ onStripeSuccess }) => {
     const { t } = useTranslation();
     const { handleStripeReturn } = useCardData();
+    const navigation = useNavigation();
 
     useEffect(() => {
         const handleDeepLink = async (event) => {
@@ -14,19 +16,45 @@ const DeepLinkHandler = () => {
                 
                 if (!url) return;
 
-                const parsedUrl = new URL(url);
+                console.log("Deep link intercepté:", url);
+                const fullUrl = decodeURIComponent(url);
+                const parsedUrl = new URL(fullUrl);
                 
                 // Vérifiez le host et le schéma
                 if (parsedUrl.protocol === 'hushy:' && 
                     (parsedUrl.hostname === 'stripe-return' || parsedUrl.hostname === 'profile')) {
                     
-                    const result = await handleStripeReturn(url);
+                    console.log("Traitement du retour Stripe...");
+                    const result = await handleStripeReturn(fullUrl);
+                    const pendingSecretData = await AsyncStorage.getItem('pendingSecretData');
                     
                     if (result.success) {
                         Alert.alert(
                             t('deepLink.alerts.success.title'),
                             t('deepLink.alerts.success.message'),
-                            [{ text: t('deepLink.alerts.ok') }]
+                            [{ 
+                                text: t('deepLink.alerts.continuePosting'),
+                                onPress: async () => {
+                                    // Si nous avons un callback, l'appeler avec le résultat
+                                    if (onStripeSuccess && typeof onStripeSuccess === 'function') {
+                                        onStripeSuccess(result);
+                                    }
+                                    
+                                    // Si nous avons des données en attente, les utiliser pour publier le secret
+                                    if (pendingSecretData) {
+                                        try {
+                                            const secretData = JSON.parse(pendingSecretData);
+                                            // Navigation vers AddSecret si nécessaire
+                                            navigation.navigate('AddSecret', { pendingSecretData: secretData });
+                                        } catch (e) {
+                                            console.error("Erreur lors de la récupération des données en attente:", e);
+                                        } finally {
+                                            // Supprimer les données en attente
+                                            await AsyncStorage.removeItem('pendingSecretData');
+                                        }
+                                    }
+                                }
+                            }]
                         );
                     } else {
                         Alert.alert(
@@ -58,7 +86,7 @@ const DeepLinkHandler = () => {
         return () => {
             subscription.remove();
         };
-    }, []);
+    }, [onStripeSuccess]);
 
     return null; // Ce composant ne rend rien, il gère uniquement les liens
 };

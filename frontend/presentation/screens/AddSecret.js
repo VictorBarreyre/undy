@@ -8,8 +8,9 @@ import { styles } from '../../infrastructure/theme/styles';
 import { FontAwesome } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location';
-import i18n from 'i18next'; // Import direct de i18n
-
+import i18n from 'i18next'; 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import DeepLinkHandler from '../components/DeepLinkHandler';
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -193,6 +194,82 @@ const AddSecret = () => {
         }
     };
 
+    const savePendingSecretData = async (secretData) => {
+        try {
+            await AsyncStorage.removeItem('pendingSecretData'); // Nettoyage préalable
+            await AsyncStorage.setItem('pendingSecretData', JSON.stringify(secretData));
+            console.log('Données du secret sauvegardées temporairement');
+        } catch (error) {
+            console.error('Erreur lors de la sauvegarde des données du secret:', error);
+        }
+    };
+
+
+    const handleStripeOnboardingSuccess = async (result) => {
+        try {
+            // Récupérer les données du secret en attente
+            const pendingSecretDataJson = await AsyncStorage.getItem('pendingSecretData');
+            if (!pendingSecretDataJson) {
+                console.log('Aucune donnée de secret en attente trouvée');
+                return;
+            }
+    
+            const pendingSecretData = JSON.parse(pendingSecretDataJson);
+            
+            // Tenter de poster le secret maintenant que Stripe est configuré
+            const postResult = await handlePostSecret(pendingSecretData);
+            
+            if (postResult && !postResult.requiresStripeSetup) {
+                // Le secret a été posté avec succès
+                Alert.alert(
+                    t('addSecret.alerts.success.title'),
+                    t('addSecret.alerts.success.message'),
+                    [
+                        {
+                            text: t('addSecret.alerts.success.shareNow'),
+                            onPress: async () => {
+                                try {
+                                    await handleShareSecret(postResult.secret);
+                                } catch (error) {
+                                    Alert.alert(t('addSecret.errors.title'), t('addSecret.errors.unableToShare'));
+                                } finally {
+                                    // Reset form fields
+                                    setSecretText('');
+                                    setSelectedLabel('');
+                                    setPrice('');
+                                    setExpiresIn(7);
+                                    // Supprimer les données en attente
+                                    await AsyncStorage.removeItem('pendingSecretData');
+                                }
+                            }
+                        },
+                        {
+                            text: t('addSecret.alerts.later'),
+                            style: "cancel",
+                            onPress: async () => {
+                                // Reset form fields
+                                setSecretText('');
+                                setSelectedLabel('');
+                                setPrice('');
+                                setExpiresIn(7);
+                                // Supprimer les données en attente
+                                await AsyncStorage.removeItem('pendingSecretData');
+                            }
+                        }
+                    ]
+                );
+            } else {
+                // Il y a encore un problème avec Stripe
+                console.error('Impossible de poster le secret après le retour de Stripe');
+                Alert.alert(t('addSecret.errors.title'), t('addSecret.errors.stripePersistent'));
+            }
+        } catch (error) {
+            console.error('Erreur lors du traitement post-Stripe:', error);
+            Alert.alert(t('addSecret.errors.title'), error.message);
+        }
+    };
+
+
     const handlePress = async () => {
         try {
             const secretData = {
@@ -200,7 +277,7 @@ const AddSecret = () => {
                 secretText,
                 price,
                 expiresIn,
-                language: currentLanguage // Ajout de la langue actuelle
+                language: currentLanguage
             };
     
             if (includeLocation && userLocation) {
@@ -226,10 +303,13 @@ const AddSecret = () => {
                     return;
                 }
             }
-
+    
             const result = await handlePostSecret(secretData);
-
+    
             if (result.requiresStripeSetup) {
+                // Sauvegarder les données du secret pour les récupérer plus tard
+                await savePendingSecretData(secretData);
+                
                 Alert.alert(
                     t('addSecret.alerts.setupRequired.title'),
                     t('addSecret.alerts.setupRequired.message'),
@@ -239,7 +319,7 @@ const AddSecret = () => {
                             onPress: async () => {
                                 try {
                                     const stripeStatus = await handleStripeOnboardingRefresh();
-
+    
                                     if (stripeStatus.stripeOnboardingUrl) {
                                         await Linking.openURL(stripeStatus.stripeOnboardingUrl);
                                     } else {
@@ -296,6 +376,54 @@ const AddSecret = () => {
         }
     };
 
+    useEffect(() => {
+        const checkPendingSecretData = async () => {
+            try {
+                const pendingSecretDataJson = await AsyncStorage.getItem('pendingSecretData');
+                if (pendingSecretDataJson) {
+                    const pendingSecretData = JSON.parse(pendingSecretDataJson);
+                    
+                    // Pré-remplir les champs du formulaire avec les données en attente
+                    setSecretText(pendingSecretData.secretText || '');
+                    setSelectedLabel(pendingSecretData.selectedLabel || '');
+                    setPrice(pendingSecretData.price?.toString() || '');
+                    setExpiresIn(pendingSecretData.expiresIn || 7);
+                    
+                    // Optionnel: demander à l'utilisateur s'il souhaite continuer avec ces données
+                    Alert.alert(
+                        t('addSecret.pendingData.title'),
+                        t('addSecret.pendingData.message'),
+                        [
+                            {
+                                text: t('addSecret.pendingData.continue'),
+                                onPress: async () => {
+                                    // Les champs sont déjà pré-remplis, rien à faire ici
+                                    console.log('Continuer avec les données en attente');
+                                }
+                            },
+                            {
+                                text: t('addSecret.pendingData.discard'),
+                                style: "cancel",
+                                onPress: async () => {
+                                    // Réinitialiser les champs et supprimer les données en attente
+                                    setSecretText('');
+                                    setSelectedLabel('');
+                                    setPrice('');
+                                    setExpiresIn(7);
+                                    await AsyncStorage.removeItem('pendingSecretData');
+                                }
+                            }
+                        ]
+                    );
+                }
+            } catch (error) {
+                console.error('Erreur lors de la vérification des données en attente:', error);
+            }
+        };
+        
+        checkPendingSecretData();
+    }, []);
+
     // Validation effect
     useEffect(() => {
         const isTextValid = secretText.trim().length > MIN_WORDS;
@@ -318,6 +446,7 @@ const AddSecret = () => {
 
     return (
         <Background>
+          <DeepLinkHandler onStripeSuccess={handleStripeOnboardingSuccess} />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
