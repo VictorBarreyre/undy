@@ -197,7 +197,7 @@ const AddSecret = () => {
     const savePendingSecretData = async (secretData) => {
         try {
             await AsyncStorage.removeItem('pendingSecretData'); // Nettoyage préalable
-            await AsyncStorage.setItem('pendingSecretData', JSON.stringify(secretData));
+            await AsyncStorage.setItem(`pendingSecretData_${userData._id}`, JSON.stringify(secretData));
             console.log('Données du secret sauvegardées temporairement');
         } catch (error) {
             console.error('Erreur lors de la sauvegarde des données du secret:', error);
@@ -379,7 +379,7 @@ const AddSecret = () => {
     useEffect(() => {
         const checkPendingSecretData = async () => {
             try {
-                const pendingSecretDataJson = await AsyncStorage.getItem('pendingSecretData');
+                const pendingSecretDataJson = await AsyncStorage.getItem(`pendingSecretData_${userData._id}`);
                 if (pendingSecretDataJson) {
                     const pendingSecretData = JSON.parse(pendingSecretDataJson);
                     

@@ -493,6 +493,7 @@ export const AuthProvider = ({ children }) => {
 
       // D'abord, on supprime les données
       await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
+      await AsyncStorage.removeItem(`pendingSecretData_${userData._id}`);
 
       // Ensuite, on met à jour les états dans un ordre spécifique
       setUserData(null);

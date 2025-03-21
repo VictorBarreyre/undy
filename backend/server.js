@@ -10,9 +10,6 @@ const path = require('path');
 const helmet = require('helmet');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-
-
-
 // Charger les variables d'environnement
 dotenv.config();
 
@@ -20,12 +17,27 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-
-app.use(helmet());
+// Configuration Helmet avec ajustements pour redirect.html
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"], // Permettre les scripts inline pour redirect.html
+        styleSrc: ["'self'", "'unsafe-inline'"],  // Permettre les styles inline
+        imgSrc: ["'self'", "data:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'self'"],
+      },
+    },
+  })
+);
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
 
 // Activer "trust proxy" pour gérer les redirections HTTPS (nécessaire pour Heroku ou tout proxy)
 app.set('trust proxy', 1);
@@ -37,7 +49,6 @@ app.use((req, res, next) => {
     }
     next();
 });
-
 
 // Configuration CORS pour autoriser les origines en développement
 const corsOptions = {
@@ -56,11 +67,13 @@ app.use((req, res, next) => {
     next();
 });
 
+// Servir les fichiers statiques du dossier public - AJOUT IMPORTANT
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.use('/uploads', (req, res, next) => {
     req.protocol = 'https'; // Forcer le protocole HTTPS
     next();
 }, express.static(path.join(__dirname, 'uploads')));
-
 
 // **Configuration du Proxy en développement**
 // Ce middleware redirige les requêtes locales vers l'API sur Heroku
@@ -74,11 +87,9 @@ if (process.env.NODE_ENV === 'development') {
     );
 }
 
-
 app.use('/api/users', userRoutes);
 app.use('/api/secrets', secretRoutes);
 app.use('/api/upload', uploadRoutes);
-
 
 // Route de vérification du serveur
 app.get('/', (req, res) => {
@@ -86,6 +97,12 @@ app.get('/', (req, res) => {
         ? `https://${req.hostname}`
         : `http://${req.hostname}:${PORT}`;
     res.send(`Server is running. Base URL: ${baseUrl}`);
+});
+
+// Route supplémentaire pour rediriger toutes les routes non-API vers la page de redirection
+// Cela permet de gérer les cas où l'URL serait légèrement différente
+app.get('/redirect*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'redirect.html'));
 });
 
 // Connexion à MongoDB

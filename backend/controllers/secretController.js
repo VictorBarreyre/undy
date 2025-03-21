@@ -65,8 +65,11 @@ exports.createSecret = async (req, res) => {
             }
         }
 
-        const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://';
-        // Ajouter des données à l'URL de retour pour permettre de reprendre le processus après Stripe
+        const baseReturnUrl = 
+        process.env.NODE_ENV === 'production' 
+            ? `https://${req.get('host')}/redirect.html`  // Heroku production
+            : process.env.FRONTEND_URL || 'hushy://stripe-return'; // Dev direct vers l'app
+
         const refreshUrl = `${baseReturnUrl}stripe-return?action=refresh&secretPending=true`;
         const returnUrl = `${baseReturnUrl}stripe-return?action=complete&secretPending=true`;
 
@@ -195,7 +198,11 @@ exports.refreshStripeOnboarding = async (req, res) => {
         }
 
         // Définir les URLs de retour avec paramètres de continuité
-        const baseReturnUrl = process.env.FRONTEND_URL || 'hushy://';
+        const baseReturnUrl = 
+        process.env.NODE_ENV === 'production' 
+            ? `https://${req.get('host')}/redirect.html`  // Heroku production
+            : process.env.FRONTEND_URL || 'hushy://stripe-return'; // Dev direct vers l'app
+            
         const refreshUrl = `${baseReturnUrl}stripe-return?action=refresh&secretPending=true`;
         const returnUrl = `${baseReturnUrl}stripe-return?action=complete&secretPending=true`;
 
