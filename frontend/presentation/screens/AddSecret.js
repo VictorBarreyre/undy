@@ -8,6 +8,8 @@ import { styles } from '../../infrastructure/theme/styles';
 import { FontAwesome } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location';
+import i18n from 'i18next'; // Import direct de i18n
+
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;

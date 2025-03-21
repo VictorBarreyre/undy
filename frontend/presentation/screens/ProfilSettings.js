@@ -514,7 +514,6 @@ export default function Profile({ navigation }) {
         notifs: { label: t('settings.fields.notifications'), icon: faBell, truncateLength: 10 },
         contacts: { label: t('settings.fields.contacts'), icon: faUserGroup, truncateLength: 10 },
         location: { label: t('settings.fields.location'), icon: faLocationDot, truncateLength: 10 },
-        abonnements: { label: t('settings.fields.subscriptions'), icon: faPerson, truncateLength: 10 },
     };
 
     const accountFieldMapping = {
