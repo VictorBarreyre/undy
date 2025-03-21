@@ -38,20 +38,7 @@ export default function CardHome({ cardData }) {
     location: cardData.location || null  // Ajoutez cette ligne
   };
   
-  // Puis dans votre fonction formatLocation
-  const formatLocation = () => {
-    // Utilisez cardData au lieu de safeCardData
-    if (cardData.location?.coordinates) {
-      const [longitude, latitude] = cardData.location.coordinates;
-      
-      // Formater les coordonnées géographiques
-      const formattedLng = longitude.toFixed(4);
-      const formattedLat = latitude.toFixed(4);
-  
-      return `${formattedLat}°N, ${formattedLng}°E`;
-    }
-    return t('cardHome.locationNotShared');
-  };
+
   
   useEffect(() => {
     const fetchLocationName = async () => {
@@ -84,9 +71,6 @@ export default function CardHome({ cardData }) {
     fetchLocationName();
   }, [cardData.location]);
 
-  // Ajoutez des logs de débogage
-  console.log("Location dans cardData:", cardData.location);
-  console.log("Location dans safeCardData:", safeCardData.location);
 
   useEffect(() => {
     const calculateTimeLeft = () => {

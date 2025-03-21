@@ -11,7 +11,7 @@ exports.createSecret = async (req, res) => {
     session.startTransaction();
 
     try {
-        const { label, content, price, expiresIn = 7, location } = req.body;
+        const { label, content, price, expiresIn = 7, location, language } = req.body;
 
         // Validation des champs requis
         if (!label || !content || price == null) {
@@ -38,7 +38,8 @@ exports.createSecret = async (req, res) => {
             price,
             user: req.user.id,
             expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
-            status: 'pending'
+            status: 'pending',
+            language: language || 'fr' 
         };
 
         // Gestion détaillée de la localisation
@@ -326,42 +327,46 @@ exports.getNearbySecrets = async (req, res) => {
   };
 
 
-exports.getUnpurchasedSecrets = async (req, res) => {
+  exports.getUnpurchasedSecrets = async (req, res) => {
     try {
-        const { page = 1, limit = 10 } = req.query;
-        const userId = req.user.id;
-
-        const secrets = await Secret.find({
-            purchasedBy: { $nin: [userId] }, // Ne pas inclure les secrets déjà achetés
-            user: { $ne: userId }, // Ne pas inclure les secrets créés par l'utilisateur
-            expiresAt: { $gt: new Date() } // Ne pas inclure les secrets expirés
-        })
-            .populate('user', 'name profilePicture')
-            .select('label content price createdAt expiresAt user purchasedBy location')
-            .limit(limit * 1)
-            .skip((page - 1) * limit)
-            .sort({ createdAt: -1 }) // Les plus récents d'abord
-            .exec();
-
-        const total = await Secret.countDocuments({
-            purchasedBy: { $nin: [userId] },
-            user: { $ne: userId },
-            expiresAt: { $gt: new Date() }
-        });
-
-        res.status(200).json({
-            secrets,
-            totalPages: Math.ceil(total / limit),
-            currentPage: page
-        });
+      const { page = 1, limit = 10, language } = req.query;
+      const userId = req.user.id;
+      
+      // Construire le filtre de base
+      const filter = {
+        purchasedBy: { $nin: [userId] },
+        user: { $ne: userId },
+        expiresAt: { $gt: new Date() }
+      };
+      
+      // Ajouter le filtre de langue si spécifié
+      if (language) {
+        filter.language = language;
+      }
+      
+      const secrets = await Secret.find(filter)
+        .populate('user', 'name profilePicture')
+        .select('label content price createdAt expiresAt user purchasedBy location language')
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .sort({ createdAt: -1 })
+        .exec();
+      
+      const total = await Secret.countDocuments(filter);
+      
+      res.status(200).json({
+        secrets,
+        totalPages: Math.ceil(total / limit),
+        currentPage: page
+      });
     } catch (error) {
-        console.error('Erreur détaillée:', error);
-        res.status(500).json({
-            message: 'Erreur lors de la récupération des secrets.',
-            error: error.message
-        });
+      console.error('Erreur détaillée:', error);
+      res.status(500).json({
+        message: 'Erreur lors de la récupération des secrets.',
+        error: error.message
+      });
     }
-};
+  };
 
 const calculatePrices = (originalPrice) => {
     const buyerMargin = 0.15; // 15% de marge pour l'acheteur

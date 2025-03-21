@@ -57,6 +57,11 @@ const SecretSchema = new mongoose.Schema({
       required: function() { 
         return this.location && this.location.type === 'Point'; 
       }
+    },
+    language: {
+      type: String,
+      required: true,
+      default: 'fr' // ou la langue par défaut de votre application
     }
   }
 }, { timestamps: true });

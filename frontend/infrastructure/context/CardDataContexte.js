@@ -104,7 +104,8 @@ export const CardDataProvider = ({ children }) => {
         label: secretData.selectedLabel,
         content: secretData.secretText,
         price: numericPrice,
-        expiresIn: secretData.expiresIn || 7 // Valeur par défaut de 7 jours
+        expiresIn: secretData.expiresIn || 7,
+        language: secretData.language || i18n.language || navigator.language.split('-')[0] // Utiliser la langue de l'app/navigateur
       };
       
       // Validation et transfert de la location
@@ -331,17 +332,25 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
-  const fetchUnpurchasedSecrets = async (forceFetch = false) => {
+  const fetchUnpurchasedSecrets = async (forceFetch = false, language = null) => {
     if (!forceFetch && lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)) {
       return data;
     }
+    
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
+    
+    // Récupérer la langue de l'application ou du périphérique si non spécifiée
+    const appLanguage = language || i18n.language || navigator.language.split('-')[0];
+    
     setIsLoadingData(true);
     try {
-      const response = await instance.get('/api/secrets/unpurchased');
+      const response = await instance.get('/api/secrets/unpurchased', {
+        params: { language: appLanguage }
+      });
+      
       if (response.data && response.data.secrets) {
         setData(response.data.secrets);
         setLastFetchTime(Date.now());

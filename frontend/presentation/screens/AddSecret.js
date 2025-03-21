@@ -40,6 +40,7 @@ const AddSecret = () => {
     const [locationAvailable, setLocationAvailable] = useState(false);
     const [locationInfo, setLocationInfo] = useState(null);
 
+    const currentLanguage = i18n.language || navigator.language.split('-')[0] || 'fr';
 
 
     const MIN_PRICE = 3;
@@ -196,7 +197,8 @@ const AddSecret = () => {
                 selectedLabel,
                 secretText,
                 price,
-                expiresIn
+                expiresIn,
+                language: currentLanguage // Ajout de la langue actuelle
             };
     
             if (includeLocation && userLocation) {
