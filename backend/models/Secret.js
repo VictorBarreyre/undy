@@ -35,6 +35,7 @@ const SecretSchema = new mongoose.Schema({
     unique: true,
     sparse: true // Permet d'avoir des documents sans shareLink
   },
+
   location: {
     type: {
       type: String,
@@ -58,12 +59,13 @@ const SecretSchema = new mongoose.Schema({
         return this.location && this.location.type === 'Point'; 
       }
     },
-    language: {
-      type: String,
-      required: true,
-      default: 'fr' // ou la langue par défaut de votre application
-    }
-  }
+  },
+
+  language: {
+    type: String,
+    required: true,
+    default: 'fr' // ou la langue par défaut de votre application
+  },
 }, { timestamps: true });
 
 // Nettoyage automatique
