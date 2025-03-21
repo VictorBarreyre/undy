@@ -100,8 +100,8 @@ app.get('/', (req, res) => {
 });
 
 // Route supplémentaire pour rediriger toutes les routes non-API vers la page de redirection
-// Cela permet de gérer les cas où l'URL serait légèrement différente
-app.get('/redirect*', (req, res) => {
+app.get('/redirect.html', (req, res) => {
+    console.log('Requête reçue pour redirect.html avec paramètres:', req.query);
     res.sendFile(path.join(__dirname, 'public', 'redirect.html'));
 });
 

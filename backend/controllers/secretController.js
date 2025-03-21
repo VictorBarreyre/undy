@@ -200,9 +200,9 @@ exports.refreshStripeOnboarding = async (req, res) => {
         // Définir les URLs de retour avec paramètres de continuité
         const baseReturnUrl = 
         process.env.NODE_ENV === 'production' 
-            ? `https://${req.get('host')}/redirect.html`  // Heroku production
-            : process.env.FRONTEND_URL || 'hushy://stripe-return'; // Dev direct vers l'app
-            
+        ? `https://${req.get('host')}/redirect.html?path=` // Notez le "?path=" à la fin
+        : process.env.FRONTEND_URL || 'hushy://stripe-return'; // Dev direct vers l'app
+
         const refreshUrl = `${baseReturnUrl}stripe-return?action=refresh&secretPending=true`;
         const returnUrl = `${baseReturnUrl}stripe-return?action=complete&secretPending=true`;
 

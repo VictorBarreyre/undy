@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirection vers Hushy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+    window.onload = function() {
+    // Récupérer les paramètres d'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const path = urlParams.get('path') || 'stripe-return';
+    const action = urlParams.get('action') || 'complete';
+    const secretPending = urlParams.get('secretPending') || 'true';
+    
+    // Construire l'URL de deep link
+    const deepLink = `hushy://${path}?action=${action}&secretPending=${secretPending}`;
+    
+    console.log("Deep link à ouvrir:", deepLink);
+    
+    // Afficher le message de succès
+    document.getElementById('message').innerHTML = 
+        "Configuration Stripe terminée avec succès !";
+            
+            // Essayer la redirection automatique après un court délai
+            setTimeout(function() {
+                window.location.href = deepLink;
+                
+                // Si la redirection automatique ne fonctionne pas, afficher le bouton
+                setTimeout(function() {
+                    document.getElementById('redirect-button').style.display = 'block';
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('manual-instructions').style.display = 'block';
+                }, 1500);
+            }, 500);
+        };
+        
+        function redirectToApp() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const action = urlParams.get('action') || 'complete';
+            const secretPending = urlParams.get('secretPending') || 'true';
+            window.location.href = `hushy://stripe-return?action=${action}&secretPending=${secretPending}`;
+        }
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .btn {
+            display: none;
+            background-color: #ff78b2; /* Couleur rose de votre app */
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0 auto;
+            transition: all 0.2s ease;
+        }
+        .btn:hover {
+            background-color: #ff5a9e;
+            transform: scale(1.05);
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff78b2;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        #manual-instructions {
+            display: none;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #777;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background-color: #ff78b2;
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">H</div>
+        <h1>Hushy</h1>
+        <p id="message">Configuration de votre compte Stripe...</p>
+        <div id="loader" class="loader"></div>
+        <button id="redirect-button" class="btn" onclick="redirectToApp()">
+            Retourner sur l'application
+        </button>
+        <div id="manual-instructions">
+            <p>Si la redirection automatique ne fonctionne pas, veuillez ouvrir manuellement l'application Hushy pour continuer.</p>
+            <p>Votre compte Stripe est maintenant configuré et vous pouvez compléter la publication de votre secret.</p>
+        </div>
+        <div id="debug" style="margin-top: 30px; font-size: 12px; color: #999; display: none;">
+            <button onclick="document.getElementById('debug-info').style.display = 'block';">Afficher les infos de débogage</button>
+            <div id="debug-info" style="display: none; text-align: left; background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                <p>URL: <script>document.write(window.location.href);</script></p>
+                <p>Paramètres: <script>document.write(window.location.search);</script></p>
+                <p>Deep link généré: <span id="generated-link"></span></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
