@@ -31,6 +31,75 @@ exports.createSecret = async (req, res) => {
             return res.status(404).json({ message: "Utilisateur introuvable." });
         }
 
+        const baseReturnUrl =
+            process.env.NODE_ENV === 'production'
+                ? `https://${req.get('host')}/redirect.html?path=`
+                : process.env.FRONTEND_URL || 'hushy://stripe-return';
+
+        const refreshUrl = `${baseReturnUrl}?action=refresh&secretPending=true`;
+        const returnUrl = `${baseReturnUrl}?action=complete&secretPending=true`;
+
+        // ÉTAPE 1: Vérifier si l'utilisateur a un compte Stripe actif
+        if (!user.stripeAccountId || !user.stripeOnboardingComplete || user.stripeAccountStatus !== 'active') {
+            let accountLink;
+            
+            // Créer un compte Stripe si l'utilisateur n'en a pas
+            if (!user.stripeAccountId) {
+                const account = await stripe.accounts.create({
+                    type: 'express',
+                    country: 'FR',
+                    email: user.email,
+                    capabilities: {
+                        card_payments: { requested: true },
+                        transfers: { requested: true },
+                    },
+                    business_type: 'individual',
+                    business_profile: {
+                        mcc: '5734', // Code pour services digitaux
+                        url: 'https://hushy.app'
+                    }
+                });
+
+                accountLink = await stripe.accountLinks.create({
+                    account: account.id,
+                    refresh_url: refreshUrl,
+                    return_url: returnUrl,
+                    type: 'account_onboarding',
+                });
+
+                user.stripeAccountId = account.id;
+                user.stripeAccountStatus = 'pending';
+                user.stripeOnboardingComplete = false;
+                user.lastStripeOnboardingUrl = accountLink.url;
+                await user.save({ session });
+            } else {
+                // L'utilisateur a un compte mais pas complètement configuré
+                accountLink = await stripe.accountLinks.create({
+                    account: user.stripeAccountId,
+                    refresh_url: refreshUrl,
+                    return_url: returnUrl,
+                    type: 'account_onboarding',
+                });
+                
+                user.lastStripeOnboardingUrl = accountLink.url;
+                await user.save({ session });
+            }
+
+            await session.commitTransaction();
+            
+            // Retourner une réponse indiquant que Stripe doit être configuré d'abord
+            return res.status(202).json({
+                requiresStripeSetup: true,
+                message: 'Configuration du compte Stripe requise avant de créer un secret',
+                stripeOnboardingUrl: accountLink.url,
+                stripeStatus: {
+                    requiresStripeSetup: true,
+                    accountLink
+                }
+            });
+        }
+
+        // ÉTAPE 2: L'utilisateur a un compte Stripe actif, créer le secret
         // Configuration de base du secret
         const secretData = {
             label,
@@ -38,7 +107,7 @@ exports.createSecret = async (req, res) => {
             price,
             user: req.user.id,
             expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
-            status: 'pending',
+            status: 'active',
             language: language || 'fr'
         };
 
@@ -65,109 +134,24 @@ exports.createSecret = async (req, res) => {
             }
         }
 
-        const baseReturnUrl =
-            process.env.NODE_ENV === 'production'
-                ? `https://${req.get('host')}/redirect.html?path=` // Notez le "?path=" à la fin
-                : process.env.FRONTEND_URL || 'hushy://stripe-return'; // Dev direct vers l'app
-
-        // Utilisez une seule fois le point d'interrogation
-        const refreshUrl = `${baseReturnUrl}?action=refresh&secretPending=true`;
-        const returnUrl = `${baseReturnUrl}?action=complete&secretPending=true`;
-
-        // Gestion du compte Stripe
-        const handleStripeAccount = async () => {
-            // Si l'utilisateur n'a pas de compte Stripe, en créer un
-            if (!user.stripeAccountId) {
-                const account = await stripe.accounts.create({
-                    type: 'express',
-                    country: 'FR',
-                    email: user.email,
-                    capabilities: {
-                        card_payments: { requested: true },
-                        transfers: { requested: true },
-                    },
-                    business_type: 'individual',
-                    business_profile: {
-                        mcc: '5734', // Code pour services digitaux
-                        url: 'https://hushy.app'
-                    }
-                });
-
-                const accountLink = await stripe.accountLinks.create({
-                    account: account.id,
-                    refresh_url: refreshUrl,
-                    return_url: returnUrl,
-                    type: 'account_onboarding',
-                });
-
-                user.stripeAccountId = account.id;
-                user.stripeAccountStatus = 'pending';
-                user.stripeOnboardingComplete = false;
-                user.lastStripeOnboardingUrl = accountLink.url;
-                await user.save({ session });
-
-                return {
-                    requiresStripeSetup: true,
-                    accountLink
-                };
-            }
-
-            // Vérifier si l'onboarding est complet
-            if (!user.stripeOnboardingComplete || user.stripeAccountStatus !== 'active') {
-                const accountLink = await stripe.accountLinks.create({
-                    account: user.stripeAccountId,
-                    refresh_url: refreshUrl,
-                    return_url: returnUrl,
-                    type: 'account_onboarding',
-                });
-
-                return {
-                    requiresStripeSetup: true,
-                    accountLink
-                };
-            }
-
-            return { requiresStripeSetup: false };
-        };
-
-        // Créer le secret
-        const createSecretWithStatus = async (stripeStatus) => {
-            const secret = await Secret.create([{
-                ...secretData,
-                status: stripeStatus.requiresStripeSetup ? 'pending' : 'active'
-            }], { session });
-
-            const shareLink = `hushy://secret/${secret[0]._id}`;
-            await Secret.findByIdAndUpdate(secret[0]._id, { shareLink }, { session });
-
-            return {
-                secret: {
-                    ...secret[0]._doc,
-                    shareLink
-                },
-                stripeStatus
-            };
-        };
-
-        // Exécuter la logique de création de secret
-        const stripeStatus = await handleStripeAccount();
-        const result = await createSecretWithStatus(stripeStatus);
+        // Créer le secret directement comme actif
+        const secret = await Secret.create([secretData], { session });
+        
+        // Ajouter le lien de partage
+        const shareLink = `hushy://secret/${secret[0]._id}`;
+        await Secret.findByIdAndUpdate(secret[0]._id, { shareLink }, { session });
 
         await session.commitTransaction();
 
-        // Préparer la réponse
-        const response = {
-            message: stripeStatus.requiresStripeSetup
-                ? 'Secret créé. Configuration du compte de paiement requise.'
-                : 'Secret créé avec succès',
-            ...result
-        };
-
-        if (stripeStatus.requiresStripeSetup && stripeStatus.accountLink) {
-            response.stripeOnboardingUrl = stripeStatus.accountLink.url;
-        }
-
-        return res.status(201).json(response);
+        // Retourner une réponse de succès avec le secret créé
+        return res.status(201).json({
+            message: 'Secret créé avec succès',
+            secret: {
+                ...secret[0]._doc,
+                shareLink
+            },
+            requiresStripeSetup: false
+        });
 
     } catch (error) {
         await session.abortTransaction();
@@ -184,7 +168,6 @@ exports.createSecret = async (req, res) => {
         session.endSession();
     }
 };
-
 
 exports.refreshStripeOnboarding = async (req, res) => {
     try {
