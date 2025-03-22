@@ -448,7 +448,7 @@ const AddSecret = () => {
         <Background>
           <DeepLinkHandler 
           onStripeSuccess={handleStripeOnboardingSuccess} 
-          userId={userData._id} 
+          userId={userData?._id} 
           />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

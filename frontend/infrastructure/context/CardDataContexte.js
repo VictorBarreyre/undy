@@ -239,26 +239,62 @@ export const CardDataProvider = ({ children }) => {
     try {
       // Extraire les paramètres de l'URL
       const parsedUrl = new URL(url);
-      const stripeAccountId = parsedUrl.searchParams.get('stripeAccountId');
-      const status = parsedUrl.searchParams.get('status');
-
-      if (status === 'success') {
-        // Rafraîchir le statut Stripe
-        const stripeStatus = await handleStripeOnboardingRefresh();
-
-        return {
-          success: true,
-          message: i18n.t('cardData.stripe.configSuccessful'),
-          stripeStatus
-        };
-      } else {
-        return {
-          success: false,
-          message: i18n.t('cardData.stripe.configInProgress')
-        };
+      const action = parsedUrl.searchParams.get('action');
+      const secretPending = parsedUrl.searchParams.get('secretPending');
+      
+      console.log("Traitement du retour Stripe avec paramètres:", { action, secretPending });
+      
+      // Rafraîchir le statut Stripe
+      const stripeStatus = await handleStripeOnboardingRefresh();
+      
+      if (stripeStatus.stripeStatus === 'active' || stripeStatus.status === 'active') {
+        // Si Stripe est actif, récupérer et poster automatiquement le secret en attente
+        try {
+          // Chercher dans toutes les clés possibles pour les données du secret
+          let pendingSecretData = null;
+          
+          if (userData?._id) {
+            const userSpecificKey = `pendingSecretData_${userData._id}`;
+            const data = await AsyncStorage.getItem(userSpecificKey);
+            if (data) {
+              pendingSecretData = JSON.parse(data);
+              // Supprimer les données en attente après les avoir récupérées
+              await AsyncStorage.removeItem(userSpecificKey);
+            }
+          }
+          
+          // Fallback sur la clé générique
+          if (!pendingSecretData) {
+            const data = await AsyncStorage.getItem('pendingSecretData');
+            if (data) {
+              pendingSecretData = JSON.parse(data);
+              // Supprimer les données en attente
+              await AsyncStorage.removeItem('pendingSecretData');
+            }
+          }
+          
+          if (pendingSecretData) {
+            console.log("Données de secret en attente trouvées après configuration Stripe:", pendingSecretData);
+            // Poster le secret maintenant que Stripe est configuré
+            return {
+              success: true,
+              message: 'Configuration Stripe réussie',
+              pendingSecretData,
+              stripeStatus
+            };
+          }
+        } catch (error) {
+          console.error("Erreur lors de la récupération des données en attente:", error);
+        }
       }
+  
+      return {
+        success: stripeStatus.status === 'active' || stripeStatus.stripeStatus === 'active',
+        message: stripeStatus.message || 'Statut Stripe mis à jour',
+        stripeStatus
+      };
     } catch (error) {
-      console.error(i18n.t('cardData.errors.stripeReturn'), error);
+      console.error('Erreur handleStripeReturn:', error);
       return {
         success: false,
         message: error.message

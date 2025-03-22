@@ -22,67 +22,93 @@ const DeepLinkHandler = ({ onStripeSuccess }) => {
 
     useEffect(() => {
         const handleDeepLink = async (event) => {
-            try {
-                const url = event.url || event;
-                
-                if (!url) return;
-
-                console.log("Deep link intercepté:", url);
-                const fullUrl = decodeURIComponent(url);
-                const normalizedUrl = normalizeDeepLinkParams(fullUrl);
-                const parsedUrl = new URL(fullUrl);
-                
-                // Vérifiez le host et le schéma
-                if (parsedUrl.protocol === 'hushy:' && 
-                    (parsedUrl.hostname === 'stripe-return' || parsedUrl.hostname === 'profile')) {
+          try {
+            const url = event.url || event;
+            
+            if (!url) return;
+      
+            console.log("Deep link intercepté:", url);
+            const fullUrl = decodeURIComponent(url);
+            
+            // Gérer le cas où l'URL contient des paramètres mal formés
+            const normalizedUrl = fullUrl.replace('?action=complete?', '?');
+            
+            const parsedUrl = new URL(normalizedUrl);
+            
+            // Vérifiez le host et le schéma
+            if (parsedUrl.protocol === 'hushy:' && 
+                (parsedUrl.hostname === 'stripe-return' || parsedUrl.hostname === 'profile')) {
+              
+              console.log("Traitement du retour Stripe...");
+              const result = await handleStripeReturn(normalizedUrl);
+              
+              if (result.success) {
+                // Si nous avons les données d'un secret en attente
+                if (result.pendingSecretData) {
+                  try {
+                    console.log("Tentative de publication automatique du secret...");
+                    const postResult = await handlePostSecret(result.pendingSecretData);
                     
-                    console.log("Traitement du retour Stripe...");
-                    const result = await handleStripeReturn(fullUrl);
-                    const pendingSecretData = await AsyncStorage.getItem(`pendingSecretData_${userData._id}`);
-                    
-                    if (result.success) {
-                        Alert.alert(
-                            t('deepLink.alerts.success.title'),
-                            t('deepLink.alerts.success.message'),
-                            [{ 
-                                text: t('deepLink.alerts.continuePosting'),
-                                onPress: async () => {
-                                    // Si nous avons un callback, l'appeler avec le résultat
-                                    if (onStripeSuccess && typeof onStripeSuccess === 'function') {
-                                        onStripeSuccess(result);
-                                    }
-                                    
-                                    // Si nous avons des données en attente, les utiliser pour publier le secret
-                                    if (pendingSecretData) {
-                                        try {
-                                            const secretData = JSON.parse(pendingSecretData);
-                                            // Navigation vers AddSecret si nécessaire
-                                            navigation.navigate('AddSecret', { pendingSecretData: secretData });
-                                        } catch (e) {
-                                            console.error("Erreur lors de la récupération des données en attente:", e);
-                                        } finally {
-                                            // Supprimer les données en attente
-                                            await AsyncStorage.removeItem('pendingSecretData');
-                                        }
-                                    }
-                                }
-                            }]
-                        );
+                    if (postResult.requiresStripeSetup) {
+                      // Si on a encore besoin de configurer Stripe, c'est étrange, notifier l'utilisateur
+                      Alert.alert(
+                        t('deepLink.alerts.error.title'),
+                        t('deepLink.alerts.error.stillNeedsConfig'),
+                        [{ text: t('deepLink.alerts.ok') }]
+                      );
                     } else {
-                        Alert.alert(
-                            t('deepLink.alerts.configInProgress.title'),
-                            result.message,
-                            [{ text: t('deepLink.alerts.ok') }]
-                        );
+                      // Success! Le secret est posté
+                      Alert.alert(
+                        t('addSecret.alerts.success.title'),
+                        t('addSecret.alerts.success.message'),
+                        [
+                          {
+                            text: t('addSecret.alerts.success.shareNow'),
+                            onPress: async () => {
+                              try {
+                                await handleShareSecret(postResult.secret);
+                              } catch (error) {
+                                Alert.alert(t('addSecret.errors.title'), t('addSecret.errors.unableToShare'));
+                              }
+                            }
+                          },
+                          {
+                            text: t('addSecret.alerts.later'),
+                            style: "cancel"
+                          }
+                        ]
+                      );
                     }
+                  } catch (error) {
+                    console.error("Erreur lors de la publication automatique:", error);
+                    Alert.alert(
+                      t('deepLink.alerts.error.title'),
+                      t('deepLink.alerts.error.postingFailed'),
+                      [{ text: t('deepLink.alerts.ok') }]
+                    );
+                  }
+                } else {
+                  Alert.alert(
+                    t('deepLink.alerts.success.title'),
+                    t('deepLink.alerts.success.message'),
+                    [{ text: t('deepLink.alerts.ok') }]
+                  );
                 }
-            } catch (error) {
-                console.error(t('deepLink.errors.deepLinkError'), error);
+              } else {
                 Alert.alert(
-                    t('deepLink.errors.title'), 
-                    t('deepLink.errors.unableToProcessLink')
+                  t('deepLink.alerts.configInProgress.title'),
+                  result.message,
+                  [{ text: t('deepLink.alerts.ok') }]
                 );
+              }
             }
+          } catch (error) {
+            console.error(t('deepLink.errors.deepLinkError'), error);
+            Alert.alert(
+              t('deepLink.errors.title'), 
+              t('deepLink.errors.unableToProcessLink')
+            );
+          }
         };
 
         // Écouteur d'événements pour les liens entrants
