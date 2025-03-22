@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 
-const DeepLinkHandler = ({ onStripeSuccess }) => {
+const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
     const { t } = useTranslation();
     const { handleStripeReturn, handlePostSecret, handleShareSecret } = useCardData();
     const navigation = useNavigation();
@@ -43,17 +43,22 @@ const DeepLinkHandler = ({ onStripeSuccess }) => {
                     console.log("Traitement du retour Stripe...");
                     const result = await handleStripeReturn(normalizedUrl);
                     
+                    // Définir la clé de stockage
+                    const effectiveUserId = userId || (userData && userData._id);
+                    const storageKey = effectiveUserId 
+                        ? `pendingSecretData_${effectiveUserId}` 
+                        : 'pendingSecretData';
+                    
                     // Récupérer les données en attente
                     let pendingSecretData = null;
-                    const storageKey = userData && userData._id 
-                        ? `pendingSecretData_${userData._id}` 
-                        : 'pendingSecretData';
                     
                     try {
                         const pendingDataJson = await AsyncStorage.getItem(storageKey);
                         if (pendingDataJson) {
                             pendingSecretData = JSON.parse(pendingDataJson);
                             console.log("Données de secret en attente trouvées:", pendingSecretData);
+                        } else {
+                            console.log('Aucune donnée de secret en attente trouvée');
                         }
                     } catch (storageError) {
                         console.error("Erreur lors de la récupération des données en attente:", storageError);
@@ -63,7 +68,25 @@ const DeepLinkHandler = ({ onStripeSuccess }) => {
                         if (pendingSecretData) {
                             try {
                                 console.log("Tentative de publication automatique du secret...");
-                                const postResult = await handlePostSecret(pendingSecretData);
+                                
+                                // Préparer les données du secret avec localisation si disponibles
+                                const postData = { ...pendingSecretData };
+                                
+                                // Si des données de localisation étaient stockées, les inclure
+                                if (pendingSecretData.userLocation) {
+                                    const lat = parseFloat(pendingSecretData.userLocation.latitude);
+                                    const lng = parseFloat(pendingSecretData.userLocation.longitude);
+                                    
+                                    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                                        postData.location = {
+                                            type: 'Point',
+                                            coordinates: [lng, lat]
+                                        };
+                                        console.log("Ajout des données de localisation au secret:", postData.location);
+                                    }
+                                }
+                                
+                                const postResult = await handlePostSecret(postData);
                                 
                                 // Nettoyer les données en attente
                                 await AsyncStorage.removeItem(storageKey);
@@ -102,7 +125,7 @@ const DeepLinkHandler = ({ onStripeSuccess }) => {
                                 console.error("Erreur lors de la publication automatique:", error);
                                 Alert.alert(
                                     t('deepLink.alerts.error.title'),
-                                    t('deepLink.alerts.error.postingFailed'),
+                                    error.message || t('deepLink.alerts.error.postingFailed'),
                                     [{ text: t('deepLink.alerts.ok') }]
                                 );
                             }
@@ -138,7 +161,7 @@ const DeepLinkHandler = ({ onStripeSuccess }) => {
                 console.error(t('deepLink.errors.deepLinkError'), error);
                 Alert.alert(
                     t('deepLink.errors.title'), 
-                    t('deepLink.errors.unableToProcessLink'),
+                    error.message || t('deepLink.errors.unableToProcessLink'),
                     [{ text: t('deepLink.alerts.ok') }]
                 );
             }
@@ -157,7 +180,7 @@ const DeepLinkHandler = ({ onStripeSuccess }) => {
         return () => {
             subscription.remove();
         };
-    }, [userData, onStripeSuccess, t, handleStripeReturn, handlePostSecret, handleShareSecret, navigation]);
+    }, [userId, userData, onStripeSuccess, t, handleStripeReturn, handlePostSecret, handleShareSecret, navigation]);
 
     return null; // Ce composant ne rend rien, il gère uniquement les liens
 };

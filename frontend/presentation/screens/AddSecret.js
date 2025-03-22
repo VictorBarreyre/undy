@@ -196,14 +196,24 @@ const AddSecret = () => {
 
     const savePendingSecretData = async (secretData) => {
         try {
-            await AsyncStorage.removeItem('pendingSecretData'); // Nettoyage préalable
-            await AsyncStorage.setItem(`pendingSecretData_${userData._id}`, JSON.stringify(secretData));
-            console.log('Données du secret sauvegardées temporairement');
+            // Ajouter les données de localisation si disponibles
+            const dataToSave = {
+                ...secretData
+            };
+            
+            // Sauvegarder la localisation si elle est activée
+            if (includeLocation && userLocation) {
+                dataToSave.userLocation = userLocation;
+            }
+            
+            const storageKey = `pendingSecretData_${userData._id}`;
+            await AsyncStorage.removeItem(storageKey);
+            await AsyncStorage.setItem(storageKey, JSON.stringify(dataToSave));
+            console.log('Données du secret sauvegardées temporairement avec localisation:', dataToSave);
         } catch (error) {
             console.error('Erreur lors de la sauvegarde des données du secret:', error);
         }
     };
-
 
     const handleStripeOnboardingSuccess = async (result) => {
         try {
@@ -283,8 +293,19 @@ const AddSecret = () => {
         };
 
         if (includeLocation && userLocation) {
-            // Code de validation de la localisation...
-            // (garder votre code existant)
+            const lat = parseFloat(userLocation.latitude);
+            const lng = parseFloat(userLocation.longitude);
+            
+            // Validation géographique
+            if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                secretData.location = {
+                    type: 'Point',
+                    coordinates: [lng, lat]
+                };
+            } else {
+                Alert.alert(t('location.errors.title'), t('location.errors.invalidCoordinates'));
+                return;
+            }
         }
 
         // Sauvegarder d'abord les données
@@ -302,7 +323,35 @@ const AddSecret = () => {
                 Alert.alert(
                     t('addSecret.alerts.success.title'),
                     t('addSecret.alerts.success.message'),
-                    // Options d'alerte...
+                    [
+                        {
+                            text: t('addSecret.alerts.success.shareNow'),
+                            onPress: async () => {
+                                try {
+                                    await handleShareSecret(result.secret);
+                                } catch (error) {
+                                    Alert.alert(t('addSecret.errors.title'), t('addSecret.errors.unableToShare'));
+                                } finally {
+                                    // Reset form fields
+                                    setSecretText('');
+                                    setSelectedLabel('');
+                                    setPrice('');
+                                    setExpiresIn(7);
+                                }
+                            }
+                        },
+                        {
+                            text: t('addSecret.alerts.later'),
+                            style: "cancel",
+                            onPress: () => {
+                                // Reset form fields
+                                setSecretText('');
+                                setSelectedLabel('');
+                                setPrice('');
+                                setExpiresIn(7);
+                            }
+                        }
+                    ]
                 );
             } else {
                 // L'utilisateur a besoin de configurer Stripe
