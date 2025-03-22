@@ -3,11 +3,22 @@ import { Linking, Alert } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native'; // Pour la navigation
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Ajoutez cet import
+
+
 
 const DeepLinkHandler = ({ onStripeSuccess }) => {
     const { t } = useTranslation();
     const { handleStripeReturn } = useCardData();
     const navigation = useNavigation();
+
+    const normalizeDeepLinkParams = (url) => {
+        // Gérer le cas où l'URL contient des paramètres mal formés
+        if (url.includes('?action=complete?action=')) {
+            return url.replace('?action=complete?action=', '?action=');
+        }
+        return url;
+    };
 
     useEffect(() => {
         const handleDeepLink = async (event) => {
@@ -18,6 +29,7 @@ const DeepLinkHandler = ({ onStripeSuccess }) => {
 
                 console.log("Deep link intercepté:", url);
                 const fullUrl = decodeURIComponent(url);
+                const normalizedUrl = normalizeDeepLinkParams(fullUrl);
                 const parsedUrl = new URL(fullUrl);
                 
                 // Vérifiez le host et le schéma
@@ -26,7 +38,7 @@ const DeepLinkHandler = ({ onStripeSuccess }) => {
                     
                     console.log("Traitement du retour Stripe...");
                     const result = await handleStripeReturn(fullUrl);
-                    const pendingSecretData = await AsyncStorage.getItem('pendingSecretData');
+                    const pendingSecretData = await AsyncStorage.getItem(`pendingSecretData_${userData._id}`);
                     
                     if (result.success) {
                         Alert.alert(

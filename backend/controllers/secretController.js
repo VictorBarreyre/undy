@@ -15,7 +15,7 @@ exports.createSecret = async (req, res) => {
 
         // Validation des champs requis
         if (!label || !content || price == null) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Tous les champs sont requis.',
                 missingFields: {
                     label: !label,
@@ -39,18 +39,18 @@ exports.createSecret = async (req, res) => {
             user: req.user.id,
             expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
             status: 'pending',
-            language: language || 'fr' 
+            language: language || 'fr'
         };
 
         // Gestion détaillée de la localisation
         if (location && location.type === 'Point' && location.coordinates) {
             const [lng, lat] = location.coordinates;
-            
+
             // Validation géographique stricte
             if (
-                Array.isArray(location.coordinates) && 
+                Array.isArray(location.coordinates) &&
                 location.coordinates.length === 2 &&
-                typeof lng === 'number' && 
+                typeof lng === 'number' &&
                 typeof lat === 'number' &&
                 lng >= -180 && lng <= 180 &&
                 lat >= -90 && lat <= 90
@@ -65,13 +65,14 @@ exports.createSecret = async (req, res) => {
             }
         }
 
-        const baseReturnUrl = 
-        process.env.NODE_ENV === 'production' 
-        ? `https://${req.get('host')}/redirect.html?path=` // Notez le "?path=" à la fin
-            : process.env.FRONTEND_URL || 'hushy://stripe-return'; // Dev direct vers l'app
+        const baseReturnUrl =
+            process.env.NODE_ENV === 'production'
+                ? `https://${req.get('host')}/redirect.html?path=` // Notez le "?path=" à la fin
+                : process.env.FRONTEND_URL || 'hushy://stripe-return'; // Dev direct vers l'app
 
-        const refreshUrl = `${baseReturnUrl}stripe-return?action=refresh&secretPending=true`;
-        const returnUrl = `${baseReturnUrl}stripe-return?action=complete&secretPending=true`;
+        // Utilisez une seule fois le point d'interrogation
+        const refreshUrl = `${baseReturnUrl}?action=refresh&secretPending=true`;
+        const returnUrl = `${baseReturnUrl}?action=complete&secretPending=true`;
 
         // Gestion du compte Stripe
         const handleStripeAccount = async () => {
@@ -156,8 +157,8 @@ exports.createSecret = async (req, res) => {
 
         // Préparer la réponse
         const response = {
-            message: stripeStatus.requiresStripeSetup 
-                ? 'Secret créé. Configuration du compte de paiement requise.' 
+            message: stripeStatus.requiresStripeSetup
+                ? 'Secret créé. Configuration du compte de paiement requise.'
                 : 'Secret créé avec succès',
             ...result
         };
@@ -198,13 +199,13 @@ exports.refreshStripeOnboarding = async (req, res) => {
         }
 
         // Définir les URLs de retour avec paramètres de continuité
-        const baseReturnUrl = 
-        process.env.NODE_ENV === 'production' 
-        ? `https://${req.get('host')}/redirect.html?path=` // Notez le "?path=" à la fin
-        : process.env.FRONTEND_URL || 'hushy://stripe-return'; // Dev direct vers l'app
+        const baseReturnUrl =
+            process.env.NODE_ENV === 'production'
+                ? `https://${req.get('host')}/redirect.html?path=` // Notez le "?path=" à la fin
+                : process.env.FRONTEND_URL || 'hushy://stripe-return'; // Dev direct vers l'app
 
-        const refreshUrl = `${baseReturnUrl}stripe-return?action=refresh&secretPending=true`;
-        const returnUrl = `${baseReturnUrl}stripe-return?action=complete&secretPending=true`;
+                const refreshUrl = `${baseReturnUrl}?action=refresh&secretPending=true`;
+                const returnUrl = `${baseReturnUrl}?action=complete&secretPending=true`;
 
         // Vérifier le statut du compte Stripe
         const account = await stripe.accounts.retrieve(user.stripeAccountId);
@@ -277,101 +278,101 @@ exports.getAllSecrets = async (req, res) => {
 
 exports.getNearbySecrets = async (req, res) => {
     try {
-      const { latitude, longitude, radius = 5 } = req.query;
-      const userId = req.user.id;
-      
-      if (!latitude || !longitude) {
-        return res.status(400).json({ message: 'Coordonnées manquantes ou invalides' });
-      }
-      
-      // Convertir en nombres
-      const lat = parseFloat(latitude);
-      const lng = parseFloat(longitude);
-      const rad = parseFloat(radius);
-      
-      // Vérifier la validité des nombres
-      if (isNaN(lat) || isNaN(lng) || isNaN(rad)) {
-        return res.status(400).json({ message: 'Coordonnées ou rayon invalides' });
-      }
-      
-      // Conversion km en mètres pour MongoDB
-      const maxDistance = rad * 1000;
-      
-      // Requête avec géolocalisation
-      const secrets = await Secret.find({
-        location: {
-          $near: {
-            $geometry: {
-              type: "Point",
-              coordinates: [lng, lat] // MongoDB utilise [longitude, latitude]
+        const { latitude, longitude, radius = 5 } = req.query;
+        const userId = req.user.id;
+
+        if (!latitude || !longitude) {
+            return res.status(400).json({ message: 'Coordonnées manquantes ou invalides' });
+        }
+
+        // Convertir en nombres
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+        const rad = parseFloat(radius);
+
+        // Vérifier la validité des nombres
+        if (isNaN(lat) || isNaN(lng) || isNaN(rad)) {
+            return res.status(400).json({ message: 'Coordonnées ou rayon invalides' });
+        }
+
+        // Conversion km en mètres pour MongoDB
+        const maxDistance = rad * 1000;
+
+        // Requête avec géolocalisation
+        const secrets = await Secret.find({
+            location: {
+                $near: {
+                    $geometry: {
+                        type: "Point",
+                        coordinates: [lng, lat] // MongoDB utilise [longitude, latitude]
+                    },
+                    $maxDistance: maxDistance
+                }
             },
-            $maxDistance: maxDistance
-          }
-        },
-        purchasedBy: { $nin: [userId] }, // Ne pas inclure les secrets déjà achetés
-        user: { $ne: userId },           // Ne pas inclure les secrets créés par l'utilisateur
-        expiresAt: { $gt: new Date() }   // Ne pas inclure les secrets expirés
-      })
-      .populate('user', 'name profilePicture phone')
-      .select('label content price createdAt expiresAt user purchasedBy location shareLink')
-      .limit(50)
-      .sort({ createdAt: -1 });
-      
-      return res.status(200).json({
-        secrets,
-        totalPages: 1,
-        currentPage: 1
-      });
+            purchasedBy: { $nin: [userId] }, // Ne pas inclure les secrets déjà achetés
+            user: { $ne: userId },           // Ne pas inclure les secrets créés par l'utilisateur
+            expiresAt: { $gt: new Date() }   // Ne pas inclure les secrets expirés
+        })
+            .populate('user', 'name profilePicture phone')
+            .select('label content price createdAt expiresAt user purchasedBy location shareLink')
+            .limit(50)
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            secrets,
+            totalPages: 1,
+            currentPage: 1
+        });
     } catch (error) {
-      console.error('Erreur lors de la récupération des secrets à proximité:', error);
-      return res.status(500).json({
-        message: 'Erreur lors de la récupération des secrets à proximité',
-        error: error.message
-      });
+        console.error('Erreur lors de la récupération des secrets à proximité:', error);
+        return res.status(500).json({
+            message: 'Erreur lors de la récupération des secrets à proximité',
+            error: error.message
+        });
     }
-  };
+};
 
 
-  exports.getUnpurchasedSecrets = async (req, res) => {
+exports.getUnpurchasedSecrets = async (req, res) => {
     try {
-      const { page = 1, limit = 10, language } = req.query;
-      const userId = req.user.id;
-      
-      // Construire le filtre de base
-      const filter = {
-        purchasedBy: { $nin: [userId] },
-        user: { $ne: userId },
-        expiresAt: { $gt: new Date() }
-      };
-      
-      // Ajouter le filtre de langue si spécifié
-      if (language) {
-        filter.language = language;
-      }
-      
-      const secrets = await Secret.find(filter)
-        .populate('user', 'name profilePicture')
-        .select('label content price createdAt expiresAt user purchasedBy location language')
-        .limit(limit * 1)
-        .skip((page - 1) * limit)
-        .sort({ createdAt: -1 })
-        .exec();
-      
-      const total = await Secret.countDocuments(filter);
-      
-      res.status(200).json({
-        secrets,
-        totalPages: Math.ceil(total / limit),
-        currentPage: page
-      });
+        const { page = 1, limit = 10, language } = req.query;
+        const userId = req.user.id;
+
+        // Construire le filtre de base
+        const filter = {
+            purchasedBy: { $nin: [userId] },
+            user: { $ne: userId },
+            expiresAt: { $gt: new Date() }
+        };
+
+        // Ajouter le filtre de langue si spécifié
+        if (language) {
+            filter.language = language;
+        }
+
+        const secrets = await Secret.find(filter)
+            .populate('user', 'name profilePicture')
+            .select('label content price createdAt expiresAt user purchasedBy location language')
+            .limit(limit * 1)
+            .skip((page - 1) * limit)
+            .sort({ createdAt: -1 })
+            .exec();
+
+        const total = await Secret.countDocuments(filter);
+
+        res.status(200).json({
+            secrets,
+            totalPages: Math.ceil(total / limit),
+            currentPage: page
+        });
     } catch (error) {
-      console.error('Erreur détaillée:', error);
-      res.status(500).json({
-        message: 'Erreur lors de la récupération des secrets.',
-        error: error.message
-      });
+        console.error('Erreur détaillée:', error);
+        res.status(500).json({
+            message: 'Erreur lors de la récupération des secrets.',
+            error: error.message
+        });
     }
-  };
+};
 
 const calculatePrices = (originalPrice) => {
     const buyerMargin = 0.15; // 15% de marge pour l'acheteur
@@ -714,18 +715,18 @@ exports.getConversation = async (req, res) => {
             _id: req.params.conversationId,
             participants: req.user.id
         })
-        .populate({
-            path: 'messages.sender',
-            select: '_id name',
-            model: 'User'
-        })
-        .populate({
-            path: 'secret',
-            populate: {
-                path: 'user',
-                select: 'name'
-            }
-        });
+            .populate({
+                path: 'messages.sender',
+                select: '_id name',
+                model: 'User'
+            })
+            .populate({
+                path: 'secret',
+                populate: {
+                    path: 'user',
+                    select: 'name'
+                }
+            });
 
         if (!conversation) {
             return res.status(404).json({ message: 'Conversation introuvable.' });
@@ -738,7 +739,7 @@ exports.getConversation = async (req, res) => {
         });
 
         // Log détaillé des messages
-        console.log("Messages:", 
+        console.log("Messages:",
             conversation.messages.map(msg => ({
                 messageId: msg._id,
                 content: msg.content,
@@ -765,100 +766,100 @@ exports.getConversation = async (req, res) => {
 
 exports.addMessageToConversation = async (req, res) => {
     try {
-      console.log("Données reçues:", JSON.stringify(req.body, null, 2));
-      
-      // Extraire les données de la requête
-      const { content, messageType = 'text', image = null } = req.body;
-      
-      // Validation adaptée pour tous les types de messages
-      if ((messageType === 'text' || messageType === 'mixed') && !content?.trim()) {
-        return res.status(400).json({ message: 'Le contenu est requis pour les messages texte ou mixtes.' });
-      }
-      
-      if ((messageType === 'image' || messageType === 'mixed') && !image) {
-        return res.status(400).json({ message: 'L\'URL de l\'image est requise pour les messages image ou mixtes.' });
-      }
-      
-      // Construire l'objet message
-      const messageData = {
-        sender: req.user.id,
-        content: content?.trim() || " ", // Un espace par défaut (requis par le modèle)
-        senderName: req.user.name,
-        messageType: messageType // Conserver explicitement le type de message
-      };
-      
-      // Ajouter l'image si présente (pour les types 'image' ou 'mixed')
-      if (messageType === 'image' || messageType === 'mixed') {
-        // Si l'image est un objet FormData, extraire l'URL de l'image
-        if (typeof image === 'object' && image._parts && image._parts.length > 0) {
-          // Récupérer l'URL de l'image depuis FormData
-          // Normalement on utiliserait un service de stockage comme S3 ici
-          messageData.image = "placeholder_image_url"; 
-        } else {
-          // Sinon, utiliser la valeur directement (URL ou base64)
-          messageData.image = image;
+        console.log("Données reçues:", JSON.stringify(req.body, null, 2));
+
+        // Extraire les données de la requête
+        const { content, messageType = 'text', image = null } = req.body;
+
+        // Validation adaptée pour tous les types de messages
+        if ((messageType === 'text' || messageType === 'mixed') && !content?.trim()) {
+            return res.status(400).json({ message: 'Le contenu est requis pour les messages texte ou mixtes.' });
         }
-      }
-      
-      console.log("Message formaté:", messageData);
-      
-      // Trouver et mettre à jour la conversation
-      const conversation = await Conversation.findOne({
-        _id: req.params.conversationId,
-        participants: req.user.id
-      });
-      
-      if (!conversation) {
-        return res.status(404).json({ message: 'Conversation introuvable.' });
-      }
-      
-      // Incrémenter les compteurs de messages non lus
-      conversation.participants.forEach(participantId => {
-        const participantIdStr = participantId.toString();
-        if (participantIdStr !== req.user.id.toString()) {
-          const currentCount = conversation.unreadCount.get(participantIdStr) || 0;
-          conversation.unreadCount.set(participantIdStr, currentCount + 1);
+
+        if ((messageType === 'image' || messageType === 'mixed') && !image) {
+            return res.status(400).json({ message: 'L\'URL de l\'image est requise pour les messages image ou mixtes.' });
         }
-      });
-      
-      // Ajouter le message
-      conversation.messages.push(messageData);
-      await conversation.save();
-      
-      // Récupérer le message avec les infos de l'expéditeur
-      const updatedConversation = await Conversation.findById(req.params.conversationId)
-        .populate('messages.sender', '_id name profilePicture');
-      
-      const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1];
-      
-      res.status(201).json(lastMessage);
+
+        // Construire l'objet message
+        const messageData = {
+            sender: req.user.id,
+            content: content?.trim() || " ", // Un espace par défaut (requis par le modèle)
+            senderName: req.user.name,
+            messageType: messageType // Conserver explicitement le type de message
+        };
+
+        // Ajouter l'image si présente (pour les types 'image' ou 'mixed')
+        if (messageType === 'image' || messageType === 'mixed') {
+            // Si l'image est un objet FormData, extraire l'URL de l'image
+            if (typeof image === 'object' && image._parts && image._parts.length > 0) {
+                // Récupérer l'URL de l'image depuis FormData
+                // Normalement on utiliserait un service de stockage comme S3 ici
+                messageData.image = "placeholder_image_url";
+            } else {
+                // Sinon, utiliser la valeur directement (URL ou base64)
+                messageData.image = image;
+            }
+        }
+
+        console.log("Message formaté:", messageData);
+
+        // Trouver et mettre à jour la conversation
+        const conversation = await Conversation.findOne({
+            _id: req.params.conversationId,
+            participants: req.user.id
+        });
+
+        if (!conversation) {
+            return res.status(404).json({ message: 'Conversation introuvable.' });
+        }
+
+        // Incrémenter les compteurs de messages non lus
+        conversation.participants.forEach(participantId => {
+            const participantIdStr = participantId.toString();
+            if (participantIdStr !== req.user.id.toString()) {
+                const currentCount = conversation.unreadCount.get(participantIdStr) || 0;
+                conversation.unreadCount.set(participantIdStr, currentCount + 1);
+            }
+        });
+
+        // Ajouter le message
+        conversation.messages.push(messageData);
+        await conversation.save();
+
+        // Récupérer le message avec les infos de l'expéditeur
+        const updatedConversation = await Conversation.findById(req.params.conversationId)
+            .populate('messages.sender', '_id name profilePicture');
+
+        const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1];
+
+        res.status(201).json(lastMessage);
     } catch (error) {
-      console.error('Erreur lors de l\'ajout du message:', error);
-      res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+        console.error('Erreur lors de l\'ajout du message:', error);
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
-  };
+};
 
 
 exports.uploadImage = async (req, res) => {
     try {
         const { image } = req.body; // L'image en base64 ou un URL temporaire
-        
+
         if (!image) {
             return res.status(400).json({ message: 'Aucune image fournie' });
         }
-        
+
         // Dans une implémentation réelle, vous stockeriez l'image dans un service cloud comme S3
         // Pour cette démonstration, nous renvoyons simplement l'image telle quelle
-        
+
         // 1. Exemple simple retournant l'image reçue (pour tests uniquement)
         const imageUrl = image;
-        
+
         // 2. Alternative : pour une implémentation plus complète, vous pourriez :
         // - Valider le type/format de l'image
         // - La redimensionner si nécessaire
         // - La télécharger vers un service de stockage
         // - Retourner l'URL permanente
-        
+
         res.status(200).json({
             url: imageUrl,
             message: 'Image téléchargée avec succès'
@@ -893,7 +894,7 @@ exports.getUserConversations = async (req, res) => {
         const conversationsWithUnreadCount = conversations.map(conv => {
             const userIdStr = req.user.id.toString();
             const unreadCount = conv.unreadCount?.get(userIdStr) || 0;
-            
+
             console.log('Conversation Details:', {
                 conversationId: conv._id,
                 unreadCountMap: conv.unreadCount,
@@ -903,8 +904,8 @@ exports.getUserConversations = async (req, res) => {
             });
 
             return {
-              ...conv.toObject(),
-              unreadCount
+                ...conv.toObject(),
+                unreadCount
             };
         });
 
@@ -918,24 +919,24 @@ exports.getUserConversations = async (req, res) => {
 
 exports.markConversationAsRead = async (req, res) => {
     try {
-      const conversation = await Conversation.findOne({
-        _id: req.params.conversationId,
-        participants: req.user.id
-      });
-  
-      if (!conversation) {
-        return res.status(404).json({ message: 'Conversation introuvable.' });
-      }
-  
-      // Réinitialiser le nombre de messages non lus pour cet utilisateur
-      conversation.unreadCount.set(req.user.id.toString(), 0);
-      await conversation.save();
-  
-      res.status(200).json({ message: 'Messages marqués comme lus.' });
+        const conversation = await Conversation.findOne({
+            _id: req.params.conversationId,
+            participants: req.user.id
+        });
+
+        if (!conversation) {
+            return res.status(404).json({ message: 'Conversation introuvable.' });
+        }
+
+        // Réinitialiser le nombre de messages non lus pour cet utilisateur
+        conversation.unreadCount.set(req.user.id.toString(), 0);
+        await conversation.save();
+
+        res.status(200).json({ message: 'Messages marqués comme lus.' });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
-  };
+};
 
 exports.getUserSecretsWithCount = async (req, res) => {
     try {

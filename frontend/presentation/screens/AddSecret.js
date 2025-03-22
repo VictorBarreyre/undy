@@ -446,7 +446,10 @@ const AddSecret = () => {
 
     return (
         <Background>
-          <DeepLinkHandler onStripeSuccess={handleStripeOnboardingSuccess} />
+          <DeepLinkHandler 
+          onStripeSuccess={handleStripeOnboardingSuccess} 
+          userId={userData._id} 
+          />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
