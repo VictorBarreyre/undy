@@ -271,7 +271,7 @@ const AddSecret = () => {
 
 
    // Remplacer la fonction handlePress par celle-ci
-const handlePress = async () => {
+   const handlePress = async () => {
     try {
         // Préparer les données du secret
         const secretData = {
@@ -283,97 +283,112 @@ const handlePress = async () => {
         };
 
         if (includeLocation && userLocation) {
-            const lat = parseFloat(userLocation.latitude);
-            const lng = parseFloat(userLocation.longitude);
-            
-            // Validation géographique
-            if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                secretData.location = {
-                    type: 'Point',
-                    coordinates: [lng, lat]
-                };
-            } else {
-                Alert.alert(t('location.errors.title'), t('location.errors.invalidCoordinates'));
-                return;
-            }
+            // Code de validation de la localisation...
+            // (garder votre code existant)
         }
 
-        // ÉTAPE 1: Vérifier d'abord le statut Stripe de l'utilisateur
-        const stripeStatus = await handleStripeOnboardingRefresh();
-        
-        // Utilisateur a un compte Stripe actif
-        if (stripeStatus.status === 'active' || stripeStatus.stripeStatus === 'active') {
-            // ÉTAPE 2: Poster directement le secret
-            const result = await handlePostSecret(secretData);
+        // Sauvegarder d'abord les données
+        await savePendingSecretData(secretData);
+
+        try {
+            // Vérifier le statut Stripe de l'utilisateur
+            const stripeStatus = await handleStripeOnboardingRefresh();
             
-            // Afficher le message de succès
-            Alert.alert(
-                t('addSecret.alerts.success.title'),
-                t('addSecret.alerts.success.message'),
-                [
-                    {
-                        text: t('addSecret.alerts.success.shareNow'),
-                        onPress: async () => {
-                            try {
-                                await handleShareSecret(result.secret);
-                            } catch (error) {
-                                Alert.alert(t('addSecret.errors.title'), t('addSecret.errors.unableToShare'));
-                            } finally {
-                                // Reset form fields
-                                setSecretText('');
-                                setSelectedLabel('');
-                                setPrice('');
-                                setExpiresIn(7);
-                            }
-                        }
-                    },
-                    {
-                        text: t('addSecret.alerts.later'),
-                        style: "cancel",
-                        onPress: () => {
-                            // Reset form fields
-                            setSecretText('');
-                            setSelectedLabel('');
-                            setPrice('');
-                            setExpiresIn(7);
-                        }
-                    }
-                ]
-            );
-        } else {
-            // ÉTAPE 3: L'utilisateur n'a pas de compte Stripe actif
-            // Sauvegarder les données du secret pour plus tard
-            await savePendingSecretData(secretData);
-            
-            // Demander à l'utilisateur de configurer Stripe
-            Alert.alert(
-                t('addSecret.alerts.setupRequired.title'),
-                t('addSecret.alerts.setupRequired.message'),
-                [
-                    {
-                        text: t('addSecret.alerts.setupRequired.configureNow'),
-                        onPress: async () => {
-                            try {
-                                if (stripeStatus.stripeOnboardingUrl) {
-                                    await Linking.openURL(stripeStatus.stripeOnboardingUrl);
-                                } else {
-                                    Alert.alert(t('addSecret.alerts.info'), stripeStatus.message);
+            // Si l'utilisateur a un compte Stripe actif, poster le secret directement
+            if (stripeStatus.status === 'active' || stripeStatus.stripeStatus === 'active') {
+                const result = await handlePostSecret(secretData);
+                
+                // Afficher le message de succès
+                Alert.alert(
+                    t('addSecret.alerts.success.title'),
+                    t('addSecret.alerts.success.message'),
+                    // Options d'alerte...
+                );
+            } else {
+                // L'utilisateur a besoin de configurer Stripe
+                handleStripeConfiguration(stripeStatus);
+            }
+        } catch (error) {
+            // Gérer spécifiquement l'erreur "Aucun compte Stripe associé"
+            if (error.message.includes("Aucun compte Stripe associé") || 
+                (error.response?.data && error.response.data.status === 'no_account')) {
+                // Créer un compte Stripe pour l'utilisateur
+                Alert.alert(
+                    t('addSecret.alerts.noStripeAccount.title'),
+                    t('addSecret.alerts.noStripeAccount.message'),
+                    [
+                        {
+                            text: t('addSecret.alerts.noStripeAccount.create'),
+                            onPress: async () => {
+                                try {
+                                    // Créer un nouveau compte Stripe via handlePostSecret
+                                    // qui va déclencher la création du compte
+                                    const result = await handlePostSecret(secretData);
+                                    
+                                    if (result.requiresStripeSetup && result.stripeOnboardingUrl) {
+                                        await Linking.openURL(result.stripeOnboardingUrl);
+                                    } else {
+                                        Alert.alert(t('addSecret.alerts.info'), result.message);
+                                    }
+                                } catch (innerError) {
+                                    Alert.alert(t('addSecret.errors.title'), innerError.message);
                                 }
-                            } catch (error) {
-                                Alert.alert(t('addSecret.errors.title'), error.message);
                             }
+                        },
+                        {
+                            text: t('addSecret.alerts.later'),
+                            style: "cancel"
                         }
-                    },
-                    {
-                        text: t('addSecret.alerts.later'),
-                        style: "cancel"
-                    }
-                ]
-            );
+                    ]
+                );
+            } else {
+                Alert.alert(t('addSecret.errors.title'), error.message);
+            }
         }
     } catch (error) {
         Alert.alert(t('addSecret.errors.title'), error.message);
     }
+};
+
+// Fonction auxiliaire pour gérer la configuration Stripe
+const handleStripeConfiguration = async (stripeStatus) => {
+    Alert.alert(
+        t('addSecret.alerts.setupRequired.title'),
+        t('addSecret.alerts.setupRequired.message'),
+        [
+            {
+                text: t('addSecret.alerts.setupRequired.configureNow'),
+                onPress: async () => {
+                    try {
+                        if (stripeStatus.stripeOnboardingUrl || stripeStatus.url) {
+                            await Linking.openURL(stripeStatus.stripeOnboardingUrl || stripeStatus.url);
+                        } else {
+                            // Si pas d'URL, essayer de créer un compte
+                            const result = await handlePostSecret({
+                                selectedLabel,
+                                secretText,
+                                price,
+                                expiresIn,
+                                language: currentLanguage
+                            });
+                            
+                            if (result.requiresStripeSetup && result.stripeOnboardingUrl) {
+                                await Linking.openURL(result.stripeOnboardingUrl);
+                            } else {
+                                Alert.alert(t('addSecret.alerts.info'), result.message);
+                            }
+                        }
+                    } catch (error) {
+                        Alert.alert(t('addSecret.errors.title'), error.message);
+                    }
+                }
+            },
+            {
+                text: t('addSecret.alerts.later'),
+                style: "cancel"
+            }
+        ]
+    );
 };
 
     useEffect(() => {
