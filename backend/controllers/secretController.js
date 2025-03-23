@@ -11,7 +11,7 @@ exports.createSecret = async (req, res) => {
     session.startTransaction();
 
     try {
-        const { label, content, price, expiresIn = 7, location, language } = req.body;
+        const { label, content, price, expiresIn = 7, location, language, currency = '€' } = req.body;
 
         // Validation des champs requis
         if (!label || !content || price == null) {
@@ -22,6 +22,14 @@ exports.createSecret = async (req, res) => {
                     content: !content,
                     price: price == null
                 }
+            });
+        }
+
+        const supportedCurrencies = ['€', '$', '£', '¥'];
+        if (!supportedCurrencies.includes(currency)) {
+            return res.status(400).json({
+                message: 'Devise non supportée',
+                supportedCurrencies
             });
         }
 
@@ -105,6 +113,7 @@ exports.createSecret = async (req, res) => {
             label,
             content,
             price,
+            currency, 
             user: req.user.id,
             expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
             status: 'active',
@@ -357,19 +366,46 @@ exports.getUnpurchasedSecrets = async (req, res) => {
     }
 };
 
-const calculatePrices = (originalPrice) => {
+
+const EXCHANGE_RATES = {
+    '€': 1.0,    // Base: Euro
+    '$': 0.92,   // 1 USD = 0.92 EUR (exemple)
+    '£': 1.17,   // 1 GBP = 1.17 EUR (exemple)
+    '¥': 0.0061  // 1 JPY = 0.0061 EUR (exemple)
+};
+
+// Fonction pour convertir vers et depuis l'Euro (devise de base pour les calculs)
+const convertCurrency = (amount, fromCurrency, toCurrency = '€') => {
+    if (fromCurrency === toCurrency) return amount;
+    
+    // Convertir d'abord en Euro (devise de base)
+    const amountInEuro = fromCurrency === '€' ? amount : amount * EXCHANGE_RATES[fromCurrency];
+    
+    // Si la devise cible est l'Euro, retourner directement
+    if (toCurrency === '€') return amountInEuro;
+    
+    // Sinon, convertir de l'Euro vers la devise cible
+    return amountInEuro / EXCHANGE_RATES[toCurrency];
+};
+
+
+const calculatePrices = (originalPrice, currency = '€') => {
     const buyerMargin = 0.15; // 15% de marge pour l'acheteur
     const sellerMargin = 0.10; // 10% de marge pour le vendeur
 
-    const buyerTotal = originalPrice * (1 + buyerMargin);
-    const sellerAmount = originalPrice * (1 - sellerMargin);
+    // Convertir en Euro pour les calculs
+    const priceInEuro = convertCurrency(originalPrice, currency);
+
+    const buyerTotal = priceInEuro * (1 + buyerMargin);
+    const sellerAmount = priceInEuro * (1 - sellerMargin);
     const platformFee = buyerTotal - sellerAmount;
 
     return {
         buyerTotal: Math.round(buyerTotal * 100), // En centimes pour Stripe
         sellerAmount: Math.round(sellerAmount * 100),
         platformFee: Math.round(platformFee * 100),
-        originalPrice: Math.round(originalPrice * 100)
+        originalPrice: Math.round(originalPrice * 100),
+        currency: currency // Inclure la devise dans les détails
     };
 };
 
@@ -382,8 +418,17 @@ exports.createPaymentIntent = async (req, res) => {
         if (!secret) {
             return res.status(404).json({ message: 'Secret introuvable.' });
         }
+     // Utiliser la devise du secret
+     const currency = secret.currency || '€';
+     const priceDetails = calculatePrices(secret.price, currency);
 
-        const priceDetails = calculatePrices(secret.price);
+     // Déterminer la devise Stripe (convertir les symboles en codes ISO)
+     const stripeCurrency = {
+         '€': 'eur',
+         '$': 'usd',
+         '£': 'gbp',
+         '¥': 'jpy'
+     }[currency] || 'eur';
 
         // Créer l'intention de paiement Stripe avec le montant total pour l'acheteur
         const paymentIntent = await stripe.paymentIntents.create({
@@ -395,7 +440,9 @@ exports.createPaymentIntent = async (req, res) => {
                 originalPrice: secret.price.toString(),
                 buyerTotal: priceDetails.buyerTotal.toString(),
                 sellerAmount: priceDetails.sellerAmount.toString(),
-                platformFee: priceDetails.platformFee.toString()
+                platformFee: priceDetails.platformFee.toString(),
+                currency: currency 
+
             }
         });
 
@@ -406,6 +453,7 @@ exports.createPaymentIntent = async (req, res) => {
             amount: priceDetails.buyerTotal / 100, // Convertir en euros pour la DB
             paymentIntentId: paymentIntent.id,
             status: 'pending',
+            currency: currency, 
             metadata: {
                 originalPrice: secret.price,
                 sellerAmount: priceDetails.sellerAmount / 100,
@@ -420,7 +468,8 @@ exports.createPaymentIntent = async (req, res) => {
         res.json({
             clientSecret: paymentIntent.client_secret,
             paymentId: paymentIntent.id,
-            buyerTotal: priceDetails.buyerTotal / 100
+            buyerTotal: priceDetails.buyerTotal / 100,
+            currency: currency 
         });
 
     } catch (error) {
@@ -467,6 +516,8 @@ exports.purchaseSecret = async (req, res) => {
                 participants: { $elemMatch: { $eq: userId } }
             });
 
+            
+
             if (!conversation) {
                 conversation = await Conversation.create([{
                     secret: secretId,
@@ -485,7 +536,16 @@ exports.purchaseSecret = async (req, res) => {
         }
 
         // Calcul des prix avec marges
-        const priceDetails = calculatePrices(secret.price);
+        const currency = secret.currency || '€';
+        const priceDetails = calculatePrices(secret.price, currency);
+
+        // Déterminer la devise Stripe
+        const stripeCurrency = {
+            '€': 'eur',
+            '$': 'usd',
+            '£': 'gbp',
+            '¥': 'jpy'
+        }[currency] || 'eur';
 
         // Vérification du statut du paiement Stripe
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
@@ -495,7 +555,9 @@ exports.purchaseSecret = async (req, res) => {
             amount: paymentIntent.amount,
             expectedAmount: priceDetails.buyerTotal,
             originalPrice: secret.price,
-            calculatedBuyerTotal: priceDetails.buyerTotal / 100
+            calculatedBuyerTotal: priceDetails.buyerTotal / 100,
+            currency: paymentIntent.currency,
+            expectedCurrency: stripeCurrency
         });
 
         // Vérifications de sécurité supplémentaires
@@ -512,6 +574,7 @@ exports.purchaseSecret = async (req, res) => {
                     stripeStatus: paymentIntent.status,
                     amountCheck: paymentIntent.amount === priceDetails.buyerTotal,
                     secretIdCheck: paymentIntent.metadata.secretId === secretId,
+                    currencyCheck: paymentIntent.currency === stripeCurrency,
                     userIdCheck: paymentIntent.metadata.userId === userId
                 }
             });

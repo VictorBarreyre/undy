@@ -36,6 +36,130 @@ export const CardDataProvider = ({ children }) => {
   const { userData } = useContext(AuthContext);
   const [markedAsReadConversations, setMarkedAsReadConversations] = useState({});
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
+  const [userCurrency, setUserCurrency] = useState('€'); // Euro par défaut
+
+  const detectUserCurrency = (country, language) => {
+    // Priorité à la localisation si disponible
+    if (country) {
+      // Pays utilisant le dollar américain
+      const usdCountries = ['UNITED STATES', 'USA', 'US', 'CANADA', 'AUSTRALIA', 'NEW ZEALAND', 'SINGAPORE'];
+
+      // Pays utilisant la livre sterling
+      const gbpCountries = ['UNITED KINGDOM', 'UK', 'ENGLAND', 'GREAT BRITAIN'];
+
+      // Pays utilisant le yen japonais
+      const jpyCountries = ['JAPAN'];
+
+      // Pays utilisant l'euro
+      const euroCountries = [
+        'FRANCE', 'GERMANY', 'ITALY', 'SPAIN', 'PORTUGAL', 'NETHERLANDS',
+        'BELGIUM', 'IRELAND', 'GREECE', 'AUSTRIA', 'FINLAND', 'LUXEMBOURG',
+        'SLOVAKIA', 'SLOVENIA', 'ESTONIA', 'LATVIA', 'LITHUANIA', 'CYPRUS', 'MALTA'
+      ];
+
+      const upperCountry = country.toUpperCase();
+
+      if (usdCountries.includes(upperCountry)) return '$';
+      if (gbpCountries.includes(upperCountry)) return '£';
+      if (jpyCountries.includes(upperCountry)) return '¥';
+      if (euroCountries.includes(upperCountry)) return '€';
+    }
+
+    // Fallback sur la langue si pays non reconnu
+    if (language) {
+      switch (language.substring(0, 2).toLowerCase()) {
+        case 'en':
+          // Pour l'anglais, on essaie de différencier US/UK
+          // On pourrait utiliser navigator.language qui inclut la région
+          if (language.includes('GB') || language.includes('UK')) {
+            return '£';
+          }
+          return '$'; // Par défaut US
+        case 'fr':
+        case 'de':
+        case 'es':
+        case 'it':
+        case 'pt':
+        case 'nl':
+        case 'el':
+        case 'fi':
+          return '€';
+        case 'ja':
+          return '¥';
+        default:
+          return '€'; // Euro par défaut
+      }
+    }
+
+    return '€'; // Devise par défaut
+  };
+
+  useEffect(() => {
+    const initCurrency = async () => {
+      try {
+        // Vérifier si une devise est déjà sauvegardée
+        const savedCurrency = await AsyncStorage.getItem('userCurrency');
+        if (savedCurrency) {
+          setUserCurrency(savedCurrency);
+          return;
+        }
+
+        // Sinon, détecter la devise basée sur la localisation
+        const { status } = await Location.getForegroundPermissionsAsync();
+        let detectedCurrency = '€'; // Par défaut
+
+        if (status === 'granted') {
+          try {
+            const position = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Low // Précision faible suffisante pour le pays
+            });
+
+            if (position) {
+              const geoData = await Location.reverseGeocodeAsync({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              });
+
+              if (geoData && geoData.length > 0) {
+                const { country } = geoData[0];
+                const currentLanguage = i18n.language || navigator.language;
+                detectedCurrency = detectUserCurrency(country, currentLanguage);
+              }
+            }
+          } catch (locError) {
+            console.log('Erreur de géolocalisation, utilisation de la langue:', locError);
+            // Fallback sur la langue uniquement
+            const currentLanguage = i18n.language || navigator.language;
+            detectedCurrency = detectUserCurrency(null, currentLanguage);
+          }
+        } else {
+          // Pas de permission, utilisation de la langue uniquement
+          const currentLanguage = i18n.language || navigator.language;
+          detectedCurrency = detectUserCurrency(null, currentLanguage);
+        }
+
+        // Sauvegarder et définir la devise détectée
+        await AsyncStorage.setItem('userCurrency', detectedCurrency);
+        setUserCurrency(detectedCurrency);
+      } catch (error) {
+        console.error('Erreur lors de la détection de la devise:', error);
+        setUserCurrency('€'); // Fallback à l'euro
+      }
+    };
+
+    initCurrency();
+  }, []);
+
+  const setUserPreferredCurrency = async (currency) => {
+    try {
+      await AsyncStorage.setItem('userCurrency', currency);
+      setUserCurrency(currency);
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde de la devise:', error);
+      return false;
+    }
+  };
 
 
   useEffect(() => {
@@ -94,30 +218,31 @@ export const CardDataProvider = ({ children }) => {
 
       // Convertir explicitement price en nombre
       const numericPrice = parseFloat(secretData.price);
-      
+
       // Validation du prix
       if (isNaN(numericPrice) || numericPrice < 3) {
         throw new Error(i18n.t('cardData.errors.invalidPrice'));
       }
-      
+
       // Préparer les données de base de la requête
       const payload = {
         label: secretData.selectedLabel,
         content: secretData.secretText,
         price: numericPrice,
+        currency: secretData.currency || '€', // Utiliser la devise fournie ou euro par défaut
         expiresIn: secretData.expiresIn || 7,
         language: secretData.language || i18n.language || navigator.language.split('-')[0] // Utiliser la langue de l'app/navigateur
       };
-      
+
       // Validation et transfert de la location
       if (secretData.location) {
         // Validation stricte de l'objet location
         if (
-          secretData.location.type === 'Point' && 
-          Array.isArray(secretData.location.coordinates) && 
+          secretData.location.type === 'Point' &&
+          Array.isArray(secretData.location.coordinates) &&
           secretData.location.coordinates.length === 2 &&
-          secretData.location.coordinates.every(coord => 
-            typeof coord === 'number' && 
+          secretData.location.coordinates.every(coord =>
+            typeof coord === 'number' &&
             !isNaN(coord)
           )
         ) {
@@ -131,11 +256,11 @@ export const CardDataProvider = ({ children }) => {
       else if (secretData.latitude && secretData.longitude) {
         const lat = parseFloat(secretData.latitude);
         const lng = parseFloat(secretData.longitude);
-        
+
         // Validation géographique
         if (
-          !isNaN(lat) && !isNaN(lng) && 
-          lat >= -90 && lat <= 90 && 
+          !isNaN(lat) && !isNaN(lng) &&
+          lat >= -90 && lat <= 90 &&
           lng >= -180 && lng <= 180
         ) {
           payload.latitude = lng;    // Attention à l'ordre longitude, latitude
@@ -144,12 +269,12 @@ export const CardDataProvider = ({ children }) => {
           console.warn('Invalid coordinates:', { lat, lng });
         }
       }
-      
+
       // Log des données avant envoi avec plus de détails
       console.log('Données envoyées à l\'API:', JSON.stringify(payload, null, 2));
-      
+
       const response = await instance.post('/api/secrets/createsecrets', payload);
-      
+
       console.log(i18n.t('cardData.logs.secretCreationResponse'), response.data);
 
       // Structuration de la réponse
@@ -171,15 +296,15 @@ export const CardDataProvider = ({ children }) => {
     } catch (error) {
       // Logging détaillé de l'erreur
       console.error(
-        i18n.t('cardData.errors.secretCreation'), 
+        i18n.t('cardData.errors.secretCreation'),
         error?.response?.data || error.message,
         error.stack
       );
 
       // Génération d'un message d'erreur plus informatif
-      const errorMessage = 
-        error?.response?.data?.message || 
-        error.message || 
+      const errorMessage =
+        error?.response?.data?.message ||
+        error.message ||
         i18n.t('cardData.errors.secretCreationGeneric');
 
       throw new Error(errorMessage);
@@ -242,21 +367,21 @@ export const CardDataProvider = ({ children }) => {
       const parsedUrl = new URL(url);
       const action = parsedUrl.searchParams.get('action');
       const secretPending = parsedUrl.searchParams.get('secretPending') === 'true';
-      
+
       console.log("Traitement du retour Stripe", { action, secretPending });
-      
+
       // Vérifier le statut du compte Stripe
       const stripeStatus = await handleStripeOnboardingRefresh();
-      
+
       // Vérifier si le compte est actif
       const isStripeActive = stripeStatus.status === 'active' || stripeStatus.stripeStatus === 'active';
-      
+
       // Si on a un compte actif et des données en attente, essayer de poster automatiquement
       if (isStripeActive && secretPending) {
         try {
           // Récupérer les données en attente
           let pendingSecretData = null;
-          
+
           // Chercher d'abord dans la clé spécifique à l'utilisateur
           if (userData?._id) {
             const userSpecificKey = `pendingSecretData_${userData._id}`;
@@ -266,7 +391,7 @@ export const CardDataProvider = ({ children }) => {
               await AsyncStorage.removeItem(userSpecificKey);
             }
           }
-          
+
           // Chercher ensuite dans la clé générique
           if (!pendingSecretData) {
             const data = await AsyncStorage.getItem('pendingSecretData');
@@ -275,7 +400,7 @@ export const CardDataProvider = ({ children }) => {
               await AsyncStorage.removeItem('pendingSecretData');
             }
           }
-          
+
           if (pendingSecretData) {
             console.log("Données de secret en attente trouvées, tentative de publication");
             // Maintenant poster le secret
@@ -291,11 +416,11 @@ export const CardDataProvider = ({ children }) => {
           console.error("Erreur lors du traitement des données en attente:", error);
         }
       }
-      
+
       return {
         success: isStripeActive,
-        message: isStripeActive 
-          ? 'Compte Stripe configuré avec succès' 
+        message: isStripeActive
+          ? 'Compte Stripe configuré avec succès'
           : 'Configuration Stripe en cours',
         stripeStatus,
         isStripeActive
@@ -379,21 +504,21 @@ export const CardDataProvider = ({ children }) => {
     if (!forceFetch && lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)) {
       return data;
     }
-    
+
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
-    
+
     // Récupérer la langue de l'application ou du périphérique si non spécifiée
     const appLanguage = language || i18n.language || navigator.language.split('-')[0];
-    
+
     setIsLoadingData(true);
     try {
       const response = await instance.get('/api/secrets/unpurchased', {
         params: { language: appLanguage }
       });
-      
+
       if (response.data && response.data.secrets) {
         setData(response.data.secrets);
         setLastFetchTime(Date.now());
@@ -881,6 +1006,9 @@ export const CardDataProvider = ({ children }) => {
       setTotalUnreadCount,
       fetchSecretsByLocation,
       getCurrentLocation,
+      userCurrency,
+      setUserPreferredCurrency,
+      detectUserCurrency,
     }}>
       {children}
     </CardDataContext.Provider>

@@ -15,6 +15,12 @@ const SecretSchema = new mongoose.Schema({
     required: true,
     min: 0,
   },
+  currency: {
+    type: String,
+    default: '€',
+    enum: ['€', '$', '£', '¥'], // Limite les valeurs possibles
+    required: true
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

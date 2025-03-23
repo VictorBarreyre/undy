@@ -24,12 +24,19 @@ const PaymentSchema = new mongoose.Schema({
       enum: ['pending', 'succeeded', 'failed'],
       default: 'pending',
   },
+  currency: {
+    type: String,
+    default: '€',
+    enum: ['€', '$', '£', '¥'],
+    required: true
+},
   metadata: {
       originalPrice: Number,
       sellerAmount: Number,
       platformFee: Number,
       buyerMargin: Number,
-      sellerMargin: Number
+      sellerMargin: Number,
+      currency: String 
   }
 }, { timestamps: true });
 
