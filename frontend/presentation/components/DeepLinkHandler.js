@@ -3,8 +3,8 @@ import { Linking, Alert } from 'react-native';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
     const { t } = useTranslation();

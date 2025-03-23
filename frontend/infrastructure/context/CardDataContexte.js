@@ -4,6 +4,7 @@ import { AuthContext } from './AuthContext';
 import { Platform, Share } from 'react-native';
 import i18n from 'i18next'; // Import direct de i18n
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Ajoutez cette ligne
 
 
 const CardDataContext = createContext();
