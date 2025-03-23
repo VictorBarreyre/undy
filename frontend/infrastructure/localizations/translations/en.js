@@ -82,7 +82,7 @@ export default {
     "preferences": "Preferences",
     "contactAccess": {
       "title": "Contact Access",
-      "message": "To view secrets from your contacts, we need access to your contacts.",
+      "message": "To view hushys from your contacts, we need access to your contacts.",
       "cancel": "Cancel",
       "authorize": "Authorize"
     },
@@ -120,7 +120,7 @@ export default {
 
   "location": {
     "shareLocation": {
-      "title": "Share location with this secret",
+      "title": "Share location with this hushy",
       "enabled": "Your location will be included",
       "disabled": "Your location will not be shared"
     },
@@ -130,13 +130,13 @@ export default {
     "alerts": {
       "welcome": {
         "title": "Location Access",
-        "message": "Hushy can use your location to show you nearby secrets. Would you like to enable this feature?",
+        "message": "Hushy can use your location to show you nearby hushys. Would you like to enable this feature?",
         "yes": "Yes, enable",
         "no": "No, thanks"
       },
       "shareLocation": {
         "title": "Share Your Location",
-        "message": "Would you like to share your location with this secret? This will allow users nearby to discover it more easily.",
+        "message": "Would you like to share your location with this hushy? This will allow users nearby to discover it more easily.",
         "yes": "Share",
         "no": "Don't share"
       }
@@ -145,7 +145,7 @@ export default {
       "permissionError": "Location permission error:",
       "locationError": "Location error:",
       "gettingPosition": "Error getting position:",
-      "fetchingNearbySecrets": "Error fetching nearby secrets:",
+      "fetchingNearbySecrets": "Error fetching nearby hushys:",
       "permissionCheckError": "Error checking location permissions:",
       "accessUpdateError": "Error updating location access:"
     },
@@ -154,11 +154,11 @@ export default {
     }
   },
 "swipeDeck": {
-  "noSecrets": "No secrets available",
+  "noSecrets": "No hushys available",
   "tryChangingFilters": "Try changing your filters",
-  "checkBackLater": "Check back later to discover new secrets",
+  "checkBackLater": "Check back later to discover new hushys",
   "noContactsUsingApp": "None of your contacts are using Hushy yet",
-  "noSecretsNearby": "No secrets available nearby",
+  "noSecretsNearby": "No hushys available nearby",
   "errors": {
     "initialLoading": "Initial loading error:",
     "purchase": "Error during purchase:",
@@ -180,7 +180,7 @@ export default {
     "duration7d": "7 days",
     "duration30d": "30 days",
     "youWillReceive": "You will receive {{amount}}€",
-    "postSecret": "Post secret",
+    "postSecret": "Post hushy",
     "categories": [
       "Confession",
       "Love",
@@ -194,7 +194,7 @@ export default {
       "Dream",
       "Shame",
       "Event",
-      "Family secret",
+      "Family hushy",
       "Infidelity",
       "Guilt"
     ],
@@ -204,14 +204,25 @@ export default {
       "selectCategory": "Select a category"
     },
     "alerts": {
+      "noStripeAccount": {
+        "title": "No Stripe Account",
+        "message": "You don't have a Stripe account set up to receive payments yet.",
+        "create": "Create an account"
+      },
+      "pendingData": {
+        "title": "Pending Data",
+        "message": "You have an unfinished hushy. Would you like to continue with this data?",
+        "continue": "Continue",
+        "discard": "Discard"
+      },
       "setupRequired": {
         "title": "Setup required",
-        "message": "Your secret has been created. To be able to sell it, you need to set up your payment account.",
+        "message": "Your hushy has been created. To be able to sell it, you need to set up your payment account.",
         "configureNow": "Configure now"
       },
       "success": {
         "title": "Congratulations! 🎉",
-        "message": "Your secret has been successfully published. It is now available for sale!",
+        "message": "Your hushy has been successfully published. It is now available for sale!",
         "shareNow": "Share now 🔐"
       },
       "info": "Information",
@@ -221,7 +232,7 @@ export default {
       "title": "Error",
       "deepLink": "Deep link error:",
       "unableToProcessLink": "Unable to process the link",
-      "unableToShare": "Unable to share the secret."
+      "unableToShare": "Unable to share the hushy."
     }
   },
 
@@ -271,7 +282,7 @@ export default {
       "sendMessage": "Error sending message:",
       "imageSelection": "Error selecting image:",
       "shareError": "Error while sharing",
-      "missingSecretData": "Missing secret data"
+      "missingSecretData": "Missing hushy data"
     },
     "messageFailed": "Failed",
     "retry": "Retry",
@@ -303,7 +314,7 @@ export default {
       "othersSecrets": "Others' hushys"
     },
     "stats": {
-      "secrets": "Secrets",
+      "secrets": "hHushys",
       "followers": "Followers",
       "following": "Following"
     },
@@ -406,7 +417,7 @@ export default {
     "errors": {
       "title": "Error",
       "fetchError": "Error:",
-      "unableToLoad": "Unable to load the secret.",
+      "unableToLoad": "Unable to load the hushy.",
       "purchaseError": "Error during purchase:",
       "paymentError": "Payment error:"
     }
@@ -425,11 +436,11 @@ export default {
     "labelUnavailable": "Label unavailable",
     "profilePicture": "{{name}}'s profile picture",
     "logs": {
-      "secretRevealed": "Secret revealed!"
+      "secretRevealed": "hushy revealed!"
     },
     "errors": {
       "title": "Error",
-      "unableToShare": "Unable to share the secret."
+      "unableToShare": "Unable to share the hushy."
     }
   },
 
@@ -447,24 +458,28 @@ export default {
     "alerts": {
       "success": {
         "title": "Success",
-        "message": "Your Stripe account has been successfully configured!"
+        "message": "Your Stripe account has been successfully configured!",
+        "accountCreated": "Your Stripe account has been successfully created!",
       },
       "configInProgress": {
         "title": "Configuration in progress"
       },
-      "ok": "OK"
+      "ok": "OK",
+      "errors": {
+        "title": "Error",
+        "deepLinkError": "Deep link error:",
+        "unableToProcessLink": "Unable to process the link",
+        "stillNeedsConfig": "Stripe configuration is still needed.",
+        "postingFailed": "Failed to automatically post the hushy.",
+      },
+      "returnToPost": "Return to posting",
     },
-    "errors": {
-      "title": "Error",
-      "deepLinkError": "Deep link error:",
-      "unableToProcessLink": "Unable to process the link"
-    }
   },
 
   "earnings": {
     "title": "Earnings Details",
     "noEarningsYet": "You haven't generated any earnings yet. Start selling your secrets to earn money.",
-    "publishSecret": "Publish a secret",
+    "publishSecret": "Publish a hushy",
     "loadingTransactions": "Loading transactions...",
     "transfer": "Transfer",
     "sale": "Sale",
@@ -514,9 +529,9 @@ export default {
       "paymentSheetConfig": "PaymentSheet configuration:",
       "initializationSuccess": "PaymentSheet successfully initialized",
       "paymentProcessStart": "Starting payment process",
-      "creatingPaymentIntent": "Creating payment intent for secret {{secretId}}",
+      "creatingPaymentIntent": "Creating payment intent for hushy {{secretId}}",
       "apiResponseReceived": "API response received",
-      "clientSecretReceived": "Client secret received, payment ID: {{paymentId}}",
+      "clientSecretReceived": "Client hushy received, payment ID: {{paymentId}}",
       "presentingPaymentSheet": "Presenting payment sheet",
       "paymentCanceled": "Payment canceled by user",
       "paymentSuccess": "Payment successful"
@@ -526,7 +541,7 @@ export default {
       "applePayCheckError": "Error checking Apple Pay:",
       "initPaymentSheetError": "Error initializing PaymentSheet:",
       "initializationError": "Error in initializePaymentSheet:",
-      "invalidSecretData": "Invalid secret data",
+      "invalidSecretData": "Invalid hushy data",
       "paymentCreationError": "Error creating payment",
       "presentationError": "Presentation error:",
       "handlePaymentError": "Error in handlePayment:",
@@ -622,8 +637,8 @@ export default {
     "errors": {
       "axiosInitError": "Axios initialization error:",
       "axiosNotInitialized": "Axios instance not initialized",
-      "secretCreation": "Secret creation error:",
-      "secretCreationGeneric": "Error creating secret",
+      "secretCreation": "hushy creation error:",
+      "secretCreationGeneric": "Error creating hushy",
       "stripeRefresh": "Stripe refresh error:",
       "stripeRefreshGeneric": "Error refreshing Stripe configuration",
       "stripeReturn": "Stripe return error:",
@@ -635,7 +650,7 @@ export default {
       "invalidDataFromApi": "Invalid data received from API",
       "fetchingSecrets": "Error fetching secrets:",
       "fetchingUserSecrets": "Error fetching user secrets and count:",
-      "missingSecretOrPaymentId": "Secret ID and Payment ID are required",
+      "missingSecretOrPaymentId": "hushy ID and Payment ID are required",
       "noConversationIdReceived": "No conversation ID received",
       "purchaseErrorDetails": "Error details:",
       "fetchingPurchasedSecrets": "Error fetching purchased secrets:",
@@ -651,16 +666,16 @@ export default {
       "fullError": "Full error:"
     },
     "logs": {
-      "secretCreationResponse": "Secret creation response:",
+      "secretCreationResponse": "hushy creation response:",
       "stripeRefreshResponse": "Stripe refresh response:",
-      "attemptingPurchase": "Attempting to purchase secret:",
+      "attemptingPurchase": "Attempting to purchase hushy:",
       "messagesReceived": "Messages received:",
       "userDataNull": "getUserConversations: userData is null, returning empty array",
       "userDataNullSkippingUpdate": "refreshUnreadCounts: userData is null, skipping update",
       "updatingCounters": "Updating counters (with local cache):",
-      "searchingSecret": "Searching for secret with ID:",
+      "searchingSecret": "Searching for hushy with ID:",
       "responseReceived": "Response received:",
-      "soughtSecret": "Sought secret:"
+      "soughtSecret": "Sought hushy:"
     },
     "stripe": {
       "configComplete": "Stripe account fully configured",
@@ -672,12 +687,12 @@ export default {
       "deleteSuccess": "Stripe account successfully deleted"
     },
     "share": {
-      "messageIOS": "🔐 Discover my secret on Hushy!\n\n{{link}}",
-      "messageAndroid": "🔐 Discover my secret on Hushy!\n\n{{link}}\n\nDownload the app: https://play.google.com/store/apps/details?id=com.hushy",
-      "title": "Share a secret",
-      "subject": "A secret to share on Hushy",
-      "confidentialSecret": "Confidential secret 🔐",
-      "dialogTitle": "Share this confidential secret"
+      "messageIOS": "🔐 Discover my hushy on Hushy!\n\n{{link}}",
+      "messageAndroid": "🔐 Discover my hushy on Hushy!\n\n{{link}}\n\nDownload the app: https://play.google.com/store/apps/details?id=com.hushy",
+      "title": "Share a hushy",
+      "subject": "A hushy to share on Hushy",
+      "confidentialSecret": "Confidential hushy 🔐",
+      "dialogTitle": "Share this confidential hushy"
     }
   },
   "permissions": {

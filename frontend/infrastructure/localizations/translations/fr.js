@@ -82,7 +82,7 @@ export default {
     "preferences": "Préférences",
     "contactAccess": {
       "title": "Accès aux contacts",
-      "message": "Pour afficher les secrets de vos contacts, nous avons besoin d'accéder à vos contacts.",
+      "message": "Pour afficher les hushys de vos contacts, nous avons besoin d'accéder à vos contacts.",
       "cancel": "Annuler",
       "authorize": "Autoriser"
     },
@@ -116,11 +116,11 @@ export default {
     }
   },
 "swipeDeck": {
-  "noSecrets": "Aucun secret disponible",
+  "noSecrets": "Aucun hushy disponible",
   "tryChangingFilters": "Essayez de modifier vos filtres",
-  "checkBackLater": "Revenez plus tard pour découvrir de nouveaux secrets",
+  "checkBackLater": "Revenez plus tard pour découvrir de nouveaux hushys",
   "noContactsUsingApp": "Aucun de vos contacts n'utilise encore Hushy",
-  "noSecretsNearby": "Aucun secret disponible autour de vous",
+  "noSecretsNearby": "Aucun hushy disponible autour de vous",
   "errors": {
     "initialLoading": "Erreur de chargement initial:",
     "purchase": "Erreur lors de l'achat:",
@@ -142,7 +142,7 @@ export default {
     "duration7d": "7 jours",
     "duration30d": "30 jours",
     "youWillReceive": "Vous recevrez {{amount}}€",
-    "postSecret": "Poster le secret",
+    "postSecret": "Poster le hushy",
     "categories": [
       "Confession",
       "Amour",
@@ -168,13 +168,24 @@ export default {
     "alerts": {
       "setupRequired": {
         "title": "Configuration nécessaire",
-        "message": "Votre secret a été créé. Pour pouvoir le vendre, vous devez configurer votre compte de paiement.",
+        "message": "Votre hushy a été créé. Pour pouvoir le vendre, vous devez configurer votre compte de paiement.",
         "configureNow": "Configurer maintenant"
       },
       "success": {
         "title": "Félicitations ! 🎉",
-        "message": "Votre secret a été publié avec succès. Il est maintenant disponible à la vente !",
+        "message": "Votre hushy a été publié avec succès. Il est maintenant disponible à la vente !",
         "shareNow": "Partager maintenant 🔐"
+      },
+      "noStripeAccount": {
+        "title": "Pas de compte Stripe",
+        "message": "Vous n'avez pas encore de compte Stripe configuré pour recevoir des paiements.",
+        "create": "Créer un compte"
+      },
+      "pendingData": {
+        "title": "Données en attente",
+        "message": "Vous avez un hushy inachevé. Souhaitez-vous continuer avec ces données?",
+        "continue": "Continuer",
+        "discard": "Ignorer"
       },
       "info": "Information",
       "later": "Plus tard"
@@ -183,7 +194,7 @@ export default {
       "title": "Erreur",
       "deepLink": "Deep link error:",
       "unableToProcessLink": "Impossible de traiter le lien",
-      "unableToShare": "Impossible de partager le secret."
+      "unableToShare": "Impossible de partager le hushy."
     }
   },
 
@@ -231,7 +242,7 @@ export default {
       "sendMessage": "Erreur lors de l'envoi du message:",
       "imageSelection": "Erreur lors de la sélection d'image:",
       "shareError": "Erreur lors du partage",
-      "missingSecretData": "Données du secret manquantes"
+      "missingSecretData": "Données du hushy manquantes"
     },
     "messageFailed": "Échec",
     "retry": "Renvoyer",
@@ -264,7 +275,7 @@ export default {
       "othersSecrets": "Ceux des autres"
     },
     "stats": {
-      "secrets": "Secrets",
+      "secrets": "Hushys",
       "followers": "Abonnés",
       "following": "Abonnements"
     },
@@ -370,7 +381,7 @@ export default {
     "errors": {
       "title": "Erreur",
       "fetchError": "Erreur:",
-      "unableToLoad": "Impossible de charger le secret.",
+      "unableToLoad": "Impossible de charger le hushy.",
       "purchaseError": "Erreur lors de l'achat:",
       "paymentError": "Erreur de paiement:"
     }
@@ -389,11 +400,11 @@ export default {
     "labelUnavailable": "Label indisponible",
     "profilePicture": "Photo de profil de {{name}}",
     "logs": {
-      "secretRevealed": "Secret révélé !"
+      "secretRevealed": "hushy révélé !"
     },
     "errors": {
       "title": "Erreur",
-      "unableToShare": "Impossible de partager le secret."
+      "unableToShare": "Impossible de partager le hushy."
     }
   },
 
@@ -411,12 +422,20 @@ export default {
     "alerts": {
       "success": {
         "title": "Succès",
-        "message": "Votre compte Stripe a été configuré avec succès !"
+        "message": "Votre compte Stripe a été configuré avec succès !",
+        "accountCreated": "Votre compte Stripe a été créé avec succès!",
+
+      },
+      "error": {
+        "title": "Erreur",
+        "stillNeedsConfig": "La configuration Stripe est toujours nécessaire.",
+        "postingFailed": "Échec de la publication automatique du hushy.",
       },
       "configInProgress": {
         "title": "Configuration en cours"
       },
-      "ok": "OK"
+      "ok": "OK",
+      "returnToPost": "Retourner à la publication",
     },
     "errors": {
       "title": "Erreur",
@@ -427,8 +446,8 @@ export default {
 
   "earnings": {
     "title": "Détails des revenus",
-    "noEarningsYet": "Vous n'avez pas encore généré de revenus. Commencez à vendre vos secrets pour gagner de l'argent.",
-    "publishSecret": "Publier un secret",
+    "noEarningsYet": "Vous n'avez pas encore généré de revenus. Commencez à vendre vos hushys pour gagner de l'argent.",
+    "publishSecret": "Publier un hushy",
     "loadingTransactions": "Chargement des transactions...",
     "transfer": "Transfert",
     "sale": "Vente",
@@ -457,7 +476,7 @@ export default {
     "noContactsUsingApp": "Aucun de vos contacts n'utilise encore Hushy. Invitez-les à rejoindre l'application !",
     "cancel": "Annuler",
     "inviteWithCount": "Inviter ({{count}})",
-    "invitationMessage": "Hey ! Je t'invite à rejoindre Hushy, une super app pour partager des secrets ! Télécharge-la maintenant : https://hushy.app",
+    "invitationMessage": "Hey ! Je t'invite à rejoindre Hushy, une super app pour partager des hushys ! Télécharge-la maintenant : https://hushy.app",
     "invitationTitle": "Invitation à Hushy",
     "errors": {
       "title": "Erreur",
@@ -468,7 +487,7 @@ export default {
 
   "location": {
     "shareLocation": {
-      "title": "Partager ma position avec ce secret",
+      "title": "Partager ma position avec ce hushy",
       "enabled": "Votre position sera incluse",
       "disabled": "Votre position ne sera pas partagée"
     },
@@ -478,13 +497,13 @@ export default {
   "alerts": {
     "welcome": {
       "title": "Accès à la localisation",
-      "message": "Hushy peut utiliser votre position pour vous montrer les secrets à proximité. Voulez-vous activer cette fonctionnalité ?",
+      "message": "Hushy peut utiliser votre position pour vous montrer les hushys à proximité. Voulez-vous activer cette fonctionnalité ?",
       "yes": "Oui, activer",
       "no": "Non, merci"
     },
     "shareLocation": {
       "title": "Partager votre position",
-      "message": "Souhaitez-vous partager votre position avec ce secret ? Cela permettra aux utilisateurs à proximité de le découvrir plus facilement.",
+      "message": "Souhaitez-vous partager votre position avec ce hushy ? Cela permettra aux utilisateurs à proximité de le découvrir plus facilement.",
       "yes": "Partager",
       "no": "Ne pas partager"
     }
@@ -493,7 +512,7 @@ export default {
     "permissionError": "Erreur de permission de localisation:",
     "locationError": "Erreur de localisation:",
     "gettingPosition": "Erreur lors de l'obtention de la position:",
-    "fetchingNearbySecrets": "Erreur lors de la récupération des secrets à proximité:",
+    "fetchingNearbySecrets": "Erreur lors de la récupération des hushys à proximité:",
     "permissionCheckError": "Erreur lors de la vérification des permissions de localisation:",
     "accessUpdateError": "Erreur lors de la mise à jour de l'accès à la localisation:"
   },
@@ -514,9 +533,9 @@ export default {
       "paymentSheetConfig": "Configuration PaymentSheet:",
       "initializationSuccess": "PaymentSheet initialisé avec succès",
       "paymentProcessStart": "Début du processus de paiement",
-      "creatingPaymentIntent": "Création de l'intention de paiement pour le secret {{secretId}}",
+      "creatingPaymentIntent": "Création de l'intention de paiement pour le hushy {{secretId}}",
       "apiResponseReceived": "Réponse reçue de l'API",
-      "clientSecretReceived": "Client secret reçu, ID du paiement: {{paymentId}}",
+      "clientSecretReceived": "Client hushy reçu, ID du paiement: {{paymentId}}",
       "presentingPaymentSheet": "Présentation de la feuille de paiement",
       "paymentCanceled": "Paiement annulé par l'utilisateur",
       "paymentSuccess": "Paiement réussi"
@@ -526,7 +545,7 @@ export default {
       "applePayCheckError": "Erreur lors de la vérification d'Apple Pay:",
       "initPaymentSheetError": "Erreur initPaymentSheet:",
       "initializationError": "Erreur dans initializePaymentSheet:",
-      "invalidSecretData": "Données du secret invalides",
+      "invalidSecretData": "Données du hushy invalides",
       "paymentCreationError": "Erreur lors de la création du paiement",
       "presentationError": "Erreur de présentation:",
       "handlePaymentError": "Erreur dans handlePayment:",
@@ -623,8 +642,8 @@ export default {
       "fullError": "Erreur complète:",
       "axiosInitError": "Erreur d'initialisation axios:",
       "axiosNotInitialized": "Instance Axios non initialisée",
-      "secretCreation": "Erreur création secret:",
-      "secretCreationGeneric": "Erreur lors de la création du secret",
+      "secretCreation": "Erreur création hushy:",
+      "secretCreationGeneric": "Erreur lors de la création du hushy",
       "stripeRefresh": "Erreur rafraîchissement Stripe:",
       "stripeRefreshGeneric": "Erreur lors du rafraîchissement de la configuration Stripe",
       "stripeReturn": "Erreur de retour Stripe:",
@@ -634,12 +653,12 @@ export default {
       "stripeDeleteFundsAvailable": "Impossible de supprimer le compte. Des fonds sont encore disponibles.",
       "stripeDeleteGeneric": "Erreur lors de la suppression du compte Stripe",
       "invalidDataFromApi": "Données invalides reçues depuis l'API",
-      "fetchingSecrets": "Erreur lors de la récupération des secrets :",
-      "fetchingUserSecrets": "Erreur récupération secrets et comptage:",
+      "fetchingSecrets": "Erreur lors de la récupération des hushys :",
+      "fetchingUserSecrets": "Erreur récupération hushys et comptage:",
       "missingSecretOrPaymentId": "Secret ID et Payment ID sont requis",
       "noConversationIdReceived": "Aucun ID de conversation reçu",
       "purchaseErrorDetails": "Détails de l'erreur:",
-      "fetchingPurchasedSecrets": "Erreur lors de la récupération des secrets achetés:",
+      "fetchingPurchasedSecrets": "Erreur lors de la récupération des hushys achetés:",
       "sendingMessage": "Erreur lors de l'envoi du message:",
       "fetchingMessages": "Erreur lors de la récupération des messages:",
       "fetchingConversations": "Erreur lors de la récupération des conversations:",
@@ -651,16 +670,16 @@ export default {
       "refreshingCounters": "Erreur lors du rafraîchissement des compteurs:"
     },
     "logs": {
-      "secretCreationResponse": "Réponse création secret:",
+      "secretCreationResponse": "Réponse création hushy:",
       "stripeRefreshResponse": "Réponse rafraîchissement Stripe:",
-      "attemptingPurchase": "Tentative d'achat du secret:",
+      "attemptingPurchase": "Tentative d'achat du hushy:",
       "messagesReceived": "Messages reçus:",
       "userDataNull": "getUserConversations: userData is null, returning empty array",
       "userDataNullSkippingUpdate": "refreshUnreadCounts: userData is null, skipping update",
       "updatingCounters": "Mise à jour des compteurs (avec cache local):",
-      "searchingSecret": "Recherche du secret avec ID:",
+      "searchingSecret": "Recherche du hushy avec ID:",
       "responseReceived": "Réponse reçue:",
-      "soughtSecret": "Secret recherché:"
+      "soughtSecret": "hushy recherché:"
     },
     "stripe": {
       "configComplete": "Compte Stripe complètement configuré",
@@ -672,12 +691,12 @@ export default {
       "deleteSuccess": "Compte Stripe supprimé avec succès"
     },
     "share": {
-      "messageIOS": "🔐 Découvre mon secret sur Hushy !\n\n{{link}}",
-      "messageAndroid": "🔐 Découvre mon secret sur Hushy !\n\n{{link}}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy",
-      "title": "Partager un secret",
-      "subject": "Un secret à partager sur Hushy",
-      "confidentialSecret": "Secret confidentiel 🔐",
-      "dialogTitle": "Partager ce secret confidentiel"
+      "messageIOS": "🔐 Découvre mon hushy sur Hushy !\n\n{{link}}",
+      "messageAndroid": "🔐 Découvre mon hushy sur Hushy !\n\n{{link}}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy",
+      "title": "Partager un hushy",
+      "subject": "Un hushy à partager sur Hushy",
+      "confidentialSecret": "hushy confidentiel 🔐",
+      "dialogTitle": "Partager ce hushy confidentiel"
     }
   },
   "permissions": {
