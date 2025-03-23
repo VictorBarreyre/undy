@@ -233,7 +233,45 @@ exports.registerUser = async (req, res) => {
         });
     } catch (error) {
         console.error('Erreur lors de l\'inscription :', error);
-        res.status(500).json({ message: 'Erreur lors de l\'inscription' });
+        
+        // Vérifier s'il s'agit d'une erreur de validation MongoDB
+        if (error.name === 'ValidationError') {
+            const validationErrors = {};
+            
+            // Extraire les champs spécifiques en erreur
+            for (const field in error.errors) {
+                validationErrors[field] = error.errors[field].message;
+            }
+            
+            // S'il y a une erreur d'email spécifique
+            if (validationErrors.email) {
+                return res.status(400).json({ 
+                    message: 'Adresse email invalide',
+                    field: 'email',
+                    details: validationErrors.email
+                });
+            }
+            
+            // Erreur de validation générique
+            return res.status(400).json({
+                message: 'Données d\'inscription invalides',
+                validationErrors
+            });
+        }
+        
+        // Erreur spécifique liée au format de l'email
+        if (error.message && error.message.includes('email')) {
+            return res.status(400).json({
+                message: 'Format d\'email invalide',
+                field: 'email'
+            });
+        }
+        
+        // Erreur serveur générique avec plus de détails
+        res.status(500).json({ 
+            message: 'Erreur lors de l\'inscription', 
+            details: error.message 
+        });
     }
 };
 

@@ -314,7 +314,7 @@ export default {
       "othersSecrets": "Others' hushys"
     },
     "stats": {
-      "secrets": "hHushys",
+      "secrets": "Hushys",
       "followers": "Followers",
       "following": "Following"
     },
@@ -478,7 +478,7 @@ export default {
 
   "earnings": {
     "title": "Earnings Details",
-    "noEarningsYet": "You haven't generated any earnings yet. Start selling your secrets to earn money.",
+    "noEarningsYet": "You haven't generated any earnings yet. Start selling your hushys to earn money.",
     "publishSecret": "Publish a hushy",
     "loadingTransactions": "Loading transactions...",
     "transfer": "Transfer",
@@ -508,7 +508,7 @@ export default {
     "noContactsUsingApp": "None of your contacts are using Hushy yet. Invite them to join the app!",
     "cancel": "Cancel",
     "inviteWithCount": "Invite ({{count}})",
-    "invitationMessage": "Hey! I'm inviting you to join Hushy, an awesome app for sharing secrets! Download it now: https://hushy.app",
+    "invitationMessage": "Hey! I'm inviting you to join Hushy, an awesome app for sharing hushys! Download it now: https://hushy.app",
     "invitationTitle": "Invitation to Hushy",
     "errors": {
       "title": "Error",
@@ -648,12 +648,12 @@ export default {
       "stripeDeleteFundsAvailable": "Unable to delete account. Funds are still available.",
       "stripeDeleteGeneric": "Error deleting Stripe account",
       "invalidDataFromApi": "Invalid data received from API",
-      "fetchingSecrets": "Error fetching secrets:",
-      "fetchingUserSecrets": "Error fetching user secrets and count:",
+      "fetchingSecrets": "Error fetching hushys:",
+      "fetchingUserSecrets": "Error fetching user hushys and count:",
       "missingSecretOrPaymentId": "hushy ID and Payment ID are required",
       "noConversationIdReceived": "No conversation ID received",
       "purchaseErrorDetails": "Error details:",
-      "fetchingPurchasedSecrets": "Error fetching purchased secrets:",
+      "fetchingPurchasedSecrets": "Error fetching purchased hushys:",
       "sendingMessage": "Error sending message:",
       "fetchingMessages": "Error fetching messages:",
       "fetchingConversations": "Error fetching conversations:",
