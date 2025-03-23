@@ -22,7 +22,15 @@ export default {
       "successTitle": "Inscription réussie",
       "successMessage": "Votre compte a été créé avec succès!",
       "errorTitle": "Erreur d'inscription",
-      "genericError": "Erreur lors de l'inscription"
+      "genericError": "Erreur lors de l'inscription",
+      "genericError": "Erreur lors de l'inscription",
+      "serverError": "Une erreur serveur est survenue lors de l'inscription",
+      "invalidEmail": "Veuillez entrer une adresse email valide",
+      "emailAlreadyExists": "Cette adresse email est déjà enregistrée",
+      "invalidData": "Les données d'inscription sont invalides",
+      "emailFormat": "Le format de l'email est invalide",
+      "weakPassword": "Le mot de passe est trop faible",
+      "requiredFields": "Tous les champs obligatoires doivent être remplis",
     },
     "errors": {
       // Garder les traductions existantes...

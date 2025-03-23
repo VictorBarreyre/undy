@@ -22,7 +22,14 @@ export default {
       "successTitle": "Registration successful",
       "successMessage": "Your account has been created successfully!",
       "errorTitle": "Registration error",
-      "genericError": "Error during registration"
+      "genericError": "Error during registration",
+      "serverError": "A server error occurred during registration",
+      "invalidEmail": "Please enter a valid email address",
+      "emailAlreadyExists": "This email address is already registered",
+      "invalidData": "The registration data is invalid",
+      "emailFormat": "The email format is invalid",
+      "weakPassword": "The password is too weak",
+      "requiredFields": "All required fields must be filled",
     },
     "success": {
       "noChangeNeeded": "No changes needed.",
