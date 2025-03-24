@@ -19,7 +19,7 @@ const {
     uploadImage, 
     getNearbySecrets,
     deleteSecret,
-    verifyIdentity,
+    createIdentityVerification,
     checkIdentityVerificationStatus
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
