@@ -18,7 +18,9 @@ const {
     markConversationAsRead,
     uploadImage, 
     getNearbySecrets,
-    deleteSecret
+    deleteSecret,
+    verifyIdentity,
+    checkIdentityVerificationStatus
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -46,6 +48,7 @@ router.get('/stripe-refresh', protect, (req, res) => {
     });
 });
 router.post('/verify-identity', protect, verifyIdentity);
+router.get('/verify-identity-status', protect, checkIdentityVerificationStatus);
 
 
 

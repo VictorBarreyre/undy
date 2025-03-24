@@ -1268,3 +1268,52 @@ exports.deleteSecret = async (req, res) => {
         });
     }
 };
+
+exports.checkIdentityVerificationStatus = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('stripeAccountId stripeIdentityVerified stripeVerificationStatus');
+        
+        if (!user || !user.stripeAccountId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Compte Stripe non configuré'
+            });
+        }
+        
+        // Récupérer le statut depuis Stripe
+        const account = await stripe.accounts.retrieve(user.stripeAccountId);
+        
+        let verificationStatus = 'pending';
+        
+        if (account.individual && account.individual.verification) {
+            verificationStatus = account.individual.verification.status;
+            
+            // Mettre à jour le statut dans notre base de données
+            if (verificationStatus === 'verified') {
+                await User.findByIdAndUpdate(req.user.id, {
+                    stripeIdentityVerified: true,
+                    stripeVerificationStatus: 'verified'
+                });
+            } else if (verificationStatus === 'unverified') {
+                await User.findByIdAndUpdate(req.user.id, {
+                    stripeVerificationStatus: 'unverified'
+                });
+            }
+        }
+        
+        return res.status(200).json({
+            success: true,
+            verified: verificationStatus === 'verified',
+            status: verificationStatus,
+            details: account.individual ? account.individual.verification : null
+        });
+        
+    } catch (error) {
+        console.error('Erreur lors de la vérification du statut:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la vérification du statut',
+            error: error.message
+        });
+    }
+};
