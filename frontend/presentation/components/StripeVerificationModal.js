@@ -3,7 +3,7 @@ import {
     VStack, Text, Button, Actionsheet,
     Box, Progress, HStack
 } from 'native-base';
-import { Platform, Alert } from 'react-native';
+import { Platform, Alert, Linking } from 'react-native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faCamera, faImage } from '@fortawesome/free-solid-svg-icons';
@@ -28,6 +28,17 @@ const StripeVerificationActionSheet = ({
         verified: userData?.stripeIdentityVerified || false,
         status: userData?.stripeVerificationStatus || 'unverified'
     });
+
+
+    useEffect(() => {
+        console.log('Données de vérification Stripe:', {
+            stripeIdentityVerified: userData?.stripeIdentityVerified,
+            stripeVerificationStatus: userData?.stripeVerificationStatus,
+            stripeVerificationSessionId: userData?.stripeVerificationSessionId,
+            stripeIdentityDocumentId: userData?.stripeIdentityDocumentId,
+            stripeIdentityVerificationDate: userData?.stripeIdentityVerificationDate
+        });
+    }, [userData]);
 
     // Vérifier le statut de vérification au chargement
     useEffect(() => {
@@ -201,6 +212,65 @@ const StripeVerificationActionSheet = ({
                 </>
             );
         }
+            // Compte vérifié et identité vérifiée
+            if (verificationStatus.verified) {
+                return (
+                    <>
+                        <Text style={styles.h4} textAlign="center">
+                            {t('stripeVerification.accountConfigured.title')}
+                        </Text>
+    
+                        <Text
+                            style={styles.caption}
+                            color="#94A3B8"
+                            textAlign="center"
+                            mb={2}
+                        >
+                            {t('stripeVerification.accountConfigured.description')}
+                        </Text>
+    
+                        {/* Affichage des informations bancaires si disponibles */}
+                        {userData.stripeExternalAccount && (
+                            <Box 
+                                borderWidth={1} 
+                                borderColor="gray.200" 
+                                p={4} 
+                                borderRadius="md" 
+                                mb={4}
+                            >
+                                <Text style={styles.caption} color="gray.700">
+                                    Compte bancaire : {userData.stripeExternalAccount}
+                                </Text>
+                            </Box>
+                        )}
+    
+                        <VStack space={2}>
+                            <Button
+                                onPress={resetStripeAccount}
+                                backgroundColor="orange.500"
+                                borderRadius="full"
+                            >
+                                <Text color="white" style={styles.cta}>
+                                    {t('stripeVerification.accountConfigured.resetAccount')}
+                                </Text>
+                            </Button>
+    
+                            <Button
+                                onPress={() => {
+                                    // Vous pourriez ajouter une action pour ouvrir le dashboard Stripe
+                                    onClose();
+                                }}
+                                backgroundColor="black"
+                                borderRadius="full"
+                            >
+                                <Text color="white" style={styles.cta}>
+                                    {t('stripeVerification.accountConfigured.manageAccount')}
+                                </Text>
+                            </Button>
+                        </VStack>
+                    </>
+                );
+            }
 
         // Compte actif mais identité pas encore vérifiée
         if (userData?.stripeAccountStatus === 'active' && 
