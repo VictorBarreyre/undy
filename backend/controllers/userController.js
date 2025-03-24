@@ -158,12 +158,27 @@ exports.appleLogin = async (req, res) => {
 
     } catch (error) {
         console.error('ERREUR GÉNÉRALE APPLE LOGIN:', error);
-        console.error('Message:', error.message);
-        console.error('Stack:', error.stack);
-        console.log('---------- FIN APPLE LOGIN (ERREUR GÉNÉRALE) ----------');
+        
+        if (error.name === 'AppleSignInError') {
+            return res.status(400).json({ 
+                code: 'APPLE_AUTH_FAILED',
+                message: 'Authentification Apple échouée',
+                shouldRetry: true
+            });
+        }
+        
+        if (error.code === 'ERR_NETWORK') {
+            return res.status(500).json({ 
+                code: 'NETWORK_ERROR',
+                message: 'Problème de connexion réseau',
+                shouldRetry: true
+            });
+        }
+        
         res.status(500).json({ 
-            message: 'Erreur lors de la connexion Apple',
-            details: error.message
+            code: 'UNKNOWN_ERROR',
+            message: 'Erreur interne lors de la connexion Apple',
+            shouldRetry: false
         });
     }
 };
@@ -417,15 +432,32 @@ exports.googleLogin = async (req, res) => {
                 if (!email) {
                     throw new Error('Impossible de récupérer l\'email');
                 }
-            } catch (verifyError) {
-                console.error('Erreur de vérification Google access token:', verifyError);
-                return res.status(400).json({ 
-                    message: 'Échec de la vérification de l\'access token Google',
-                    details: verifyError.message 
+            } catch (error) {
+                console.error('Erreur lors de la connexion Google:', error);
+                
+                // Catégoriser les erreurs
+                if (error.response && error.response.status === 401) {
+                    return res.status(401).json({ 
+                        code: 'GOOGLE_AUTH_FAILED',
+                        message: 'Authentification Google échouée',
+                        shouldRetry: true
+                    });
+                }
+                
+                if (error.code === 'ERR_NETWORK') {
+                    return res.status(500).json({ 
+                        code: 'NETWORK_ERROR',
+                        message: 'Problème de connexion réseau',
+                        shouldRetry: true
+                    });
+                }
+                
+                res.status(500).json({ 
+                    code: 'UNKNOWN_ERROR',
+                    message: 'Erreur interne lors de la connexion Google',
+                    shouldRetry: false
                 });
             }
-        } else {
-            // Code pour ID token...
         }
 
         // Rechercher l'utilisateur par email
