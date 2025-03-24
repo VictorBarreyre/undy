@@ -1214,17 +1214,10 @@ exports.deleteSecret = async (req, res) => {
             metadata: {
                 userId: req.user.id,
                 documentType,
-                documentSide
+                documentSide,
+                fileId: file.id  // Stocker l'ID du fichier dans les métadonnées
             }
         });
-
-        // Ajouter le fichier à la session de vérification
-        await stripe.identity.verificationSessions.update(
-            verificationSession.id,
-            {
-                uploaded_file: file.id
-            }
-        );
 
         // Mettre à jour l'utilisateur avec l'ID de la session et du fichier
         await User.findByIdAndUpdate(req.user.id, {
@@ -1238,7 +1231,8 @@ exports.deleteSecret = async (req, res) => {
             message: 'Document d\'identité téléchargé et session de vérification créée',
             clientSecret: verificationSession.client_secret,
             sessionId: verificationSession.id,
-            fileId: file.id
+            fileId: file.id,
+            verificationUrl: verificationSession.url
         });
         
     } catch (error) {
@@ -1251,10 +1245,10 @@ exports.deleteSecret = async (req, res) => {
     }
 };
 
-// Méthode pour vérifier le statut
+// Méthode pour suivre le statut de vérification
 exports.checkIdentityVerificationStatus = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('stripeVerificationSessionId');
+        const user = await User.findById(req.user.id).select('stripeVerificationSessionId stripeIdentityDocumentId');
         
         if (!user || !user.stripeVerificationSessionId) {
             return res.status(400).json({
@@ -1278,61 +1272,8 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
             success: true,
             status: verificationSession.status,
             verified: verificationSession.status === 'verified',
-            details: verificationSession
-        });
-        
-    } catch (error) {
-        console.error('Erreur lors de la vérification du statut:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Erreur lors de la vérification du statut',
-            error: error.message
-        });
-    }
-};
-
-// Endpoint pour vérifier le statut
-exports.checkIdentityVerificationStatus = async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id).select('stripeAccountId stripeVerificationSessionId stripeIdentityVerified stripeVerificationStatus');
-        
-        if (!user || !user.stripeAccountId) {
-            return res.status(400).json({
-                success: false,
-                message: 'Compte Stripe non configuré'
-            });
-        }
-        
-        if (!user.stripeVerificationSessionId) {
-            return res.status(200).json({
-                success: true,
-                verified: false,
-                status: 'not_started',
-                message: 'Aucune vérification d\'identité n\'a été initiée'
-            });
-        }
-        
-        // Récupérer le statut de la session de vérification
-        const verificationSession = await stripe.identity.verificationSessions.retrieve(
-            user.stripeVerificationSessionId
-        );
-        
-        const status = verificationSession.status;
-        const verified = status === 'verified';
-        
-        // Mettre à jour le statut dans notre base de données
-        if (status !== user.stripeVerificationStatus) {
-            await User.findByIdAndUpdate(req.user.id, {
-                stripeVerificationStatus: status,
-                stripeIdentityVerified: verified
-            });
-        }
-        
-        return res.status(200).json({
-            success: true,
-            verified,
-            status,
-            lastUpdated: verificationSession.last_error,
+            verificationUrl: verificationSession.url,
+            fileId: user.stripeIdentityDocumentId,
             details: verificationSession
         });
         
