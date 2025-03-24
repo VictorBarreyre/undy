@@ -1071,6 +1071,7 @@ const checkIdentityVerificationStatus = async () => {
       };
   }
 };
+
   return (
     <CardDataContext.Provider value={{
       data,

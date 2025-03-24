@@ -78,71 +78,93 @@ useEffect(() => {
     }
 }, [isOpen, userData]);
 
-    const startStripeIdentityVerification = async () => {
-        try {
-            setIsUploading(true);
-            
-            if (!identityDocument || !selfieImage) {
-                Alert.alert('Erreur', 'Veuillez fournir à la fois un document d\'identité et une photo de vous');
-                setIsUploading(false);
-                return;
-            }
+const startStripeIdentityVerification = async () => {
+    try {
+        setIsUploading(true);
+        
+        if (!identityDocument || !selfieImage) {
+            Alert.alert('Erreur', 'Veuillez fournir à la fois un document d\'identité et une photo de vous');
+            setIsUploading(false);
+            return;
+        }
 
-            // Préparer les données du document
-            const documentData = {
-                documentImage: `data:${identityDocument.type};base64,${identityDocument.base64}`,
-                selfieImage: `data:${selfieImage.type};base64,${selfieImage.base64}`,
-                documentType: 'identity_document',
-                documentSide: 'front'
-            };
-            
-            // Appeler votre API de vérification d'identité
-            const sessionResponse = await handleIdentityVerification(userData, documentData);
-            setUploadProgress(50);
+        // Préparer les données du document
+        const documentData = {
+            documentImage: `data:${identityDocument.type};base64,${identityDocument.base64}`,
+            selfieImage: `data:${selfieImage.type};base64,${selfieImage.base64}`,
+            documentType: 'identity_document',
+            documentSide: 'front'
+        };
+        
+        // Appeler votre API de vérification d'identité
+        const sessionResponse = await handleIdentityVerification(userData, documentData);
+        setUploadProgress(50);
 
-            if (sessionResponse.success && sessionResponse.clientSecret) {
-                setUploadProgress(70);
-                
+        if (sessionResponse.success && sessionResponse.clientSecret) {
+            setUploadProgress(70);
+            
+            try {
                 // Utiliser le SDK Stripe pour le flux de vérification natif
-                const { verificationIntent } = await createIdentityVerificationFlow({
+                const verificationResult = await createIdentityVerificationFlow({
                     clientSecret: sessionResponse.clientSecret,
-                    // Nous utilisons déjà nos propres écrans pour collecter les données
-                    skipRecollectingData: true 
+                    skipRecollectingData: true  // Nous avons déjà collecté les données
                 });
                 
                 setUploadProgress(90);
 
                 // Traiter la réponse
-                console.log("Résultat de la vérification:", verificationIntent);
+                console.log("Résultat de la vérification:", verificationResult);
                 
-                // Mettre à jour l'état selon le résultat
-                if (verificationIntent.status === 'verified') {
-                    setVerificationStatus({
-                        verified: true,
-                        status: 'verified'
-                    });
-                    Alert.alert('Vérification réussie', 'Votre identité a été vérifiée avec succès');
-                } else if (verificationIntent.status === 'processing') {
+                // Vérifier si verificationResult existe et a un status
+                if (verificationResult && verificationResult.verificationSession) {
+                    const status = verificationResult.verificationSession.status;
+                    
+                    // Mettre à jour l'état selon le résultat
+                    if (status === 'verified') {
+                        setVerificationStatus({
+                            verified: true,
+                            status: 'verified'
+                        });
+                        Alert.alert('Vérification réussie', 'Votre identité a été vérifiée avec succès');
+                    } else if (status === 'processing') {
+                        setVerificationStatus({
+                            verified: false,
+                            status: 'processing'
+                        });
+                        Alert.alert('Vérification en cours', 'Votre vérification est en cours de traitement');
+                    } else {
+                        Alert.alert('Vérification en attente', 'Votre vérification doit être traitée. Nous vous informerons du résultat.');
+                    }
+                } else {
+                    // Si le statut n'est pas disponible, définir comme processing par défaut
                     setVerificationStatus({
                         verified: false,
                         status: 'processing'
                     });
-                    Alert.alert('Vérification en cours', 'Votre vérification est en cours de traitement');
-                } else {
-                    Alert.alert('Vérification échouée', 'Impossible de vérifier votre identité');
+                    Alert.alert('Vérification soumise', 'Votre vérification a été soumise et est en cours de traitement');
                 }
-            } else {
-                Alert.alert('Erreur', sessionResponse.message || 'Échec de la préparation de la vérification');
+                
+            } catch (stripeError) {
+                console.error('Erreur SDK Stripe:', stripeError);
+                Alert.alert('Erreur', stripeError.message || 'Erreur lors de la vérification avec Stripe');
+                
+                // Même en cas d'erreur du SDK, la session a été créée, donc on peut considérer comme en cours
+                setVerificationStatus({
+                    verified: false,
+                    status: 'processing'
+                });
             }
-        } catch (error) {
-            console.error('Erreur de vérification d\'identité:', error);
-            Alert.alert('Erreur', 'Une erreur est survenue lors de la vérification');
-        } finally {
-            setIsUploading(false);
-            setUploadProgress(0);
+        } else {
+            Alert.alert('Erreur', sessionResponse.message || 'Échec de la préparation de la vérification');
         }
-    };
-
+    } catch (error) {
+        console.error('Erreur de vérification d\'identité:', error);
+        Alert.alert('Erreur', 'Une erreur est survenue lors de la vérification');
+    } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+    }
+};
     // Fonction pour obtenir une image depuis la galerie (document)
     const pickFromGallery = (forSelfie = false) => {
         launchImageLibrary({

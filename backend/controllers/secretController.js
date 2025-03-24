@@ -1267,44 +1267,31 @@ exports.deleteSecret = async (req, res) => {
             verificationOptions.metadata.selfieFileId = selfieFile.id;
         }
 
-        // Créer la session de vérification avec les deux documents
+        // Créer la session de vérification avec les documents
+        // Note: Au lieu d'essayer d'utiliser uploaded_document et uploaded_selfie, nous allons
+        // créer la session d'abord, puis nous utiliserons le SDK mobile pour finaliser la vérification
         const verificationSession = await stripe.identity.verificationSessions.create({
             type: 'document',
             options: {
                 document: {
                     allowed_types: ['passport', 'id_card', 'driving_license'],
                     require_matching_selfie: !!selfieImage, // Activer la correspondance selfie si une selfie a été fournie
-                    require_live_capture: false,  // Désactiver la capture en direct car nous avons déjà les images
-                    require_id_number: false      // Ne pas demander le numéro d'ID
+                    require_live_capture: false  // Désactiver la capture en direct car nous avons déjà les images
                 }
             },
-            metadata: verificationOptions.metadata
+            metadata: {
+                userId: req.user.id,
+                documentFileId: documentFile.id,
+                selfieFileId: selfieFile ? selfieFile.id : undefined,
+                documentType: documentType || 'identity_document',
+                documentSide: documentSide || 'front'
+            }
         });
 
-        // Attacher les documents téléchargés à la session de vérification
-        // Note: Cette partie utilise l'API non documentée de Stripe pour attacher des documents préexistants
-        // Il est préférable de contacter Stripe pour confirmer la méthode officielle
-        const verificationUpdateData = {
-            uploaded_document: {
-                front: documentFile.id
-            }
-        };
-
-        // Ajouter la selfie si elle existe
-        if (selfieFile) {
-            verificationUpdateData.uploaded_selfie = selfieFile.id;
-        }
-
-        try {
-            await stripe.identity.verificationSessions.update(
-                verificationSession.id,
-                verificationUpdateData
-            );
-        } catch (error) {
-            console.error('Erreur lors de l\'attachement des documents à la session:', error);
-            // Même en cas d'erreur ici, on continue car le client_secret peut toujours être utilisé
-            // pour la vérification côté client
-        }
+        // Ne pas essayer d'attacher manuellement les documents à la session
+        // L'API Stripe ne semble pas supporter cette approche directement
+        // À la place, nous fournirons le client_secret au SDK mobile qui s'occupera
+        // de finaliser la vérification
 
         // Mettre à jour l'utilisateur
         user.stripeVerificationSessionId = verificationSession.id;
@@ -1345,31 +1332,71 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
             });
         }
 
-        // Le reste du code reste inchangé...
-        const verificationSession = await stripe.identity.verificationSessions.retrieve(
-            user.stripeVerificationSessionId
-        );
+        try {
+            // Récupérer le statut de la session de vérification
+            const verificationSession = await stripe.identity.verificationSessions.retrieve(
+                user.stripeVerificationSessionId
+            );
 
-        // Mettre à jour le statut
-        user.stripeVerificationStatus = verificationSession.status;
-        user.stripeIdentityVerified = verificationSession.status === 'verified';
-        
-        if (verificationSession.status === 'verified') {
-            user.stripeIdentityVerificationDate = new Date();
+            // Mettre à jour le statut dans la base de données
+            user.stripeVerificationStatus = verificationSession.status;
+            user.stripeIdentityVerified = verificationSession.status === 'verified';
+            
+            if (verificationSession.status === 'verified') {
+                user.stripeIdentityVerificationDate = new Date();
+                
+                // Si l'utilisateur n'est pas déjà vérifié pour les paiements,
+                // vous pourriez mettre à jour son statut de capacité Stripe ici
+                if (user.stripeAccountId && !user.stripePaymentsVerified) {
+                    try {
+                        // Mettre à jour les capacités du compte pour activer les paiements
+                        await stripe.accounts.update(user.stripeAccountId, {
+                            capabilities: {
+                                card_payments: { requested: true },
+                                transfers: { requested: true }
+                            }
+                        });
+                        
+                        user.stripePaymentsVerified = true;
+                    } catch (stripeError) {
+                        console.error('Erreur lors de la mise à jour des capacités Stripe:', stripeError);
+                        // Ne pas bloquer le processus si cette mise à jour échoue
+                    }
+                }
+            }
+
+            await user.save();
+
+            return res.status(200).json({
+                success: true,
+                status: verificationSession.status,
+                verified: verificationSession.status === 'verified',
+                lastUpdated: user.stripeIdentityVerificationDate,
+                details: {
+                    verified_outputs: verificationSession.verified_outputs || null,
+                    requirements: verificationSession.requirements || null
+                }
+            });
+        } catch (stripeError) {
+            // Si la session n'existe plus ou est invalide chez Stripe
+            console.error('Erreur Stripe lors de la vérification du statut:', stripeError);
+            
+            // Pour éviter les erreurs futures, réinitialiser les données de vérification
+            user.stripeVerificationSessionId = null;
+            user.stripeVerificationStatus = 'unverified';
+            user.stripeIdentityVerified = false;
+            await user.save();
+            
+            return res.status(200).json({
+                success: true,
+                status: 'unverified',
+                verified: false,
+                message: 'Session de vérification invalide ou expirée'
+            });
         }
-
-        await user.save();
-
-        return res.status(200).json({
-            success: true,
-            status: verificationSession.status,
-            verified: verificationSession.status === 'verified',
-            verificationUrl: verificationSession.url,
-            details: verificationSession
-        });
         
     } catch (error) {
-        console.error('Erreur de vérification du statut:', error);
+        console.error('Erreur détaillée de vérification du statut:', error);
         return res.status(500).json({
             success: false,
             message: 'Impossible de vérifier le statut',
