@@ -1,3 +1,4 @@
+// Dans StripeVerificationActionSheet.js
 import React, { useState, useEffect } from 'react';
 import {
     VStack, Text, Button, Actionsheet,
@@ -10,6 +11,7 @@ import { faCamera, faImage } from '@fortawesome/free-solid-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { useTranslation } from 'react-i18next';
+import { StripeProvider, useStripe } from '@stripe/stripe-react-native';
 
 const StripeVerificationActionSheet = ({
     isOpen,
@@ -19,16 +21,19 @@ const StripeVerificationActionSheet = ({
     navigation
 }) => {
     const { t } = useTranslation();
+    const { createIdentityVerificationFlow, collectBankAccountToken } = useStripe(); // Hook Stripe
     const { handleIdentityVerification, checkIdentityVerificationStatus } = useCardData();
     const [identityDocument, setIdentityDocument] = useState(null);
+    const [selfieImage, setSelfieImage] = useState(null);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
     const [showDocumentOptions, setShowDocumentOptions] = useState(false);
+    const [showSelfieOptions, setShowSelfieOptions] = useState(false);
+    const [verificationStep, setVerificationStep] = useState('document'); // 'document', 'selfie', 'review', 'complete'
     const [verificationStatus, setVerificationStatus] = useState({
         verified: userData?.stripeIdentityVerified || false,
         status: userData?.stripeVerificationStatus || 'unverified'
     });
-
 
     useEffect(() => {
         console.log('Données de vérification Stripe:', {
@@ -57,8 +62,73 @@ const StripeVerificationActionSheet = ({
         }
     }, [isOpen, userData]);
 
-    // Fonction pour obtenir une image depuis la galerie
-    const pickFromGallery = () => {
+    const startStripeIdentityVerification = async () => {
+        try {
+            setIsUploading(true);
+            
+            if (!identityDocument || !selfieImage) {
+                Alert.alert('Erreur', 'Veuillez fournir à la fois un document d\'identité et une photo de vous');
+                setIsUploading(false);
+                return;
+            }
+
+            // Préparer les données du document
+            const documentData = {
+                documentImage: `data:${identityDocument.type};base64,${identityDocument.base64}`,
+                selfieImage: `data:${selfieImage.type};base64,${selfieImage.base64}`,
+                documentType: 'identity_document',
+                documentSide: 'front'
+            };
+            
+            // Appeler votre API de vérification d'identité
+            const sessionResponse = await handleIdentityVerification(userData, documentData);
+            setUploadProgress(50);
+
+            if (sessionResponse.success && sessionResponse.clientSecret) {
+                setUploadProgress(70);
+                
+                // Utiliser le SDK Stripe pour le flux de vérification natif
+                const { verificationIntent } = await createIdentityVerificationFlow({
+                    clientSecret: sessionResponse.clientSecret,
+                    // Nous utilisons déjà nos propres écrans pour collecter les données
+                    skipRecollectingData: true 
+                });
+                
+                setUploadProgress(90);
+
+                // Traiter la réponse
+                console.log("Résultat de la vérification:", verificationIntent);
+                
+                // Mettre à jour l'état selon le résultat
+                if (verificationIntent.status === 'verified') {
+                    setVerificationStatus({
+                        verified: true,
+                        status: 'verified'
+                    });
+                    Alert.alert('Vérification réussie', 'Votre identité a été vérifiée avec succès');
+                } else if (verificationIntent.status === 'processing') {
+                    setVerificationStatus({
+                        verified: false,
+                        status: 'processing'
+                    });
+                    Alert.alert('Vérification en cours', 'Votre vérification est en cours de traitement');
+                } else {
+                    Alert.alert('Vérification échouée', 'Impossible de vérifier votre identité');
+                }
+            } else {
+                Alert.alert('Erreur', sessionResponse.message || 'Échec de la préparation de la vérification');
+            }
+        } catch (error) {
+            console.error('Erreur de vérification d\'identité:', error);
+            Alert.alert('Erreur', 'Une erreur est survenue lors de la vérification');
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
+        }
+    };
+
+    // Fonction pour obtenir une image depuis la galerie (document)
+    const pickFromGallery = (forSelfie = false) => {
         launchImageLibrary({
             mediaType: 'photo',
             quality: 0.8,
@@ -75,14 +145,21 @@ const StripeVerificationActionSheet = ({
                     response.errorMessage || t('stripeVerification.errors.generic')
                 );
             } else if (response.assets && response.assets.length > 0) {
-                setIdentityDocument(response.assets[0]);
-                setShowDocumentOptions(false);
+                if (forSelfie) {
+                    setSelfieImage(response.assets[0]);
+                    setShowSelfieOptions(false);
+                    setVerificationStep('review');
+                } else {
+                    setIdentityDocument(response.assets[0]);
+                    setShowDocumentOptions(false);
+                    setVerificationStep('selfie');
+                }
             }
         });
     };
 
     // Fonction pour prendre une photo avec l'appareil photo
-    const takePhoto = () => {
+    const takePhoto = (forSelfie = false) => {
         launchCamera({
             mediaType: 'photo',
             quality: 0.8,
@@ -99,56 +176,28 @@ const StripeVerificationActionSheet = ({
                     response.errorMessage || t('stripeVerification.errors.generic')
                 );
             } else if (response.assets && response.assets.length > 0) {
-                setIdentityDocument(response.assets[0]);
-                setShowDocumentOptions(false);
+                if (forSelfie) {
+                    setSelfieImage(response.assets[0]);
+                    setShowSelfieOptions(false);
+                    setVerificationStep('review');
+                } else {
+                    setIdentityDocument(response.assets[0]);
+                    setShowDocumentOptions(false);
+                    setVerificationStep('selfie');
+                }
             }
         });
     };
 
-    // Fonction pour ouvrir le menu de sélection du document
-    const pickIdentityDocument = () => {
-        setShowDocumentOptions(true);
+    const resetVerification = () => {
+        setIdentityDocument(null);
+        setSelfieImage(null);
+        setVerificationStep('document');
     };
 
-    // Fonction pour soumettre le document d'identité à Stripe
-    const uploadIdentityDocument = async () => {
-        if (!identityDocument) {
-            Alert.alert('Erreur', 'Veuillez sélectionner un document');
-            return;
-        }
-    
-        try {
-            setIsUploading(true);
-            
-            const documentData = {
-                image: `data:${identityDocument.type};base64,${identityDocument.base64}`,
-                documentType: 'identity_document', // Ou permettre à l'utilisateur de choisir
-                documentSide: 'front'
-            };
-    
-            const result = await handleIdentityVerification(userData, documentData);
-    
-            if (result.success && result.verificationUrl) {
-                // Ouvrir l'URL de vérification Stripe
-                Linking.openURL(result.verificationUrl);
-    
-                Alert.alert(
-                    'Vérification d\'identité',
-                    'Veuillez compléter la vérification dans le navigateur'
-                );
-            } else {
-                Alert.alert('Erreur', result.message || 'Échec de la vérification');
-            }
-        } catch (error) {
-            console.error('Erreur lors de la vérification:', error);
-            Alert.alert('Erreur', 'Une erreur est survenue');
-        } finally {
-            setIsUploading(false);
-        }
-    };
-    
     const checkStatus = async () => {
         try {
+            setIsUploading(true);
             const result = await checkIdentityVerificationStatus();
             
             if (result.success) {
@@ -175,6 +224,8 @@ const StripeVerificationActionSheet = ({
         } catch (error) {
             console.error('Erreur de vérification:', error);
             Alert.alert('Erreur', 'Impossible de vérifier le statut');
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -212,159 +263,255 @@ const StripeVerificationActionSheet = ({
                 </>
             );
         }
-            // Compte vérifié et identité vérifiée
-            if (verificationStatus.verified) {
-                return (
-                    <>
-                        <Text style={styles.h4} textAlign="center">
-                            {t('stripeVerification.accountConfigured.title')}
-                        </Text>
-    
-                        <Text
-                            style={styles.caption}
-                            color="#94A3B8"
-                            textAlign="center"
-                            mb={2}
-                        >
-                            {t('stripeVerification.accountConfigured.description')}
-                        </Text>
-    
-                        {/* Affichage des informations bancaires si disponibles */}
-                        {userData.stripeExternalAccount && (
-                            <Box 
-                                borderWidth={1} 
-                                borderColor="gray.200" 
-                                p={4} 
-                                borderRadius="md" 
-                                mb={4}
-                            >
-                                <Text style={styles.caption} color="gray.700">
-                                    Compte bancaire : {userData.stripeExternalAccount}
-                                </Text>
-                            </Box>
-                        )}
-    
-                        <VStack space={2}>
-                            <Button
-                                onPress={resetStripeAccount}
-                                backgroundColor="orange.500"
-                                borderRadius="full"
-                            >
-                                <Text color="white" style={styles.cta}>
-                                    {t('stripeVerification.accountConfigured.resetAccount')}
-                                </Text>
-                            </Button>
-    
-                            <Button
-                                onPress={() => {
-                                    // Vous pourriez ajouter une action pour ouvrir le dashboard Stripe
-                                    onClose();
-                                }}
-                                backgroundColor="black"
-                                borderRadius="full"
-                            >
-                                <Text color="white" style={styles.cta}>
-                                    {t('stripeVerification.accountConfigured.manageAccount')}
-                                </Text>
-                            </Button>
-                        </VStack>
-                    </>
-                );
-            }
 
-        // Compte actif mais identité pas encore vérifiée
-        if (userData?.stripeAccountStatus === 'active' && 
-            (!verificationStatus.verified && verificationStatus.status !== 'verified')) {
-            
+        // Compte vérifié et identité vérifiée
+        if (verificationStatus.verified) {
             return (
                 <>
                     <Text style={styles.h4} textAlign="center">
-                        {t('stripeVerification.identityVerification.title')}
+                        {t('stripeVerification.accountConfigured.title')}
                     </Text>
-
+    
                     <Text
                         style={styles.caption}
                         color="#94A3B8"
                         textAlign="center"
                         mb={2}
                     >
-                        {verificationStatus.status === 'pending' 
-                            ? t('stripeVerification.identityVerification.pending')
-                            : t('stripeVerification.identityVerification.description')}
+                        {t('stripeVerification.accountConfigured.description')}
                     </Text>
-
-                    {identityDocument ? (
-                        <Box>
-                            <Text style={styles.caption} textAlign="center">
-                                {t('stripeVerification.identityVerification.documentSelected', {
-                                    name: identityDocument.fileName || 'Photo'
-                                })}
+    
+                    {/* Affichage des informations bancaires si disponibles */}
+                    {userData.stripeExternalAccount && (
+                        <Box 
+                            borderWidth={1} 
+                            borderColor="gray.200" 
+                            p={4} 
+                            borderRadius="md" 
+                            mb={4}
+                        >
+                            <Text style={styles.caption} color="gray.700">
+                                Compte bancaire : {userData.stripeExternalAccount}
                             </Text>
-                            {isUploading && (
-                                <Progress
-                                    value={uploadProgress}
-                                    mx={4}
-                                    my={2}
-                                    colorScheme="emerald"
-                                />
-                            )}
                         </Box>
-                    ) : null}
-
-                    <HStack space={2} justifyContent="center">
-                        {verificationStatus.status === 'pending' ? (
-                            // Si en attente, montrer uniquement le bouton de vérification
-                            <Button
-                                onPress={checkStatus}
-                                backgroundColor="gray.700"
-                                borderRadius="full"
-                                flex={1}
-                            >
-                                <Text color="white" style={styles.cta}>
-                                    {t('stripeVerification.identityVerification.checkStatus')}
-                                </Text>
-                            </Button>
-                        ) : (
-                            // Sinon, montrer les boutons pour télécharger un document
-                            <>
-                                <Button
-                                    onPress={pickIdentityDocument}
-                                    backgroundColor="gray.200"
-                                    borderRadius="full"
-                                    flex={1}
-                                >
-                                    <Text color="black" style={styles.cta}>
-                                        {identityDocument
-                                            ? t('stripeVerification.identityVerification.changeDocument')
-                                            : t('stripeVerification.identityVerification.chooseDocument')
-                                        }
-                                    </Text>
-                                </Button>
-
-                                {identityDocument && (
-                                    <Button
-                                        onPress={uploadIdentityDocument}
-                                        backgroundColor="black"
-                                        borderRadius="full"
-                                        flex={1}
-                                        isDisabled={isUploading}
-                                    >
-                                        <Text color="white" style={styles.cta}>
-                                            {isUploading
-                                                ? t('stripeVerification.identityVerification.uploading')
-                                                : t('stripeVerification.identityVerification.submit')
-                                            }
-                                        </Text>
-                                    </Button>
-                                )}
-                            </>
-                        )}
-                    </HStack>
+                    )}
+    
+                    <VStack space={2}>
+                        <Button
+                            onPress={resetStripeAccount}
+                            backgroundColor="orange.500"
+                            borderRadius="full"
+                        >
+                            <Text color="white" style={styles.cta}>
+                                {t('stripeVerification.accountConfigured.resetAccount')}
+                            </Text>
+                        </Button>
+    
+                        <Button
+                            onPress={() => {
+                                onClose();
+                            }}
+                            backgroundColor="black"
+                            borderRadius="full"
+                        >
+                            <Text color="white" style={styles.cta}>
+                                {t('stripeVerification.accountConfigured.manageAccount')}
+                            </Text>
+                        </Button>
+                    </VStack>
                 </>
             );
         }
 
-        // Compte vérifié et identité vérifiée
+        // Compte actif mais identité pas encore vérifiée
+        if (userData?.stripeAccountStatus === 'active' && 
+            (!verificationStatus.verified && verificationStatus.status !== 'verified')) {
+            
+            // Étape document d'identité
+            if (verificationStep === 'document') {
+                return (
+                    <>
+                        <Text style={styles.h4} textAlign="center">
+                            {t('stripeVerification.identityVerification.documentTitle')}
+                        </Text>
+
+                        <Text
+                            style={styles.caption}
+                            color="#94A3B8"
+                            textAlign="center"
+                            mb={2}
+                        >
+                            {t('stripeVerification.identityVerification.documentDescription')}
+                        </Text>
+
+                        <Button
+                            onPress={() => setShowDocumentOptions(true)}
+                            backgroundColor="black"
+                            borderRadius="full"
+                        >
+                            <Text color="white" style={styles.cta}>
+                                {t('stripeVerification.identityVerification.selectDocument')}
+                            </Text>
+                        </Button>
+                    </>
+                );
+            }
+            
+            // Étape selfie
+            if (verificationStep === 'selfie') {
+                return (
+                    <>
+                        <Text style={styles.h4} textAlign="center">
+                            {t('stripeVerification.identityVerification.selfieTitle')}
+                        </Text>
+
+                        <Text
+                            style={styles.caption}
+                            color="#94A3B8"
+                            textAlign="center"
+                            mb={2}
+                        >
+                            {t('stripeVerification.identityVerification.selfieDescription')}
+                        </Text>
+
+                        {identityDocument && (
+                            <Box mb={4}>
+                                <Text style={styles.caption} textAlign="center">
+                                    {t('stripeVerification.identityVerification.documentSelected', {
+                                        name: identityDocument.fileName || 'Document d\'identité'
+                                    })}
+                                </Text>
+                            </Box>
+                        )}
+
+                        <Button
+                            onPress={() => setShowSelfieOptions(true)}
+                            backgroundColor="black"
+                            borderRadius="full"
+                        >
+                            <Text color="white" style={styles.cta}>
+                                {t('stripeVerification.identityVerification.takeSelfie')}
+                            </Text>
+                        </Button>
+
+                        <Button
+                            onPress={resetVerification}
+                            backgroundColor="gray.200"
+                            borderRadius="full"
+                            mt={2}
+                        >
+                            <Text color="black" style={styles.cta}>
+                                {t('stripeVerification.identityVerification.changeDocument')}
+                            </Text>
+                        </Button>
+                    </>
+                );
+            }
+            
+            // Étape révision et soumission
+            if (verificationStep === 'review') {
+                return (
+                    <>
+                        <Text style={styles.h4} textAlign="center">
+                            {t('stripeVerification.identityVerification.reviewTitle')}
+                        </Text>
+
+                        <Text
+                            style={styles.caption}
+                            color="#94A3B8"
+                            textAlign="center"
+                            mb={2}
+                        >
+                            {t('stripeVerification.identityVerification.reviewDescription')}
+                        </Text>
+
+                        <Box mb={4}>
+                            {identityDocument && (
+                                <Text style={styles.caption} textAlign="center" mb={1}>
+                                    ✓ {t('stripeVerification.identityVerification.documentSelected', {
+                                        name: identityDocument.fileName || 'Document d\'identité'
+                                    })}
+                                </Text>
+                            )}
+                            
+                            {selfieImage && (
+                                <Text style={styles.caption} textAlign="center">
+                                    ✓ {t('stripeVerification.identityVerification.selfieSelected')}
+                                </Text>
+                            )}
+                        </Box>
+
+                        {isUploading && (
+                            <Progress
+                                value={uploadProgress}
+                                mx={4}
+                                my={2}
+                                colorScheme="emerald"
+                            />
+                        )}
+
+                        <Button
+                            onPress={startStripeIdentityVerification}
+                            backgroundColor="black"
+                            borderRadius="full"
+                            isDisabled={isUploading}
+                        >
+                            <Text color="white" style={styles.cta}>
+                                {isUploading
+                                    ? t('stripeVerification.identityVerification.submitting')
+                                    : t('stripeVerification.identityVerification.submit')
+                                }
+                            </Text>
+                        </Button>
+
+                        <Button
+                            onPress={resetVerification}
+                            backgroundColor="gray.200"
+                            borderRadius="full"
+                            mt={2}
+                            isDisabled={isUploading}
+                        >
+                            <Text color="black" style={styles.cta}>
+                                {t('stripeVerification.identityVerification.restart')}
+                            </Text>
+                        </Button>
+                    </>
+                );
+            }
+
+            // Vérification en cours
+            if (verificationStatus.status === 'processing') {
+                return (
+                    <>
+                        <Text style={styles.h4} textAlign="center">
+                            {t('stripeVerification.identityVerification.processingTitle')}
+                        </Text>
+
+                        <Text
+                            style={styles.caption}
+                            color="#94A3B8"
+                            textAlign="center"
+                            mb={2}
+                        >
+                            {t('stripeVerification.identityVerification.processingDescription')}
+                        </Text>
+
+                        <Button
+                            onPress={checkStatus}
+                            backgroundColor="black"
+                            borderRadius="full"
+                            isDisabled={isUploading}
+                        >
+                            <Text color="white" style={styles.cta}>
+                                {t('stripeVerification.identityVerification.checkStatus')}
+                            </Text>
+                        </Button>
+                    </>
+                );
+            }
+        }
+
+        // Fallback
         return (
             <>
                 <Text style={styles.h4} textAlign="center">
@@ -392,10 +539,7 @@ const StripeVerificationActionSheet = ({
                 </Button>
 
                 <Button
-                    onPress={() => {
-                        // Action pour gérer le compte Stripe - pourrait ouvrir un lien vers le dashboard Stripe
-                        onClose();
-                    }}
+                    onPress={onClose}
                     backgroundColor="black"
                     borderRadius="full"
                 >
@@ -409,7 +553,7 @@ const StripeVerificationActionSheet = ({
 
     return (
         <>
-            <Actionsheet isOpen={isOpen && !showDocumentOptions} onClose={onClose}>
+            <Actionsheet isOpen={isOpen && !showDocumentOptions && !showSelfieOptions} onClose={onClose}>
                 <Actionsheet.Content
                     backgroundColor="white"
                     maxHeight="100%"
@@ -430,7 +574,7 @@ const StripeVerificationActionSheet = ({
                     <Actionsheet.Item
                         alignContent='center'
                         justifyContent='center'
-                        onPress={takePhoto}
+                        onPress={() => takePhoto(false)}
                         startIcon={<FontAwesomeIcon icon={faCamera} size={20} color="#000" />}
                     >
                         {t('stripeVerification.documentOptions.takePhoto')}
@@ -438,13 +582,38 @@ const StripeVerificationActionSheet = ({
                     <Actionsheet.Item
                         alignContent='center'
                         justifyContent='center'
-                        onPress={pickFromGallery}
+                        onPress={() => pickFromGallery(false)}
                         startIcon={<FontAwesomeIcon icon={faImage} size={20} color="#000" />}
                     >
                         {t('stripeVerification.documentOptions.chooseFromGallery')}
                     </Actionsheet.Item>
                     <Actionsheet.Item onPress={() => setShowDocumentOptions(false)}>
                         {t('stripeVerification.documentOptions.cancel')}
+                    </Actionsheet.Item>
+                </Actionsheet.Content>
+            </Actionsheet>
+
+            {/* Actionsheet pour choisir la source de la selfie */}
+            <Actionsheet isOpen={showSelfieOptions} onClose={() => setShowSelfieOptions(false)}>
+                <Actionsheet.Content>
+                    <Actionsheet.Item
+                        alignContent='center'
+                        justifyContent='center'
+                        onPress={() => takePhoto(true)}
+                        startIcon={<FontAwesomeIcon icon={faCamera} size={20} color="#000" />}
+                    >
+                        {t('stripeVerification.selfieOptions.takePhoto')}
+                    </Actionsheet.Item>
+                    <Actionsheet.Item
+                        alignContent='center'
+                        justifyContent='center'
+                        onPress={() => pickFromGallery(true)}
+                        startIcon={<FontAwesomeIcon icon={faImage} size={20} color="#000" />}
+                    >
+                        {t('stripeVerification.selfieOptions.chooseFromGallery')}
+                    </Actionsheet.Item>
+                    <Actionsheet.Item onPress={() => setShowSelfieOptions(false)}>
+                        {t('stripeVerification.selfieOptions.cancel')}
                     </Actionsheet.Item>
                 </Actionsheet.Content>
             </Actionsheet>

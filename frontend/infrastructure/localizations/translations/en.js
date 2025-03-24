@@ -577,65 +577,86 @@ export default {
     }
   },
 
-  "stripeVerification": {
-    "bankAccountSetup": {
-      "title": "Bank Account Setup",
-      "description": "Your bank account will be automatically set up when you publish your first hushy.",
-      "publishSecret": "Publish a hushy"
-    },
-    "identityVerification": {
-      "title": "Identity Verification",
-      "description": "To finalize your Stripe account setup, we need a photo of your ID document. Don't delay if you want to continue receiving payments and transferring them to your account",
-      "documentSelected": "Document selected: {{name}}",
-      "chooseDocument": "Choose a document",
-      "submit": "Submit",
-    },
-    "deleteConfirm": {
-      "title": "Delete this hushy?",
-      "message": "This action cannot be undone.",
-      "cancel": "Cancel",
-      "confirm": "Delete"
-    },
-    
-    "deleteSuccess": {
-      "title": "Success",
-      "message": "Hushy deleted successfully",
-      "ok": "OK"
-    },
-    
-    "deleteError": {
-      "title": "Error",
-      "message": "Could not delete this hushy",
-      "ok": "OK"
-    },
-    "documentOptions": {
-      "takePhoto": "Take a photo",
-      "chooseFromGallery": "Choose from gallery",
-      "cancel": "Cancel"
-    },
-    "accountConfigured": {
-      "title": "Stripe Account Configured",
-      "description": "Your bank account is active. You can reset or manage your Stripe account if needed.",
-      "resetAccount": "Reset Stripe account",
-      "manageAccount": "Manage my account"
-    },
-    "success": {
-      "title": "Success",
-      "documentSubmitted": "Your identity document has been successfully submitted. We are currently verifying your information."
-    },
-    "errors": {
-      "title": "Error",
-      "generic": "An error occurred",
-      "selectDocument": "Please select a document",
-      "uploadError": "Upload error:",
-      "uploadFailed": "An error occurred during upload",
-      "verificationFailed": "Verification failed"
-    },
-    "logs": {
-      "userCancelled": "User cancelled image picker"
-    },
-  "delete": "Delete"
+"stripeVerification": {
+  "logs": {
+    "userCancelled": "User cancelled image selection"
   },
+  "errors": {
+    "title": "Error",
+    "generic": "An error occurred",
+    "selectDocument": "Please select a document",
+    "uploadError": "Upload error:",
+    "uploadFailed": "An error occurred during upload",
+    "verificationFailed": "Identity verification failed"
+  },
+  "bankAccountSetup": {
+    "title": "Bank Account Setup",
+    "description": "You must first set up your bank account to publish paid secrets.",
+    "publishSecret": "Publish a secret"
+  },
+  "identityVerification": {
+    "title": "Identity Verification",
+    "description": "To receive your payments, we need to verify your identity in accordance with regulations.",
+    "documentTitle": "Identity Document",
+    "documentDescription": "Please provide an identity document (ID card, passport, or driver's license).",
+    "selfieTitle": "Photo of Yourself",
+    "selfieDescription": "Take a photo of yourself to confirm your identity.",
+    "reviewTitle": "Identity Verification",
+    "reviewDescription": "Please review the documents before submitting.",
+    "documentSelected": "Document selected: {{name}}",
+    "selfieSelected": "Photo of yourself selected",
+    "processingTitle": "Verification in Progress",
+    "processingDescription": "Your identity verification is being processed. This may take a few moments.",
+    "pending": "Your verification is being processed. Please check the status later.",
+    "chooseDocument": "Choose a document",
+    "changeDocument": "Change document",
+    "takeSelfie": "Take a selfie",
+    "selectDocument": "Select a document",
+    "restart": "Start over",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "uploading": "Uploading...",
+    "checkStatus": "Check status"
+  },
+  "documentOptions": {
+    "takePhoto": "Take a photo",
+    "chooseFromGallery": "Choose from gallery",
+    "cancel": "Cancel"
+  },
+  "selfieOptions": {
+    "takePhoto": "Take a photo",
+    "chooseFromGallery": "Choose from gallery",
+    "cancel": "Cancel"
+  },
+  "accountConfigured": {
+    "title": "Account Configured",
+    "description": "Your account is configured to receive payments.",
+    "resetAccount": "Reset account",
+    "manageAccount": "Manage account"
+  },
+  "success": {
+    "title": "Success",
+    "documentSubmitted": "Your identity document has been successfully submitted.",
+    "identityVerified": "Your identity has been successfully verified."
+  },
+  "deleteConfirm": {
+    "title": "Delete this hushy?",
+    "message": "This action cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "deleteSuccess": {
+    "title": "Success",
+    "message": "Hushy deleted successfully",
+    "ok": "OK"
+  },
+  "deleteError": {
+    "title": "Error",
+    "message": "Could not delete this hushy",
+    "ok": "OK"
+  },
+  "delete": "Delete"
+},
   "notifications": {
     "alerts": {
       "simulatorWarning": "Notifications don't work on simulator",

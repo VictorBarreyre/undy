@@ -581,69 +581,86 @@ export default {
     }
   },
 
-  "stripeVerification": {
-    "bankAccountSetup": {
-      "title": "Configuration du compte bancaire",
-      "description": "Votre compte bancaire sera configuré automatiquement lors de la publication de votre premier hushy.",
-      "publishSecret": "Publier un husy"
-    },
-    "documentOptions": {
-      "takePhoto": "Prendre une photo",
-      "chooseFromGallery": "Choisir depuis la galerie",
-      "cancel": "Annuler"
-    },
-    "identityVerification": {
-      "title": "Vérification d'identité",
-      "description": "Pour finaliser la configuration de votre compte Stripe, nous avons besoin d'une photo de votre pièce d'identité. Ne tardez pas si vous voulez pouvoir continuer à recevoir des paiements et à les transférer sur votre compte",
-      "documentSelected": "Document sélectionné : {{name}}",
-      "chooseDocument": "Choisir un document",
-      "submit": "Soumettre",
-      "changeDocument": "Changer de document",
-    "uploading": "Téléchargement..."
-    },
-    "accountConfigured": {
-      "title": "Compte Stripe configuré",
-      "description": "Votre compte bancaire est actif. Vous pouvez réinitialiser ou gérer votre compte Stripe si nécessaire.",
-      "resetAccount": "Réinitialiser le compte Stripe",
-      "manageAccount": "Gérer mon compte"
-    },
-    "success": {
-      "title": "Succès",
-      "documentSubmitted": "Votre document d'identité a été soumis avec succès.",
-      "redirecting": "Vous allez être redirigé vers le service de vérification de Stripe."
-    },
-    "errors": {
-      "title": "Erreur",
-      "generic": "Une erreur est survenue",
-      "selectDocument": "Veuillez sélectionner un document",
-      "uploadError": "Erreur d'upload:",
-      "uploadFailed": "Une erreur est survenue lors de l'upload",
-      "verificationFailed": "Échec de la vérification"
-    },
-    "logs": {
-      "userCancelled": "User cancelled image picker"
-    },
-    "deleteConfirm": {
-      "title": "Supprimer ce hushy ?",
-      "message": "Cette action ne peut pas être annulée.",
-      "cancel": "Annuler",
-      "confirm": "Supprimer"
-    },
-    
-    "deleteSuccess": {
-      "title": "Succès",
-      "message": "Hushy supprimé avec succès",
-      "ok": "OK"
-    },
-    
-    "deleteError": {
-      "title": "Erreur",
-      "message": "Impossible de supprimer ce hushy",
-      "ok": "OK"
-    },
-    "delete": "Supprimer"
-
+"stripeVerification": {
+  "logs": {
+    "userCancelled": "L'utilisateur a annulé la sélection d'image"
   },
+  "errors": {
+    "title": "Erreur",
+    "generic": "Une erreur est survenue",
+    "selectDocument": "Veuillez sélectionner un document",
+    "uploadError": "Erreur lors de l'envoi:",
+    "uploadFailed": "Une erreur est survenue lors de l'envoi",
+    "verificationFailed": "Échec de la vérification d'identité"
+  },
+  "bankAccountSetup": {
+    "title": "Configuration du compte bancaire",
+    "description": "Vous devez d'abord configurer votre compte bancaire pour publier des secrets payants.",
+    "publishSecret": "Publier un secret"
+  },
+  "identityVerification": {
+    "title": "Vérification d'identité",
+    "description": "Pour recevoir vos paiements, nous devons vérifier votre identité conformément aux réglementations.",
+    "documentTitle": "Document d'identité",
+    "documentDescription": "Veuillez fournir une pièce d'identité (carte d'identité, passeport ou permis de conduire).",
+    "selfieTitle": "Photo de vous",
+    "selfieDescription": "Prenez une photo de vous pour confirmer votre identité.",
+    "reviewTitle": "Vérification d'identité",
+    "reviewDescription": "Veuillez vérifier les documents avant de les soumettre.",
+    "documentSelected": "Document sélectionné: {{name}}",
+    "selfieSelected": "Photo de vous sélectionnée",
+    "processingTitle": "Vérification en cours",
+    "processingDescription": "Votre vérification d'identité est en cours de traitement. Cela peut prendre quelques instants.",
+    "pending": "Votre vérification est en cours de traitement. Veuillez vérifier le statut ultérieurement.",
+    "chooseDocument": "Choisir un document",
+    "changeDocument": "Changer de document",
+    "takeSelfie": "Prendre une photo de vous",
+    "selectDocument": "Choisir un document",
+    "restart": "Recommencer",
+    "submit": "Soumettre",
+    "submitting": "Envoi en cours...",
+    "uploading": "Envoi en cours...",
+    "checkStatus": "Vérifier le statut"
+  },
+  "documentOptions": {
+    "takePhoto": "Prendre une photo",
+    "chooseFromGallery": "Choisir dans la galerie",
+    "cancel": "Annuler"
+  },
+  "selfieOptions": {
+    "takePhoto": "Prendre une photo",
+    "chooseFromGallery": "Choisir dans la galerie",
+    "cancel": "Annuler"
+  },
+  "accountConfigured": {
+    "title": "Compte configuré",
+    "description": "Votre compte est configuré pour recevoir des paiements.",
+    "resetAccount": "Réinitialiser le compte",
+    "manageAccount": "Gérer le compte"
+  },
+  "success": {
+    "title": "Succès",
+    "documentSubmitted": "Votre document d'identité a été soumis avec succès.",
+    "identityVerified": "Votre identité a été vérifiée avec succès."
+  },
+  "deleteConfirm": {
+    "title": "Supprimer ce hushy ?",
+    "message": "Cette action ne peut pas être annulée.",
+    "cancel": "Annuler",
+    "confirm": "Supprimer"
+  },
+  "deleteSuccess": {
+    "title": "Succès",
+    "message": "Hushy supprimé avec succès",
+    "ok": "OK"
+  },
+  "deleteError": {
+    "title": "Erreur",
+    "message": "Impossible de supprimer ce hushy",
+    "ok": "OK"
+  },
+  "delete": "Supprimer"
+},
 
   "notifications": {
     "alerts": {

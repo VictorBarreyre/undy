@@ -1001,17 +1001,47 @@ export const CardDataProvider = ({ children }) => {
 
   const handleIdentityVerification = async (userData, documentData) => {
     const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
+    }
+    
     try {
-        const response = await instance.post('/api/secrets/verify-identity', {
-            ...documentData,
-            stripeAccountId: userData.stripeAccountId
+        console.log('Envoi des données de vérification:', {
+            stripeAccountId: userData.stripeAccountId,
+            documentType: documentData.documentType,
+            documentSide: documentData.documentSide,
+            hasDocument: !!documentData.documentImage,
+            hasSelfie: !!documentData.selfieImage
         });
+
+        // Préparer les données à envoyer au serveur
+        const payload = {
+            stripeAccountId: userData.stripeAccountId,
+            documentType: documentData.documentType || 'identity_document',
+            documentSide: documentData.documentSide || 'front'
+        };
+
+        // Ajouter l'image du document si présente
+        if (documentData.documentImage) {
+            payload.documentImage = documentData.documentImage;
+        } else if (documentData.image) {
+            // Pour compatibilité avec l'ancien format
+            payload.documentImage = documentData.image;
+        }
+
+        // Ajouter l'image selfie si présente
+        if (documentData.selfieImage) {
+            payload.selfieImage = documentData.selfieImage;
+        }
+
+        // Appeler l'API de vérification d'identité
+        const response = await instance.post('/api/secrets/verify-identity', payload);
+
+        console.log('Réponse de la vérification d\'identité:', response.data);
 
         return {
             success: true,
-            ...response.data,
-            // Ajouter l'URL de vérification pour rediriger l'utilisateur
-            verificationUrl: response.data.verificationUrl
+            ...response.data
         };
     } catch (error) {
         console.error('Erreur de vérification d\'identité:', error);

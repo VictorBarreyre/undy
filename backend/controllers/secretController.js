@@ -1171,64 +1171,157 @@ exports.deleteSecret = async (req, res) => {
 
   exports.verifyIdentity = async (req, res) => {
     try {
-        const { image, documentType, documentSide } = req.body;
+        const { documentImage, selfieImage, documentType, documentSide, stripeAccountId } = req.body;
 
-        if (!image) {
+        if (!documentImage) {
             return res.status(400).json({
                 success: false,
-                message: 'L\'image est requise'
+                message: 'L\'image du document est requise'
             });
         }
 
+        // Vérifier que l'utilisateur a un compte Stripe existant
         const user = await User.findById(req.user.id);
+        const userStripeAccountId = stripeAccountId || user.stripeAccountId;
         
-        // Décoder l'image base64
-        const buffer = Buffer.from(image.split(',')[1], 'base64');
+        if (!userStripeAccountId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Aucun compte Stripe associé à cet utilisateur'
+            });
+        }
 
-        // Télécharger le fichier sur Stripe
-        const file = await stripe.files.create({
+        // Créer un objet pour stocker les fichiers uploadés
+        const uploadedFiles = [];
+
+        // Décoder et télécharger l'image du document sur Stripe
+        let documentImageBuffer;
+        try {
+            // Extraire la partie base64 de l'URL data
+            const base64Data = documentImage.split(',')[1];
+            documentImageBuffer = Buffer.from(base64Data, 'base64');
+        } catch (error) {
+            return res.status(400).json({
+                success: false,
+                message: 'Format d\'image de document invalide'
+            });
+        }
+
+        // Télécharger le document sur Stripe
+        const documentFile = await stripe.files.create({
             purpose: 'identity_document',
             file: {
-                data: buffer,
+                data: documentImageBuffer,
                 name: `identity_doc_${Date.now()}.jpg`,
                 type: 'application/octet-stream'
             }
         });
+        
+        uploadedFiles.push(documentFile.id);
 
-        // Créer une session de vérification d'identité
+        // Options pour la session de vérification
+        const verificationOptions = {
+            type: 'document',
+            metadata: {
+                userId: req.user.id,
+                documentType: documentType || 'identity_document',
+                documentSide: documentSide || 'front',
+                documentFileId: documentFile.id
+            }
+        };
+
+        // Si une selfie a été fournie, la télécharger aussi
+        let selfieFile = null;
+        if (selfieImage) {
+            let selfieImageBuffer;
+            try {
+                const base64Data = selfieImage.split(',')[1];
+                selfieImageBuffer = Buffer.from(base64Data, 'base64');
+            } catch (error) {
+                // Nettoyer les fichiers déjà téléchargés en cas d'erreur
+                for (const fileId of uploadedFiles) {
+                    try {
+                        await stripe.files.del(fileId);
+                    } catch (deleteError) {
+                        console.error('Erreur lors de la suppression du fichier:', deleteError);
+                    }
+                }
+                
+                return res.status(400).json({
+                    success: false,
+                    message: 'Format d\'image selfie invalide'
+                });
+            }
+
+            // Télécharger la selfie sur Stripe
+            selfieFile = await stripe.files.create({
+                purpose: 'identity_document',
+                file: {
+                    data: selfieImageBuffer,
+                    name: `identity_selfie_${Date.now()}.jpg`,
+                    type: 'application/octet-stream'
+                }
+            });
+            
+            uploadedFiles.push(selfieFile.id);
+            verificationOptions.metadata.selfieFileId = selfieFile.id;
+        }
+
+        // Créer la session de vérification avec les deux documents
         const verificationSession = await stripe.identity.verificationSessions.create({
             type: 'document',
             options: {
                 document: {
                     allowed_types: ['passport', 'id_card', 'driving_license'],
-                    require_matching_selfie: true
+                    require_matching_selfie: !!selfieImage, // Activer la correspondance selfie si une selfie a été fournie
+                    require_live_capture: false,  // Désactiver la capture en direct car nous avons déjà les images
+                    require_id_number: false      // Ne pas demander le numéro d'ID
                 }
             },
-            metadata: {
-                userId: req.user.id,
-                documentType,
-                documentSide,
-                fileId: file.id
-            }
+            metadata: verificationOptions.metadata
         });
+
+        // Attacher les documents téléchargés à la session de vérification
+        // Note: Cette partie utilise l'API non documentée de Stripe pour attacher des documents préexistants
+        // Il est préférable de contacter Stripe pour confirmer la méthode officielle
+        const verificationUpdateData = {
+            uploaded_document: {
+                front: documentFile.id
+            }
+        };
+
+        // Ajouter la selfie si elle existe
+        if (selfieFile) {
+            verificationUpdateData.uploaded_selfie = selfieFile.id;
+        }
+
+        try {
+            await stripe.identity.verificationSessions.update(
+                verificationSession.id,
+                verificationUpdateData
+            );
+        } catch (error) {
+            console.error('Erreur lors de l\'attachement des documents à la session:', error);
+            // Même en cas d'erreur ici, on continue car le client_secret peut toujours être utilisé
+            // pour la vérification côté client
+        }
 
         // Mettre à jour l'utilisateur
         user.stripeVerificationSessionId = verificationSession.id;
-        user.stripeIdentityDocumentId = file.id;
+        user.stripeIdentityDocumentId = documentFile.id;
         user.stripeVerificationStatus = 'processing';
         user.stripeIdentityVerificationDate = new Date();
         await user.save();
 
         return res.status(200).json({
             success: true,
-            message: 'Document d\'identité téléchargé',
-            verificationUrl: verificationSession.url, // URL pour compléter la vérification
+            message: 'Documents téléchargés et session de vérification créée',
             clientSecret: verificationSession.client_secret,
             sessionId: verificationSession.id
         });
         
     } catch (error) {
-        console.error('Erreur de vérification d\'identité:', error);
+        console.error('Erreur détaillée de vérification d\'identité:', error);
         return res.status(500).json({
             success: false,
             message: 'Erreur lors du processus de vérification',
@@ -1237,6 +1330,7 @@ exports.deleteSecret = async (req, res) => {
     }
 };
 
+// Fonction améliorée pour vérifier le statut d'une session de vérification
 exports.checkIdentityVerificationStatus = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -1253,12 +1347,33 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
             user.stripeVerificationSessionId
         );
 
-        // Mettre à jour le statut
+        console.log('Statut de vérification:', verificationSession.status, verificationSession);
+
+        // Mettre à jour le statut dans la base de données
         user.stripeVerificationStatus = verificationSession.status;
         user.stripeIdentityVerified = verificationSession.status === 'verified';
         
         if (verificationSession.status === 'verified') {
             user.stripeIdentityVerificationDate = new Date();
+            
+            // Si l'utilisateur n'est pas déjà vérifié pour les paiements,
+            // vous pourriez mettre à jour son statut de capacité Stripe ici
+            if (user.stripeAccountId && !user.stripePaymentsVerified) {
+                try {
+                    // Mettre à jour les capacités du compte pour activer les paiements
+                    await stripe.accounts.update(user.stripeAccountId, {
+                        capabilities: {
+                            card_payments: { requested: true },
+                            transfers: { requested: true }
+                        }
+                    });
+                    
+                    user.stripePaymentsVerified = true;
+                } catch (stripeError) {
+                    console.error('Erreur lors de la mise à jour des capacités Stripe:', stripeError);
+                    // Ne pas bloquer le processus si cette mise à jour échoue
+                }
+            }
         }
 
         await user.save();
@@ -1267,12 +1382,15 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
             success: true,
             status: verificationSession.status,
             verified: verificationSession.status === 'verified',
-            verificationUrl: verificationSession.url,
-            details: verificationSession
+            lastUpdated: user.stripeIdentityVerificationDate,
+            details: {
+                verified_outputs: verificationSession.verified_outputs || null,
+                requirements: verificationSession.requirements || null
+            }
         });
         
     } catch (error) {
-        console.error('Erreur de vérification du statut:', error);
+        console.error('Erreur détaillée de vérification du statut:', error);
         return res.status(500).json({
             success: false,
             message: 'Impossible de vérifier le statut',

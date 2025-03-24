@@ -19,6 +19,7 @@ import NotificationService from '../Notifications/NotificationService';
 import { useTranslation } from 'react-i18next';
 import Clipboard from '@react-native-clipboard/clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STRIPE_PUBLISHABLE_KEY } from '@env';
 
 
 export default function Profile({ navigation }) {
@@ -709,6 +710,9 @@ export default function Profile({ navigation }) {
                 navigation={navigation}
             />
 
+            <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}
+                           urlScheme="hushy" // Assurez-vous que c'est le même que dans votre configuration d'app
+>
             <StripeVerificationModal
                 isOpen={stripeModalVisible}
                 onClose={() => setStripeModalVisible(false)}
@@ -716,6 +720,7 @@ export default function Profile({ navigation }) {
                 resetStripeAccount={handleResetStripeAccount}
                 navigation={navigation}
             />
+            </StripeProvider>
 
             <Actionsheet
                 isOpen={modalVisible}
