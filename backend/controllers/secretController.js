@@ -1189,51 +1189,80 @@ exports.deleteSecret = async (req, res) => {
             });
         }
 
-        // Extraire les données de l'image
-        let fileData;
-        if (image.startsWith('data:')) {
-            const parts = image.split(',');
-            fileData = Buffer.from(parts[1], 'base64');
-        } else {
-            return res.status(400).json({
-                success: false, 
-                message: 'Format d\'image non pris en charge'
-            });
-        }
-
-        // Créer un fichier sur Stripe (sans l'attacher directement)
-        const file = await stripe.files.create({
-            purpose: 'dispute_evidence', // Utiliser un purpose plus générique
-            file: {
-                data: fileData,
-                name: `identity_doc_${Date.now()}.jpg`,
-                type: 'application/octet-stream',
+        // Créer une session de vérification d'identité Stripe
+        const verificationSession = await stripe.identity.verificationSessions.create({
+            type: 'document',
+            options: {
+                document: {
+                    allowed_types: ['passport', 'id_card', 'driving_license'],
+                    require_matching_selfie: true // Demander un selfie de correspondance
+                }
+            },
+            metadata: {
+                userId: req.user.id,
+                documentType: documentType,
+                documentSide: documentSide
             }
         });
 
-        // Stocker l'ID du fichier dans votre base de données
+        // Mettre à jour l'utilisateur avec l'ID de la session de vérification
         await User.findByIdAndUpdate(req.user.id, {
-            stripeDocumentId: file.id,
-            stripeDocumentType: documentType,
-            stripeDocumentSide: documentSide,
+            stripeVerificationSessionId: verificationSession.id,
             stripeVerificationStatus: 'pending'
         });
-        
-        // À ce stade, vous pouvez avoir un processus administratif
-        // où vous consultez les documents, puis les attachez manuellement
-        // au compte Stripe Connect via le dashboard administrateur
 
         return res.status(200).json({
             success: true,
-            message: 'Document reçu. Nous vérifions manuellement votre pièce d\'identité.',
-            fileId: file.id
+            message: 'Session de vérification d\'identité créée',
+            clientSecret: verificationSession.client_secret,
+            sessionId: verificationSession.id
         });
         
     } catch (error) {
-        console.error('Erreur:', error);
+        console.error('Erreur de vérification d\'identité:', error);
         return res.status(500).json({
             success: false,
-            message: 'Erreur lors du traitement du document',
+            message: 'Erreur lors du processus de vérification d\'identité',
+            error: error.message
+        });
+    }
+};
+
+// Méthode pour vérifier le statut
+exports.checkIdentityVerificationStatus = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('stripeVerificationSessionId');
+        
+        if (!user || !user.stripeVerificationSessionId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Aucune session de vérification en cours'
+            });
+        }
+
+        // Récupérer le statut de la session de vérification
+        const verificationSession = await stripe.identity.verificationSessions.retrieve(
+            user.stripeVerificationSessionId
+        );
+
+        // Mettre à jour le statut de vérification
+        await User.findByIdAndUpdate(req.user.id, {
+            stripeVerificationStatus: verificationSession.status,
+            stripeIdentityVerified: verificationSession.status === 'verified'
+        });
+
+        return res.status(200).json({
+            success: true,
+            status: verificationSession.status,
+            verified: verificationSession.status === 'verified',
+            details: verificationSession
+        });
+        
+    } catch (error) {
+        console.error('Erreur lors de la vérification du statut:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la vérification du statut',
             error: error.message
         });
     }

@@ -594,13 +594,12 @@ export default {
     },
     "identityVerification": {
       "title": "Vérification d'identité",
-      "description": "Pour finaliser la configuration de votre compte Stripe, nous avons besoin d'une pièce d'identité. Ne tardez pas pour continuer à recevoir des paiements.",
-      "stripeDescription": "Stripe va vous guider à travers un processus sécurisé de vérification d'identité. Cela prendra environ 2 minutes.",
-      "startVerification": "Commencer la vérification",
-      "pending": "Votre vérification d'identité est en cours de traitement. Cela peut prendre jusqu'à 24 heures.",
-      "checkStatus": "Vérifier le statut",
-      "uploading": "Téléchargement...",
-      "pendingDescription": "Votre vérification est en cours. Revenez plus tard pour vérifier le statut."
+      "description": "Pour finaliser la configuration de votre compte Stripe, nous avons besoin d'une photo de votre pièce d'identité. Ne tardez pas si vous voulez pouvoir continuer à recevoir des paiements et à les transférer sur votre compte",
+      "documentSelected": "Document sélectionné : {{name}}",
+      "chooseDocument": "Choisir un document",
+      "submit": "Soumettre",
+      "changeDocument": "Changer de document",
+    "uploading": "Téléchargement..."
     },
     "accountConfigured": {
       "title": "Compte Stripe configuré",
@@ -619,8 +618,7 @@ export default {
       "selectDocument": "Veuillez sélectionner un document",
       "uploadError": "Erreur d'upload:",
       "uploadFailed": "Une erreur est survenue lors de l'upload",
-      "verificationFailed": "Échec de la vérification",
-      "statusCheckFailed": "Impossible de vérifier le statut actuel"
+      "verificationFailed": "Échec de la vérification"
     },
     "logs": {
       "userCancelled": "User cancelled image picker"

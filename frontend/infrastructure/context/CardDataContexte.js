@@ -998,6 +998,50 @@ export const CardDataProvider = ({ children }) => {
       throw new Error(error?.response?.data?.message || i18n.t('cardData.errors.deletingSecretGeneric'));
     }
   };
+
+  const handleIdentityVerification = async (userData, documentData) => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+        throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
+    }
+    try {
+        const response = await instance.post('/api/secrets/verify-identity', {
+            ...documentData,
+            stripeAccountId: userData.stripeAccountId
+        });
+
+        return {
+            success: true,
+            ...response.data
+        };
+    } catch (error) {
+        console.error('Erreur de vérification d\'identité:', error);
+        return {
+            success: false,
+            message: error.response?.data?.message || 'Échec de la vérification d\'identité'
+        };
+    }
+};
+
+const checkIdentityVerificationStatus = async () => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+        throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
+    }
+    try {
+        const response = await instance.get('/api/secrets/check-identity-verification-status');
+        return {
+            success: true,
+            ...response.data
+        };
+    } catch (error) {
+        console.error('Erreur de vérification du statut:', error);
+        return {
+            success: false,
+            message: error.response?.data?.message || 'Impossible de vérifier le statut'
+        };
+    }
+};
   
 
   return (
@@ -1033,7 +1077,9 @@ export const CardDataProvider = ({ children }) => {
       userCurrency,
       setUserPreferredCurrency,
       detectUserCurrency,
-      deleteSecret
+      deleteSecret,
+      handleIdentityVerification,
+      checkIdentityVerificationStatus
     }}>
       {children}
     </CardDataContext.Provider>
