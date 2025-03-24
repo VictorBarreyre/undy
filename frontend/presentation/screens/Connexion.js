@@ -22,6 +22,8 @@ const Connexion = ({ navigation }) => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isAppleSignInSupported, setIsAppleSignInSupported] = useState(false);
+    const [isGoogleSignInInProgress, setIsGoogleSignInInProgress] = useState(false);
+
 
     useEffect(() => {
         const checkAppleSignInSupport = async () => {
@@ -251,118 +253,132 @@ const Connexion = ({ navigation }) => {
         }
       }, [login, navigation, t]);
 
-    const handleGoogleLogin = useCallback(async () => {
-        try {
-            console.log('Starting Google login process');
-
-            // First check for Play Services (Android) or proper configuration (iOS)
-            await GoogleSignin.hasPlayServices({
-                showPlayServicesUpdateDialog: true
-            });
-
-            console.log('Play services available, proceeding with sign in');
-
-            // Always try to sign out first to prevent session conflicts
-            try {
-                await GoogleSignin.signOut();
-                console.log('Successfully signed out of previous Google session');
-            } catch (signOutError) {
-                // This is expected if no user was signed in, so just log it
-                console.log('Sign out error (this is usually normal):', signOutError.message);
-            }
-
-            // Sign in the user
-            const userInfo = await GoogleSignin.signIn();
-            console.log('Google sign in successful, user info received');
-
-            if (!userInfo) {
-                throw new Error('No user information received from Google');
-            }
-
-            // Get the tokens only after userInfo is successfully retrieved
-            const tokens = await GoogleSignin.getTokens();
-            console.log('Tokens successfully retrieved');
-
-            if (!tokens || !tokens.accessToken) {
-                throw new Error('No access token received from Google');
-            }
-
-            // Now make the API call
-            const instance = getAxiosInstance();
-            if (!instance) {
-                throw new Error('Unable to create Axios instance');
-            }
-
-            console.log('Sending credentials to backend');
-            const response = await instance.post('/api/users/google-login',
-                {
-                    token: tokens.accessToken,
-                    tokenType: 'access_token',
-                    userData: userInfo.user
-                },
-                {
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-
-            console.log('Backend authentication successful');
-
-            // Handle the successful login
-            await login(response.data.token, response.data.refreshToken);
-            navigation.navigate('HomeTab', { screen: 'MainFeed' });
-
-        } catch (error) {
-            console.error('Detailed Google login error:', error);
-
-            // Handle different error cases
-            if (error.code) {
-                switch (error.code) {
-                    case statusCodes.SIGN_IN_CANCELLED:
-                        console.log('User cancelled the login flow');
-                        return; // Don't show an error for user cancellation
-
-                    case statusCodes.IN_PROGRESS:
-                        console.log('Google sign-in operation already in progress');
-                        return; // Don't show an error for this case
-
-                    case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-                        Alert.alert(
-                            t('auth.alerts.serviceUnavailable'),
-                            t('auth.errors.googlePlayNotAvailable'),
-                            [{ text: t('auth.alerts.ok') }]
-                        );
-                        break;
-
-                    default:
-                        Alert.alert(
-                            t('auth.errors.connectionError'),
-                            `${t('auth.errors.googleConnectionError')} (${error.code})`,
-                            [{ text: t('auth.alerts.ok') }]
-                        );
-                }
-            } else if (error.response) {
-                // Handle server errors
-                const statusCode = error.response.status;
-                const errorMessage = error.response.data?.message || t('auth.errors.genericError');
-
-                Alert.alert(
-                    t('auth.errors.connectionError'),
-                    `${errorMessage} (${statusCode})`,
-                    [{ text: t('auth.alerts.ok') }]
-                );
-            } else {
-                // Handle other errors
-                Alert.alert(
-                    t('auth.errors.connectionError'),
-                    error.message || t('auth.errors.genericError'),
-                    [{ text: t('auth.alerts.ok') }]
-                );
-            }
+      const handleGoogleLogin = useCallback(async () => {
+        // Si une tentative est déjà en cours, ne rien faire
+        if (isGoogleSignInInProgress) {
+          console.log('Connexion Google déjà en cours - ignoré');
+          return;
         }
-    }, [login, navigation, t]);
-
+      
+        try {
+          // Marquer le début de la tentative
+          setIsGoogleSignInInProgress(true);
+          console.log('1. Début du processus de connexion Google');
+          
+          // Vérifier la disponibilité des services Google
+          await GoogleSignin.hasPlayServices({
+            showPlayServicesUpdateDialog: true
+          });
+          
+          // Déconnexion préalable (pour éviter les conflits de session)
+          try {
+            await GoogleSignin.signOut();
+          } catch (signOutError) {
+            // Ignorer cette erreur, c'est normal
+            console.log('Déconnexion préalable - ignoré:', signOutError.message);
+          }
+      
+          // Tenter la connexion
+          console.log('2. Tentative de connexion avec GoogleSignin.signIn()');
+          const userInfo = await GoogleSignin.signIn();
+          
+          console.log('3. Résultat de GoogleSignin.signIn():', userInfo ? 'OK' : 'null');
+          console.log('UserInfo details:', JSON.stringify(userInfo, null, 2));
+          
+          // Vérifier que nous avons les données utilisateur
+          if (!userInfo) {
+            console.log('Aucune information utilisateur reçue - arrêt silencieux');
+            return;
+          }
+          
+          // Récupérer les tokens
+          console.log('4. Tentative de récupération des tokens');
+          const tokens = await GoogleSignin.getTokens();
+          console.log('5. Tokens récupérés:', tokens ? 'OK' : 'null');
+          
+          // Vérifier que nous avons un token
+          if (!tokens || !tokens.accessToken) {
+            console.log('Token d\'accès manquant - arrêt silencieux');
+            return;
+          }
+          
+          // Créer l'instance Axios
+          console.log('6. Création de l\'instance Axios');
+          const instance = getAxiosInstance();
+          if (!instance) {
+            console.log('Impossible de créer l\'instance Axios - arrêt silencieux');
+            return;
+          }
+          
+          // Préparer les données pour l'API
+          const userData = userInfo.user;
+          console.log('7. Données utilisateur préparées:', {
+            email: userData?.email,
+            id: userData?.id,
+            name: userData?.name
+          });
+          
+          // Appeler l'API de connexion
+          console.log('8. Envoi de la requête au serveur');
+          const response = await instance.post('/api/users/google-login',
+            {
+              token: tokens.accessToken,
+              tokenType: 'access_token',
+              userData: userData
+            },
+            {
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          
+          console.log('9. Réponse du serveur reçue:', {
+            status: response.status,
+            hasToken: !!response.data?.token,
+            hasRefreshToken: !!response.data?.refreshToken
+          });
+          
+          // Vérifier que nous avons une réponse valide
+          if (!response.data || !response.data.token) {
+            console.log('Réponse invalide du serveur - arrêt silencieux');
+            return;
+          }
+          
+          // Connexion réussie, procéder à la connexion locale
+          console.log('10. Connexion réussie, navigation vers l\'application');
+          await login(response.data.token, response.data.refreshToken);
+          navigation.navigate('HomeTab', { screen: 'MainFeed' });
+          
+        } catch (error) {
+          // IMPORTANT: Ne pas afficher d'alerte, juste logger l'erreur
+          console.log('Erreur de connexion Google:', error.code || error.message);
+          
+          // Pour le débogage uniquement
+          if (error.code) {
+            switch (error.code) {
+              case statusCodes.SIGN_IN_CANCELLED:
+                console.log('Connexion annulée par l\'utilisateur');
+                break;
+              case statusCodes.IN_PROGRESS:
+                console.log('Connexion déjà en cours');
+                break;
+              case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+                console.log('Services Google Play non disponibles');
+                break;
+              default:
+                console.log(`Erreur Google inconnue: ${error.code}`);
+            }
+          } else if (error.response) {
+            console.log('Erreur serveur:', error.response.status, error.response.data);
+          } else {
+            console.log('Erreur générique:', error.message);
+          }
+        } finally {
+          // Toujours réinitialiser l'indicateur de connexion, que ce soit un succès ou un échec
+          setIsGoogleSignInInProgress(false);
+        }
+      }, [isGoogleSignInInProgress, login, navigation]);
 
     return (
         <View style={styles.container}>
