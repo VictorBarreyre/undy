@@ -60,7 +60,15 @@ exports.createSecret = async (req, res) => {
                     capabilities: {
                         card_payments: { requested: true },
                         transfers: { requested: true },
+                        identity_verification: { requested: true }
                     },
+                    settings: {
+                        payouts: {
+                          schedule: {
+                            interval: 'manual'
+                          }
+                        }
+                      },
                     business_type: 'individual',
                     business_profile: {
                         mcc: '5734', // Code pour services digitaux
@@ -1161,10 +1169,18 @@ exports.deleteSecret = async (req, res) => {
     }
   };
 
-  exports.createIdentityVerification = async (req, res) => {
+  exports.verifyIdentity = async (req, res) => {
     try {
-        // Récupérer l'utilisateur avec son compte Stripe
-        const user = await User.findById(req.user.id).select('stripeAccountId stripeAccountStatus stripeIdentityVerified email');
+        const { image, documentType, documentSide } = req.body;
+
+        if (!image) {
+            return res.status(400).json({
+                success: false,
+                message: 'L\'image est requise'
+            });
+        }
+
+        const user = await User.findById(req.user.id).select('stripeAccountId');
         
         if (!user || !user.stripeAccountId) {
             return res.status(400).json({
@@ -1173,49 +1189,51 @@ exports.deleteSecret = async (req, res) => {
             });
         }
 
-        // Définir les URLs de retour en utilisant la même logique que pour Stripe Onboarding
-        const baseReturnUrl =
-            process.env.NODE_ENV === 'production'
-                ? `https://${req.get('host')}/redirect.html?path=`
-                : process.env.FRONTEND_URL || 'hushy://stripe-return';
+        // Extraire les données de l'image
+        let fileData;
+        if (image.startsWith('data:')) {
+            const parts = image.split(',');
+            fileData = Buffer.from(parts[1], 'base64');
+        } else {
+            return res.status(400).json({
+                success: false, 
+                message: 'Format d\'image non pris en charge'
+            });
+        }
 
-        // Pour la vérification d'identité, nous utilisons un paramètre différent
-        const returnUrl = `${baseReturnUrl}?action=identity-verification-complete&verificationPending=true`;
-        
-        // Créer une session de vérification Stripe Identity
-        const verificationSession = await stripe.identity.verificationSessions.create({
-            type: 'document',
-            metadata: {
-                user_id: req.user.id,
-            },
-            options: {
-                document: {
-                    allowed_types: ['driving_license', 'id_card', 'passport'],
-                    require_matching_selfie: false,
-                }
-            },
-            return_url: returnUrl,
+        // Créer un fichier sur Stripe (sans l'attacher directement)
+        const file = await stripe.files.create({
+            purpose: 'dispute_evidence', // Utiliser un purpose plus générique
+            file: {
+                data: fileData,
+                name: `identity_doc_${Date.now()}.jpg`,
+                type: 'application/octet-stream',
+            }
         });
 
-        // Mettre à jour le statut de vérification de l'utilisateur
+        // Stocker l'ID du fichier dans votre base de données
         await User.findByIdAndUpdate(req.user.id, {
-            stripeVerificationStatus: 'pending',
-            stripeVerificationSessionId: verificationSession.id,
+            stripeDocumentId: file.id,
+            stripeDocumentType: documentType,
+            stripeDocumentSide: documentSide,
+            stripeVerificationStatus: 'pending'
         });
         
-        // Retourner l'URL de vérification pour rediriger l'utilisateur
+        // À ce stade, vous pouvez avoir un processus administratif
+        // où vous consultez les documents, puis les attachez manuellement
+        // au compte Stripe Connect via le dashboard administrateur
+
         return res.status(200).json({
             success: true,
-            message: 'Session de vérification créée',
-            clientSecret: verificationSession.client_secret,
-            url: verificationSession.url
+            message: 'Document reçu. Nous vérifions manuellement votre pièce d\'identité.',
+            fileId: file.id
         });
         
     } catch (error) {
-        console.error('Erreur lors de la création de la session de vérification:', error);
+        console.error('Erreur:', error);
         return res.status(500).json({
             success: false,
-            message: 'Erreur lors de la création de la session de vérification',
+            message: 'Erreur lors du traitement du document',
             error: error.message
         });
     }

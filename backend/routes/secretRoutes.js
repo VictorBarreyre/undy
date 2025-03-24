@@ -19,7 +19,7 @@ const {
     uploadImage, 
     getNearbySecrets,
     deleteSecret,
-    createIdentityVerification,
+    verifyIdentity,
     checkIdentityVerificationStatus
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
@@ -47,7 +47,7 @@ router.get('/stripe-refresh', protect, (req, res) => {
         status: 'success'
     });
 });
-router.post('/create-identity-verification', protect, createIdentityVerification);
+router.post('/create-identity-verification', protect, verifyIdentity);
 router.get('/identity-verification-status', protect, checkIdentityVerificationStatus);
 
 
