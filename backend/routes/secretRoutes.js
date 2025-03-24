@@ -17,7 +17,8 @@ const {
     getSharedSecret,
     markConversationAsRead,
     uploadImage, 
-    getNearbySecrets
+    getNearbySecrets,
+    deleteSecret
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -53,6 +54,8 @@ router.get('/purchased', protect, getPurchasedSecrets);
 router.get('/user-secrets-with-count', protect, getUserSecretsWithCount);
 router.get('/shared/:secretId', protect, getSharedSecret);
 router.get('/nearby', protect, getNearbySecrets);
+router.delete('/:id', protect, deleteSecret); 
+
 
 
 

@@ -976,6 +976,30 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
+  const deleteSecret = async (secretId) => {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
+    }
+    
+    try {
+      // Appel à l'API pour supprimer le secret
+      const response = await instance.delete(`/api/secrets/${secretId}`);
+      
+      console.log(i18n.t('cardData.logs.secretDeleted'), secretId);
+      
+      // Mettre à jour le cache local si nécessaire
+      setData(currentData => currentData.filter(secret => secret._id !== secretId));
+      setLastFetchTime(null); // Forcer un rafraîchissement lors de la prochaine requête
+      
+      return response.data;
+    } catch (error) {
+      console.error(i18n.t('cardData.errors.deletingSecret'), error);
+      throw new Error(error?.response?.data?.message || i18n.t('cardData.errors.deletingSecretGeneric'));
+    }
+  };
+  
+
   return (
     <CardDataContext.Provider value={{
       data,
@@ -1009,6 +1033,7 @@ export const CardDataProvider = ({ children }) => {
       userCurrency,
       setUserPreferredCurrency,
       detectUserCurrency,
+      deleteSecret
     }}>
       {children}
     </CardDataContext.Provider>

@@ -587,12 +587,19 @@ export default {
       "description": "Votre compte bancaire sera configuré automatiquement lors de la publication de votre premier hushy.",
       "publishSecret": "Publier un husy"
     },
+    "documentOptions": {
+      "takePhoto": "Prendre une photo",
+      "chooseFromGallery": "Choisir depuis la galerie",
+      "cancel": "Annuler"
+    },
     "identityVerification": {
       "title": "Vérification d'identité",
       "description": "Pour finaliser la configuration de votre compte Stripe, nous avons besoin d'une photo de votre pièce d'identité. Ne tardez pas si vous voulez pouvoir continuer à recevoir des paiements et à les transférer sur votre compte",
       "documentSelected": "Document sélectionné : {{name}}",
       "chooseDocument": "Choisir un document",
-      "submit": "Soumettre"
+      "submit": "Soumettre",
+      "changeDocument": "Changer de document",
+    "uploading": "Téléchargement..."
     },
     "accountConfigured": {
       "title": "Compte Stripe configuré",
@@ -614,7 +621,27 @@ export default {
     },
     "logs": {
       "userCancelled": "User cancelled image picker"
-    }
+    },
+    "deleteConfirm": {
+      "title": "Supprimer ce hushy ?",
+      "message": "Cette action ne peut pas être annulée.",
+      "cancel": "Annuler",
+      "confirm": "Supprimer"
+    },
+    
+    "deleteSuccess": {
+      "title": "Succès",
+      "message": "Hushy supprimé avec succès",
+      "ok": "OK"
+    },
+    
+    "deleteError": {
+      "title": "Erreur",
+      "message": "Impossible de supprimer ce hushy",
+      "ok": "OK"
+    },
+    "delete": "Supprimer"
+
   },
 
   "notifications": {

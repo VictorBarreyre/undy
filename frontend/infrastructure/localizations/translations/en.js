@@ -588,7 +588,30 @@ export default {
       "description": "To finalize your Stripe account setup, we need a photo of your ID document. Don't delay if you want to continue receiving payments and transferring them to your account",
       "documentSelected": "Document selected: {{name}}",
       "chooseDocument": "Choose a document",
-      "submit": "Submit"
+      "submit": "Submit",
+    },
+    "deleteConfirm": {
+      "title": "Delete this hushy?",
+      "message": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    
+    "deleteSuccess": {
+      "title": "Success",
+      "message": "Hushy deleted successfully",
+      "ok": "OK"
+    },
+    
+    "deleteError": {
+      "title": "Error",
+      "message": "Could not delete this hushy",
+      "ok": "OK"
+    },
+    "documentOptions": {
+      "takePhoto": "Take a photo",
+      "chooseFromGallery": "Choose from gallery",
+      "cancel": "Cancel"
     },
     "accountConfigured": {
       "title": "Stripe Account Configured",
@@ -610,7 +633,8 @@ export default {
     },
     "logs": {
       "userCancelled": "User cancelled image picker"
-    }
+    },
+  "delete": "Delete"
   },
   "notifications": {
     "alerts": {

@@ -1119,3 +1119,44 @@ exports.getSharedSecret = async (req, res) => {
         });
     }
 };
+
+exports.deleteSecret = async (req, res) => {
+    try {
+      const secretId = req.params.id;
+      const userId = req.user.id;
+      
+      // Vérifier que le secret existe
+      const secret = await Secret.findById(secretId);
+      if (!secret) {
+        return res.status(404).json({ message: 'Secret introuvable.' });
+      }
+      
+      // Vérifier que l'utilisateur est le propriétaire du secret
+      if (secret.user.toString() !== userId) {
+        return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à supprimer ce secret.' });
+      }
+      
+      // Vérifier si le secret a été acheté par quelqu'un
+      if (secret.purchasedBy && secret.purchasedBy.length > 0) {
+        return res.status(400).json({ 
+          message: 'Ce secret a déjà été acheté et ne peut pas être supprimé.' 
+        });
+      }
+      
+      // Supprimer le secret
+      await Secret.findByIdAndDelete(secretId);
+      
+      // Répondre avec succès
+      res.status(200).json({ 
+        success: true, 
+        message: 'Secret supprimé avec succès.' 
+      });
+      
+    } catch (error) {
+      console.error('Erreur lors de la suppression du secret:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Erreur lors de la suppression du secret.' 
+      });
+    }
+  };

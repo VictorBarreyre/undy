@@ -1,12 +1,13 @@
-import React, { useContext, useState, useEffect } from 'react';
-import { Box, HStack, Text, VStack } from 'native-base';
+import React, { useState, useContext, useEffect } from 'react';
+import { Box, HStack, Text, VStack, Pressable } from 'native-base';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
+import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { styles } from '../../infrastructure/theme/styles';
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, Alert } from 'react-native';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
+import { faEllipsis, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 import { useTranslation } from 'react-i18next';
-import { useDateFormatter } from '../../utils/dateFormatters'; // Ajustez le chemin selon votre structure
+import { useDateFormatter } from '../../utils/dateFormatters';
 
 const calculatePrices = (originalPrice) => {
     const buyerMargin = 0.10; // 10% pour l'acheteur
@@ -22,12 +23,16 @@ const calculatePrices = (originalPrice) => {
     };
 };
 
-const SecretCard = ({ secret, isPurchased = false }) => {
+const SecretCard = ({ secret, isPurchased = false, onDeleteSuccess }) => {
     const { t } = useTranslation();
     const dateFormatter = useDateFormatter();
     const { userData } = useContext(AuthContext);
     const [timeLeft, setTimeLeft] = useState('');
     const priceDetails = calculatePrices(secret.price);
+    const [isDeleting, setIsDeleting] = useState(false);
+    
+    // Accéder aux fonctions du contexte CardData
+    const { deleteSecret } = useCardData();
 
     const getTimeAgo = (createdAt) => {
         const diffTime = Date.now() - new Date(createdAt);
@@ -61,6 +66,54 @@ const SecretCard = ({ secret, isPurchased = false }) => {
         return () => clearInterval(timer);
     }, [secret.expiresAt, dateFormatter]);
 
+    const handleDelete = async () => {
+        try {
+            // Demander confirmation directement avec Alert
+            Alert.alert(
+                t('secretCard.deleteConfirm.title', 'Supprimer ce secret ?'),
+                t('secretCard.deleteConfirm.message', 'Cette action est irréversible.'),
+                [
+                    {
+                        text: t('secretCard.deleteConfirm.cancel', 'Annuler'),
+                        style: 'cancel'
+                    },
+                    {
+                        text: t('secretCard.deleteConfirm.confirm', 'Supprimer'),
+                        style: 'destructive',
+                        onPress: async () => {
+                            setIsDeleting(true);
+                            try {
+                                // Supprimer le secret
+                                await deleteSecret(secret._id);
+                                
+                                // Notifier le parent du succès de la suppression
+                                if (onDeleteSuccess) {
+                                    onDeleteSuccess(secret._id);
+                                }
+                                
+                                // Afficher une confirmation
+                                Alert.alert(
+                                    t('secretCard.deleteSuccess.title', 'Secret supprimé'),
+                                    t('secretCard.deleteSuccess.message', 'Le secret a été supprimé avec succès.')
+                                );
+                            } catch (error) {
+                                console.error('Erreur lors de la suppression du secret:', error);
+                                Alert.alert(
+                                    t('secretCard.deleteError.title', 'Erreur'),
+                                    t('secretCard.deleteError.message', 'Impossible de supprimer ce secret.')
+                                );
+                            } finally {
+                                setIsDeleting(false);
+                            }
+                        }
+                    }
+                ]
+            );
+        } catch (error) {
+            console.error('Erreur lors de la confirmation de suppression:', error);
+        }
+    };
+
     const renderPriceInfo = () => {
         // Si c'est un secret acheté
         if (isPurchased) {
@@ -77,9 +130,7 @@ const SecretCard = ({ secret, isPurchased = false }) => {
                 <HStack justifyContent="space-between" alignItems="center">
                     <Text style={styles.caption}>{secret.label}</Text>
                     <VStack alignItems="end">
-                        <Text style={[styles.littleCaption, { color: '#94A3B8' }]}>
-                            {t('secretCard.basePrice', { price: priceDetails.originalPrice })}
-                        </Text>
+                       
                         <Text style={[styles.littleCaption, { color: '#94A3B8' }]}>
                             {t('secretCard.yourEarnings', { earnings: priceDetails.sellerEarnings })}
                         </Text>
@@ -98,6 +149,8 @@ const SecretCard = ({ secret, isPurchased = false }) => {
             </HStack>
         );
     };
+
+    const isOwner = secret.user === userData?.id;
 
     return (
         <Box
@@ -123,12 +176,25 @@ const SecretCard = ({ secret, isPurchased = false }) => {
                             {t('secretCard.expiresIn')} {timeLeft}
                         </Text>
                     </VStack>
-                    <FontAwesomeIcon
-                        icon={faEllipsis}
-                        size={16}
-                        color="#94A3B8"
-                        style={{ marginRight: 10 }}
-                    />
+                    
+                    {/* Icône de suppression si l'utilisateur est propriétaire */}
+                    {isOwner ? (
+                        <Pressable onPress={handleDelete} disabled={isDeleting}>
+                            <FontAwesomeIcon
+                                icon={faTrashAlt}
+                                size={15}
+                                color="#FF78B2"
+                              
+                            />
+                        </Pressable>
+                    ) : (
+                        <FontAwesomeIcon
+                            icon={faEllipsis}
+                            size={16}
+                            color="#94A3B8"
+                      
+                        />
+                    )}
                 </HStack>
                 
                 <Text
