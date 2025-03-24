@@ -101,6 +101,29 @@ const UserSchema = new mongoose.Schema({
     stripeIdentityDocumentId: {
         type: String,
         default: null
+    },
+    stripeVerificationSessionId: {
+        type: String,
+        default: null
+    },
+    stripeVerificationStatus: {
+        type: String,
+        enum: [
+            'not_started', 
+            'requires_input', 
+            'processing', 
+            'verified', 
+            'canceled'
+        ],
+        default: 'not_started'
+    },
+    stripeIdentityVerificationDate: {
+        type: Date,
+        default: null
+    },
+    stripeVerificationDetails: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null
     }
 }, { timestamps: true });
 
