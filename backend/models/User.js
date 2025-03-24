@@ -112,10 +112,15 @@ const UserSchema = new mongoose.Schema({
             'not_started', 
             'requires_input', 
             'processing', 
+            'requires_additional_verification',
             'verified', 
             'canceled'
         ],
         default: 'not_started'
+    },
+    stripeIdentityDocumentId: {
+        type: String,
+        default: null
     },
     stripeIdentityVerificationDate: {
         type: Date,

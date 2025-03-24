@@ -1001,9 +1001,6 @@ export const CardDataProvider = ({ children }) => {
 
   const handleIdentityVerification = async (userData, documentData) => {
     const instance = getAxiosInstance();
-    if (!instance) {
-        throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
-    }
     try {
         const response = await instance.post('/api/secrets/verify-identity', {
             ...documentData,
@@ -1012,7 +1009,9 @@ export const CardDataProvider = ({ children }) => {
 
         return {
             success: true,
-            ...response.data
+            ...response.data,
+            // Ajouter l'URL de vérification pour rediriger l'utilisateur
+            verificationUrl: response.data.verificationUrl
         };
     } catch (error) {
         console.error('Erreur de vérification d\'identité:', error);
@@ -1025,9 +1024,6 @@ export const CardDataProvider = ({ children }) => {
 
 const checkIdentityVerificationStatus = async () => {
     const instance = getAxiosInstance();
-    if (!instance) {
-        throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
-    }
     try {
         const response = await instance.get('/api/secrets/check-identity-verification-status');
         return {
@@ -1042,8 +1038,6 @@ const checkIdentityVerificationStatus = async () => {
         };
     }
 };
-  
-
   return (
     <CardDataContext.Provider value={{
       data,

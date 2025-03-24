@@ -1180,15 +1180,8 @@ exports.deleteSecret = async (req, res) => {
             });
         }
 
-        const user = await User.findById(req.user.id).select('stripeAccountId');
+        const user = await User.findById(req.user.id);
         
-        if (!user || !user.stripeAccountId) {
-            return res.status(400).json({
-                success: false,
-                message: 'Compte Stripe non configuré'
-            });
-        }
-
         // Décoder l'image base64
         const buffer = Buffer.from(image.split(',')[1], 'base64');
 
@@ -1215,42 +1208,40 @@ exports.deleteSecret = async (req, res) => {
                 userId: req.user.id,
                 documentType,
                 documentSide,
-                fileId: file.id  // Stocker l'ID du fichier dans les métadonnées
+                fileId: file.id
             }
         });
 
-        // Mettre à jour l'utilisateur avec l'ID de la session et du fichier
-        await User.findByIdAndUpdate(req.user.id, {
-            stripeVerificationSessionId: verificationSession.id,
-            stripeIdentityDocumentId: file.id,
-            stripeVerificationStatus: 'processing'
-        });
+        // Mettre à jour l'utilisateur
+        user.stripeVerificationSessionId = verificationSession.id;
+        user.stripeIdentityDocumentId = file.id;
+        user.stripeVerificationStatus = 'processing';
+        user.stripeIdentityVerificationDate = new Date();
+        await user.save();
 
         return res.status(200).json({
             success: true,
-            message: 'Document d\'identité téléchargé et session de vérification créée',
+            message: 'Document d\'identité téléchargé',
+            verificationUrl: verificationSession.url, // URL pour compléter la vérification
             clientSecret: verificationSession.client_secret,
-            sessionId: verificationSession.id,
-            fileId: file.id,
-            verificationUrl: verificationSession.url
+            sessionId: verificationSession.id
         });
         
     } catch (error) {
         console.error('Erreur de vérification d\'identité:', error);
         return res.status(500).json({
             success: false,
-            message: 'Erreur lors du processus de vérification d\'identité',
+            message: 'Erreur lors du processus de vérification',
             error: error.message
         });
     }
 };
 
-// Méthode pour suivre le statut de vérification
 exports.checkIdentityVerificationStatus = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('stripeVerificationSessionId stripeIdentityDocumentId');
+        const user = await User.findById(req.user.id);
         
-        if (!user || !user.stripeVerificationSessionId) {
+        if (!user.stripeVerificationSessionId) {
             return res.status(400).json({
                 success: false,
                 message: 'Aucune session de vérification en cours'
@@ -1262,26 +1253,29 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
             user.stripeVerificationSessionId
         );
 
-        // Mettre à jour le statut de vérification
-        await User.findByIdAndUpdate(req.user.id, {
-            stripeVerificationStatus: verificationSession.status,
-            stripeIdentityVerified: verificationSession.status === 'verified'
-        });
+        // Mettre à jour le statut
+        user.stripeVerificationStatus = verificationSession.status;
+        user.stripeIdentityVerified = verificationSession.status === 'verified';
+        
+        if (verificationSession.status === 'verified') {
+            user.stripeIdentityVerificationDate = new Date();
+        }
+
+        await user.save();
 
         return res.status(200).json({
             success: true,
             status: verificationSession.status,
             verified: verificationSession.status === 'verified',
             verificationUrl: verificationSession.url,
-            fileId: user.stripeIdentityDocumentId,
             details: verificationSession
         });
         
     } catch (error) {
-        console.error('Erreur lors de la vérification du statut:', error);
+        console.error('Erreur de vérification du statut:', error);
         return res.status(500).json({
             success: false,
-            message: 'Erreur lors de la vérification du statut',
+            message: 'Impossible de vérifier le statut',
             error: error.message
         });
     }

@@ -102,110 +102,68 @@ const StripeVerificationActionSheet = ({
     // Fonction pour soumettre le document d'identité à Stripe
     const uploadIdentityDocument = async () => {
         if (!identityDocument) {
-            Alert.alert(
-                t('stripeVerification.errors.title'),
-                t('stripeVerification.errors.selectDocument')
-            );
+            Alert.alert('Erreur', 'Veuillez sélectionner un document');
             return;
         }
-
+    
         try {
             setIsUploading(true);
-            setUploadProgress(10); // Démarrer avec 10%
-
-            // Préparer le document en base64 pour l'envoi
+            
             const documentData = {
                 image: `data:${identityDocument.type};base64,${identityDocument.base64}`,
-                documentType: 'identity_document',
-                documentSide: 'front' // Vous pourriez implémenter une option pour choisir recto/verso
+                documentType: 'identity_document', // Ou permettre à l'utilisateur de choisir
+                documentSide: 'front'
             };
-
-            // Animation de progression
-            const progressInterval = setInterval(() => {
-                setUploadProgress(prev => {
-                    const newProgress = prev + 5;
-                    return newProgress < 90 ? newProgress : prev;
-                });
-            }, 300);
-
-            // Envoi au serveur
+    
             const result = await handleIdentityVerification(userData, documentData);
-
-            clearInterval(progressInterval);
-            setUploadProgress(100);
-
-            if (result.success) {
-                // Vérifier immédiatement le nouveau statut
-                const statusCheck = await checkIdentityVerificationStatus();
-                if (statusCheck.success) {
-                    setVerificationStatus({
-                        verified: statusCheck.verified,
-                        status: statusCheck.status
-                    });
-                }
-
+    
+            if (result.success && result.verificationUrl) {
+                // Ouvrir l'URL de vérification Stripe
+                Linking.openURL(result.verificationUrl);
+    
                 Alert.alert(
-                    t('stripeVerification.success.title'),
-                    t('stripeVerification.success.documentSubmitted'),
-                    [
-                        {
-                            text: 'OK',
-                            onPress: () => {
-                                setIdentityDocument(null);
-                                // Ne pas fermer le modal pour montrer le nouveau statut
-                            }
-                        }
-                    ]
+                    'Vérification d\'identité',
+                    'Veuillez compléter la vérification dans le navigateur'
                 );
             } else {
-                Alert.alert(
-                    t('stripeVerification.errors.title'),
-                    result.message || t('stripeVerification.errors.verificationFailed')
-                );
+                Alert.alert('Erreur', result.message || 'Échec de la vérification');
             }
         } catch (error) {
-            console.error(t('stripeVerification.errors.uploadError'), error);
-
-            const errorMessage = error.message || t('stripeVerification.errors.uploadFailed');
-
-            Alert.alert(
-                t('stripeVerification.errors.title'),
-                errorMessage
-            );
+            console.error('Erreur lors de la vérification:', error);
+            Alert.alert('Erreur', 'Une erreur est survenue');
         } finally {
             setIsUploading(false);
-            // Laisser le progress à 100 en cas de succès, revenir à 0 en cas d'échec
         }
     };
-
-    // Fonction pour vérifier le statut manuel
+    
     const checkStatus = async () => {
         try {
             const result = await checkIdentityVerificationStatus();
+            
             if (result.success) {
                 setVerificationStatus({
                     verified: result.verified,
                     status: result.status
                 });
-
+    
+                // Message personnalisé selon le statut
+                const statusMessages = {
+                    'verified': 'Votre identité a été vérifiée avec succès',
+                    'processing': 'Vérification en cours',
+                    'requires_input': 'Des informations supplémentaires sont requises',
+                    'default': 'Statut de vérification : ' + result.status
+                };
+    
                 Alert.alert(
-                    t('stripeVerification.statusCheck.title'),
-                    result.verified
-                        ? t('stripeVerification.statusCheck.verified')
-                        : t('stripeVerification.statusCheck.pending')
+                    'Statut de vérification',
+                    statusMessages[result.status] || statusMessages['default']
                 );
             } else {
-                Alert.alert(
-                    t('stripeVerification.errors.title'),
-                    result.message || t('stripeVerification.errors.statusCheckFailed')
-                );
+                Alert.alert('Erreur', result.message);
             }
         } catch (error) {
-            console.error(t('stripeVerification.errors.statusCheck'), error);
-            Alert.alert(
-                t('stripeVerification.errors.title'),
-                error.message || t('stripeVerification.errors.statusCheckFailed')
-            );
+            console.error('Erreur de vérification:', error);
+            Alert.alert('Erreur', 'Impossible de vérifier le statut');
         }
     };
 
