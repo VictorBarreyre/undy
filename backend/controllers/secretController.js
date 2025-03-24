@@ -1173,6 +1173,15 @@ exports.deleteSecret = async (req, res) => {
             });
         }
 
+        // Définir les URLs de retour en utilisant la même logique que pour Stripe Onboarding
+        const baseReturnUrl =
+            process.env.NODE_ENV === 'production'
+                ? `https://${req.get('host')}/redirect.html?path=`
+                : process.env.FRONTEND_URL || 'hushy://stripe-return';
+
+        // Pour la vérification d'identité, nous utilisons un paramètre différent
+        const returnUrl = `${baseReturnUrl}?action=identity-verification-complete&verificationPending=true`;
+        
         // Créer une session de vérification Stripe Identity
         const verificationSession = await stripe.identity.verificationSessions.create({
             type: 'document',
@@ -1185,7 +1194,7 @@ exports.deleteSecret = async (req, res) => {
                     require_matching_selfie: false,
                 }
             },
-            return_url: `${process.env.FRONTEND_URL || 'hushy://'}identity-verification-complete`,
+            return_url: returnUrl,
         });
 
         // Mettre à jour le statut de vérification de l'utilisateur

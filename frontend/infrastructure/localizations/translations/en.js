@@ -585,10 +585,13 @@ export default {
     },
     "identityVerification": {
       "title": "Identity Verification",
-      "description": "To finalize your Stripe account setup, we need a photo of your ID document. Don't delay if you want to continue receiving payments and transferring them to your account",
-      "documentSelected": "Document selected: {{name}}",
-      "chooseDocument": "Choose a document",
-      "submit": "Submit",
+      "description": "To finalize your Stripe account setup, we need an ID document. Don't delay if you want to continue receiving payments.",
+      "stripeDescription": "Stripe will guide you through a secure identity verification process. This will take about 2 minutes.",
+      "startVerification": "Start Verification",
+      "pending": "Your identity verification is being processed. This may take up to 24 hours.",
+      "checkStatus": "Check Status",
+      "uploading": "Uploading...",
+      "pendingDescription": "Your verification is in progress. Check back later to verify status."
     },
     "deleteConfirm": {
       "title": "Delete this hushy?",
@@ -621,7 +624,8 @@ export default {
     },
     "success": {
       "title": "Success",
-      "documentSubmitted": "Your identity document has been successfully submitted. We are currently verifying your information."
+      "documentSubmitted": "Your identity document has been successfully submitted.",
+      "redirecting": "You will be redirected to Stripe's verification service."
     },
     "errors": {
       "title": "Error",
@@ -629,7 +633,8 @@ export default {
       "selectDocument": "Please select a document",
       "uploadError": "Upload error:",
       "uploadFailed": "An error occurred during upload",
-      "verificationFailed": "Verification failed"
+      "verificationFailed": "Verification failed",
+      "statusCheckFailed": "Unable to check current status"
     },
     "logs": {
       "userCancelled": "User cancelled image picker"
