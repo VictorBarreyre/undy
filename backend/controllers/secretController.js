@@ -1189,33 +1189,56 @@ exports.deleteSecret = async (req, res) => {
             });
         }
 
-        // Créer une session de vérification d'identité Stripe
+        // Décoder l'image base64
+        const buffer = Buffer.from(image.split(',')[1], 'base64');
+
+        // Télécharger le fichier sur Stripe
+        const file = await stripe.files.create({
+            purpose: 'identity_document',
+            file: {
+                data: buffer,
+                name: `identity_doc_${Date.now()}.jpg`,
+                type: 'application/octet-stream'
+            }
+        });
+
+        // Créer une session de vérification d'identité
         const verificationSession = await stripe.identity.verificationSessions.create({
             type: 'document',
             options: {
                 document: {
                     allowed_types: ['passport', 'id_card', 'driving_license'],
-                    require_matching_selfie: true // Demander un selfie de correspondance
+                    require_matching_selfie: true
                 }
             },
             metadata: {
                 userId: req.user.id,
-                documentType: documentType,
-                documentSide: documentSide
+                documentType,
+                documentSide
             }
         });
 
-        // Mettre à jour l'utilisateur avec l'ID de la session de vérification
+        // Ajouter le fichier à la session de vérification
+        await stripe.identity.verificationSessions.update(
+            verificationSession.id,
+            {
+                uploaded_file: file.id
+            }
+        );
+
+        // Mettre à jour l'utilisateur avec l'ID de la session et du fichier
         await User.findByIdAndUpdate(req.user.id, {
             stripeVerificationSessionId: verificationSession.id,
-            stripeVerificationStatus: 'pending'
+            stripeIdentityDocumentId: file.id,
+            stripeVerificationStatus: 'processing'
         });
 
         return res.status(200).json({
             success: true,
-            message: 'Session de vérification d\'identité créée',
+            message: 'Document d\'identité téléchargé et session de vérification créée',
             clientSecret: verificationSession.client_secret,
-            sessionId: verificationSession.id
+            sessionId: verificationSession.id,
+            fileId: file.id
         });
         
     } catch (error) {
