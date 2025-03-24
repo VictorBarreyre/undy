@@ -1335,45 +1335,27 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         
+        // Si l'utilisateur n'a pas de session de vérification, retourner simplement un statut "non vérifié"
         if (!user.stripeVerificationSessionId) {
-            return res.status(400).json({
-                success: false,
-                message: 'Aucune session de vérification en cours'
+            return res.status(200).json({
+                success: true,
+                status: 'unverified',
+                verified: false,
+                message: 'Aucune session de vérification n\'a été initiée'
             });
         }
 
-        // Récupérer le statut de la session de vérification
+        // Le reste du code reste inchangé...
         const verificationSession = await stripe.identity.verificationSessions.retrieve(
             user.stripeVerificationSessionId
         );
 
-        console.log('Statut de vérification:', verificationSession.status, verificationSession);
-
-        // Mettre à jour le statut dans la base de données
+        // Mettre à jour le statut
         user.stripeVerificationStatus = verificationSession.status;
         user.stripeIdentityVerified = verificationSession.status === 'verified';
         
         if (verificationSession.status === 'verified') {
             user.stripeIdentityVerificationDate = new Date();
-            
-            // Si l'utilisateur n'est pas déjà vérifié pour les paiements,
-            // vous pourriez mettre à jour son statut de capacité Stripe ici
-            if (user.stripeAccountId && !user.stripePaymentsVerified) {
-                try {
-                    // Mettre à jour les capacités du compte pour activer les paiements
-                    await stripe.accounts.update(user.stripeAccountId, {
-                        capabilities: {
-                            card_payments: { requested: true },
-                            transfers: { requested: true }
-                        }
-                    });
-                    
-                    user.stripePaymentsVerified = true;
-                } catch (stripeError) {
-                    console.error('Erreur lors de la mise à jour des capacités Stripe:', stripeError);
-                    // Ne pas bloquer le processus si cette mise à jour échoue
-                }
-            }
         }
 
         await user.save();
@@ -1382,15 +1364,12 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
             success: true,
             status: verificationSession.status,
             verified: verificationSession.status === 'verified',
-            lastUpdated: user.stripeIdentityVerificationDate,
-            details: {
-                verified_outputs: verificationSession.verified_outputs || null,
-                requirements: verificationSession.requirements || null
-            }
+            verificationUrl: verificationSession.url,
+            details: verificationSession
         });
         
     } catch (error) {
-        console.error('Erreur détaillée de vérification du statut:', error);
+        console.error('Erreur de vérification du statut:', error);
         return res.status(500).json({
             success: false,
             message: 'Impossible de vérifier le statut',

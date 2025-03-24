@@ -20,6 +20,8 @@ import { useTranslation } from 'react-i18next';
 import Clipboard from '@react-native-clipboard/clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STRIPE_PUBLISHABLE_KEY } from '@env';
+import { StripeProvider } from '@stripe/stripe-react-native';
+
 
 
 export default function Profile({ navigation }) {

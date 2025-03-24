@@ -1053,20 +1053,23 @@ export const CardDataProvider = ({ children }) => {
 };
 
 const checkIdentityVerificationStatus = async () => {
-    const instance = getAxiosInstance();
-    try {
-        const response = await instance.get('/api/secrets/check-identity-verification-status');
-        return {
-            success: true,
-            ...response.data
-        };
-    } catch (error) {
-        console.error('Erreur de vérification du statut:', error);
-        return {
-            success: false,
-            message: error.response?.data?.message || 'Impossible de vérifier le statut'
-        };
-    }
+  const instance = getAxiosInstance();
+  try {
+      const response = await instance.get('/api/secrets/check-identity-verification-status');
+      return {
+          success: true,
+          ...response.data
+      };
+  } catch (error) {
+      console.error('Erreur de vérification du statut:', error);
+      // Retourner un objet avec succès=false mais sans propager l'erreur
+      return {
+          success: false,
+          verified: false,
+          status: 'unverified',
+          message: error.response?.data?.message || 'Impossible de vérifier le statut'
+      };
+  }
 };
   return (
     <CardDataContext.Provider value={{

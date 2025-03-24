@@ -46,21 +46,37 @@ const StripeVerificationActionSheet = ({
     }, [userData]);
 
     // Vérifier le statut de vérification au chargement
-    useEffect(() => {
-        const checkStatus = async () => {
+  // Vérifier le statut de vérification au chargement
+useEffect(() => {
+    const checkStatus = async () => {
+        try {
             const result = await checkIdentityVerificationStatus();
             if (result.success) {
                 setVerificationStatus({
                     verified: result.verified,
                     status: result.status
                 });
+            } else {
+                // Définir un état par défaut si la requête échoue
+                setVerificationStatus({
+                    verified: false,
+                    status: 'unverified'
+                });
             }
-        };
-
-        if (isOpen && userData?.stripeAccountStatus === 'active') {
-            checkStatus();
+        } catch (error) {
+            console.error('Erreur lors de la vérification du statut:', error);
+            // Même en cas d'erreur, définir un état par défaut
+            setVerificationStatus({
+                verified: false,
+                status: 'unverified'
+            });
         }
-    }, [isOpen, userData]);
+    };
+
+    if (isOpen && userData?.stripeAccountStatus === 'active') {
+        checkStatus();
+    }
+}, [isOpen, userData]);
 
     const startStripeIdentityVerification = async () => {
         try {
