@@ -45,6 +45,8 @@ router.get('/stripe-refresh', protect, (req, res) => {
         status: 'success'
     });
 });
+router.post('/verify-identity', protect, verifyIdentity);
+
 
 
 

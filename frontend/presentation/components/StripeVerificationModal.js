@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { 
-    VStack, Text, Button, Actionsheet, 
+import {
+    VStack, Text, Button, Actionsheet,
     Box, Progress, HStack, Icon
 } from 'native-base';
 import { Platform, Alert } from 'react-native';
@@ -11,12 +11,12 @@ import { styles } from '../../infrastructure/theme/styles';
 import { getAxiosInstance } from '../../data/api/axiosInstance';
 import { useTranslation } from 'react-i18next';
 
-const StripeVerificationActionSheet = ({ 
-    isOpen, 
-    onClose, 
-    userData, 
-    resetStripeAccount, 
-    navigation 
+const StripeVerificationActionSheet = ({
+    isOpen,
+    onClose,
+    userData,
+    resetStripeAccount,
+    navigation
 }) => {
     const { t } = useTranslation();
     const [identityDocument, setIdentityDocument] = useState(null);
@@ -38,7 +38,7 @@ const StripeVerificationActionSheet = ({
                 console.log(t('stripeVerification.logs.userCancelled'));
             } else if (response.errorCode) {
                 Alert.alert(
-                    t('stripeVerification.errors.title'), 
+                    t('stripeVerification.errors.title'),
                     response.errorMessage || t('stripeVerification.errors.generic')
                 );
             } else if (response.assets && response.assets.length > 0) {
@@ -62,7 +62,7 @@ const StripeVerificationActionSheet = ({
                 console.log(t('stripeVerification.logs.userCancelled'));
             } else if (response.errorCode) {
                 Alert.alert(
-                    t('stripeVerification.errors.title'), 
+                    t('stripeVerification.errors.title'),
                     response.errorMessage || t('stripeVerification.errors.generic')
                 );
             } else if (response.assets && response.assets.length > 0) {
@@ -81,17 +81,17 @@ const StripeVerificationActionSheet = ({
     const uploadIdentityDocument = async () => {
         if (!identityDocument) {
             Alert.alert(
-                t('stripeVerification.errors.title'), 
+                t('stripeVerification.errors.title'),
                 t('stripeVerification.errors.selectDocument')
             );
             return;
         }
 
         const instance = getAxiosInstance();
-        
+
         try {
             setIsUploading(true);
-            
+
             // Préparer le document en base64 pour l'envoi
             const documentData = {
                 image: `data:${identityDocument.type};base64,${identityDocument.base64}`,
@@ -100,7 +100,7 @@ const StripeVerificationActionSheet = ({
             };
 
             // Envoi au serveur
-            const response = await instance.post('/api/users/verify-identity', documentData, {
+            const response = await instance.post('/api/secrets/verify-identity', documentData, {
                 onUploadProgress: (progressEvent) => {
                     const percentCompleted = Math.round(
                         (progressEvent.loaded * 100) / progressEvent.total
@@ -111,7 +111,7 @@ const StripeVerificationActionSheet = ({
 
             if (response.data.success) {
                 Alert.alert(
-                    t('stripeVerification.success.title'), 
+                    t('stripeVerification.success.title'),
                     t('stripeVerification.success.documentSubmitted'),
                     [
                         {
@@ -125,20 +125,20 @@ const StripeVerificationActionSheet = ({
                 );
             } else {
                 Alert.alert(
-                    t('stripeVerification.errors.title'), 
+                    t('stripeVerification.errors.title'),
                     response.data.message || t('stripeVerification.errors.verificationFailed')
                 );
             }
         } catch (error) {
             console.error(t('stripeVerification.errors.uploadError'), error);
-            
+
             // Afficher un message d'erreur plus détaillé si disponible
-            const errorMessage = error.response?.data?.message || 
-                                error.message || 
-                                t('stripeVerification.errors.uploadFailed');
-                                
+            const errorMessage = error.response?.data?.message ||
+                error.message ||
+                t('stripeVerification.errors.uploadFailed');
+
             Alert.alert(
-                t('stripeVerification.errors.title'), 
+                t('stripeVerification.errors.title'),
                 errorMessage
             );
         } finally {
@@ -150,7 +150,7 @@ const StripeVerificationActionSheet = ({
     return (
         <>
             <Actionsheet isOpen={isOpen && !showDocumentOptions} onClose={onClose}>
-                <Actionsheet.Content 
+                <Actionsheet.Content
                     backgroundColor="white"
                     maxHeight="100%"
                     _content={{
@@ -210,10 +210,10 @@ const StripeVerificationActionSheet = ({
                                             })}
                                         </Text>
                                         {isUploading && (
-                                            <Progress 
-                                                value={uploadProgress} 
-                                                mx={4} 
-                                                my={2} 
+                                            <Progress
+                                                value={uploadProgress}
+                                                mx={4}
+                                                my={2}
                                             />
                                         )}
                                     </Box>
@@ -227,7 +227,7 @@ const StripeVerificationActionSheet = ({
                                         flex={1}
                                     >
                                         <Text color="black" style={styles.cta}>
-                                            {identityDocument 
+                                            {identityDocument
                                                 ? t('stripeVerification.identityVerification.changeDocument')
                                                 : t('stripeVerification.identityVerification.chooseDocument')
                                             }
@@ -298,13 +298,17 @@ const StripeVerificationActionSheet = ({
             {/* Actionsheet pour choisir la source du document d'identité */}
             <Actionsheet isOpen={showDocumentOptions} onClose={() => setShowDocumentOptions(false)}>
                 <Actionsheet.Content>
-                    <Actionsheet.Item 
+                    <Actionsheet.Item
+                        alignContent='center'
+                        justifyContent='center'
                         onPress={takePhoto}
                         startIcon={<FontAwesomeIcon icon={faCamera} size={20} color="#000" />}
                     >
                         {t('stripeVerification.documentOptions.takePhoto')}
                     </Actionsheet.Item>
-                    <Actionsheet.Item 
+                    <Actionsheet.Item
+                        alignContent='center'
+                        justifyContent='center'
                         onPress={pickFromGallery}
                         startIcon={<FontAwesomeIcon icon={faImage} size={20} color="#000" />}
                     >

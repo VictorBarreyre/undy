@@ -1160,3 +1160,111 @@ exports.deleteSecret = async (req, res) => {
       });
     }
   };
+
+  exports.verifyIdentity = async (req, res) => {
+    try {
+        // Récupérer les données de la requête
+        const { image, documentType, documentSide } = req.body;
+
+        if (!image || !documentType) {
+            return res.status(400).json({
+                success: false,
+                message: 'L\'image et le type de document sont requis'
+            });
+        }
+
+        // Récupérer l'utilisateur avec son compte Stripe
+        const user = await User.findById(req.user.id).select('stripeAccountId');
+        
+        if (!user || !user.stripeAccountId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Compte Stripe non configuré'
+            });
+        }
+
+        // Traiter l'image (data:image/jpeg;base64,...)
+        let fileData;
+        
+        if (image.startsWith('data:')) {
+            // Format: data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABA...
+            const parts = image.split(',');
+            const mimeType = parts[0].match(/:(.*?);/)[1];
+            const extension = mimeType.split('/')[1];
+            fileData = Buffer.from(parts[1], 'base64');
+        } else {
+            return res.status(400).json({
+                success: false, 
+                message: 'Format d\'image non pris en charge'
+            });
+        }
+
+        // Créer un fichier temporaire
+        const fileName = `identity_doc_${req.user.id}_${Date.now()}.jpg`;
+        const filePath = `/tmp/${fileName}`;
+        
+        // Écrire le fichier en utilisant fs
+        const fs = require('fs');
+        fs.writeFileSync(filePath, fileData);
+        
+        // Télécharger le document vers Stripe
+        const file = await stripe.files.create({
+            purpose: 'identity_document',
+            file: {
+                data: fs.readFileSync(filePath),
+                name: fileName,
+                type: 'application/octet-stream',
+            },
+        });
+        
+        // Supprimer le fichier temporaire
+        fs.unlinkSync(filePath);
+        
+        // Créer une vérification d'identité Stripe
+        const verification = await stripe.identity.verificationSessions.create({
+            type: 'document',
+            metadata: {
+                userId: req.user.id,
+            },
+            options: {
+                document: {
+                    allowed_types: ['driving_license', 'id_card', 'passport'],
+                    require_matching_selfie: false,
+                },
+            },
+        });
+        
+        // Associer le document au compte Stripe de l'utilisateur
+        await stripe.accounts.update(user.stripeAccountId, {
+            individual: {
+                verification: {
+                    document: {
+                        front: file.id,
+                        back: documentSide === 'back' ? file.id : undefined,
+                    },
+                },
+            },
+        });
+        
+        // Mettre à jour le statut de vérification de l'utilisateur
+        await User.findByIdAndUpdate(req.user.id, {
+            stripeIdentityVerified: true,
+            stripeVerificationStatus: 'pending'
+        });
+        
+        // Retourner la réponse
+        return res.status(200).json({
+            success: true,
+            message: 'Document d\'identité soumis avec succès',
+            verificationId: verification.id
+        });
+        
+    } catch (error) {
+        console.error('Erreur lors de la vérification d\'identité:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la vérification d\'identité',
+            error: error.message
+        });
+    }
+};

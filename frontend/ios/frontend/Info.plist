@@ -62,7 +62,11 @@
 	<key>UILaunchStoryboardName</key>
 	<string>SplashScreen</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-<string>Hushy a besoin de votre position pour afficher les secrets autour de vous</string>
+    <string>Hushy a besoin de votre position pour afficher les secrets autour de vous</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Hushy a besoin d'accéder à votre caméra pour prendre des photos de documents d'identité pour la vérification Stripe</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Hushy a besoin d'accéder à votre photothèque pour sélectionner des documents d'identité pour la vérification Stripe</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>

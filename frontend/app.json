@@ -12,22 +12,22 @@
       "backgroundColor": "#ffffff"
     },
     "scheme": "hushy",
-   "plugins": [
-  [
-    "expo-notifications",
-    {
-      "icon": "./assets/notification-icon.png",
-      "color": "#ffffff"
-    }
-  ],
-  [
-    "expo-location",
-    {
-      "locationAlwaysAndWhenInUsePermission": "Allow Hushy to use your location to find secrets around you.",
-      "locationWhenInUsePermission": "Allow Hushy to use your location to find secrets around you."
-    }
-  ]
-],
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Hushy to use your location to find secrets around you.",
+          "locationWhenInUsePermission": "Allow Hushy to use your location to find secrets around you."
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hushy.app",
@@ -38,7 +38,9 @@
       "infoPlist": {
         "CFBundleURLTypes": [{
           "CFBundleURLSchemes": ["hushy"]
-        }]
+        }],
+        "NSCameraUsageDescription": "Hushy a besoin d'accéder à votre caméra pour prendre des photos de documents d'identité pour la vérification Stripe",
+        "NSPhotoLibraryUsageDescription": "Hushy a besoin d'accéder à votre photothèque pour sélectionner des documents d'identité pour la vérification Stripe"
       }
     },
     "android": {
