@@ -124,145 +124,178 @@ const Connexion = ({ navigation }) => {
     // Connexion Apple
     const handleAppleLogin = useCallback(async () => {
         try {
-            console.log('1. Début de la connexion Apple');
-            
-            const isSupported = await appleAuth.isSupported;
-            console.log('2. Apple Sign In supporté:', isSupported);
-            
-            if (!isSupported) {
-                Alert.alert(
-                    t('auth.alerts.serviceUnavailable'),
-                    t('auth.errors.appleNotAvailable'),
-                    [{ text: t('auth.alerts.ok') }]
-                );
-                return;
-            }
-            
-            // Reste du code Apple login...
-            let appleAuthRequestResponse;
-            
-            try {
-                appleAuthRequestResponse = await appleAuth.performRequest({
-                    requestedOperation: appleAuth.Operation.LOGIN,
-                    requestedScopes: [
-                        appleAuth.Scope.EMAIL,
-                        appleAuth.Scope.FULL_NAME
-                    ]
-                });
-            } catch (appleAuthError) {
-                console.error('Erreur spécifique performRequest:', {
-                    message: appleAuthError.message,
-                    code: appleAuthError.code,
-                    name: appleAuthError.name
-                });
-                throw new Error(`Erreur lors de la demande Apple: ${appleAuthError.message}`);
-            }
-            
-            if (!appleAuthRequestResponse.identityToken) {
-                throw new Error('Authentification Apple incomplète: pas de token reçu');
-            }
-            
-            let credentialState;
-            try {
-                credentialState = await appleAuth.getCredentialStateForUser(
-                    appleAuthRequestResponse.user
-                );
-            } catch (credentialError) {
-                throw new Error(`Erreur de vérification des identifiants: ${credentialError.message}`);
-            }
-            
-            if (credentialState === appleAuth.State.AUTHORIZED) {
-                const instance = getAxiosInstance();
-                
-                if (!instance) {
-                    throw new Error('Impossible de créer l\'instance Axios');
-                }
-                
-                const requestData = {
-                    identityToken: appleAuthRequestResponse.identityToken,
-                    authorizationCode: appleAuthRequestResponse.authorizationCode,
-                    fullName: {
-                        givenName: appleAuthRequestResponse.fullName?.givenName,
-                        familyName: appleAuthRequestResponse.fullName?.familyName
-                    }
-                };
-                
-                let response;
-                try {
-                    response = await instance.post('/api/users/apple-login', requestData);
-                } catch (serverError) {
-                    throw new Error(`Erreur serveur: ${serverError.message}`);
-                }
-                
-                await login(response.data.token, response.data.refreshToken);
-                navigation.navigate('HomeTab', { screen: 'MainFeed' });
-            } else {
-                throw new Error(`Identifiants Apple non autorisés (état: ${credentialState})`);
-            }
-        } catch (error) {
-            console.error('Erreur globale de connexion Apple:', {
-                message: error.message,
-                stack: error.stack,
-                name: error.name
+          console.log('Starting Apple login process');
+          
+          // Check if Apple Sign In is supported on this device
+          const isSupported = await appleAuth.isSupported;
+          console.log('Apple Sign In supported:', isSupported);
+          
+          if (!isSupported) {
+            Alert.alert(
+              t('auth.alerts.serviceUnavailable'),
+              t('auth.errors.appleNotAvailable'),
+              [{ text: t('auth.alerts.ok') }]
+            );
+            return;
+          }
+          
+          // Request authentication from Apple
+          console.log('Requesting Apple authentication');
+          let appleAuthRequestResponse;
+          
+          try {
+            appleAuthRequestResponse = await appleAuth.performRequest({
+              requestedOperation: appleAuth.Operation.LOGIN,
+              requestedScopes: [
+                appleAuth.Scope.EMAIL,
+                appleAuth.Scope.FULL_NAME
+              ]
             });
             
-            if (error.response) {
-                Alert.alert(
-                    t('auth.errors.connectionError'),
-                    error.response.data?.message || t('auth.errors.genericError'),
-                    [{ text: t('auth.alerts.ok') }]
-                );
-            } else if (error.code === appleAuth.Error.CANCELED) {
-                // Ne rien afficher quand l'utilisateur annule
-                console.log('Connexion Apple annulée par l\'utilisateur');
-                return;
-            } else {
-                Alert.alert(
-                    t('auth.errors.connectionError'),
-                    `${t('auth.errors.genericError')}: ${error.message}`,
-                    [{ text: t('auth.alerts.ok') }]
-                );
+            console.log('Apple auth request successful');
+          } catch (appleAuthError) {
+            console.error('Apple auth request error:', {
+              message: appleAuthError.message,
+              code: appleAuthError.code
+            });
+            
+            // If user cancelled, just return without showing an error
+            if (appleAuthError.code === appleAuth.Error.CANCELED) {
+              console.log('User cancelled Apple Sign In');
+              return;
             }
+            
+            throw new Error(`Apple authentication request failed: ${appleAuthError.message}`);
+          }
+          
+          // Validate that we got a token
+          if (!appleAuthRequestResponse || !appleAuthRequestResponse.identityToken) {
+            throw new Error('Apple authentication incomplete: no token received');
+          }
+          
+          console.log('Apple identity token received');
+          
+          // Verify the user's credentials
+          let credentialState;
+          try {
+            credentialState = await appleAuth.getCredentialStateForUser(
+              appleAuthRequestResponse.user
+            );
+            console.log('Apple credential state:', credentialState);
+          } catch (credentialError) {
+            console.error('Apple credential verification error:', credentialError);
+            throw new Error(`Credential verification error: ${credentialError.message}`);
+          }
+          
+          // Only proceed if authorized
+          if (credentialState === appleAuth.State.AUTHORIZED) {
+            console.log('Apple credentials authorized, proceeding with backend authentication');
+            
+            const instance = getAxiosInstance();
+            if (!instance) {
+              throw new Error('Unable to create Axios instance');
+            }
+            
+            const requestData = {
+              identityToken: appleAuthRequestResponse.identityToken,
+              authorizationCode: appleAuthRequestResponse.authorizationCode,
+              fullName: {
+                givenName: appleAuthRequestResponse.fullName?.givenName,
+                familyName: appleAuthRequestResponse.fullName?.familyName
+              }
+            };
+            
+            console.log('Sending Apple credentials to backend');
+            let response;
+            try {
+              response = await instance.post('/api/users/apple-login', requestData);
+              console.log('Backend authentication successful');
+            } catch (serverError) {
+              console.error('Backend error during Apple authentication:', serverError);
+              throw new Error(`Server error: ${serverError.message}`);
+            }
+            
+            // Handle successful login
+            await login(response.data.token, response.data.refreshToken);
+            navigation.navigate('HomeTab', { screen: 'MainFeed' });
+          } else {
+            throw new Error(`Apple credentials not authorized (state: ${credentialState})`);
+          }
+        } catch (error) {
+          console.error('Global Apple login error:', {
+            message: error.message,
+            name: error.name
+          });
+          
+          // Don't show error for user cancellation
+          if (error.code === appleAuth.Error.CANCELED) {
+            console.log('User cancelled Apple Sign In');
+            return;
+          }
+          
+          // Handle server errors
+          if (error.response) {
+            Alert.alert(
+              t('auth.errors.connectionError'),
+              error.response.data?.message || t('auth.errors.genericError'),
+              [{ text: t('auth.alerts.ok') }]
+            );
+          } else {
+            // Handle other errors
+            Alert.alert(
+              t('auth.errors.connectionError'),
+              `${t('auth.errors.genericError')}: ${error.message}`,
+              [{ text: t('auth.alerts.ok') }]
+            );
+          }
         }
-    }, [login, navigation, t]);
+      }, [login, navigation, t]);
 
-    // Connexion Google
     const handleGoogleLogin = useCallback(async () => {
         try {
-            // Configuration de GoogleSignin, etc...
-            await GoogleSignin.configure({
-                webClientId: GOOGLE_WEBCLIENT_ID,
-                iosClientId: GOOGLE_IOS_ID,
-                offlineAccess: true,
-                scopes: ['email', 'profile'],
-                forceCodeForRefreshToken: true
-            });
-            
-            try {
-                await GoogleSignin.signOut();
-            } catch (signOutError) {
-                console.log('Erreur de déconnexion (normal):', signOutError.message);
-            }
-            
+            console.log('Starting Google login process');
+
+            // First check for Play Services (Android) or proper configuration (iOS)
             await GoogleSignin.hasPlayServices({
                 showPlayServicesUpdateDialog: true
             });
-            
+
+            console.log('Play services available, proceeding with sign in');
+
+            // Always try to sign out first to prevent session conflicts
+            try {
+                await GoogleSignin.signOut();
+                console.log('Successfully signed out of previous Google session');
+            } catch (signOutError) {
+                // This is expected if no user was signed in, so just log it
+                console.log('Sign out error (this is usually normal):', signOutError.message);
+            }
+
+            // Sign in the user
             const userInfo = await GoogleSignin.signIn();
+            console.log('Google sign in successful, user info received');
+
+            if (!userInfo) {
+                throw new Error('No user information received from Google');
+            }
+
+            // Get the tokens only after userInfo is successfully retrieved
             const tokens = await GoogleSignin.getTokens();
-            
-            if (!tokens.accessToken) {
-                throw new Error('Aucun access token récupéré');
+            console.log('Tokens successfully retrieved');
+
+            if (!tokens || !tokens.accessToken) {
+                throw new Error('No access token received from Google');
             }
-            
+
+            // Now make the API call
             const instance = getAxiosInstance();
-            
             if (!instance) {
-                throw new Error('Impossible de créer l\'instance Axios');
+                throw new Error('Unable to create Axios instance');
             }
-            
-            const response = await instance.post('/api/users/google-login', 
-                { 
+
+            console.log('Sending credentials to backend');
+            const response = await instance.post('/api/users/google-login',
+                {
                     token: tokens.accessToken,
                     tokenType: 'access_token',
                     userData: userInfo.user
@@ -273,25 +306,27 @@ const Connexion = ({ navigation }) => {
                     }
                 }
             );
-            
+
+            console.log('Backend authentication successful');
+
+            // Handle the successful login
             await login(response.data.token, response.data.refreshToken);
             navigation.navigate('HomeTab', { screen: 'MainFeed' });
-            
+
         } catch (error) {
-            console.error('Erreur détaillée de connexion Google:', error.message);
-            
+            console.error('Detailed Google login error:', error);
+
+            // Handle different error cases
             if (error.code) {
                 switch (error.code) {
                     case statusCodes.SIGN_IN_CANCELLED:
-                        // User cancelled the login flow - don't show error
-                        console.log('Connexion annulée par l\'utilisateur');
-                        return;
-                        
+                        console.log('User cancelled the login flow');
+                        return; // Don't show an error for user cancellation
+
                     case statusCodes.IN_PROGRESS:
-                        // Silent handling - operation already in progress
-                        console.log('Connexion déjà en cours');
-                        return;
-                        
+                        console.log('Google sign-in operation already in progress');
+                        return; // Don't show an error for this case
+
                     case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
                         Alert.alert(
                             t('auth.alerts.serviceUnavailable'),
@@ -299,33 +334,36 @@ const Connexion = ({ navigation }) => {
                             [{ text: t('auth.alerts.ok') }]
                         );
                         break;
-                        
+
                     default:
                         Alert.alert(
                             t('auth.errors.connectionError'),
-                            t('auth.errors.googleConnectionError'),
+                            `${t('auth.errors.googleConnectionError')} (${error.code})`,
                             [{ text: t('auth.alerts.ok') }]
                         );
-                        console.error(`Code d'erreur technique: ${error.code}`);
                 }
             } else if (error.response) {
-                console.error('Détails de l\'erreur serveur:', error.response.data);
+                // Handle server errors
+                const statusCode = error.response.status;
+                const errorMessage = error.response.data?.message || t('auth.errors.genericError');
+
                 Alert.alert(
-                    t('auth.errors.serverError'),
-                    t('auth.errors.genericError'),
+                    t('auth.errors.connectionError'),
+                    `${errorMessage} (${statusCode})`,
                     [{ text: t('auth.alerts.ok') }]
                 );
             } else {
+                // Handle other errors
                 Alert.alert(
-                    t('auth.alerts.errorTitle'),
-                    t('auth.errors.genericError'),
+                    t('auth.errors.connectionError'),
+                    error.message || t('auth.errors.genericError'),
                     [{ text: t('auth.alerts.ok') }]
                 );
             }
         }
     }, [login, navigation, t]);
 
-    
+
     return (
         <View style={styles.container}>
             {/* Fond animé */}

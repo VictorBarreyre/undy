@@ -25,56 +25,73 @@ const generateTokens = (userId) => {
 };
 
 exports.appleLogin = async (req, res) => {
-    console.log('---------- DÉBUT APPLE LOGIN ----------');
-    console.log('Requête reçue:', {
+    console.log('---------- APPLE LOGIN START ----------');
+    console.log('Request received:', {
         headers: req.headers,
         method: req.method,
         path: req.path
     });
     
     try {
-        console.log('Corps de la requête:', req.body);
+        console.log('Request body:', req.body);
         const { identityToken, authorizationCode, fullName } = req.body;
         
-        console.log('Données extraites:', {
+        console.log('Extracted data:', {
             hasIdentityToken: !!identityToken,
             hasAuthCode: !!authorizationCode,
             fullName
         });
 
+        // Validate input
         if (!identityToken) {
-            console.log('ERREUR: Token Apple manquant');
-            return res.status(400).json({ message: 'Token Apple manquant' });
+            console.log('ERROR: Missing Apple token');
+            return res.status(400).json({ 
+                success: false,
+                code: 'MISSING_TOKEN',
+                message: 'Missing Apple token' 
+            });
         }
 
-        // Configurer la vérification du token Apple
+        // Configure Apple verification
         const appleVerifyOptions = {
             clientId: process.env.APPLE_SERVICE_ID,
             teamId: process.env.APPLE_TEAM_ID,
         };
         
-        console.log('Options de vérification:', {
-            clientId: process.env.APPLE_SERVICE_ID,
-            teamId: process.env.APPLE_TEAM_ID,
-            clientIdConfigured: !!process.env.APPLE_SERVICE_ID,
-            teamIdConfigured: !!process.env.APPLE_TEAM_ID
+        // Check for missing configuration
+        if (!process.env.APPLE_SERVICE_ID || !process.env.APPLE_TEAM_ID) {
+            console.error('ERROR: Missing Apple configuration');
+            return res.status(500).json({
+                success: false,
+                code: 'CONFIGURATION_ERROR',
+                message: 'Server configuration error'
+            });
+        }
+        
+        console.log('Verification options:', {
+            clientId: process.env.APPLE_SERVICE_ID ? '[CONFIGURED]' : '[MISSING]',
+            teamId: process.env.APPLE_TEAM_ID ? '[CONFIGURED]' : '[MISSING]'
         });
 
         try {
-            console.log('Tentative de vérification du token Apple');
-            // Vérifier le token d'identité Apple
+            console.log('Attempting to verify Apple token');
+            // Verify Apple identity token
             const appleUser = await appleSignin.verifyIdToken(identityToken, appleVerifyOptions);
-            console.log('Vérification réussie, données obtenues:', {
+            
+            if (!appleUser) {
+                throw new Error('Token verification returned empty result');
+            }
+            
+            console.log('Verification successful, data obtained:', {
                 sub: appleUser.sub,
-                hasEmail: !!appleUser.email,
-                email: appleUser.email
+                hasEmail: !!appleUser.email
             });
 
-            // Extraire l'email et l'identifiant Apple
+            // Extract email and Apple ID
             const { sub: appleId, email } = appleUser;
 
-            // Rechercher un utilisateur existant
-            console.log('Recherche d\'un utilisateur existant avec:', {
+            // Search for existing user
+            console.log('Searching for existing user with:', {
                 email,
                 appleId
             });
@@ -86,100 +103,145 @@ exports.appleLogin = async (req, res) => {
                 ]
             });
             
-            console.log('Utilisateur trouvé:', user ? 'Oui' : 'Non');
+            console.log('User found:', user ? 'Yes' : 'No');
 
-            // Si l'utilisateur n'existe pas, créer un nouveau compte
+            // If user doesn't exist, create new account
             if (!user) {
-                console.log('Création d\'un nouvel utilisateur');
-                const hashedPassword = await bcrypt.hash(appleId, 10);
+                console.log('Creating new user');
+                
+                // Generate a secure random password
+                const hashedPassword = await bcrypt.hash(appleId + Date.now().toString(), 10);
+                
+                // Use fallback values if data is missing
+                const emailToUse = email || `${appleId}@apple.user.temp`;
+                const nameToUse = fullName?.givenName || 'Apple User';
                 
                 const newUser = {
-                    email: email || `${appleId}@apple.com`,
-                    name: fullName?.givenName || 'Utilisateur Apple',
+                    email: emailToUse,
+                    name: nameToUse,
                     appleId: appleId,
                     password: hashedPassword
                 };
                 
-                console.log('Données du nouvel utilisateur:', {
+                console.log('New user data:', {
                     email: newUser.email,
                     name: newUser.name,
                     hasAppleId: !!newUser.appleId
                 });
                 
-                user = await User.create(newUser);
-                console.log('Nouvel utilisateur créé avec ID:', user._id);
+                try {
+                    user = await User.create(newUser);
+                    console.log('New user created with ID:', user._id);
+                } catch (createError) {
+                    console.error('User creation error:', createError);
+                    
+                    // Check for duplicate email error
+                    if (createError.code === 11000) {
+                        return res.status(409).json({
+                            success: false,
+                            code: 'DUPLICATE_EMAIL',
+                            message: 'Email already in use'
+                        });
+                    }
+                    
+                    throw createError;
+                }
             } else {
-                console.log('Utilisateur existant trouvé:', {
+                console.log('Existing user found:', {
                     id: user._id,
                     email: user.email,
                     hasAppleId: !!user.appleId
                 });
                 
-                // Mettre à jour l'Apple ID si nécessaire
+                // Update Apple ID if needed
                 if (!user.appleId) {
-                    console.log('Mise à jour de l\'Apple ID pour l\'utilisateur existant');
+                    console.log('Updating Apple ID for existing user');
                     user.appleId = appleId;
                     await user.save();
                 }
             }
 
-            // Générer les tokens
-            console.log('Génération des tokens d\'authentification');
+            // Generate authentication tokens
+            console.log('Generating authentication tokens');
             const { accessToken, refreshToken } = generateTokens(user._id);
 
-            // Sauvegarder le refresh token
-            console.log('Sauvegarde du refresh token');
-            await RefreshToken.create({
-                userId: user._id,
-                token: refreshToken,
-                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 jours
-            });
+            // Save refresh token
+            console.log('Saving refresh token');
+            try {
+                await RefreshToken.create({
+                    userId: user._id,
+                    token: refreshToken,
+                    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+                });
+            } catch (tokenError) {
+                console.error('Error saving refresh token:', tokenError);
+                // Continue anyway, not critical
+            }
 
-            console.log('Envoi de la réponse au client');
+            console.log('Sending response to client');
             res.json({
+                success: true,
                 _id: user._id,
                 name: user.name,
                 email: user.email,
                 token: accessToken,
                 refreshToken: refreshToken
             });
-            console.log('---------- FIN APPLE LOGIN (SUCCÈS) ----------');
+            console.log('---------- APPLE LOGIN END (SUCCESS) ----------');
 
         } catch (verifyError) {
-            console.error('ERREUR DE VÉRIFICATION APPLE DÉTAILLÉE:', verifyError);
+            console.error('APPLE VERIFICATION ERROR DETAILS:', verifyError);
             console.error('Message:', verifyError.message);
             console.error('Stack:', verifyError.stack);
-            console.log('---------- FIN APPLE LOGIN (ERREUR VÉRIFICATION) ----------');
+            console.log('---------- APPLE LOGIN END (VERIFICATION ERROR) ----------');
+            
+            // Check for specific verification errors
+            if (verifyError.message.includes('jwt expired')) {
+                return res.status(401).json({ 
+                    success: false,
+                    code: 'TOKEN_EXPIRED',
+                    message: 'Apple token expired',
+                    details: 'Please try signing in again'
+                });
+            }
+            
             return res.status(400).json({ 
-                message: 'Échec de la connexion Apple',
+                success: false,
+                code: 'VERIFICATION_FAILED',
+                message: 'Apple verification failed',
                 details: verifyError.message
             });
         }
 
     } catch (error) {
-        console.error('ERREUR GÉNÉRALE APPLE LOGIN:', error);
+        console.error('GENERAL APPLE LOGIN ERROR:', error);
         
         if (error.name === 'AppleSignInError') {
             return res.status(400).json({ 
+                success: false,
                 code: 'APPLE_AUTH_FAILED',
-                message: 'Authentification Apple échouée',
+                message: 'Apple authentication failed',
                 shouldRetry: true
             });
         }
         
         if (error.code === 'ERR_NETWORK') {
             return res.status(500).json({ 
+                success: false,
                 code: 'NETWORK_ERROR',
-                message: 'Problème de connexion réseau',
+                message: 'Network connection problem',
                 shouldRetry: true
             });
         }
         
         res.status(500).json({ 
+            success: false,
             code: 'UNKNOWN_ERROR',
-            message: 'Erreur interne lors de la connexion Apple',
+            message: 'Internal error during Apple login',
             shouldRetry: false
         });
+        
+        console.log('---------- APPLE LOGIN END (ERROR) ----------');
     }
 };
 
@@ -394,20 +456,23 @@ exports.loginUser = async (req, res) => {
 };
 
 exports.googleLogin = async (req, res) => {
-    console.log('Requête Google Login reçue');
-    console.log('Corps de la requête:', req.body);
+    console.log('---------- GOOGLE LOGIN START ----------');
+    console.log('Request received');
+    console.log('Request body:', req.body);
 
     try {
         const { token, tokenType, userData } = req.body;
         
-        console.log('Token reçu:', token ? 'Présent' : 'Absent');
-        console.log('Type de token:', tokenType);
-        console.log('Données utilisateur:', userData);
+        console.log('Token received:', token ? 'Present' : 'Absent');
+        console.log('Token type:', tokenType);
+        console.log('User data:', userData);
 
         if (!token) {
             return res.status(400).json({ 
-                message: 'Token Google manquant',
-                details: 'Aucun token n\'a été envoyé'
+                success: false,
+                code: 'MISSING_TOKEN',
+                message: 'Missing Google token',
+                details: 'No token was sent'
             });
         }
 
@@ -415,92 +480,132 @@ exports.googleLogin = async (req, res) => {
         
         if (tokenType === 'access_token') {
             try {
-                // Utiliser l'access token pour vérifier auprès de Google
+                // Use the access token to verify with Google
+                console.log('Verifying access token with Google API');
                 const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
                 });
                 
+                // Extract user information
                 email = response.data.email;
                 name = response.data.name;
                 picture = response.data.picture;
                 googleId = response.data.sub || userData?.id;
                 
-                console.log('Infos Google récupérées via access token:', { email, name });
+                console.log('Google info retrieved via access token:', { 
+                    hasEmail: !!email, 
+                    hasName: !!name 
+                });
                 
                 if (!email) {
-                    throw new Error('Impossible de récupérer l\'email');
+                    throw new Error('Could not retrieve email');
                 }
             } catch (error) {
-                console.error('Erreur lors de la connexion Google:', error);
+                console.error('Google verification error:', error);
                 
-                // Catégoriser les erreurs
+                // Categorize errors
                 if (error.response && error.response.status === 401) {
                     return res.status(401).json({ 
+                        success: false,
                         code: 'GOOGLE_AUTH_FAILED',
-                        message: 'Authentification Google échouée',
+                        message: 'Google authentication failed',
                         shouldRetry: true
                     });
                 }
                 
                 if (error.code === 'ERR_NETWORK') {
                     return res.status(500).json({ 
+                        success: false,
                         code: 'NETWORK_ERROR',
-                        message: 'Problème de connexion réseau',
+                        message: 'Network connection problem',
                         shouldRetry: true
                     });
                 }
                 
-                res.status(500).json({ 
-                    code: 'UNKNOWN_ERROR',
-                    message: 'Erreur interne lors de la connexion Google',
+                return res.status(500).json({ 
+                    success: false,
+                    code: 'VERIFICATION_ERROR',
+                    message: 'Google verification error',
+                    details: error.message,
                     shouldRetry: false
                 });
             }
+        } else {
+            return res.status(400).json({
+                success: false,
+                code: 'INVALID_TOKEN_TYPE',
+                message: 'Invalid token type',
+                details: 'This server only accepts access_token type'
+            });
         }
 
-        // Rechercher l'utilisateur par email
+        // Search for user by email
+        console.log('Searching for user by email:', email);
         let user = await User.findOne({ email });
         
         if (!user) {
-            // Générer un mot de passe aléatoire sécurisé pour les utilisateurs Google
+            console.log('User not found, creating new account');
+            // Generate a secure random password for Google users
             const randomPassword = await bcrypt.hash(googleId + Date.now().toString(), 10);
             
-            // Si l'utilisateur n'existe pas, le créer avec un mot de passe généré
+            // Create new user
             try {
                 user = await User.create({
                     email,
                     name,
-                    googleId, // Si vous avez déjà ce champ dans votre schéma
+                    googleId,
                     profilePicture: picture,
-                    password: randomPassword // Fournir un mot de passe pour satisfaire la validation
+                    password: randomPassword
                 });
-                console.log('Nouvel utilisateur Google créé');
+                console.log('New Google user created with ID:', user._id);
             } catch (createError) {
-                console.error('Erreur création utilisateur:', createError);
+                console.error('User creation error:', createError);
+                
+                // Check for duplicate email error
+                if (createError.code === 11000) {
+                    return res.status(409).json({
+                        success: false,
+                        code: 'DUPLICATE_EMAIL',
+                        message: 'Email already in use',
+                        details: 'This email is already registered with a different method'
+                    });
+                }
+                
                 throw createError;
             }
         } else {
-            // Mettre à jour le googleId si ce champ existe dans votre schéma et n'est pas déjà défini
+            console.log('Existing user found with ID:', user._id);
+            // Update Google ID if not already set
             if ('googleId' in user.schema.paths && !user.googleId) {
                 user.googleId = googleId;
                 await user.save();
+                console.log('Updated Google ID for existing user');
             }
         }
 
-        // Générer des tokens d'authentification pour votre application
+        // Generate authentication tokens for your application
+        console.log('Generating authentication tokens');
         const { accessToken, refreshToken } = generateTokens(user._id);
         
-        // Sauvegarder le refresh token
-        await RefreshToken.create({
-            userId: user._id,
-            token: refreshToken,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 jours
-        });
+        // Save the refresh token
+        try {
+            await RefreshToken.create({
+                userId: user._id,
+                token: refreshToken,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+            });
+            console.log('Refresh token saved');
+        } catch (tokenError) {
+            console.error('Error saving refresh token:', tokenError);
+            // Continue anyway, not critical
+        }
 
-        // Retourner la réponse
+        // Return the response
+        console.log('Sending successful response');
         res.json({
+            success: true,
             _id: user._id,
             name: user.name,
             email: user.email,
@@ -508,13 +613,24 @@ exports.googleLogin = async (req, res) => {
             token: accessToken,
             refreshToken: refreshToken
         });
-
+        
+        console.log('---------- GOOGLE LOGIN END (SUCCESS) ----------');
     } catch (error) {
-        console.error('Erreur lors de la connexion Google:', error);
-        res.status(500).json({ 
-            message: 'Erreur interne lors de la connexion Google',
+        console.error('General Google login error:', error);
+        
+        const errorResponse = { 
+            success: false,
+            message: 'Internal error during Google login',
             details: error.message 
-        });
+        };
+        
+        // Add stack trace in development environment
+        if (process.env.NODE_ENV === 'development') {
+            errorResponse.stack = error.stack;
+        }
+        
+        res.status(500).json(errorResponse);
+        console.log('---------- GOOGLE LOGIN END (ERROR) ----------');
     }
 };
 
