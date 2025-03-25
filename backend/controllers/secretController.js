@@ -1210,36 +1210,22 @@ exports.deleteSecret = async (req, res) => {
                 document: {
                     allowed_types: ['passport', 'id_card', 'driving_license'],
                     require_matching_selfie: true,
-                    require_live_capture: skipImageUpload // Activer la capture en direct si on skip l'upload
+                    require_live_capture: skipImageUpload
                 }
             }
         });
 
-        // NOUVELLE APPROCHE: Utiliser une redirection OAuth pour la vérification
-        const redirectUrl = process.env.NODE_ENV === 'production'
-            ? `https://${req.get('host')}/stripe-verify-redirect`
-            : 'hushy://stripe-verify-redirect';
-        
-        const verificationUrl = `https://connect.stripe.com/express/identity/dashboard?client_id=${process.env.STRIPE_CLIENT_ID}&stripe_user_id=${userStripeAccountId}&redirect_uri=${encodeURIComponent(redirectUrl)}`;
-
         console.log("Session Stripe créée:", {
             id: verificationSession.id,
-            url: verificationUrl,
-            session_url: verificationSession.url || "non disponible"
+            client_secret: verificationSession.client_secret
         });
 
-        // Mettre à jour l'utilisateur avec l'ID de session
-        user.stripeVerificationSessionId = verificationSession.id;
-        user.stripeVerificationStatus = 'requires_input';
-        await user.save();
-
-        // Retourner le client secret pour initialiser le SDK côté client
+        // Utiliser la méthode SDK mobile native plutôt que l'URL web
         return res.status(200).json({
             success: true,
             message: 'Session de vérification créée',
             clientSecret: verificationSession.client_secret,
-            sessionId: verificationSession.id,
-            verificationUrl // Inclure l'URL pour le fallback web
+            sessionId: verificationSession.id
         });
     } catch (error) {
         console.error('Erreur détaillée de vérification d\'identité:', error);

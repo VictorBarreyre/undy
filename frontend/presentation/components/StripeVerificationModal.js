@@ -81,128 +81,97 @@ const StripeVerificationModal = ({
 
 
     // Fonction complètement réécrite pour initier la vérification Stripe
-    const initiateStripeVerification = async () => {
-        try {
-            setIsUploading(true);
+   // Fonction complètement réécrite pour initier la vérification Stripe avec seulement l'approche native
+const initiateStripeVerification = async () => {
+    try {
+        setIsUploading(true);
 
-            // 1. D'abord, vérifier si une session est déjà en cours
-            const statusCheck = await checkIdentityVerificationStatus();
-            console.log("Vérification du statut existant:", statusCheck);
+        // 1. D'abord, vérifier si une session est déjà en cours
+        const statusCheck = await checkIdentityVerificationStatus();
+        console.log("Vérification du statut existant:", statusCheck);
 
-            // Si une session existe déjà et nécessite une action
-            if (statusCheck.success && statusCheck.status === 'requires_input') {
-                // Créer une nouvelle session plutôt que d'essayer de réutiliser l'ancienne
-                console.log("Session existante nécessitant des inputs, création d'une nouvelle session");
-            }
+        // Si une session existe déjà et nécessite une action
+        if (statusCheck.success && statusCheck.status === 'requires_input') {
+            // Créer une nouvelle session plutôt que d'essayer de réutiliser l'ancienne
+            console.log("Session existante nécessitant des inputs, création d'une nouvelle session");
+        }
 
-            // 2. Créer une nouvelle session de vérification
-            const sessionResponse = await handleIdentityVerification(userData, {
-                skipImageUpload: true
-            });
+        // 2. Créer une nouvelle session de vérification
+        const sessionResponse = await handleIdentityVerification(userData, {
+            skipImageUpload: true
+        });
 
-            console.log("Réponse de création de session:", JSON.stringify(sessionResponse, null, 2));
+        console.log("Réponse de création de session:", JSON.stringify(sessionResponse, null, 2));
 
-            if (!sessionResponse.success) {
-                throw new Error(sessionResponse.message || "Échec de création de la session de vérification");
-            }
+        if (!sessionResponse.success) {
+            throw new Error(sessionResponse.message || "Échec de création de la session de vérification");
+        }
 
-            // 3. IMPORTANT: Vérifier qu'on a un client secret valide
-            if (!sessionResponse.clientSecret) {
-                throw new Error("Client secret manquant dans la réponse");
-            }
+        // 3. IMPORTANT: Vérifier qu'on a un client secret valide
+        if (!sessionResponse.clientSecret) {
+            throw new Error("Client secret manquant dans la réponse");
+        }
 
-            // Mémoriser la session ID pour les vérifications ultérieures
-            const sessionId = sessionResponse.sessionId;
+        // Mémoriser la session ID pour les vérifications ultérieures
+        const sessionId = sessionResponse.sessionId;
 
-            // 4. PRIORITÉ à l'API native Stripe
-            if (Platform.OS !== 'web' && stripe && stripe.presentVerificationSheet) {
-                try {
-                    console.log("Tentative de vérification native avec client secret");
+        // 4. Utiliser UNIQUEMENT l'API native Stripe
+        if (Platform.OS !== 'web' && stripe && stripe.presentVerificationSheet) {
+            try {
+                console.log("Tentative de vérification native avec client secret");
 
-                    const { error } = await stripe.presentVerificationSheet({
-                        verificationSessionClientSecret: sessionResponse.clientSecret,
+                const { error } = await stripe.presentVerificationSheet({
+                    verificationSessionClientSecret: sessionResponse.clientSecret,
+                });
+
+                if (error) {
+                    console.error("Erreur Stripe native:", error);
+                    throw new Error(`Erreur présentation Stripe: ${error.message}`);
+                } else {
+                    // Si l'expérience native réussit
+                    setVerificationStatus({
+                        verified: false,
+                        status: 'processing'
                     });
 
-                    if (error) {
-                        console.error("Erreur Stripe native:", error);
-                        throw new Error(`Erreur présentation Stripe: ${error.message}`);
-                    } else {
-                        // Si l'expérience native réussit
-                        setVerificationStatus({
-                            verified: false,
-                            status: 'processing'
-                        });
-
-                        if (sessionId) {
-                            checkVerificationStatus(sessionId);
-                        }
-
-                        return; // Sortir de la fonction si l'expérience native réussit
+                    if (sessionId) {
+                        checkVerificationStatus(sessionId);
                     }
-                } catch (nativeError) {
-                    console.error("Exception native:", nativeError);
-                    // Continuer avec l'approche web comme fallback
+                    
+                    // Afficher un message de succès
+                    Alert.alert(
+                        'Vérification en cours',
+                        'Nous vérifions actuellement votre identité. Cela peut prendre quelques minutes.',
+                        [{ text: 'OK' }]
+                    );
                 }
+            } catch (nativeError) {
+                console.error("Exception native:", nativeError);
+                Alert.alert(
+                    'Erreur',
+                    "La vérification d'identité a échoué. Veuillez réessayer plus tard.",
+                    [{ text: 'OK' }]
+                );
             }
-
-            // 5. Fallback à l'approche web si l'API native n'est pas disponible ou a échoué
-            // IMPORTANT: Utiliser UNIQUEMENT l'URL fournie par le backend
-            const verificationUrl = sessionResponse.verificationUrl;
-
-            if (!verificationUrl) {
-                throw new Error("URL de vérification manquante - contactez le support");
-            }
-
-            console.log("Ouverture de l'URL de vérification web:", verificationUrl);
-
-            // 6. Ouvrir le lien avec des précautions
+        } else {
+            // Si l'API native n'est pas disponible (par exemple sur le web ou si le SDK n'est pas correctement installé)
             Alert.alert(
-                'Vérification d\'identité',
-                'Nous allons ouvrir une page web pour vérifier votre identité. Veuillez compléter toutes les étapes.',
-                [
-                    { text: 'Annuler', style: 'cancel' },
-                    {
-                        text: 'Continuer',
-                        onPress: async () => {
-                            try {
-                                const canOpen = await Linking.canOpenURL(verificationUrl);
-                                if (!canOpen) {
-                                    throw new Error("Impossible d'ouvrir l'URL de vérification");
-                                }
-
-                                await Linking.openURL(verificationUrl);
-
-                                // Mettre à jour l'état
-                                setVerificationStatus({
-                                    verified: false,
-                                    status: 'processing'
-                                });
-
-                                if (sessionId) {
-                                    checkVerificationStatus(sessionId);
-                                }
-                            } catch (linkError) {
-                                console.error("Erreur d'ouverture d'URL:", linkError);
-                                Alert.alert(
-                                    'Erreur',
-                                    "Impossible d'ouvrir la page de vérification. Veuillez réessayer."
-                                );
-                            }
-                        }
-                    }
-                ]
+                'Non disponible',
+                "La vérification d'identité n'est pas disponible sur cet appareil. Veuillez utiliser un appareil mobile compatible.",
+                [{ text: 'OK' }]
             );
-
-        } catch (error) {
-            console.error('Erreur de vérification:', error);
-            Alert.alert(
-                'Erreur',
-                error.message || 'Erreur lors de la vérification d\'identité'
-            );
-        } finally {
-            setIsUploading(false);
         }
-    };
+
+    } catch (error) {
+        console.error('Erreur de vérification:', error);
+        Alert.alert(
+            'Erreur',
+            error.message || 'Erreur lors de la vérification d\'identité'
+        );
+    } finally {
+        setIsUploading(false);
+    }
+};
 
 
     const startStripeIdentityVerification = async () => {
