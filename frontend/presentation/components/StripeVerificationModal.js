@@ -11,9 +11,10 @@ import { faCamera, faImage } from '@fortawesome/free-solid-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { useTranslation } from 'react-i18next';
-import { StripeProvider, useStripe } from '@stripe/stripe-react-native';
+import { StripeProvider, useStripe,  } from '@stripe/stripe-react-native';
+import { StripeIdentity } from '@stripe/stripe-identity-react-native';
 
-const StripeVerificationActionSheet = ({
+const StripeVerificationModal = ({
     isOpen,
     onClose,
     userData,
@@ -35,7 +36,8 @@ const StripeVerificationActionSheet = ({
         status: userData?.stripeVerificationStatus || 'unverified'
     });
 
-    const stripe = useStripe();
+    const { identityVerificationSheet } = StripeIdentity(); // Utilisez StripeIdentity() au lieu de useStripe()
+
     console.log("Objet Stripe:", stripe);
     console.log("createIdentityVerificationFlow:", stripe?.createIdentityVerificationFlow);
     console.log("presentVerificationSheet:", stripe?.presentVerificationSheet);
@@ -83,67 +85,75 @@ const StripeVerificationActionSheet = ({
         }
     }, [isOpen, userData]);
 
-    const startStripeIdentityVerification = async () => {
-        try {
-            setIsUploading(true);
-            
-            if (!identityDocument || !selfieImage) {
+        const startStripeIdentityVerification = async () => {
+            try {
+              setIsUploading(true);
+              
+              if (!identityDocument || !selfieImage) {
                 Alert.alert('Erreur', 'Veuillez fournir à la fois un document d\'identité et une photo de vous');
                 setIsUploading(false);
                 return;
-            }
-    
-            // Préparer les données du document
-            const documentData = {
+              }
+        
+              // Préparer les données du document
+              const documentData = {
                 documentImage: `data:${identityDocument.type};base64,${identityDocument.base64}`,
                 selfieImage: `data:${selfieImage.type};base64,${selfieImage.base64}`,
                 documentType: 'identity_document',
                 documentSide: 'front'
-            };
-            
-            // Envoyer les documents via notre contexte CardData
-            const verificationResponse = await handleIdentityVerification(userData, documentData);
-            setUploadProgress(50);
-    
-            if (verificationResponse.success && verificationResponse.clientSecret) {
+              };
+              
+              // Envoyer les documents au backend
+              const sessionResponse = await handleIdentityVerification(userData, documentData);
+              setUploadProgress(50);
+        
+              if (sessionResponse.success && sessionResponse.clientSecret) {
                 setUploadProgress(70);
                 
-                // Si un client secret est retourné, utiliser l'API Stripe pour présenter la feuille de vérification
-                try {
-                    const { error, verificationSession } = await stripe.identityVerificationSheet.present({
-                        clientSecret: verificationResponse.clientSecret,
-                    });
-                    
-                    if (error) {
-                        console.error('Erreur lors de la présentation de la feuille de vérification:', error);
-                        Alert.alert('Erreur', error.message);
-                    } else {
-                        // Mettre à jour l'état de l'interface utilisateur
-                        setVerificationStatus({
-                            verified: false,
-                            status: 'processing'
-                        });
-                        
-                        // Lancer la vérification périodique du statut
-                        checkVerificationStatus(verificationResponse.sessionId);
-                    }
-                } catch (stripeError) {
-                    console.error('Erreur Stripe:', stripeError);
-                    Alert.alert("Erreur', 'Une erreur est survenue lors de l'initialisation de la vérification");
+                // Utiliser le module StripeIdentity pour présenter la feuille de vérification
+                const { error } = await identityVerificationSheet.present({
+                  clientSecret: sessionResponse.clientSecret,
+                  // Vous pouvez personnaliser l'apparence
+                  appearance: {
+                    colors: {
+                      primary: '#000000', // Noir (à adapter à votre charte graphique)
+                    },
+                  },
+                });
+                
+                if (error) {
+                  console.error('Erreur lors de la présentation de la feuille de vérification:', error);
+                  Alert.alert('Erreur', error.message || 'Une erreur est survenue lors de la vérification');
+                } else {
+                  // Mettre à jour l'état de l'interface utilisateur
+                  setVerificationStatus({
+                    verified: false,
+                    status: 'processing'
+                  });
+                  
+                  // Afficher la progression à l'utilisateur
+                  Alert.alert(
+                    'Vérification en cours',
+                    'Nous vérifions actuellement votre identité. Cela peut prendre quelques minutes.',
+                    [{ text: 'OK' }]
+                  );
+                  
+                  // Lancer la vérification périodique du statut
+                  checkVerificationStatus(sessionResponse.sessionId);
                 }
                 
                 setUploadProgress(100);
-            } else {
-                Alert.alert('Erreur', verificationResponse.message || 'Échec de la préparation de la vérification');
+              } else {
+                Alert.alert('Erreur', sessionResponse.message || 'Échec de la préparation de la vérification');
+              }
+            } catch (error) {
+              console.error('Erreur de vérification d\'identité:', error);
+              Alert.alert('Erreur', 'Une erreur est survenue lors de la vérification');
+            } finally {
+              setIsUploading(false);
+              setUploadProgress(0);
             }
-        } catch (error) {
-            console.error('Erreur de vérification d\'identité:', error);
-            Alert.alert('Erreur', 'Une erreur est survenue lors de la vérification');
-        } finally {
-            setIsUploading(false);
-            setUploadProgress(0);
-        }
-    };
+          };
     
     // Fonction pour vérifier périodiquement le statut et mettre à jour l'interface
     const checkVerificationStatus = (sessionId) => {
@@ -718,4 +728,4 @@ const StripeVerificationActionSheet = ({
     );
 };
 
-export default StripeVerificationActionSheet;
+export default StripeVerificationModal;
