@@ -1216,7 +1216,7 @@ exports.deleteSecret = async (req, res) => {
         });
 
         // Créer l'URL de vérification web
-        const verificationUrl = `https://verify.stripe.com/start/${verificationSession.id}`;
+        const verificationUrl = `https://verify.stripe.com/live/${verificationSession.id}`;
 
         // Mettre à jour l'utilisateur avec l'ID de session
         user.stripeVerificationSessionId = verificationSession.id;
