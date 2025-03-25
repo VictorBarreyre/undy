@@ -1011,54 +1011,38 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
-  const handleIdentityVerification = async (userData, documentData) => {
+  const handleIdentityVerification = async (userData, options = {}) => {
     const instance = getAxiosInstance();
     if (!instance) {
         throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     
     try {
-        console.log('Envoi des données de vérification:', {
-            stripeAccountId: userData.stripeAccountId,
-            documentType: documentData.documentType,
-            documentSide: documentData.documentSide,
-            hasDocument: !!documentData.documentImage,
-            hasSelfie: !!documentData.selfieImage
-        });
-
-        // Préparer les données à envoyer au serveur
         const payload = {
             stripeAccountId: userData.stripeAccountId,
-            documentType: documentData.documentType || 'identity_document',
-            documentSide: documentData.documentSide || 'front'
+            documentType: options.documentType || 'identity_document',
+            documentSide: options.documentSide || 'front',
+            skipImageUpload: options.skipImageUpload || false
         };
 
-        // Ajouter l'image du document
-        if (documentData.documentImage) {
-            payload.documentImage = documentData.documentImage;
-        } 
-
-        // Ajouter l'image selfie
-        if (documentData.selfieImage) {
-            payload.selfieImage = documentData.selfieImage;
+        // Ajouter les images seulement si on ne skip pas l'upload
+        if (!options.skipImageUpload) {
+            if (options.documentImage) {
+                payload.documentImage = options.documentImage;
+            }
+            if (options.selfieImage) {
+                payload.selfieImage = options.selfieImage;
+            }
         }
 
         // Appeler l'API de vérification d'identité
         const response = await instance.post('/api/secrets/verify-identity', payload);
 
-        // S'assurer que la réponse contient le client_secret
-        if (!response.data.clientSecret) {
-            console.error('Réponse de vérification d\'identité sans clientSecret:', response.data);
-            return {
-                success: false,
-                message: 'Échec de création de la session de vérification'
-            };
-        }
-
         return {
             success: true,
             sessionId: response.data.sessionId,
             clientSecret: response.data.clientSecret,
+            verificationUrl: response.data.verificationUrl,
             message: response.data.message
         };
     } catch (error) {
@@ -1069,6 +1053,7 @@ export const CardDataProvider = ({ children }) => {
         };
     }
 };
+
 
 const checkIdentityVerificationStatus = async () => {
   const instance = getAxiosInstance();

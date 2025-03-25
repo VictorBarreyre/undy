@@ -45,6 +45,8 @@ const StripeVerificationModal = ({
         });
     }, [userData]);
 
+
+
     // Vérifier le statut de vérification au chargement
     useEffect(() => {
         const checkStatus = async () => {
@@ -77,16 +79,99 @@ const StripeVerificationModal = ({
         }
     }, [isOpen, userData]);
 
+    // Nouvelle fonction pour initier directement la vérification Stripe
+const initiateStripeVerification = async () => {
+    try {
+        setIsUploading(true);
+        
+        // Appeler l'API backend pour créer une session de vérification
+        // Notez qu'on ne passe pas d'images ici - Stripe collectera tout directement
+        const sessionResponse = await handleIdentityVerification(userData, {
+            // Pas besoin d'envoyer des images, juste indiquer qu'on veut une session
+            skipImageUpload: true
+        });
+        
+        if (sessionResponse.success && sessionResponse.clientSecret) {
+            // Tenter d'utiliser l'API native Stripe
+            if (stripe && stripe.presentVerificationSheet) {
+                try {
+                    const { error } = await stripe.presentVerificationSheet({
+                        verificationSessionClientSecret: sessionResponse.clientSecret,
+                    });
+                    
+                    if (error) {
+                        console.error('Erreur lors de la présentation de la feuille de vérification:', error);
+                        // Fallback vers l'URL web si la méthode native échoue
+                        openWebVerification(sessionResponse);
+                    } else {
+                        // Mise à jour du statut si succès
+                        setVerificationStatus({
+                            verified: false,
+                            status: 'processing'
+                        });
+                        
+                        Alert.alert(
+                            'Vérification en cours',
+                            'Nous vérifions actuellement votre identité. Cela peut prendre quelques minutes.',
+                            [{ text: 'OK' }]
+                        );
+                        
+                        checkVerificationStatus(sessionResponse.sessionId);
+                    }
+                } catch (nativeError) {
+                    console.error('Erreur native:', nativeError);
+                    // Fallback vers l'URL web si la méthode native échoue
+                    openWebVerification(sessionResponse);
+                }
+            } else {
+                // Fallback vers l'URL web si la méthode native n'est pas disponible
+                openWebVerification(sessionResponse);
+            }
+        } else {
+            Alert.alert('Erreur', sessionResponse.message || 'Échec de la préparation de la vérification');
+        }
+    } catch (error) {
+        console.error('Erreur d\'initialisation de vérification:', error);
+        Alert.alert('Erreur', 'Une erreur est survenue lors de l\'initialisation de la vérification');
+    } finally {
+        setIsUploading(false);
+    }
+};
+
+// Fonction auxiliaire pour ouvrir la vérification web 
+const openWebVerification = (sessionResponse) => {
+    // L'URL de vérification web peut être fournie par le backend ou construite ici
+    const verificationUrl = sessionResponse.verificationUrl || 
+                            `https://verify.stripe.com/start/${sessionResponse.sessionId}`;
+    
+    Alert.alert(
+        'Vérification Web',
+        'Nous allons ouvrir une page web pour compléter votre vérification d\'identité',
+        [
+            { text: 'Annuler', style: 'cancel' },
+            { text: 'Continuer', onPress: () => Linking.openURL(verificationUrl) }
+        ]
+    );
+    
+    // Mettre à jour l'état pour commencer à vérifier périodiquement le statut
+    setVerificationStatus({
+        verified: false,
+        status: 'processing'
+    });
+    
+    checkVerificationStatus(sessionResponse.sessionId);
+};
+
     const startStripeIdentityVerification = async () => {
         try {
             setIsUploading(true);
-            
+
             if (!identityDocument || !selfieImage) {
                 Alert.alert('Erreur', 'Veuillez fournir à la fois un document d\'identité et une photo de vous');
                 setIsUploading(false);
                 return;
             }
-    
+
             // Préparer les données du document
             const documentData = {
                 documentImage: `data:${identityDocument.type};base64,${identityDocument.base64}`,
@@ -94,40 +179,61 @@ const StripeVerificationModal = ({
                 documentType: 'identity_document',
                 documentSide: 'front'
             };
-            
+
             // Envoyer les documents au backend
             const sessionResponse = await handleIdentityVerification(userData, documentData);
             setUploadProgress(50);
-    
+
             if (sessionResponse.success && sessionResponse.clientSecret) {
                 setUploadProgress(70);
-                
-                // Utiliser l'API standard de Stripe React Native
-                const { error } = await presentVerificationSheet({
-                    verificationSessionClientSecret: sessionResponse.clientSecret,
-                });
-                
-                if (error) {
-                    console.error('Erreur lors de la présentation de la feuille de vérification:', error);
-                    Alert.alert('Erreur', error.message || 'Une erreur est survenue lors de la vérification');
+
+                // Vérifier si la méthode est disponible
+                if (stripe && stripe.presentVerificationSheet) {
+                    // Utiliser la méthode directement depuis l'objet stripe
+                    const { error } = await stripe.presentVerificationSheet({
+                        verificationSessionClientSecret: sessionResponse.clientSecret,
+                    });
+
+                    if (error) {
+                        console.error('Erreur lors de la présentation de la feuille de vérification:', error);
+                        Alert.alert('Erreur', error.message || 'Une erreur est survenue lors de la vérification');
+                    } else {
+                        // Mettre à jour l'état de l'interface utilisateur
+                        setVerificationStatus({
+                            verified: false,
+                            status: 'processing'
+                        });
+
+                        // Afficher la progression à l'utilisateur
+                        Alert.alert(
+                            'Vérification en cours',
+                            'Nous vérifions actuellement votre identité. Cela peut prendre quelques minutes.',
+                            [{ text: 'OK' }]
+                        );
+
+                        // Lancer la vérification périodique du statut
+                        checkVerificationStatus(sessionResponse.sessionId);
+                    }
                 } else {
-                    // Mettre à jour l'état de l'interface utilisateur
+                    // Fallback si la méthode n'est pas disponible
+                    console.log("La méthode de vérification native n'est pas disponible");
+
+                    // Informer l'utilisateur que la vérification a été soumise
+                    Alert.alert(
+                        'Vérification soumise',
+                        'Votre documentation a été soumise pour vérification. Vous serez notifié une fois la vérification terminée.',
+                        [{ text: 'OK' }]
+                    );
+
+                    // Mettre à jour le statut et lancer la vérification périodique
                     setVerificationStatus({
                         verified: false,
                         status: 'processing'
                     });
-                    
-                    // Afficher la progression à l'utilisateur
-                    Alert.alert(
-                        'Vérification en cours',
-                        'Nous vérifions actuellement votre identité. Cela peut prendre quelques minutes.',
-                        [{ text: 'OK' }]
-                    );
-                    
-                    // Lancer la vérification périodique du statut
+
                     checkVerificationStatus(sessionResponse.sessionId);
                 }
-                
+
                 setUploadProgress(100);
             } else {
                 Alert.alert('Erreur', sessionResponse.message || 'Échec de la préparation de la vérification');
@@ -140,38 +246,38 @@ const StripeVerificationModal = ({
             setUploadProgress(0);
         }
     };
-    
-    
+
+
     // Fonction pour vérifier périodiquement le statut et mettre à jour l'interface
     const checkVerificationStatus = (sessionId) => {
         const maxAttempts = 30; // 5 minutes avec un intervalle de 10 secondes
         let attempts = 0;
-        
+
         // Créer un ID pour pouvoir annuler l'intervalle plus tard
         const intervalId = setInterval(async () => {
             try {
                 attempts++;
-                
+
                 // Arrêter les vérifications après le nombre maximum de tentatives
                 if (attempts >= maxAttempts) {
                     clearInterval(intervalId);
                     return;
                 }
-                
+
                 // Vérifier le statut auprès du backend
                 const statusResult = await checkIdentityVerificationStatus();
                 console.log(`Vérification du statut (tentative ${attempts}):`, statusResult);
-                
+
                 if (statusResult.success) {
                     // Si la vérification est terminée avec succès
                     if (statusResult.verified) {
                         clearInterval(intervalId);
-                        
+
                         setVerificationStatus({
                             verified: true,
                             status: 'verified'
                         });
-                        
+
                         Alert.alert(
                             'Vérification réussie',
                             'Votre identité a été vérifiée avec succès.',
@@ -181,13 +287,13 @@ const StripeVerificationModal = ({
                     // Si la vérification a échoué ou a besoin d'informations supplémentaires
                     else if (statusResult.status === 'requires_input' || statusResult.status === 'failed') {
                         clearInterval(intervalId);
-                        
+
                         // Mettre à jour l'état
                         setVerificationStatus({
                             verified: false,
                             status: statusResult.status
                         });
-                        
+
                         // Proposer à l'utilisateur de continuer via le web si nécessaire
                         if (statusResult.status === 'requires_input') {
                             Alert.alert(
@@ -214,7 +320,7 @@ const StripeVerificationModal = ({
                 }
             } catch (error) {
                 console.error('Erreur lors de la vérification du statut:', error);
-                
+
                 // Même en cas d'erreur, continuer à vérifier
             }
         }, 10000); // Vérifier toutes les 10 secondes
@@ -439,7 +545,7 @@ const StripeVerificationModal = ({
                         </Text>
 
                         <Button
-                            onPress={() => setShowDocumentOptions(true)}
+                            onPress={initiateStripeVerification}
                             backgroundColor="black"
                             borderRadius="full"
                         >

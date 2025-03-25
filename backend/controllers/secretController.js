@@ -1187,7 +1187,7 @@ exports.deleteSecret = async (req, res) => {
 
   exports.verifyIdentity = async (req, res) => {
     try {
-        const { documentImage, selfieImage, documentType, documentSide, stripeAccountId } = req.body;
+        const { documentImage, selfieImage, documentType, documentSide, stripeAccountId, skipImageUpload } = req.body;
 
         // Vérifier que l'utilisateur a un compte Stripe existant
         const user = await User.findById(req.user.id);
@@ -1209,11 +1209,14 @@ exports.deleteSecret = async (req, res) => {
             options: {
                 document: {
                     allowed_types: ['passport', 'id_card', 'driving_license'],
-                    require_matching_selfie: !!selfieImage,
-                    require_live_capture: false
+                    require_matching_selfie: true,
+                    require_live_capture: skipImageUpload // Activer la capture en direct si on skip l'upload
                 }
             }
         });
+
+        // Créer l'URL de vérification web
+        const verificationUrl = `https://verify.stripe.com/start/${verificationSession.id}`;
 
         // Mettre à jour l'utilisateur avec l'ID de session
         user.stripeVerificationSessionId = verificationSession.id;
@@ -1225,9 +1228,9 @@ exports.deleteSecret = async (req, res) => {
             success: true,
             message: 'Session de vérification créée',
             clientSecret: verificationSession.client_secret,
-            sessionId: verificationSession.id
+            sessionId: verificationSession.id,
+            verificationUrl // Inclure l'URL pour le fallback web
         });
-
     } catch (error) {
         console.error('Erreur détaillée de vérification d\'identité:', error);
         return res.status(500).json({
