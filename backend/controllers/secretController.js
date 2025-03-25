@@ -335,35 +335,52 @@ exports.getNearbySecrets = async (req, res) => {
 
 exports.getUnpurchasedSecrets = async (req, res) => {
     try {
-        const { page = 1, limit = 10, language } = req.query;
+        const { page = 1, limit = 10, language, languages } = req.query;
         const userId = req.user.id;
 
-        // Construire le filtre de base
-        const filter = {
+        // Construire le filtre de base - secrets non achetés par l'utilisateur,
+        // non créés par l'utilisateur et non expirés
+        const baseFilter = {
             purchasedBy: { $nin: [userId] },
             user: { $ne: userId },
             expiresAt: { $gt: new Date() }
         };
 
-        // Ajouter le filtre de langue si spécifié
+        // Options pour le filtrage par langue
+        let languageFilter = {};
+
+        // Cas 1: Une seule langue spécifiée
         if (language) {
-            filter.language = language;
+            languageFilter = { language };
+        } 
+        // Cas 2: Plusieurs langues spécifiées (séparées par des virgules)
+        else if (languages) {
+            const languageList = languages.split(',').map(lang => lang.trim());
+            languageFilter = { language: { $in: languageList } };
         }
 
+        // Combiner les filtres
+        const filter = { ...baseFilter, ...languageFilter };
+
+        // Exécuter la requête avec pagination
         const secrets = await Secret.find(filter)
             .populate('user', 'name profilePicture')
-            .select('label content price createdAt expiresAt user purchasedBy location language')
+            .select('label content price createdAt expiresAt user purchasedBy location language currency')
             .limit(limit * 1)
             .skip((page - 1) * limit)
             .sort({ createdAt: -1 })
             .exec();
 
+        // Compter le nombre total de documents correspondant au filtre
         const total = await Secret.countDocuments(filter);
 
+        // Structure de la réponse
         res.status(200).json({
             secrets,
             totalPages: Math.ceil(total / limit),
-            currentPage: page
+            currentPage: Number(page),
+            totalItems: total,
+            itemsPerPage: Number(limit)
         });
     } catch (error) {
         console.error('Erreur détaillée:', error);
@@ -373,7 +390,6 @@ exports.getUnpurchasedSecrets = async (req, res) => {
         });
     }
 };
-
 
 const EXCHANGE_RATES = {
     '€': 1.0,    // Base: Euro

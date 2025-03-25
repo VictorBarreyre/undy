@@ -500,25 +500,37 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
-  const fetchUnpurchasedSecrets = async (forceFetch = false, language = null) => {
+  const fetchUnpurchasedSecrets = async (forceFetch = false, languages = null) => {
     if (!forceFetch && lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)) {
       return data;
     }
-
+  
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
-
-    // Récupérer la langue de l'application ou du périphérique si non spécifiée
-    const appLanguage = language || i18n.language || navigator.language.split('-')[0];
-
+  
+    // Construire les paramètres de la requête
+    const params = {};
+    
+    // Traitement des langues
+    if (languages) {
+      if (Array.isArray(languages)) {
+        // Si un tableau de langues est fourni, le convertir en chaîne séparée par des virgules
+        params.languages = languages.join(',');
+      } else if (typeof languages === 'string') {
+        // Si une seule langue est fournie comme chaîne
+        params.language = languages;
+      }
+    } else {
+      // Par défaut, utiliser la langue actuelle de l'application
+      params.language = i18n.language || navigator.language.split('-')[0];
+    }
+  
     setIsLoadingData(true);
     try {
-      const response = await instance.get('/api/secrets/unpurchased', {
-        params: { language: appLanguage }
-      });
-
+      const response = await instance.get('/api/secrets/unpurchased', { params });
+  
       if (response.data && response.data.secrets) {
         setData(response.data.secrets);
         setLastFetchTime(Date.now());
@@ -1033,6 +1045,15 @@ export const CardDataProvider = ({ children }) => {
 
         // Appeler l'API de vérification d'identité
         const response = await instance.post('/api/secrets/verify-identity', payload);
+
+        // S'assurer que la réponse contient le client_secret
+        if (!response.data.clientSecret) {
+            console.error('Réponse de vérification d\'identité sans clientSecret:', response.data);
+            return {
+                success: false,
+                message: 'Échec de création de la session de vérification'
+            };
+        }
 
         return {
             success: true,
