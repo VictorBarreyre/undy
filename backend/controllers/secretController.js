@@ -1215,9 +1215,18 @@ exports.deleteSecret = async (req, res) => {
             }
         });
 
-        // Créer l'URL de vérification web
-        const verificationUrl = `https://verify.stripe.com/${verificationSession.id}`;
+        // NOUVELLE APPROCHE: Utiliser une redirection OAuth pour la vérification
+        const redirectUrl = process.env.NODE_ENV === 'production'
+            ? `https://${req.get('host')}/stripe-verify-redirect`
+            : 'hushy://stripe-verify-redirect';
+        
+        const verificationUrl = `https://connect.stripe.com/express/identity/dashboard?client_id=${process.env.STRIPE_CLIENT_ID}&stripe_user_id=${userStripeAccountId}&redirect_uri=${encodeURIComponent(redirectUrl)}`;
 
+        console.log("Session Stripe créée:", {
+            id: verificationSession.id,
+            url: verificationUrl,
+            session_url: verificationSession.url || "non disponible"
+        });
 
         // Mettre à jour l'utilisateur avec l'ID de session
         user.stripeVerificationSessionId = verificationSession.id;
