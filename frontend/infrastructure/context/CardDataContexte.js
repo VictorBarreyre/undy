@@ -1002,7 +1002,7 @@ export const CardDataProvider = ({ children }) => {
   const handleIdentityVerification = async (userData, documentData) => {
     const instance = getAxiosInstance();
     if (!instance) {
-      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
+        throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     
     try {
@@ -1021,15 +1021,12 @@ export const CardDataProvider = ({ children }) => {
             documentSide: documentData.documentSide || 'front'
         };
 
-        // Ajouter l'image du document si présente
+        // Ajouter l'image du document
         if (documentData.documentImage) {
             payload.documentImage = documentData.documentImage;
-        } else if (documentData.image) {
-            // Pour compatibilité avec l'ancien format
-            payload.documentImage = documentData.image;
-        }
+        } 
 
-        // Ajouter l'image selfie si présente
+        // Ajouter l'image selfie
         if (documentData.selfieImage) {
             payload.selfieImage = documentData.selfieImage;
         }
@@ -1037,11 +1034,11 @@ export const CardDataProvider = ({ children }) => {
         // Appeler l'API de vérification d'identité
         const response = await instance.post('/api/secrets/verify-identity', payload);
 
-        console.log('Réponse de la vérification d\'identité:', response.data);
-
         return {
             success: true,
-            ...response.data
+            sessionId: response.data.sessionId,
+            clientSecret: response.data.clientSecret,
+            message: response.data.message
         };
     } catch (error) {
         console.error('Erreur de vérification d\'identité:', error);

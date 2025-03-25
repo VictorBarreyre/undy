@@ -1173,13 +1173,6 @@ exports.deleteSecret = async (req, res) => {
     try {
         const { documentImage, selfieImage, documentType, documentSide, stripeAccountId } = req.body;
 
-        if (!documentImage) {
-            return res.status(400).json({
-                success: false,
-                message: 'L\'image du document est requise'
-            });
-        }
-
         // Vérifier que l'utilisateur a un compte Stripe existant
         const user = await User.findById(req.user.id);
         const userStripeAccountId = stripeAccountId || user.stripeAccountId;
@@ -1191,122 +1184,34 @@ exports.deleteSecret = async (req, res) => {
             });
         }
 
-        // Créer un objet pour stocker les fichiers uploadés
-        const uploadedFiles = [];
-
-        // Décoder et télécharger l'image du document sur Stripe
-        let documentImageBuffer;
-        try {
-            // Extraire la partie base64 de l'URL data
-            const base64Data = documentImage.split(',')[1];
-            documentImageBuffer = Buffer.from(base64Data, 'base64');
-        } catch (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Format d\'image de document invalide'
-            });
-        }
-
-        // Télécharger le document sur Stripe
-        const documentFile = await stripe.files.create({
-            purpose: 'identity_document',
-            file: {
-                data: documentImageBuffer,
-                name: `identity_doc_${Date.now()}.jpg`,
-                type: 'application/octet-stream'
-            }
-        });
-        
-        uploadedFiles.push(documentFile.id);
-
-        // Options pour la session de vérification
-        const verificationOptions = {
-            type: 'document',
-            metadata: {
-                userId: req.user.id,
-                documentType: documentType || 'identity_document',
-                documentSide: documentSide || 'front',
-                documentFileId: documentFile.id
-            }
-        };
-
-        // Si une selfie a été fournie, la télécharger aussi
-        let selfieFile = null;
-        if (selfieImage) {
-            let selfieImageBuffer;
-            try {
-                const base64Data = selfieImage.split(',')[1];
-                selfieImageBuffer = Buffer.from(base64Data, 'base64');
-            } catch (error) {
-                // Nettoyer les fichiers déjà téléchargés en cas d'erreur
-                for (const fileId of uploadedFiles) {
-                    try {
-                        await stripe.files.del(fileId);
-                    } catch (deleteError) {
-                        console.error('Erreur lors de la suppression du fichier:', deleteError);
-                    }
-                }
-                
-                return res.status(400).json({
-                    success: false,
-                    message: 'Format d\'image selfie invalide'
-                });
-            }
-
-            // Télécharger la selfie sur Stripe
-            selfieFile = await stripe.files.create({
-                purpose: 'identity_document',
-                file: {
-                    data: selfieImageBuffer,
-                    name: `identity_selfie_${Date.now()}.jpg`,
-                    type: 'application/octet-stream'
-                }
-            });
-            
-            uploadedFiles.push(selfieFile.id);
-            verificationOptions.metadata.selfieFileId = selfieFile.id;
-        }
-
-        // Créer la session de vérification avec les documents
-        // Note: Au lieu d'essayer d'utiliser uploaded_document et uploaded_selfie, nous allons
-        // créer la session d'abord, puis nous utiliserons le SDK mobile pour finaliser la vérification
+        // Créer une session de vérification Stripe Identity
         const verificationSession = await stripe.identity.verificationSessions.create({
             type: 'document',
+            metadata: {
+                userId: req.user.id
+            },
             options: {
                 document: {
                     allowed_types: ['passport', 'id_card', 'driving_license'],
-                    require_matching_selfie: !!selfieImage, // Activer la correspondance selfie si une selfie a été fournie
-                    require_live_capture: false  // Désactiver la capture en direct car nous avons déjà les images
+                    require_matching_selfie: !!selfieImage,
+                    require_live_capture: false
                 }
-            },
-            metadata: {
-                userId: req.user.id,
-                documentFileId: documentFile.id,
-                selfieFileId: selfieFile ? selfieFile.id : undefined,
-                documentType: documentType || 'identity_document',
-                documentSide: documentSide || 'front'
             }
         });
 
-        // Ne pas essayer d'attacher manuellement les documents à la session
-        // L'API Stripe ne semble pas supporter cette approche directement
-        // À la place, nous fournirons le client_secret au SDK mobile qui s'occupera
-        // de finaliser la vérification
-
-        // Mettre à jour l'utilisateur
+        // Mettre à jour l'utilisateur avec l'ID de session
         user.stripeVerificationSessionId = verificationSession.id;
-        user.stripeIdentityDocumentId = documentFile.id;
-        user.stripeVerificationStatus = 'processing';
-        user.stripeIdentityVerificationDate = new Date();
+        user.stripeVerificationStatus = 'requires_input';
         await user.save();
 
+        // Retourner le client secret pour initialiser le SDK côté client
         return res.status(200).json({
             success: true,
-            message: 'Documents téléchargés et session de vérification créée',
+            message: 'Session de vérification créée',
             clientSecret: verificationSession.client_secret,
             sessionId: verificationSession.id
         });
-        
+
     } catch (error) {
         console.error('Erreur détaillée de vérification d\'identité:', error);
         return res.status(500).json({

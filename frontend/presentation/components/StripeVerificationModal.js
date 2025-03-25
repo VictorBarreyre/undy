@@ -101,32 +101,40 @@ const StripeVerificationActionSheet = ({
                 documentSide: 'front'
             };
             
-            // Envoyer les documents au backend
-            const sessionResponse = await handleIdentityVerification(userData, documentData);
+            // Envoyer les documents via notre contexte CardData
+            const verificationResponse = await handleIdentityVerification(userData, documentData);
             setUploadProgress(50);
     
-            if (sessionResponse.success && sessionResponse.sessionId) {
+            if (verificationResponse.success && verificationResponse.clientSecret) {
                 setUploadProgress(70);
                 
-                // Mettre à jour l'état de l'interface utilisateur
-                setVerificationStatus({
-                    verified: false,
-                    status: 'processing'
-                });
-                
-                // Afficher la progression à l'utilisateur
-                Alert.alert(
-                    'Vérification en cours',
-                    'Nous vérifions actuellement votre identité. Cela peut prendre quelques minutes.',
-                    [{ text: 'OK' }]
-                );
-                
-                // Lancer la vérification périodique du statut
-                checkVerificationStatus(sessionResponse.sessionId);
+                // Si un client secret est retourné, utiliser l'API Stripe pour présenter la feuille de vérification
+                try {
+                    const { error, verificationSession } = await stripe.identityVerificationSheet.present({
+                        clientSecret: verificationResponse.clientSecret,
+                    });
+                    
+                    if (error) {
+                        console.error('Erreur lors de la présentation de la feuille de vérification:', error);
+                        Alert.alert('Erreur', error.message);
+                    } else {
+                        // Mettre à jour l'état de l'interface utilisateur
+                        setVerificationStatus({
+                            verified: false,
+                            status: 'processing'
+                        });
+                        
+                        // Lancer la vérification périodique du statut
+                        checkVerificationStatus(verificationResponse.sessionId);
+                    }
+                } catch (stripeError) {
+                    console.error('Erreur Stripe:', stripeError);
+                    Alert.alert("Erreur', 'Une erreur est survenue lors de l'initialisation de la vérification");
+                }
                 
                 setUploadProgress(100);
             } else {
-                Alert.alert('Erreur', sessionResponse.message || 'Échec de la préparation de la vérification');
+                Alert.alert('Erreur', verificationResponse.message || 'Échec de la préparation de la vérification');
             }
         } catch (error) {
             console.error('Erreur de vérification d\'identité:', error);
