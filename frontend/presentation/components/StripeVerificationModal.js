@@ -204,30 +204,6 @@ const StripeVerificationModal = ({
         }
     };
 
-    
-    // Fonction auxiliaire pour ouvrir la vérification web 
-    const openWebVerification = (sessionResponse) => {
-        // L'URL de vérification web peut être fournie par le backend ou construite ici
-        // Dans votre fichier StripeVerificationModal.js, fonction initiateStripeVerification() ou openWebVerification()
-        const verificationUrl = sessionResponse.verificationUrl ||
-            `https://verify.stripe.com/live/${sessionResponse.sessionId}`;
-        Alert.alert(
-            'Vérification Web',
-            'Nous allons ouvrir une page web pour compléter votre vérification d\'identité',
-            [
-                { text: 'Annuler', style: 'cancel' },
-                { text: 'Continuer', onPress: () => Linking.openURL(verificationUrl) }
-            ]
-        );
-
-        // Mettre à jour l'état pour commencer à vérifier périodiquement le statut
-        setVerificationStatus({
-            verified: false,
-            status: 'processing'
-        });
-
-        checkVerificationStatus(sessionResponse.sessionId);
-    };
 
     const startStripeIdentityVerification = async () => {
         try {
