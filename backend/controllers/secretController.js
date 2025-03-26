@@ -50,7 +50,7 @@ exports.createSecret = async (req, res) => {
         // ÉTAPE 1: Vérifier si l'utilisateur a un compte Stripe actif
         if (!user.stripeAccountId || !user.stripeOnboardingComplete || user.stripeAccountStatus !== 'active') {
             let accountLink;
-            
+
             // Créer un compte Stripe si l'utilisateur n'en a pas
             if (!user.stripeAccountId) {
                 const account = await stripe.accounts.create({
@@ -64,11 +64,11 @@ exports.createSecret = async (req, res) => {
                     },
                     settings: {
                         payouts: {
-                          schedule: {
-                            interval: 'manual'
-                          }
+                            schedule: {
+                                interval: 'manual'
+                            }
                         }
-                      },
+                    },
                     business_type: 'individual',
                     business_profile: {
                         mcc: '5734', // Code pour services digitaux
@@ -96,13 +96,13 @@ exports.createSecret = async (req, res) => {
                     return_url: returnUrl,
                     type: 'account_onboarding',
                 });
-                
+
                 user.lastStripeOnboardingUrl = accountLink.url;
                 await user.save({ session });
             }
 
             await session.commitTransaction();
-            
+
             // Retourner une réponse indiquant que Stripe doit être configuré d'abord
             return res.status(202).json({
                 requiresStripeSetup: true,
@@ -121,7 +121,7 @@ exports.createSecret = async (req, res) => {
             label,
             content,
             price,
-            currency, 
+            currency,
             user: req.user.id,
             expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
             status: 'active',
@@ -153,7 +153,7 @@ exports.createSecret = async (req, res) => {
 
         // Créer le secret directement comme actif
         const secret = await Secret.create([secretData], { session });
-        
+
         // Ajouter le lien de partage
         const shareLink = `hushy://secret/${secret[0]._id}`;
         await Secret.findByIdAndUpdate(secret[0]._id, { shareLink }, { session });
@@ -204,8 +204,8 @@ exports.refreshStripeOnboarding = async (req, res) => {
                 ? `https://${req.get('host')}/redirect.html?path=` // Notez le "?path=" à la fin
                 : process.env.FRONTEND_URL || 'hushy://stripe-return'; // Dev direct vers l'app
 
-                const refreshUrl = `${baseReturnUrl}?action=refresh&secretPending=true`;
-                const returnUrl = `${baseReturnUrl}?action=complete&secretPending=true`;
+        const refreshUrl = `${baseReturnUrl}?action=refresh&secretPending=true`;
+        const returnUrl = `${baseReturnUrl}?action=complete&secretPending=true`;
 
         // Vérifier le statut du compte Stripe
         const account = await stripe.accounts.retrieve(user.stripeAccountId);
@@ -352,7 +352,7 @@ exports.getUnpurchasedSecrets = async (req, res) => {
         // Cas 1: Une seule langue spécifiée
         if (language) {
             languageFilter = { language };
-        } 
+        }
         // Cas 2: Plusieurs langues spécifiées (séparées par des virgules)
         else if (languages) {
             const languageList = languages.split(',').map(lang => lang.trim());
@@ -401,13 +401,13 @@ const EXCHANGE_RATES = {
 // Fonction pour convertir vers et depuis l'Euro (devise de base pour les calculs)
 const convertCurrency = (amount, fromCurrency, toCurrency = '€') => {
     if (fromCurrency === toCurrency) return amount;
-    
+
     // Convertir d'abord en Euro (devise de base)
     const amountInEuro = fromCurrency === '€' ? amount : amount * EXCHANGE_RATES[fromCurrency];
-    
+
     // Si la devise cible est l'Euro, retourner directement
     if (toCurrency === '€') return amountInEuro;
-    
+
     // Sinon, convertir de l'Euro vers la devise cible
     return amountInEuro / EXCHANGE_RATES[toCurrency];
 };
@@ -442,17 +442,17 @@ exports.createPaymentIntent = async (req, res) => {
         if (!secret) {
             return res.status(404).json({ message: 'Secret introuvable.' });
         }
-     // Utiliser la devise du secret
-     const currency = secret.currency || '€';
-     const priceDetails = calculatePrices(secret.price, currency);
+        // Utiliser la devise du secret
+        const currency = secret.currency || '€';
+        const priceDetails = calculatePrices(secret.price, currency);
 
-     // Déterminer la devise Stripe (convertir les symboles en codes ISO)
-     const stripeCurrency = {
-         '€': 'eur',
-         '$': 'usd',
-         '£': 'gbp',
-         '¥': 'jpy'
-     }[currency] || 'eur';
+        // Déterminer la devise Stripe (convertir les symboles en codes ISO)
+        const stripeCurrency = {
+            '€': 'eur',
+            '$': 'usd',
+            '£': 'gbp',
+            '¥': 'jpy'
+        }[currency] || 'eur';
 
         // Créer l'intention de paiement Stripe avec le montant total pour l'acheteur
         const paymentIntent = await stripe.paymentIntents.create({
@@ -465,7 +465,7 @@ exports.createPaymentIntent = async (req, res) => {
                 buyerTotal: priceDetails.buyerTotal.toString(),
                 sellerAmount: priceDetails.sellerAmount.toString(),
                 platformFee: priceDetails.platformFee.toString(),
-                currency: currency 
+                currency: currency
 
             }
         });
@@ -477,7 +477,7 @@ exports.createPaymentIntent = async (req, res) => {
             amount: priceDetails.buyerTotal / 100, // Convertir en euros pour la DB
             paymentIntentId: paymentIntent.id,
             status: 'pending',
-            currency: currency, 
+            currency: currency,
             metadata: {
                 originalPrice: secret.price,
                 sellerAmount: priceDetails.sellerAmount / 100,
@@ -493,7 +493,7 @@ exports.createPaymentIntent = async (req, res) => {
             clientSecret: paymentIntent.client_secret,
             paymentId: paymentIntent.id,
             buyerTotal: priceDetails.buyerTotal / 100,
-            currency: currency 
+            currency: currency
         });
 
     } catch (error) {
@@ -540,7 +540,7 @@ exports.purchaseSecret = async (req, res) => {
                 participants: { $elemMatch: { $eq: userId } }
             });
 
-            
+
 
             if (!conversation) {
                 conversation = await Conversation.create([{
@@ -1146,53 +1146,53 @@ exports.getSharedSecret = async (req, res) => {
 
 exports.deleteSecret = async (req, res) => {
     try {
-      const secretId = req.params.id;
-      const userId = req.user.id;
-      
-      // Vérifier que le secret existe
-      const secret = await Secret.findById(secretId);
-      if (!secret) {
-        return res.status(404).json({ message: 'Secret introuvable.' });
-      }
-      
-      // Vérifier que l'utilisateur est le propriétaire du secret
-      if (secret.user.toString() !== userId) {
-        return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à supprimer ce secret.' });
-      }
-      
-      // Vérifier si le secret a été acheté par quelqu'un
-      if (secret.purchasedBy && secret.purchasedBy.length > 0) {
-        return res.status(400).json({ 
-          message: 'Ce secret a déjà été acheté et ne peut pas être supprimé.' 
-        });
-      }
-      
-      // Supprimer le secret
-      await Secret.findByIdAndDelete(secretId);
-      
-      // Répondre avec succès
-      res.status(200).json({ 
-        success: true, 
-        message: 'Secret supprimé avec succès.' 
-      });
-      
-    } catch (error) {
-      console.error('Erreur lors de la suppression du secret:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Erreur lors de la suppression du secret.' 
-      });
-    }
-  };
+        const secretId = req.params.id;
+        const userId = req.user.id;
 
-  exports.verifyIdentity = async (req, res) => {
+        // Vérifier que le secret existe
+        const secret = await Secret.findById(secretId);
+        if (!secret) {
+            return res.status(404).json({ message: 'Secret introuvable.' });
+        }
+
+        // Vérifier que l'utilisateur est le propriétaire du secret
+        if (secret.user.toString() !== userId) {
+            return res.status(403).json({ message: 'Vous n\'êtes pas autorisé à supprimer ce secret.' });
+        }
+
+        // Vérifier si le secret a été acheté par quelqu'un
+        if (secret.purchasedBy && secret.purchasedBy.length > 0) {
+            return res.status(400).json({
+                message: 'Ce secret a déjà été acheté et ne peut pas être supprimé.'
+            });
+        }
+
+        // Supprimer le secret
+        await Secret.findByIdAndDelete(secretId);
+
+        // Répondre avec succès
+        res.status(200).json({
+            success: true,
+            message: 'Secret supprimé avec succès.'
+        });
+
+    } catch (error) {
+        console.error('Erreur lors de la suppression du secret:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erreur lors de la suppression du secret.'
+        });
+    }
+};
+
+exports.verifyIdentity = async (req, res) => {
     try {
         const { stripeAccountId, skipImageUpload } = req.body;
 
         // Vérifier que l'utilisateur a un compte Stripe existant
         const user = await User.findById(req.user.id);
         const userStripeAccountId = stripeAccountId || user.stripeAccountId;
-        
+
         if (!userStripeAccountId) {
             return res.status(400).json({
                 success: false,
@@ -1212,6 +1212,7 @@ exports.deleteSecret = async (req, res) => {
         }
 
         // Créer une session de vérification Stripe Identity avec options optimisées
+        // Dans votre fonction verifyIdentity
         const verificationSession = await stripe.identity.verificationSessions.create({
             type: 'document',
             metadata: {
@@ -1225,22 +1226,21 @@ exports.deleteSecret = async (req, res) => {
                 }
             }
         });
-
+        
+        // Récupérer directement l'URL officielle - C'EST LA CLEF!
+        const verificationUrl = verificationSession.url;
+        
         // Sauvegarder l'ID de session dans le profil utilisateur
         user.stripeVerificationSessionId = verificationSession.id;
         user.stripeVerificationStatus = 'requires_input';
         await user.save();
 
-        console.log("Session Stripe créée:", {
-            id: verificationSession.id,
-            client_secret: verificationSession.client_secret
-        });
-
         return res.status(200).json({
             success: true,
             message: 'Session de vérification créée',
             clientSecret: verificationSession.client_secret,
-            sessionId: verificationSession.id
+            sessionId: verificationSession.id,
+            verificationUrl: verificationUrl // URL officielle fournie par Stripe
         });
     } catch (error) {
         console.error('Erreur détaillée de vérification d\'identité:', error);
@@ -1256,7 +1256,7 @@ exports.deleteSecret = async (req, res) => {
 exports.checkIdentityVerificationStatus = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
-        
+
         // Si l'utilisateur n'a pas de session de vérification, retourner simplement un statut "non vérifié"
         if (!user.stripeVerificationSessionId) {
             return res.status(200).json({
@@ -1276,10 +1276,10 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
             // Mettre à jour le statut dans la base de données
             user.stripeVerificationStatus = verificationSession.status;
             user.stripeIdentityVerified = verificationSession.status === 'verified';
-            
+
             if (verificationSession.status === 'verified') {
                 user.stripeIdentityVerificationDate = new Date();
-                
+
                 // Si l'utilisateur n'est pas déjà vérifié pour les paiements,
                 // vous pourriez mettre à jour son statut de capacité Stripe ici
                 if (user.stripeAccountId && !user.stripePaymentsVerified) {
@@ -1291,7 +1291,7 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
                                 transfers: { requested: true }
                             }
                         });
-                        
+
                         user.stripePaymentsVerified = true;
                     } catch (stripeError) {
                         console.error('Erreur lors de la mise à jour des capacités Stripe:', stripeError);
@@ -1315,13 +1315,13 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
         } catch (stripeError) {
             // Si la session n'existe plus ou est invalide chez Stripe
             console.error('Erreur Stripe lors de la vérification du statut:', stripeError);
-            
+
             // Pour éviter les erreurs futures, réinitialiser les données de vérification
             user.stripeVerificationSessionId = null;
             user.stripeVerificationStatus = 'unverified';
             user.stripeIdentityVerified = false;
             await user.save();
-            
+
             return res.status(200).json({
                 success: true,
                 status: 'unverified',
@@ -1329,7 +1329,7 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
                 message: 'Session de vérification invalide ou expirée'
             });
         }
-        
+
     } catch (error) {
         console.error('Erreur détaillée de vérification du statut:', error);
         return res.status(500).json({

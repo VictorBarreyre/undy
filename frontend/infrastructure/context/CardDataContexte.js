@@ -1042,7 +1042,7 @@ export const CardDataProvider = ({ children }) => {
             success: true,
             sessionId: response.data.sessionId,
             clientSecret: response.data.clientSecret,
-            verificationUrl: response.data.verificationUrl,
+            verificationUrl: response.data.verificationUrl, // Utilisez l'URL fournie par le backend
             message: response.data.message
         };
     } catch (error) {

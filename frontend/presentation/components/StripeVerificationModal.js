@@ -21,7 +21,6 @@ const StripeVerificationModal = ({
 }) => {
     const { t } = useTranslation();
     const stripe = useStripe(); // Hook Stripe
-    const { presentVerificationSheet } = useStripe(); // Fonction pour présenter l'interface de vérification
     const { handleIdentityVerification, checkIdentityVerificationStatus } = useCardData();
     const [identityDocument, setIdentityDocument] = useState(null);
     const [selfieImage, setSelfieImage] = useState(null);
@@ -45,7 +44,15 @@ const StripeVerificationModal = ({
         });
     }, [userData]);
 
-// Au début du composant
+    useEffect(() => {
+        console.log("Stripe SDK details:", {
+          object: stripe,
+          methods: stripe ? Object.keys(stripe).sort() : "N/A",
+          version: stripe?.version || "Unknown"
+        });
+      }, [stripe]);
+
+
 useEffect(() => {
     // Vérifier que le SDK Stripe est correctement initialisé
     if (stripe) {
@@ -58,13 +65,29 @@ useEffect(() => {
         console.error("SDK Stripe non initialisé");
     }
     
-    // Vérifier les permissions de caméra
+    // Vérifier les permissions pour react-native-image-picker
     (async () => {
         try {
-            const { status } = await Camera.requestCameraPermissionsAsync();
-            console.log("Permissions caméra:", status);
+            // Pour Android, vérifier les permissions via Platform et PermissionsAndroid
+            if (Platform.OS === 'android') {
+                const cameraPermission = await PermissionsAndroid.check(
+                    PermissionsAndroid.PERMISSIONS.CAMERA
+                );
+                const storagePermission = await PermissionsAndroid.check(
+                    PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
+                );
+                console.log("Permissions Android:", {
+                    camera: cameraPermission,
+                    storage: storagePermission
+                });
+            }
+            // Pour iOS, les permissions sont demandées au moment de l'utilisation
+            // On peut simplement le mentionner dans les logs
+            else if (Platform.OS === 'ios') {
+                console.log("Permissions iOS: seront demandées lors de l'utilisation");
+            }
         } catch (e) {
-            console.error("Erreur vérification permissions caméra:", e);
+            console.error("Erreur vérification permissions:", e);
         }
     })();
 }, []);
@@ -103,72 +126,88 @@ useEffect(() => {
 
 
     // Fonction complètement réécrite pour initier la vérification Stripe
-    const initiateStripeVerification = async () => {
-        try {
-            setIsUploading(true);
-            console.log("Démarrage de la vérification Stripe");
-    
-            // Créer une nouvelle session de vérification
-            const sessionResponse = await handleIdentityVerification(userData, {
-                skipImageUpload: true
-            });
-    
-            console.log("Réponse de création de session:", JSON.stringify(sessionResponse, null, 2));
-    
-            if (!sessionResponse.success || !sessionResponse.clientSecret) {
-                throw new Error(sessionResponse.message || "Échec de création de la session de vérification");
-            }
-    
-            // Mémoriser la session ID pour les vérifications ultérieures
-            const sessionId = sessionResponse.sessionId;
-    
-            // Utiliser UNIQUEMENT l'API native Stripe avec gestion d'erreur améliorée
-            if (stripe && stripe.presentVerificationSheet) {
-                console.log("Tentative de vérification native avec client secret");
-                
-                const result = await stripe.presentVerificationSheet({
-                    verificationSessionClientSecret: sessionResponse.clientSecret
-                });
-    
-                // Vérifier résultat explicitement 
-                if (result.error) {
-                    throw new Error(`Erreur présentation Stripe: ${result.error.message}`);
-                }
-                
-                // Si l'expérience native réussit
-                setVerificationStatus({
-                    verified: false,
-                    status: 'processing'
-                });
-    
-                // Lancer la vérification périodique
-                if (sessionId) {
-                    checkVerificationStatus(sessionId);
-                }
-                
-                Alert.alert(
-                    'Vérification en cours',
-                    'Nous vérifions actuellement votre identité. Cela peut prendre quelques minutes.',
-                    [{ text: 'OK' }]
-                );
-                
-                return true;
-            } else {
-                throw new Error("API de vérification native Stripe non disponible");
-            }
-        } catch (error) {
-            console.error("Erreur complète de vérification:", error);
-            Alert.alert(
-                'Erreur',
-                `La vérification a échoué: ${error.message}`,
-                [{ text: 'OK' }]
-            );
-            return false;
-        } finally {
-            setIsUploading(false);
-        }
-    };
+  const initiateStripeVerification = async () => {
+    try {
+        setIsUploading(true);
+        console.log("Démarrage de la vérification Stripe");
 
+        // Créer une nouvelle session de vérification
+        const sessionResponse = await handleIdentityVerification(userData, {
+            skipImageUpload: true
+        });
+
+        console.log("Réponse de création de session:", JSON.stringify(sessionResponse, null, 2));
+
+        if (!sessionResponse.success) {
+            throw new Error(sessionResponse.message || "Échec de création de la session de vérification");
+        }
+
+        // Mémoriser la session ID pour les vérifications ultérieures
+        const sessionId = sessionResponse.sessionId;
+
+        // Créer l'URL de vérification web Stripe
+        const verificationUrl = `https://verify.stripe.com/start/${sessionId}`;
+        
+        // Proposer à l'utilisateur d'ouvrir la page web pour la vérification
+        Alert.alert(
+            'Vérification d\'identité',
+            'Voulez-vous procéder à la vérification de votre identité via notre navigateur sécurisé?',
+            [
+                { 
+                    text: 'Annuler',
+                    style: 'cancel',
+                    onPress: () => setIsUploading(false)
+                },
+                { 
+                    text: 'Continuer',
+                    onPress: async () => {
+                        // Ouvrir l'URL dans le navigateur
+                        const supported = await Linking.canOpenURL(verificationUrl);
+                        
+                        if (supported) {
+                            await Linking.openURL(verificationUrl);
+                            
+                            // Mettre à jour l'état pour indiquer que la vérification est en cours
+                            setVerificationStatus({
+                                verified: false,
+                                status: 'processing'
+                            });
+                            
+                            // Démarrer la vérification du statut
+                            if (sessionId) {
+                                checkVerificationStatus(sessionId);
+                            }
+                            
+                            Alert.alert(
+                                'Vérification en cours',
+                                'Une fois la vérification terminée dans votre navigateur, revenez à l\'application. Nous vérifierons automatiquement le statut.',
+                                [{ text: 'OK' }]
+                            );
+                        } else {
+                            Alert.alert(
+                                'Erreur',
+                                'Impossible d\'ouvrir le navigateur pour la vérification.',
+                                [{ text: 'OK' }]
+                            );
+                        }
+                    }
+                }
+            ]
+        );
+        
+        return true;
+    } catch (error) {
+        console.error("Erreur complète de vérification:", error);
+        Alert.alert(
+            'Erreur',
+            `La vérification a échoué: ${error.message}`,
+            [{ text: 'OK' }]
+        );
+        return false;
+    } finally {
+        setIsUploading(false);
+    }
+};
 
     const startStripeIdentityVerification = async () => {
         try {
