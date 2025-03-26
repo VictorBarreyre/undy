@@ -89,7 +89,6 @@ app.post('/webhooks/stripe', express.raw({type: 'application/json'}), async (req
             }
           }
         }
-        
         await user.save();
         console.log(`Statut de vérification mis à jour pour l'utilisateur ${user._id}: ${session.status}`);
       } else {
