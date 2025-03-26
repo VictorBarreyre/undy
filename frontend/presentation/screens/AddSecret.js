@@ -227,18 +227,19 @@ const AddSecret = () => {
         }
       };
 
-    const savePendingSecretData = async (secretData) => {
+      const savePendingSecretData = async (secretData) => {
         try {
             // Ajouter les données de localisation si disponibles
             const dataToSave = {
-                ...secretData
+                ...secretData,
+                timestamp: Date.now() // Ajouter un timestamp
             };
-
+    
             // Sauvegarder la localisation si elle est activée
             if (includeLocation && userLocation) {
                 dataToSave.userLocation = userLocation;
             }
-
+    
             const storageKey = `pendingSecretData_${userData._id}`;
             await AsyncStorage.removeItem(storageKey);
             await AsyncStorage.setItem(storageKey, JSON.stringify(dataToSave));
@@ -352,6 +353,8 @@ const AddSecret = () => {
                 // Si l'utilisateur a un compte Stripe actif, poster le secret directement
                 if (stripeStatus.status === 'active' || stripeStatus.stripeStatus === 'active') {
                     const result = await handlePostSecret(secretData);
+
+                    await AsyncStorage.removeItem(`pendingSecretData_${userData._id}`);
 
                     // Afficher le message de succès
                     Alert.alert(
@@ -473,21 +476,37 @@ const AddSecret = () => {
             ]
         );
     };
-
     useEffect(() => {
         const checkPendingSecretData = async () => {
             try {
-                const pendingSecretDataJson = await AsyncStorage.getItem(`pendingSecretData_${userData._id}`);
+                const storageKey = `pendingSecretData_${userData._id}`;
+                const pendingSecretDataJson = await AsyncStorage.getItem(storageKey);
                 if (pendingSecretDataJson) {
                     const pendingSecretData = JSON.parse(pendingSecretDataJson);
     
-                    // Pré-remplir les champs du formulaire avec les données en attente
-                    setSecretText(pendingSecretData.secretText || '');
-                    setSelectedLabel(pendingSecretData.selectedLabel || '');
-                    setPrice(pendingSecretData.price?.toString() || '');
-                    setExpiresIn(pendingSecretData.expiresIn || 7);
+                    // Vérifier si le secret a déjà été posté
+                    // Par exemple, en vérifiant l'âge des données en attente
+                    const currentTime = Date.now();
+                    if (pendingSecretData.timestamp && 
+                        (currentTime - pendingSecretData.timestamp > 5 * 60 * 1000)) { // Plus de 5 minutes
+                        // Supprimer les données anciennes
+                        await AsyncStorage.removeItem(storageKey);
+                        return;
+                    }
     
-                    // Suppression de l'alerte
+                    // Vérifier si les champs sont vides avant de les restaurer
+                    const hasEmptyFields = 
+                        !secretText && 
+                        !selectedLabel && 
+                        !price;
+    
+                    if (hasEmptyFields) {
+                        // Pré-remplir les champs du formulaire avec les données en attente
+                        setSecretText(pendingSecretData.secretText || '');
+                        setSelectedLabel(pendingSecretData.selectedLabel || '');
+                        setPrice(pendingSecretData.price?.toString() || '');
+                        setExpiresIn(pendingSecretData.expiresIn || 7);
+                    }
                 }
             } catch (error) {
                 console.error('Erreur lors de la vérification des données en attente:', error);
