@@ -525,6 +525,9 @@ export default {
     }
   },
   "errors": {
+    "title": "Erreur de localisation",
+    "permissionDenied": "Vous devez autoriser l'accès à la localisation pour utiliser cette fonctionnalité.",
+    "gettingPosition": "Impossible d'obtenir votre position actuelle.",
     "permissionError": "Erreur de permission de localisation:",
     "locationError": "Erreur de localisation:",
     "gettingPosition": "Erreur lors de l'obtention de la position:",

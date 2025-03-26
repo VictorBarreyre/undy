@@ -132,7 +132,9 @@ export default {
       "disabled": "Your location will not be shared"
     },
     "errors": {
-      "title": "Location Error"
+     "title": "Location Error",
+    "permissionDenied": "You must allow location access to use this feature.",
+    "gettingPosition": "Unable to retrieve your current location."
     },
     "alerts": {
       "welcome": {
