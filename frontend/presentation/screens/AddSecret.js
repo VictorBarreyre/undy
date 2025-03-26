@@ -600,7 +600,6 @@ const AddSecret = () => {
                                                         value="includeLocation"
                                                         isChecked={includeLocation}
                                                         onChange={handleLocationToggle}
-                                                        isDisabled={!locationAvailable}
                                                         colorScheme="pink"
                                                         aria-label={t('location.shareLocation.accessibility')}
                                                         _checked={{
