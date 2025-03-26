@@ -273,6 +273,52 @@ exports.refreshStripeOnboarding = async (req, res) => {
     }
 };
 
+exports.handleStripeReturn = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const user = await User.findById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+        }
+        
+        // Récupérer les informations à jour depuis Stripe
+        if (user.stripeAccountId) {
+            const stripeAccount = await stripe.accounts.retrieve(user.stripeAccountId);
+            
+            // Mise à jour des informations utilisateur basées sur Stripe
+            user.stripeAccountStatus = stripeAccount.details_submitted ? 'active' : 'pending';
+            user.stripeOnboardingComplete = stripeAccount.details_submitted;
+            user.stripePayoutsEnabled = stripeAccount.payouts_enabled;
+            user.stripeChargesEnabled = stripeAccount.charges_enabled;
+            user.stripeIdentityVerified = stripeAccount.payouts_enabled;
+            
+            // Si l'utilisateur a un compte bancaire lié, enregistrer l'info
+            if (stripeAccount.external_accounts && stripeAccount.external_accounts.data.length > 0) {
+                const lastFour = stripeAccount.external_accounts.data[0].last4;
+                const bankName = stripeAccount.external_accounts.data[0].bank_name;
+                user.stripeExternalAccount = `${bankName} ****${lastFour}`;
+            }
+            
+            await user.save();
+        }
+        
+        return res.status(200).json({
+            success: true,
+            user: {
+                stripeAccountId: user.stripeAccountId,
+                stripeAccountStatus: user.stripeAccountStatus,
+                stripeOnboardingComplete: user.stripeOnboardingComplete,
+                stripeIdentityVerified: user.stripeIdentityVerified,
+                stripeExternalAccount: user.stripeExternalAccount
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors du traitement du retour Stripe :', error);
+        return res.status(500).json({ success: false, message: 'Erreur serveur' });
+    }
+};
+
 exports.checkIdentityVerificationStatus = async (req, res) => {
     try {
       const user = await User.findById(req.user.id).select('stripeAccountId stripeIdentityVerified stripeVerificationStatus');

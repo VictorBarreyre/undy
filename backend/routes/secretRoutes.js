@@ -20,6 +20,7 @@ const {
     getNearbySecrets,
     deleteSecret,
     checkIdentityVerificationStatus, 
+    handleStripeReturn
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -35,12 +36,9 @@ router.post('/:id/confirm-payment', protect, confirmPayment);
 router.post('/:id/purchase', protect, purchaseSecret);
 router.post('/stripe/refresh-onboarding', protect, refreshStripeOnboarding);
 router.get('/check-identity-verification-status', protect, checkIdentityVerificationStatus); 
-router.get('/stripe-return', protect, (req, res) => {
-    res.status(200).json({
-        message: 'Retour Stripe réussi',
-        status: 'success'
-    });
-});
+router.get('/stripe-return', protect, handleStripeReturn);
+
+
 router.get('/stripe-refresh', protect, (req, res) => {
     res.status(200).json({
         message: 'Rafraîchissement Stripe réussi',
