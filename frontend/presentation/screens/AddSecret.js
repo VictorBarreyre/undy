@@ -168,33 +168,64 @@ const AddSecret = () => {
 
     const handleLocationToggle = async (isChecked) => {
         setIncludeLocation(isChecked);
-
-        if (isChecked && !userLocation) {
-            try {
-                const position = await getCurrentLocation();
-                if (position) {
-                    setUserLocation(position);
-                    // Obtenir les informations de localisation
-                    await getLocationInfo(position.latitude, position.longitude);
-                } else {
-                    setIncludeLocation(false);
-                    Alert.alert(
-                        t('location.errors.title'),
-                        t('location.errors.gettingPosition'),
-                        [{ text: t('permissions.ok') }]
-                    );
-                }
-            } catch (error) {
-                console.error('Erreur lors de l\'obtention de la position:', error);
+      
+        if (isChecked) {
+          try {
+            // Vérifier d'abord si on a déjà la permission
+            const { status } = await Location.getForegroundPermissionsAsync();
+            
+            if (status !== 'granted') {
+              // Si pas de permission, la demander
+              const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
+              
+              if (newStatus !== 'granted') {
+                // Si l'utilisateur refuse, désactiver la checkbox et afficher une alerte
                 setIncludeLocation(false);
                 Alert.alert(
-                    t('location.errors.title'),
-                    t('location.errors.gettingPosition'),
-                    [{ text: t('permissions.ok') }]
+                  t('location.errors.title'),
+                  t('location.errors.permissionDenied'),
+                  [
+                    { 
+                      text: t('permissions.cancel'), 
+                      style: 'cancel' 
+                    },
+                    { 
+                      text: t('permissions.openSettings'), 
+                      onPress: () => Linking.openSettings() 
+                    }
+                  ]
                 );
+                return;
+              }
+              
+              // Permission accordée, mettre à jour le statut
+              setLocationAvailable(true);
             }
+            
+            // Maintenant qu'on a la permission, obtenir la position
+            const position = await getCurrentLocation();
+            if (position) {
+              setUserLocation(position);
+              await getLocationInfo(position.latitude, position.longitude);
+            } else {
+              setIncludeLocation(false);
+              Alert.alert(
+                t('location.errors.title'),
+                t('location.errors.gettingPosition'),
+                [{ text: t('permissions.ok') }]
+              );
+            }
+          } catch (error) {
+            console.error('Erreur lors de l\'obtention de la position:', error);
+            setIncludeLocation(false);
+            Alert.alert(
+              t('location.errors.title'),
+              t('location.errors.gettingPosition'),
+              [{ text: t('permissions.ok') }]
+            );
+          }
         }
-    };
+      };
 
     const savePendingSecretData = async (secretData) => {
         try {

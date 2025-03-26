@@ -262,6 +262,42 @@ exports.refreshStripeOnboarding = async (req, res) => {
     }
 };
 
+exports.checkIdentityVerificationStatus = async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id).select('stripeAccountId stripeIdentityVerified stripeVerificationStatus');
+      
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'Utilisateur introuvable'
+        });
+      }
+      
+      if (!user.stripeAccountId) {
+        return res.status(200).json({
+          success: true,
+          verified: false,
+          status: 'unverified',
+          message: 'Aucun compte Stripe associé'
+        });
+      }
+      
+      // Retourner le statut actuel stocké dans le modèle utilisateur
+      return res.status(200).json({
+        success: true,
+        verified: user.stripeIdentityVerified || false,
+        status: user.stripeVerificationStatus || 'unverified',
+        message: user.stripeIdentityVerified ? 'Identité vérifiée' : 'Vérification d\'identité en attente'
+      });
+    } catch (error) {
+      console.error('Erreur lors de la vérification du statut d\'identité:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur serveur lors de la vérification du statut d\'identité'
+      });
+    }
+  };
+
 exports.getAllSecrets = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query;
