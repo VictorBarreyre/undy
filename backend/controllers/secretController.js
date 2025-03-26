@@ -60,7 +60,6 @@ exports.createSecret = async (req, res) => {
                     capabilities: {
                         card_payments: { requested: true },
                         transfers: { requested: true },
-                        identity_verification: { requested: true }
                     },
                     settings: {
                         payouts: {
@@ -81,6 +80,7 @@ exports.createSecret = async (req, res) => {
                     refresh_url: refreshUrl,
                     return_url: returnUrl,
                     type: 'account_onboarding',
+                    collect: 'eventually_due', // Cette option demande toutes les informations y compris KYC
                 });
 
                 user.stripeAccountId = account.id;
@@ -96,7 +96,7 @@ exports.createSecret = async (req, res) => {
                     refresh_url: refreshUrl,
                     return_url: returnUrl,
                     type: 'account_onboarding',
-                    collect: 'eventually_due', // Cette option demande toutes les informations requises, y compris KYC
+                    collect: 'eventually_due', // S'assurer que c'est bien 'eventually_due'
                 });
 
                 user.lastStripeOnboardingUrl = accountLink.url;
@@ -238,6 +238,7 @@ exports.refreshStripeOnboarding = async (req, res) => {
             refresh_url: refreshUrl,
             return_url: returnUrl,
             type: 'account_onboarding',
+            collect: 'eventually_due', // S'assurer que c'est bien 'eventually_due'
         });
 
         // Mettre à jour l'URL d'onboarding
