@@ -81,7 +81,6 @@ exports.createSecret = async (req, res) => {
                     refresh_url: refreshUrl,
                     return_url: returnUrl,
                     type: 'account_onboarding',
-                    collect: 'eventually_due', // Cette option demande toutes les informations requises, y compris KYC
                 });
 
                 user.stripeAccountId = account.id;
@@ -239,7 +238,6 @@ exports.refreshStripeOnboarding = async (req, res) => {
             refresh_url: refreshUrl,
             return_url: returnUrl,
             type: 'account_onboarding',
-            collect: 'eventually_due', // S'assure que toutes les vérifications, y compris KYC, sont demandées
         });
 
         // Mettre à jour l'URL d'onboarding
