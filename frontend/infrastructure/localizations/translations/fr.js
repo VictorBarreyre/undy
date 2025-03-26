@@ -580,18 +580,21 @@ export default {
       "years_plural": "Il y a {{count}} ans"
     }
   },
-
 "stripeVerification": {
   "logs": {
-    "userCancelled": "L'utilisateur a annulé la sélection d'image"
+    "userCancelled": "Sélection d'image annulée par l'utilisateur"
+  },
+  "accountConfigured": {
+    "descriptionIdentityPending": "Votre compte est presque prêt. Pour pouvoir transférer l'argent sur votre compte en banque, veuillez vérifier votre identité.",
+    "verifyIdentity": "Vérifier mon identité"
   },
   "errors": {
     "title": "Erreur",
     "generic": "Une erreur est survenue",
     "selectDocument": "Veuillez sélectionner un document",
-    "uploadError": "Erreur lors de l'envoi:",
-    "uploadFailed": "Une erreur est survenue lors de l'envoi",
-    "verificationFailed": "Échec de la vérification d'identité"
+    "uploadError": "Erreur de téléchargement :",
+    "uploadFailed": "Une erreur est survenue lors du téléchargement",
+    "verificationFailed": "La vérification d'identité a échoué"
   },
   "bankAccountSetup": {
     "title": "Configuration du compte bancaire",
@@ -602,12 +605,12 @@ export default {
     "title": "Vérification d'identité",
     "description": "Pour recevoir vos paiements, nous devons vérifier votre identité conformément aux réglementations.",
     "documentTitle": "Document d'identité",
-    "documentDescription": "Veuillez fournir une pièce d'identité (carte d'identité, passeport ou permis de conduire).",
+    "documentDescription": "Veuillez fournir un document d'identité (carte d'identité, passeport ou permis de conduire).",
     "selfieTitle": "Photo de vous",
     "selfieDescription": "Prenez une photo de vous pour confirmer votre identité.",
     "reviewTitle": "Vérification d'identité",
     "reviewDescription": "Veuillez vérifier les documents avant de les soumettre.",
-    "documentSelected": "Document sélectionné: {{name}}",
+    "documentSelected": "Document sélectionné : {{name}}",
     "selfieSelected": "Photo de vous sélectionnée",
     "processingTitle": "Vérification en cours",
     "processingDescription": "Votre vérification d'identité est en cours de traitement. Cela peut prendre quelques instants.",
@@ -619,8 +622,10 @@ export default {
     "restart": "Recommencer",
     "submit": "Soumettre",
     "submitting": "Envoi en cours...",
-    "uploading": "Envoi en cours...",
-    "checkStatus": "Vérifier le statut"
+    "uploading": "Téléchargement en cours...",
+    "checkStatus": "Vérifier le statut",
+    "verifyOnline": "Vérifier en ligne", // en français
+    "uploadDocuments": "Téléverser des documents" 
   },
   "documentOptions": {
     "takePhoto": "Prendre une photo",
@@ -661,7 +666,6 @@ export default {
   },
   "delete": "Supprimer"
 },
-
   "notifications": {
     "alerts": {
       "simulatorWarning": "Les notifications ne fonctionnent pas sur simulateur",

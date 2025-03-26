@@ -81,6 +81,7 @@ exports.createSecret = async (req, res) => {
                     refresh_url: refreshUrl,
                     return_url: returnUrl,
                     type: 'account_onboarding',
+                    collect: 'eventually_due', // Cette option demande toutes les informations requises, y compris KYC
                 });
 
                 user.stripeAccountId = account.id;
@@ -89,12 +90,14 @@ exports.createSecret = async (req, res) => {
                 user.lastStripeOnboardingUrl = accountLink.url;
                 await user.save({ session });
             } else {
+
                 // L'utilisateur a un compte mais pas complètement configuré
                 accountLink = await stripe.accountLinks.create({
                     account: user.stripeAccountId,
                     refresh_url: refreshUrl,
                     return_url: returnUrl,
                     type: 'account_onboarding',
+                    collect: 'eventually_due', // Cette option demande toutes les informations requises, y compris KYC
                 });
 
                 user.lastStripeOnboardingUrl = accountLink.url;
@@ -236,6 +239,7 @@ exports.refreshStripeOnboarding = async (req, res) => {
             refresh_url: refreshUrl,
             return_url: returnUrl,
             type: 'account_onboarding',
+            collect: 'eventually_due', // S'assure que toutes les vérifications, y compris KYC, sont demandées
         });
 
         // Mettre à jour l'URL d'onboarding
@@ -1185,157 +1189,3 @@ exports.deleteSecret = async (req, res) => {
     }
 };
 
-exports.verifyIdentity = async (req, res) => {
-    try {
-        const { stripeAccountId, skipImageUpload } = req.body;
-
-        // Vérifier que l'utilisateur a un compte Stripe existant
-        const user = await User.findById(req.user.id);
-        const userStripeAccountId = stripeAccountId || user.stripeAccountId;
-
-        if (!userStripeAccountId) {
-            return res.status(400).json({
-                success: false,
-                message: 'Aucun compte Stripe associé à cet utilisateur'
-            });
-        }
-
-        // Récupérer le compte pour valider qu'il existe
-        try {
-            await stripe.accounts.retrieve(userStripeAccountId);
-        } catch (stripeError) {
-            return res.status(400).json({
-                success: false,
-                message: 'Compte Stripe invalide ou inaccessible',
-                error: stripeError.message
-            });
-        }
-
-        // Créer une session de vérification Stripe Identity avec options optimisées
-        // Dans votre fonction verifyIdentity
-        const verificationSession = await stripe.identity.verificationSessions.create({
-            type: 'document',
-            metadata: {
-                userId: req.user.id
-            },
-            options: {
-                document: {
-                    allowed_types: ['passport', 'id_card', 'driving_license'],
-                    require_matching_selfie: true,
-                    require_live_capture: true
-                }
-            }
-        });
-        
-        // Récupérer directement l'URL officielle - C'EST LA CLEF!
-        const verificationUrl = verificationSession.url;
-        
-        // Sauvegarder l'ID de session dans le profil utilisateur
-        user.stripeVerificationSessionId = verificationSession.id;
-        user.stripeVerificationStatus = 'requires_input';
-        await user.save();
-
-        return res.status(200).json({
-            success: true,
-            message: 'Session de vérification créée',
-            clientSecret: verificationSession.client_secret,
-            sessionId: verificationSession.id,
-            verificationUrl: verificationUrl // URL officielle fournie par Stripe
-        });
-    } catch (error) {
-        console.error('Erreur détaillée de vérification d\'identité:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Erreur lors du processus de vérification',
-            error: error.message
-        });
-    }
-};
-
-// Fonction améliorée pour vérifier le statut d'une session de vérification
-exports.checkIdentityVerificationStatus = async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id);
-
-        // Si l'utilisateur n'a pas de session de vérification, retourner simplement un statut "non vérifié"
-        if (!user.stripeVerificationSessionId) {
-            return res.status(200).json({
-                success: true,
-                status: 'unverified',
-                verified: false,
-                message: 'Aucune session de vérification n\'a été initiée'
-            });
-        }
-
-        try {
-            // Récupérer le statut de la session de vérification
-            const verificationSession = await stripe.identity.verificationSessions.retrieve(
-                user.stripeVerificationSessionId
-            );
-
-            // Mettre à jour le statut dans la base de données
-            user.stripeVerificationStatus = verificationSession.status;
-            user.stripeIdentityVerified = verificationSession.status === 'verified';
-
-            if (verificationSession.status === 'verified') {
-                user.stripeIdentityVerificationDate = new Date();
-
-                // Si l'utilisateur n'est pas déjà vérifié pour les paiements,
-                // vous pourriez mettre à jour son statut de capacité Stripe ici
-                if (user.stripeAccountId && !user.stripePaymentsVerified) {
-                    try {
-                        // Mettre à jour les capacités du compte pour activer les paiements
-                        await stripe.accounts.update(user.stripeAccountId, {
-                            capabilities: {
-                                card_payments: { requested: true },
-                                transfers: { requested: true }
-                            }
-                        });
-
-                        user.stripePaymentsVerified = true;
-                    } catch (stripeError) {
-                        console.error('Erreur lors de la mise à jour des capacités Stripe:', stripeError);
-                        // Ne pas bloquer le processus si cette mise à jour échoue
-                    }
-                }
-            }
-
-            await user.save();
-
-            return res.status(200).json({
-                success: true,
-                status: verificationSession.status,
-                verified: verificationSession.status === 'verified',
-                lastUpdated: user.stripeIdentityVerificationDate,
-                details: {
-                    verified_outputs: verificationSession.verified_outputs || null,
-                    requirements: verificationSession.requirements || null
-                }
-            });
-        } catch (stripeError) {
-            // Si la session n'existe plus ou est invalide chez Stripe
-            console.error('Erreur Stripe lors de la vérification du statut:', stripeError);
-
-            // Pour éviter les erreurs futures, réinitialiser les données de vérification
-            user.stripeVerificationSessionId = null;
-            user.stripeVerificationStatus = 'unverified';
-            user.stripeIdentityVerified = false;
-            await user.save();
-
-            return res.status(200).json({
-                success: true,
-                status: 'unverified',
-                verified: false,
-                message: 'Session de vérification invalide ou expirée'
-            });
-        }
-
-    } catch (error) {
-        console.error('Erreur détaillée de vérification du statut:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Impossible de vérifier le statut',
-            error: error.message
-        });
-    }
-};

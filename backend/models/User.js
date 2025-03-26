@@ -61,16 +61,16 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         required: false,
         default: false // Désactivé par défaut
-      },
+    },
     hasSubscriptions: {
         type: Number,
         required: false,
         default: 0,
     },
-    // Nouveaux champs pour Stripe
+    // Champs Stripe simplifiés
     stripeAccountId: {
         type: String,
-        sparse: true, // Permet d'avoir des valeurs null tout en gardant l'unicité
+        sparse: true,
     },
     stripeAccountStatus: {
         type: String,
@@ -86,53 +86,37 @@ const UserSchema = new mongoose.Schema({
         default: 0
     },
     stripeExternalAccount: {
-        type: String,  // Pour stocker l'IBAN masqué
+        type: String,
         select: true,
         sparse: true
     },
     lastStripeOnboardingUrl: {
-        type: String, // Pour stocker temporairement l'URL d'onboarding
-        select: false // Ne pas inclure par défaut dans les requêtes
+        type: String,
+        select: false
     },
+    // Champs liés à la vérification d'identité
+    // Ces champs peuvent être conservés pour la compatibilité, mais ne seront plus utilisés
+    // activement puisque la vérification est maintenant faite pendant l'onboarding Stripe Connect
     stripeIdentityVerified: {
         type: Boolean,
         default: false
     },
-    stripeIdentityDocumentId: {
-        type: String,
-        default: null
+    stripePayoutsEnabled: {
+        type: Boolean,
+        default: false
     },
-    stripeVerificationSessionId: {
-        type: String,
-        default: null
+    stripeChargesEnabled: {
+        type: Boolean,
+        default: false
     },
-    stripeVerificationStatus: {
-        type: String,
-        enum: [
-            'not_started', 
-            'requires_input', 
-            'processing', 
-            'requires_additional_verification',
-            'verified', 
-            'canceled'
-        ],
-        default: 'not_started'
-    },
-    stripeIdentityDocumentId: {
-        type: String,
-        default: null
-    },
-    stripeIdentityVerificationDate: {
+    // Date de la dernière mise à jour du statut Stripe
+    stripeLastUpdated: {
         type: Date,
-        default: null
-    },
-    stripeVerificationDetails: {
-        type: mongoose.Schema.Types.Mixed,
-        default: null
+        default: Date.now
     }
 }, { timestamps: true });
 
-// Middleware existant pour le mot de passe
+// Middleware pour le hachage du mot de passe
 UserSchema.pre('save', async function(next) {
     if (!this.isModified('password')) {
         return next();
@@ -143,22 +127,30 @@ UserSchema.pre('save', async function(next) {
     next();
 });
 
-// Méthode existante pour comparer les mots de passe
+// Méthode pour comparer les mots de passe
 UserSchema.methods.matchPassword = async function(enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Nouvelle méthode pour vérifier si l'utilisateur peut recevoir des paiements
+// Méthode pour vérifier si l'utilisateur peut recevoir des paiements
 UserSchema.methods.canReceivePayments = function() {
-    return this.stripeAccountId && this.stripeAccountStatus === 'active' && this.stripeOnboardingComplete;
+    return this.stripeAccountId && 
+           this.stripeAccountStatus === 'active' && 
+           this.stripeOnboardingComplete &&
+           this.stripeChargesEnabled;
 };
 
-// Méthode pour mettre à jour le statut Stripe
-UserSchema.methods.updateStripeStatus = async function(status) {
-    this.stripeAccountStatus = status;
-    if (status === 'active') {
-        this.stripeOnboardingComplete = true;
-    }
+// Méthode pour mettre à jour le statut Stripe avec les capacités
+UserSchema.methods.updateStripeStatus = async function(stripeAccount) {
+    if (!stripeAccount) return this;
+    
+    this.stripeAccountStatus = stripeAccount.details_submitted ? 'active' : 'pending';
+    this.stripeOnboardingComplete = stripeAccount.details_submitted;
+    this.stripePayoutsEnabled = stripeAccount.payouts_enabled;
+    this.stripeChargesEnabled = stripeAccount.charges_enabled;
+    this.stripeIdentityVerified = stripeAccount.payouts_enabled; // Si les paiements sont activés, l'identité a été vérifiée
+    this.stripeLastUpdated = new Date();
+    
     return this.save();
 };
 

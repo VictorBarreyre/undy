@@ -19,8 +19,7 @@ const {
     uploadImage, 
     getNearbySecrets,
     deleteSecret,
-    verifyIdentity,
-    checkIdentityVerificationStatus
+
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -47,11 +46,6 @@ router.get('/stripe-refresh', protect, (req, res) => {
         status: 'success'
     });
 });
-router.post('/verify-identity', protect, verifyIdentity);
-router.get('/check-identity-verification-status', protect, checkIdentityVerificationStatus);
-
-
-
 
 // Routes des secrets
 router.get('/unpurchased', protect, getUnpurchasedSecrets);

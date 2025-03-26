@@ -34,64 +34,6 @@ const StripeVerificationModal = ({
         status: userData?.stripeVerificationStatus || 'unverified'
     });
 
-    useEffect(() => {
-        console.log('Données de vérification Stripe:', {
-            stripeIdentityVerified: userData?.stripeIdentityVerified,
-            stripeVerificationStatus: userData?.stripeVerificationStatus,
-            stripeVerificationSessionId: userData?.stripeVerificationSessionId,
-            stripeIdentityDocumentId: userData?.stripeIdentityDocumentId,
-            stripeIdentityVerificationDate: userData?.stripeIdentityVerificationDate
-        });
-    }, [userData]);
-
-    useEffect(() => {
-        console.log("Stripe SDK details:", {
-          object: stripe,
-          methods: stripe ? Object.keys(stripe).sort() : "N/A",
-          version: stripe?.version || "Unknown"
-        });
-      }, [stripe]);
-
-
-useEffect(() => {
-    // Vérifier que le SDK Stripe est correctement initialisé
-    if (stripe) {
-        console.log("SDK Stripe disponible:", !!stripe);
-        console.log("Méthodes disponibles:", {
-            presentVerificationSheet: !!stripe.presentVerificationSheet,
-            createToken: !!stripe.createToken
-        });
-    } else {
-        console.error("SDK Stripe non initialisé");
-    }
-    
-    // Vérifier les permissions pour react-native-image-picker
-    (async () => {
-        try {
-            // Pour Android, vérifier les permissions via Platform et PermissionsAndroid
-            if (Platform.OS === 'android') {
-                const cameraPermission = await PermissionsAndroid.check(
-                    PermissionsAndroid.PERMISSIONS.CAMERA
-                );
-                const storagePermission = await PermissionsAndroid.check(
-                    PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
-                );
-                console.log("Permissions Android:", {
-                    camera: cameraPermission,
-                    storage: storagePermission
-                });
-            }
-            // Pour iOS, les permissions sont demandées au moment de l'utilisation
-            // On peut simplement le mentionner dans les logs
-            else if (Platform.OS === 'ios') {
-                console.log("Permissions iOS: seront demandées lors de l'utilisation");
-            }
-        } catch (e) {
-            console.error("Erreur vérification permissions:", e);
-        }
-    })();
-}, []);
-
     // Vérifier le statut de vérification au chargement
     useEffect(() => {
         const checkStatus = async () => {
@@ -126,88 +68,96 @@ useEffect(() => {
 
 
     // Fonction complètement réécrite pour initier la vérification Stripe
-  const initiateStripeVerification = async () => {
-    try {
-        setIsUploading(true);
-        console.log("Démarrage de la vérification Stripe");
-
-        // Créer une nouvelle session de vérification
-        const sessionResponse = await handleIdentityVerification(userData, {
-            skipImageUpload: true
-        });
-
-        console.log("Réponse de création de session:", JSON.stringify(sessionResponse, null, 2));
-
-        if (!sessionResponse.success) {
-            throw new Error(sessionResponse.message || "Échec de création de la session de vérification");
-        }
-
-        // Mémoriser la session ID pour les vérifications ultérieures
-        const sessionId = sessionResponse.sessionId;
-
-        // Créer l'URL de vérification web Stripe
-        const verificationUrl = `https://verify.stripe.com/start/${sessionId}`;
-        
-        // Proposer à l'utilisateur d'ouvrir la page web pour la vérification
-        Alert.alert(
-            'Vérification d\'identité',
-            'Voulez-vous procéder à la vérification de votre identité via notre navigateur sécurisé?',
-            [
-                { 
-                    text: 'Annuler',
-                    style: 'cancel',
-                    onPress: () => setIsUploading(false)
-                },
-                { 
-                    text: 'Continuer',
-                    onPress: async () => {
-                        // Ouvrir l'URL dans le navigateur
-                        const supported = await Linking.canOpenURL(verificationUrl);
-                        
-                        if (supported) {
-                            await Linking.openURL(verificationUrl);
-                            
-                            // Mettre à jour l'état pour indiquer que la vérification est en cours
-                            setVerificationStatus({
-                                verified: false,
-                                status: 'processing'
-                            });
-                            
-                            // Démarrer la vérification du statut
-                            if (sessionId) {
-                                checkVerificationStatus(sessionId);
+    const initiateStripeVerification = async () => {
+        try {
+            setIsUploading(true);
+            console.log("Démarrage de la vérification Stripe");
+    
+            // Créer une nouvelle session de vérification
+            const sessionResponse = await handleIdentityVerification(userData, {
+                skipImageUpload: true
+            });
+    
+            console.log("Réponse de création de session:", JSON.stringify(sessionResponse, null, 2));
+    
+            if (!sessionResponse.success) {
+                throw new Error(sessionResponse.message || "Échec de création de la session de vérification");
+            }
+    
+            // Récupérer l'URL de vérification et le sessionId
+            const verificationUrl = sessionResponse.verificationUrl;
+            const sessionId = sessionResponse.sessionId;
+    
+            if (!verificationUrl) {
+                throw new Error("Aucune URL de vérification n'a été fournie par le serveur");
+            }
+    
+            // Proposer à l'utilisateur d'ouvrir la page web pour la vérification
+            Alert.alert(
+                'Vérification d\'identité',
+                'Voulez-vous procéder à la vérification de votre identité via notre navigateur sécurisé?',
+                [
+                    { 
+                        text: 'Annuler',
+                        style: 'cancel',
+                        onPress: () => setIsUploading(false)
+                    },
+                    { 
+                        text: 'Continuer',
+                        onPress: async () => {
+                            try {
+                                // Vérifier si l'URL peut être ouverte
+                                const supported = await Linking.canOpenURL(verificationUrl);
+                                
+                                if (supported) {
+                                    // Ouvrir l'URL officielle de vérification Stripe
+                                    await Linking.openURL(verificationUrl);
+                                    
+                                    // Mettre à jour l'état pour indiquer que la vérification est en cours
+                                    setVerificationStatus({
+                                        verified: false,
+                                        status: 'processing'
+                                    });
+                                    
+                                    // Démarrer la vérification périodique du statut
+                                    if (sessionId) {
+                                        checkVerificationStatus(sessionId);
+                                    }
+                                    
+                                    Alert.alert(
+                                        'Vérification en cours',
+                                        'Une fois la vérification terminée dans votre navigateur, revenez à l\'application. Nous vérifierons automatiquement le statut.',
+                                        [{ text: 'OK' }]
+                                    );
+                                } else {
+                                    throw new Error("Impossible d'ouvrir le navigateur pour la vérification");
+                                }
+                            } catch (error) {
+                                console.error("Erreur lors de l'ouverture du lien:", error);
+                                Alert.alert(
+                                    'Erreur',
+                                    "Impossible d'ouvrir le navigateur pour la vérification. Veuillez réessayer.",
+                                    [{ text: 'OK' }]
+                                );
                             }
-                            
-                            Alert.alert(
-                                'Vérification en cours',
-                                'Une fois la vérification terminée dans votre navigateur, revenez à l\'application. Nous vérifierons automatiquement le statut.',
-                                [{ text: 'OK' }]
-                            );
-                        } else {
-                            Alert.alert(
-                                'Erreur',
-                                'Impossible d\'ouvrir le navigateur pour la vérification.',
-                                [{ text: 'OK' }]
-                            );
                         }
                     }
-                }
-            ]
-        );
-        
-        return true;
-    } catch (error) {
-        console.error("Erreur complète de vérification:", error);
-        Alert.alert(
-            'Erreur',
-            `La vérification a échoué: ${error.message}`,
-            [{ text: 'OK' }]
-        );
-        return false;
-    } finally {
-        setIsUploading(false);
-    }
-};
+                ]
+            );
+            
+            return true;
+        } catch (error) {
+            console.error("Erreur complète de vérification:", error);
+            Alert.alert(
+                'Erreur',
+                `La vérification a échoué: ${error.message}`,
+                [{ text: 'OK' }]
+            );
+            return false;
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     const startStripeIdentityVerification = async () => {
         try {
@@ -374,67 +324,8 @@ useEffect(() => {
     };
 
 
-    // Fonction pour obtenir une image depuis la galerie (document)
-    const pickFromGallery = (forSelfie = false) => {
-        launchImageLibrary({
-            mediaType: 'photo',
-            quality: 0.8,
-            selectionLimit: 1,
-            includeBase64: true,
-            maxWidth: 1200,
-            maxHeight: 1200,
-        }, (response) => {
-            if (response.didCancel) {
-                console.log(t('stripeVerification.logs.userCancelled'));
-            } else if (response.errorCode) {
-                Alert.alert(
-                    t('stripeVerification.errors.title'),
-                    response.errorMessage || t('stripeVerification.errors.generic')
-                );
-            } else if (response.assets && response.assets.length > 0) {
-                if (forSelfie) {
-                    setSelfieImage(response.assets[0]);
-                    setShowSelfieOptions(false);
-                    setVerificationStep('review');
-                } else {
-                    setIdentityDocument(response.assets[0]);
-                    setShowDocumentOptions(false);
-                    setVerificationStep('selfie');
-                }
-            }
-        });
-    };
-
-    // Fonction pour prendre une photo avec l'appareil photo
-    const takePhoto = (forSelfie = false) => {
-        launchCamera({
-            mediaType: 'photo',
-            quality: 0.8,
-            includeBase64: true,
-            maxWidth: 1200,
-            maxHeight: 1200,
-            saveToPhotos: false,
-        }, (response) => {
-            if (response.didCancel) {
-                console.log(t('stripeVerification.logs.userCancelled'));
-            } else if (response.errorCode) {
-                Alert.alert(
-                    t('stripeVerification.errors.title'),
-                    response.errorMessage || t('stripeVerification.errors.generic')
-                );
-            } else if (response.assets && response.assets.length > 0) {
-                if (forSelfie) {
-                    setSelfieImage(response.assets[0]);
-                    setShowSelfieOptions(false);
-                    setVerificationStep('review');
-                } else {
-                    setIdentityDocument(response.assets[0]);
-                    setShowDocumentOptions(false);
-                    setVerificationStep('selfie');
-                }
-            }
-        });
-    };
+ 
+  
 
     const resetVerification = () => {
         setIdentityDocument(null);
@@ -476,289 +367,104 @@ useEffect(() => {
         }
     };
 
-    // Affichage en fonction du statut Stripe et de la vérification
-    const renderContent = () => {
-        // Pas de compte Stripe ou compte en attente
-        if (!userData?.stripeAccountStatus || userData?.stripeAccountStatus === 'pending') {
-            return (
-                <>
-                    <Text style={styles.h4} textAlign="center">
-                        {t('stripeVerification.bankAccountSetup.title')}
-                    </Text>
+// Updated renderContent function
+const renderContent = () => {
+    console.log("État du compte Stripe:", {
+        stripeAccountId: userData?.stripeAccountId,
+        stripeAccountStatus: userData?.stripeAccountStatus,
+        stripeOnboardingComplete: userData?.stripeOnboardingComplete,
+        stripeExternalAccount: userData?.stripeExternalAccount,
+        stripeIdentityVerified: userData?.stripeIdentityVerified
+    });
 
-                    <Text
-                        style={styles.caption}
-                        color="#94A3B8"
-                        textAlign="center"
-                        mb={2}
-                    >
-                        {t('stripeVerification.bankAccountSetup.description')}
-                    </Text>
+    // If the Stripe account is not configured
+    if (!userData?.stripeAccountId || userData?.stripeAccountStatus !== 'active') {
+        return (
+            <>
+                <Text style={styles.h4} textAlign="center">
+                    {t('stripeVerification.bankAccountSetup.title')}
+                </Text>
 
+                <Text
+                    style={styles.caption}
+                    color="#94A3B8"
+                    textAlign="center"
+                    mb={2}
+                >
+                    {t('stripeVerification.bankAccountSetup.description')}
+                </Text>
+
+                <Button
+                    onPress={async () => {
+                        // Redirect to Stripe onboarding process
+                        const stripeStatus = await handleStripeOnboardingRefresh();
+                        if (stripeStatus.url) {
+                            Linking.openURL(stripeStatus.url);
+                        } else {
+                            Alert.alert('Erreur', 'Impossible d\'accéder à l\'onboarding Stripe');
+                        }
+                    }}
+                    backgroundColor="black"
+                    borderRadius="full"
+                >
+                    <Text color="white" style={styles.cta}>
+                        {t('stripeVerification.bankAccountSetup.configure')}
+                    </Text>
+                </Button>
+            </>
+        );
+    }
+
+    // If the account is configured but identity is not verified
+    if (!userData?.stripeIdentityVerified) {
+        return (
+            <>
+                <Text style={styles.h4} textAlign="center">
+                    {t('stripeVerification.identityVerification.title')}
+                </Text>
+
+                <Text
+                    style={styles.caption}
+                    color="#94A3B8"
+                    textAlign="center"
+                    mb={2}
+                >
+                    {t('stripeVerification.identityVerification.description')}
+                </Text>
+
+                <VStack space={2}>
                     <Button
                         onPress={() => {
-                            onClose();
-                            navigation.navigate('AddSecret');
+                            // Option 1: Web-based verification
+                            initiateStripeVerification();
                         }}
                         backgroundColor="black"
                         borderRadius="full"
                     >
                         <Text color="white" style={styles.cta}>
-                            {t('stripeVerification.bankAccountSetup.publishSecret')}
+                            {t('stripeVerification.identityVerification.verifyOnline')}
                         </Text>
                     </Button>
-                </>
-            );
-        }
 
-        // Compte vérifié et identité vérifiée
-        if (verificationStatus.verified) {
-            return (
-                <>
-                    <Text style={styles.h4} textAlign="center">
-                        {t('stripeVerification.accountConfigured.title')}
-                    </Text>
-
-                    <Text
-                        style={styles.caption}
-                        color="#94A3B8"
-                        textAlign="center"
-                        mb={2}
+                    <Button
+                        onPress={() => {
+                            // Option 2: Document and selfie upload
+                            setVerificationStep('document');
+                        }}
+                        backgroundColor="gray.500"
+                        borderRadius="full"
                     >
-                        {t('stripeVerification.accountConfigured.description')}
-                    </Text>
-
-                    {/* Affichage des informations bancaires si disponibles */}
-                    {userData.stripeExternalAccount && (
-                        <Box
-                            borderWidth={1}
-                            borderColor="gray.200"
-                            p={4}
-                            borderRadius="md"
-                            mb={4}
-                        >
-                            <Text style={styles.caption} color="gray.700">
-                                Compte bancaire : {userData.stripeExternalAccount}
-                            </Text>
-                        </Box>
-                    )}
-
-                    <VStack space={2}>
-                        <Button
-                            onPress={resetStripeAccount}
-                            backgroundColor="orange.500"
-                            borderRadius="full"
-                        >
-                            <Text color="white" style={styles.cta}>
-                                {t('stripeVerification.accountConfigured.resetAccount')}
-                            </Text>
-                        </Button>
-
-                        <Button
-                            onPress={() => {
-                                onClose();
-                            }}
-                            backgroundColor="black"
-                            borderRadius="full"
-                        >
-                            <Text color="white" style={styles.cta}>
-                                {t('stripeVerification.accountConfigured.manageAccount')}
-                            </Text>
-                        </Button>
-                    </VStack>
-                </>
-            );
-        }
-
-        // Compte actif mais identité pas encore vérifiée
-        if (userData?.stripeAccountStatus === 'active' &&
-            (!verificationStatus.verified && verificationStatus.status !== 'verified')) {
-
-            // Étape document d'identité
-            if (verificationStep === 'document') {
-                return (
-                    <>
-                        <Text style={styles.h4} textAlign="center">
-                            {t('stripeVerification.identityVerification.documentTitle')}
+                        <Text color="white" style={styles.cta}>
+                            {t('stripeVerification.identityVerification.uploadDocuments')}
                         </Text>
+                    </Button>
+                </VStack>
+            </>
+        );
+    }
 
-                        <Text
-                            style={styles.caption}
-                            color="#94A3B8"
-                            textAlign="center"
-                            mb={2}
-                        >
-                            {t('stripeVerification.identityVerification.documentDescription')}
-                        </Text>
-
-                        <Button
-                            onPress={initiateStripeVerification}
-                            backgroundColor="black"
-                            borderRadius="full"
-                        >
-                            <Text color="white" style={styles.cta}>
-                                {t('stripeVerification.identityVerification.selectDocument')}
-                            </Text>
-                        </Button>
-                    </>
-                );
-            }
-
-            // Étape selfie
-            if (verificationStep === 'selfie') {
-                return (
-                    <>
-                        <Text style={styles.h4} textAlign="center">
-                            {t('stripeVerification.identityVerification.selfieTitle')}
-                        </Text>
-
-                        <Text
-                            style={styles.caption}
-                            color="#94A3B8"
-                            textAlign="center"
-                            mb={2}
-                        >
-                            {t('stripeVerification.identityVerification.selfieDescription')}
-                        </Text>
-
-                        {identityDocument && (
-                            <Box mb={4}>
-                                <Text style={styles.caption} textAlign="center">
-                                    {t('stripeVerification.identityVerification.documentSelected', {
-                                        name: identityDocument.fileName || 'Document d\'identité'
-                                    })}
-                                </Text>
-                            </Box>
-                        )}
-
-                        <Button
-                            onPress={() => setShowSelfieOptions(true)}
-                            backgroundColor="black"
-                            borderRadius="full"
-                        >
-                            <Text color="white" style={styles.cta}>
-                                {t('stripeVerification.identityVerification.takeSelfie')}
-                            </Text>
-                        </Button>
-
-                        <Button
-                            onPress={resetVerification}
-                            backgroundColor="gray.200"
-                            borderRadius="full"
-                            mt={2}
-                        >
-                            <Text color="black" style={styles.cta}>
-                                {t('stripeVerification.identityVerification.changeDocument')}
-                            </Text>
-                        </Button>
-                    </>
-                );
-            }
-
-            // Étape révision et soumission
-            if (verificationStep === 'review') {
-                return (
-                    <>
-                        <Text style={styles.h4} textAlign="center">
-                            {t('stripeVerification.identityVerification.reviewTitle')}
-                        </Text>
-
-                        <Text
-                            style={styles.caption}
-                            color="#94A3B8"
-                            textAlign="center"
-                            mb={2}
-                        >
-                            {t('stripeVerification.identityVerification.reviewDescription')}
-                        </Text>
-
-                        <Box mb={4}>
-                            {identityDocument && (
-                                <Text style={styles.caption} textAlign="center" mb={1}>
-                                    ✓ {t('stripeVerification.identityVerification.documentSelected', {
-                                        name: identityDocument.fileName || 'Document d\'identité'
-                                    })}
-                                </Text>
-                            )}
-
-                            {selfieImage && (
-                                <Text style={styles.caption} textAlign="center">
-                                    ✓ {t('stripeVerification.identityVerification.selfieSelected')}
-                                </Text>
-                            )}
-                        </Box>
-
-                        {isUploading && (
-                            <Progress
-                                value={uploadProgress}
-                                mx={4}
-                                my={2}
-                                colorScheme="emerald"
-                            />
-                        )}
-
-                        <Button
-                            onPress={startStripeIdentityVerification}
-                            backgroundColor="black"
-                            borderRadius="full"
-                            isDisabled={isUploading}
-                        >
-                            <Text color="white" style={styles.cta}>
-                                {isUploading
-                                    ? t('stripeVerification.identityVerification.submitting')
-                                    : t('stripeVerification.identityVerification.submit')
-                                }
-                            </Text>
-                        </Button>
-
-                        <Button
-                            onPress={resetVerification}
-                            backgroundColor="gray.200"
-                            borderRadius="full"
-                            mt={2}
-                            isDisabled={isUploading}
-                        >
-                            <Text color="black" style={styles.cta}>
-                                {t('stripeVerification.identityVerification.restart')}
-                            </Text>
-                        </Button>
-                    </>
-                );
-            }
-
-            // Vérification en cours
-            if (verificationStatus.status === 'processing') {
-                return (
-                    <>
-                        <Text style={styles.h4} textAlign="center">
-                            {t('stripeVerification.identityVerification.processingTitle')}
-                        </Text>
-
-                        <Text
-                            style={styles.caption}
-                            color="#94A3B8"
-                            textAlign="center"
-                            mb={2}
-                        >
-                            {t('stripeVerification.identityVerification.processingDescription')}
-                        </Text>
-
-                        <Button
-                            onPress={checkStatus}
-                            backgroundColor="black"
-                            borderRadius="full"
-                            isDisabled={isUploading}
-                        >
-                            <Text color="white" style={styles.cta}>
-                                {t('stripeVerification.identityVerification.checkStatus')}
-                            </Text>
-                        </Button>
-                    </>
-                );
-            }
-        }
-
-        // Fallback
+    // If the account is configured but identity is not verified
+    if (!userData?.stripeIdentityVerified) {
         return (
             <>
                 <Text style={styles.h4} textAlign="center">
@@ -771,14 +477,78 @@ useEffect(() => {
                     textAlign="center"
                     mb={2}
                 >
-                    {t('stripeVerification.accountConfigured.description')}
+                    {t('stripeVerification.accountConfigured.descriptionIdentityPending')}
                 </Text>
 
+                {/* Display bank account information if available */}
+                {userData.stripeExternalAccount && (
+                    <Box
+                        borderWidth={1}
+                        borderColor="gray.200"
+                        p={4}
+                        borderRadius="md"
+                        mb={4}
+                    >
+                        <Text style={styles.caption} color="gray.700">
+                            Compte bancaire : {userData.stripeExternalAccount}
+                        </Text>
+                    </Box>
+                )}
+
+                <VStack space={2}>
+                    <Button
+                        onPress={() => {
+                            // Option 1: Web-based verification
+                            initiateStripeVerification();
+                        }}
+                        backgroundColor="black"
+                        borderRadius="full"
+                    >
+                        <Text color="white" style={styles.cta}>
+                            {t('stripeVerification.accountConfigured.verifyIdentity')}
+                        </Text>
+                    </Button>
+                </VStack>
+            </>
+        );
+    }
+
+    // If the account is fully configured and verified
+    return (
+        <>
+            <Text style={styles.h4} textAlign="center">
+                {t('stripeVerification.accountConfigured.title')}
+            </Text>
+
+            <Text
+                style={styles.caption}
+                color="#94A3B8"
+                textAlign="center"
+                mb={2}
+            >
+                {t('stripeVerification.accountConfigured.description')}
+            </Text>
+
+            {/* Display bank account information if available */}
+            {userData.stripeExternalAccount && (
+                <Box
+                    borderWidth={1}
+                    borderColor="gray.200"
+                    p={4}
+                    borderRadius="md"
+                    mb={4}
+                >
+                    <Text style={styles.caption} color="gray.700">
+                        Compte bancaire : {userData.stripeExternalAccount}
+                    </Text>
+                </Box>
+            )}
+
+            <VStack space={2}>
                 <Button
                     onPress={resetStripeAccount}
                     backgroundColor="orange.500"
                     borderRadius="full"
-                    mb={2}
                 >
                     <Text color="white" style={styles.cta}>
                         {t('stripeVerification.accountConfigured.resetAccount')}
@@ -786,7 +556,9 @@ useEffect(() => {
                 </Button>
 
                 <Button
-                    onPress={onClose}
+                    onPress={() => {
+                        onClose();
+                    }}
                     backgroundColor="black"
                     borderRadius="full"
                 >
@@ -794,9 +566,10 @@ useEffect(() => {
                         {t('stripeVerification.accountConfigured.manageAccount')}
                     </Text>
                 </Button>
-            </>
-        );
-    };
+            </VStack>
+        </>
+    );
+};
 
     return (
         <>
@@ -812,56 +585,6 @@ useEffect(() => {
                     <VStack width="97%" space={4} px={4}>
                         {renderContent()}
                     </VStack>
-                </Actionsheet.Content>
-            </Actionsheet>
-
-            {/* Actionsheet pour choisir la source du document d'identité */}
-            <Actionsheet isOpen={showDocumentOptions} onClose={() => setShowDocumentOptions(false)}>
-                <Actionsheet.Content>
-                    <Actionsheet.Item
-                        alignContent='center'
-                        justifyContent='center'
-                        onPress={() => takePhoto(false)}
-                        startIcon={<FontAwesomeIcon icon={faCamera} size={20} color="#000" />}
-                    >
-                        {t('stripeVerification.documentOptions.takePhoto')}
-                    </Actionsheet.Item>
-                    <Actionsheet.Item
-                        alignContent='center'
-                        justifyContent='center'
-                        onPress={() => pickFromGallery(false)}
-                        startIcon={<FontAwesomeIcon icon={faImage} size={20} color="#000" />}
-                    >
-                        {t('stripeVerification.documentOptions.chooseFromGallery')}
-                    </Actionsheet.Item>
-                    <Actionsheet.Item onPress={() => setShowDocumentOptions(false)}>
-                        {t('stripeVerification.documentOptions.cancel')}
-                    </Actionsheet.Item>
-                </Actionsheet.Content>
-            </Actionsheet>
-
-            {/* Actionsheet pour choisir la source de la selfie */}
-            <Actionsheet isOpen={showSelfieOptions} onClose={() => setShowSelfieOptions(false)}>
-                <Actionsheet.Content>
-                    <Actionsheet.Item
-                        alignContent='center'
-                        justifyContent='center'
-                        onPress={() => takePhoto(true)}
-                        startIcon={<FontAwesomeIcon icon={faCamera} size={20} color="#000" />}
-                    >
-                        {t('stripeVerification.selfieOptions.takePhoto')}
-                    </Actionsheet.Item>
-                    <Actionsheet.Item
-                        alignContent='center'
-                        justifyContent='center'
-                        onPress={() => pickFromGallery(true)}
-                        startIcon={<FontAwesomeIcon icon={faImage} size={20} color="#000" />}
-                    >
-                        {t('stripeVerification.selfieOptions.chooseFromGallery')}
-                    </Actionsheet.Item>
-                    <Actionsheet.Item onPress={() => setShowSelfieOptions(false)}>
-                        {t('stripeVerification.selfieOptions.cancel')}
-                    </Actionsheet.Item>
                 </Actionsheet.Content>
             </Actionsheet>
         </>

@@ -578,6 +578,14 @@ export default {
   },
 
 "stripeVerification": {
+  "accountConfigured": {
+    "title": "Account Configured",
+    "description": "Your account is configured to receive payments.",
+    "descriptionIdentityPending": "Your account is almost ready. To transfer money to your bank account, please verify your identity.",
+    "resetAccount": "Reset account",
+    "manageAccount": "Manage account",
+    "verifyIdentity": "Verify my identity"
+  },
   "logs": {
     "userCancelled": "User cancelled image selection"
   },
@@ -616,7 +624,9 @@ export default {
     "submit": "Submit",
     "submitting": "Submitting...",
     "uploading": "Uploading...",
-    "checkStatus": "Check status"
+    "checkStatus": "Check status",
+    "verifyOnline": "Verify online", 
+    "uploadDocuments": "Upload documents" 
   },
   "documentOptions": {
     "takePhoto": "Take a photo",

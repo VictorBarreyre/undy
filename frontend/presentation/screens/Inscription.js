@@ -148,7 +148,7 @@ const Inscription = ({ navigation }) => {
       
             // Seulement MAINTENANT, on active l'écran de chargement
             // après avoir obtenu l'autorisation Apple et avant l'appel au backend
-            setIsAuthenticationInProgress(true);
+            setIsRegistrationInProgress(true);
       
             const instance = getAxiosInstance();
             if (!instance) {
@@ -172,7 +172,7 @@ const Inscription = ({ navigation }) => {
             } catch (serverError) {
               console.error('Backend error during Apple authentication:', serverError);
               // Désactiver l'écran de chargement en cas d'erreur
-              setIsAuthenticationInProgress(false);
+              setIsRegistrationInProgress(false);
               throw new Error(`Server error: ${serverError.message}`);
             }
       
@@ -189,7 +189,7 @@ const Inscription = ({ navigation }) => {
           });
       
           // Désactiver l'écran de chargement en cas d'erreur
-          setIsAuthenticationInProgress(false);
+          setIsRegistrationInProgress(false);
       
           // Don't show error for user cancellation
           if (error.code === appleAuth.Error.CANCELED) {
@@ -213,7 +213,7 @@ const Inscription = ({ navigation }) => {
             );
           }
         }
-      }, [login, navigation, t, setIsAuthenticationInProgress]);
+      }, [login, navigation, t]);
 
 
      const handleGoogleLogin = useCallback(async () => {
@@ -260,7 +260,7 @@ const Inscription = ({ navigation }) => {
          const tokens = await GoogleSignin.getTokens();
          console.log('5. Tokens récupérés:', tokens ? 'OK' : 'null');
    
-         setIsAuthenticationInProgress(true);
+         setIsRegistrationInProgress(true);
    
          // Vérifier que nous avons un token
          if (!tokens || !tokens.accessToken) {
@@ -347,6 +347,45 @@ const Inscription = ({ navigation }) => {
          setIsGoogleSignInInProgress(false);
        }
      }, [isGoogleSignInInProgress, login, navigation]);
+
+     const validateInputs = () => {
+      // Vérifier que tous les champs sont remplis
+      if (!name.trim()) {
+          Alert.alert(
+              t('auth.register.errorTitle'),
+              t('auth.register.requiredFields')
+          );
+          return false;
+      }
+  
+      if (!email.trim()) {
+          Alert.alert(
+              t('auth.register.errorTitle'),
+              t('auth.register.requiredFields')
+          );
+          return false;
+      }
+  
+      // Validation email basique
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+          Alert.alert(
+              t('auth.register.errorTitle'),
+              t('auth.register.invalidEmail')
+          );
+          return false;
+      }
+  
+      if (password.length < 6) {
+          Alert.alert(
+              t('auth.register.errorTitle'),
+              t('auth.register.weakPassword')
+          );
+          return false;
+      }
+  
+      return true;
+  };
    
 
     const handleRegister = useCallback(async () => {
