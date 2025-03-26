@@ -59,7 +59,7 @@ exports.createSecret = async (req, res) => {
                     email: user.email,
                     capabilities: {
                         card_payments: { requested: true },
-                        transfers: { requested: true },
+                        transfers: { requested: true }
                     },
                     settings: {
                         payouts: {
@@ -72,6 +72,9 @@ exports.createSecret = async (req, res) => {
                     business_profile: {
                         mcc: '5734', // Code pour services digitaux
                         url: 'https://hushy.app'
+                    },
+                    tos_acceptance: {
+                        service_agreement: 'full'
                     }
                 });
 
@@ -80,23 +83,29 @@ exports.createSecret = async (req, res) => {
                     refresh_url: refreshUrl,
                     return_url: returnUrl,
                     type: 'account_onboarding',
-                    collect: 'eventually_due', // Cette option demande toutes les informations y compris KYC
+                    collect: 'eventually_due'
                 });
 
                 user.stripeAccountId = account.id;
                 user.stripeAccountStatus = 'pending';
                 user.stripeOnboardingComplete = false;
                 user.lastStripeOnboardingUrl = accountLink.url;
+                
                 await user.save({ session });
+                
+                console.log('Utilisateur mis à jour avec compte Stripe:', {
+                    userId: user._id,
+                    stripeAccountId: user.stripeAccountId,
+                    status: user.stripeAccountStatus
+                });
             } else {
-
                 // L'utilisateur a un compte mais pas complètement configuré
                 accountLink = await stripe.accountLinks.create({
                     account: user.stripeAccountId,
                     refresh_url: refreshUrl,
                     return_url: returnUrl,
                     type: 'account_onboarding',
-                    collect: 'eventually_due', // S'assurer que c'est bien 'eventually_due'
+                    collect: 'eventually_due'
                 });
 
                 user.lastStripeOnboardingUrl = accountLink.url;
@@ -104,6 +113,7 @@ exports.createSecret = async (req, res) => {
             }
 
             await session.commitTransaction();
+            session.endSession();
 
             // Retourner une réponse indiquant que Stripe doit être configuré d'abord
             return res.status(202).json({
@@ -161,6 +171,7 @@ exports.createSecret = async (req, res) => {
         await Secret.findByIdAndUpdate(secret[0]._id, { shareLink }, { session });
 
         await session.commitTransaction();
+        session.endSession();
 
         // Retourner une réponse de succès avec le secret créé
         return res.status(201).json({
@@ -174,6 +185,7 @@ exports.createSecret = async (req, res) => {
 
     } catch (error) {
         await session.abortTransaction();
+        session.endSession();
         console.error('Erreur détaillée lors de la création du secret:', {
             message: error.message,
             stack: error.stack,
@@ -183,8 +195,6 @@ exports.createSecret = async (req, res) => {
             message: 'Erreur serveur lors de la création du secret',
             details: error.message
         });
-    } finally {
-        session.endSession();
     }
 };
 
@@ -238,7 +248,7 @@ exports.refreshStripeOnboarding = async (req, res) => {
             refresh_url: refreshUrl,
             return_url: returnUrl,
             type: 'account_onboarding',
-            collect: 'eventually_due', // S'assurer que c'est bien 'eventually_due'
+            collect: 'eventually_due'
         });
 
         // Mettre à jour l'URL d'onboarding
