@@ -1187,7 +1187,7 @@ exports.deleteSecret = async (req, res) => {
 
   exports.verifyIdentity = async (req, res) => {
     try {
-        const { documentImage, selfieImage, documentType, documentSide, stripeAccountId, skipImageUpload } = req.body;
+        const { stripeAccountId, skipImageUpload } = req.body;
 
         // Vérifier que l'utilisateur a un compte Stripe existant
         const user = await User.findById(req.user.id);
@@ -1200,7 +1200,18 @@ exports.deleteSecret = async (req, res) => {
             });
         }
 
-        // Créer une session de vérification Stripe Identity
+        // Récupérer le compte pour valider qu'il existe
+        try {
+            await stripe.accounts.retrieve(userStripeAccountId);
+        } catch (stripeError) {
+            return res.status(400).json({
+                success: false,
+                message: 'Compte Stripe invalide ou inaccessible',
+                error: stripeError.message
+            });
+        }
+
+        // Créer une session de vérification Stripe Identity avec options optimisées
         const verificationSession = await stripe.identity.verificationSessions.create({
             type: 'document',
             metadata: {
@@ -1210,17 +1221,21 @@ exports.deleteSecret = async (req, res) => {
                 document: {
                     allowed_types: ['passport', 'id_card', 'driving_license'],
                     require_matching_selfie: true,
-                    require_live_capture: skipImageUpload
+                    require_live_capture: true
                 }
             }
         });
+
+        // Sauvegarder l'ID de session dans le profil utilisateur
+        user.stripeVerificationSessionId = verificationSession.id;
+        user.stripeVerificationStatus = 'requires_input';
+        await user.save();
 
         console.log("Session Stripe créée:", {
             id: verificationSession.id,
             client_secret: verificationSession.client_secret
         });
 
-        // Utiliser la méthode SDK mobile native plutôt que l'URL web
         return res.status(200).json({
             success: true,
             message: 'Session de vérification créée',
