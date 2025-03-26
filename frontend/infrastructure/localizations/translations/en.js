@@ -208,13 +208,21 @@ export default {
     "validation": {
       "tooShort": "Too short to post!",
       "priceRequirement": "Price must be higher than {{minPrice}}€",
-      "selectCategory": "Select a category"
+      "selectCategory": "Select a category",
+      "invalidCoordinates": "Invalid geographic coordinates"
+    },
+    "locationSharing": {
+      "title": "Share location with this hushy",
+      "enabled": "Your location will be included",
+      "disabled": "Your location will not be shared",
+      "accessibility": "Share location"
     },
     "alerts": {
       "noStripeAccount": {
         "title": "No Stripe Account",
         "message": "You don't have a Stripe account set up to receive payments yet.",
-        "create": "Create an account"
+        "create": "Create an account",
+        "stripePersistent": "Stripe configuration is still required"
       },
       "pendingData": {
         "title": "Pending Data",

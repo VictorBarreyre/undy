@@ -168,16 +168,24 @@ export default {
       "Infidélité",
       "Culpabilité"
     ],
+    "locationSharing": {
+      "title": "Partager ma position avec ce hushy",
+      "enabled": "Votre position sera incluse",
+      "disabled": "Votre position ne sera pas partagée",
+      "accessibility": "Partager la localisation"
+    },
     "validation": {
       "tooShort": "Trop court pour poster !",
       "priceRequirement": "Le prix doit être supérieur à {{minPrice}}€",
-      "selectCategory": "Sélectionnez une catégorie"
+      "selectCategory": "Sélectionnez une catégorie",
+      "invalidCoordinates": "Coordonnées géographiques invalides"
     },
     "alerts": {
       "setupRequired": {
         "title": "Configuration nécessaire",
         "message": "Votre hushy a été créé. Pour pouvoir le vendre, vous devez configurer votre compte de paiement.",
-        "configureNow": "Configurer maintenant"
+        "configureNow": "Configurer maintenant",
+        "stripePersistent": "La configuration Stripe est toujours requise"
       },
       "success": {
         "title": "Félicitations ! 🎉",

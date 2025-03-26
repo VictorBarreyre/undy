@@ -629,25 +629,6 @@ const StripeVerificationModal = ({
                     }}
                 >
                     <VStack width="97%" space={4} px={4}>
-                        {/* Indicateur de chargement si en cours de rafraîchissement */}
-                        {isRefreshing ? (
-                            <HStack space={2} justifyContent="center" alignItems="center">
-                                <Progress value={65} size="xs" w="80%" colorScheme="pink" />
-                                <Text color="gray.500" fontSize="xs">
-                                    {t('common.refreshing')}
-                                </Text>
-                            </HStack>
-                        ) : (
-                            <Button 
-                                onPress={refreshUserDataAndUpdate}
-                                size="sm" 
-                                colorScheme="gray"
-                                variant="ghost"
-                            >
-                                {t('common.refresh')}
-                            </Button>
-                        )}
-                        
                         {renderContent()}
                     </VStack>
                 </Actionsheet.Content>

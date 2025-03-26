@@ -480,45 +480,20 @@ const AddSecret = () => {
                 const pendingSecretDataJson = await AsyncStorage.getItem(`pendingSecretData_${userData._id}`);
                 if (pendingSecretDataJson) {
                     const pendingSecretData = JSON.parse(pendingSecretDataJson);
-
+    
                     // Pré-remplir les champs du formulaire avec les données en attente
                     setSecretText(pendingSecretData.secretText || '');
                     setSelectedLabel(pendingSecretData.selectedLabel || '');
                     setPrice(pendingSecretData.price?.toString() || '');
                     setExpiresIn(pendingSecretData.expiresIn || 7);
-
-                    // Optionnel: demander à l'utilisateur s'il souhaite continuer avec ces données
-                    Alert.alert(
-                        t('addSecret.pendingData.title'),
-                        t('addSecret.pendingData.message'),
-                        [
-                            {
-                                text: t('addSecret.pendingData.continue'),
-                                onPress: async () => {
-                                    // Les champs sont déjà pré-remplis, rien à faire ici
-                                    console.log('Continuer avec les données en attente');
-                                }
-                            },
-                            {
-                                text: t('addSecret.pendingData.discard'),
-                                style: "cancel",
-                                onPress: async () => {
-                                    // Réinitialiser les champs et supprimer les données en attente
-                                    setSecretText('');
-                                    setSelectedLabel('');
-                                    setPrice('');
-                                    setExpiresIn(7);
-                                    await AsyncStorage.removeItem('pendingSecretData');
-                                }
-                            }
-                        ]
-                    );
+    
+                    // Suppression de l'alerte
                 }
             } catch (error) {
                 console.error('Erreur lors de la vérification des données en attente:', error);
             }
         };
-
+    
         checkPendingSecretData();
     }, []);
 
