@@ -6,7 +6,7 @@ import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown, faPaperPlane,
 import { Background } from '../../navigation/Background';
 import { TouchableOpacity } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
-import { useCardData } from '../../infrastructure/context/CardDataContexte';
+import { useCardData, ConfettiPresets } from '../../infrastructure/context/CardDataContexte';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from '@react-native-community/blur';
@@ -28,7 +28,7 @@ const ChatScreen = ({ route }) => {
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
-  const { handleAddMessage, markConversationAsRead, uploadImage, refreshUnreadCounts, handleShareSecret } = useCardData();
+  const { handleAddMessage, markConversationAsRead, uploadImage, refreshUnreadCounts, handleShareSecret, triggerConfetti } = useCardData();
   const { userData, userToken } = useContext(AuthContext);
   const navigation = useNavigation();
   const [showTimestamps, setShowTimestamps] = useState(false);
@@ -45,6 +45,8 @@ const ChatScreen = ({ route }) => {
   const [isSharing, setIsSharing] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
   const shareButtonScale = useRef(new Animated.Value(1)).current;
+  const [isParticipantsModalVisible, setParticipantsModalVisible] = useState(false);
+
 
 
   const handleShare = async () => {
@@ -80,22 +82,32 @@ const ChatScreen = ({ route }) => {
       // Partager le secret
       const result = await handleShareSecret(secretToShare);
 
-     if (result && result.action === Share.sharedAction) {
-          setShareSuccess(true);
-          setTimeout(() => {
-            setShareSuccess(false);
-          }, 2000);  // Durée plus courte pour permettre de partager à nouveau rapidement
-        }
-      } catch (error) {
-        console.error("Erreur lors du partage:", error);
-        Alert.alert(t('cardHome.errors.title'), t('cardHome.errors.unableToShare'));
-      } finally {
-        // Important: Toujours réinitialiser isSharing pour permettre de nouveaux partages
+      if (result && result.action === Share.sharedAction) {
+        setShareSuccess(true);
         setTimeout(() => {
-          setIsSharing(false);
-        }, 500);  // Petit délai pour éviter les clics accidentels multiples
+          setShareSuccess(false);
+        }, 2000);  // Durée plus courte pour permettre de partager à nouveau rapidement
       }
-    };
+    } catch (error) {
+      console.error("Erreur lors du partage:", error);
+      Alert.alert(t('cardHome.errors.title'), t('cardHome.errors.unableToShare'));
+    } finally {
+      // Important: Toujours réinitialiser isSharing pour permettre de nouveaux partages
+      setTimeout(() => {
+        setIsSharing(false);
+      }, 500);  // Petit délai pour éviter les clics accidentels multiples
+    }
+  };
+
+  useEffect(() => {
+    if (showModalOnMount) {
+      // Trigger confetti when the modal is first mounted
+      triggerConfetti(ConfettiPresets.amazing);
+
+      // Optional: You might want to set the modal to visible
+      setModalVisible(true);
+    }
+  }, [showModalOnMount]);
 
   // État unifié pour les messages non lus
   const [unreadState, setUnreadState] = useState({
@@ -212,8 +224,16 @@ const ChatScreen = ({ route }) => {
       scrollSaveTimeout.current = setTimeout(() => {
         saveScrollPosition(currentPosition);
 
+        // Calculate if the bottom of the visible area reaches the bottom of the content
         const isBottomReached = (layoutMeasurement.height + currentPosition) >= (contentSize.height - 20);
-        if (isBottomReached && unreadState.count > 0) {
+
+        // Check if unread messages are visible
+        const areUnreadMessagesVisible = (
+          unreadState.count > 0 &&
+          layoutMeasurement.height + contentOffset.y >= contentSize.height - (unreadState.count * 50) // Adjust 50 based on average message height
+        );
+
+        if (isBottomReached || areUnreadMessagesVisible) {
           markConversationAsRead(conversationId, userToken);
 
           setUnreadState({
@@ -745,7 +765,10 @@ const ChatScreen = ({ route }) => {
                   <Text style={styles.h5}>
                     {secretData?.user?.name || t('chat.defaultUser')}
                   </Text>
-                  <Text style={styles.littleCaption} color="#94A3B8">
+                  <Text
+                    style={styles.littleCaption}
+                    color="#94A3B8"
+                    onPress={() => setParticipantsModalVisible(true)}>
                     {t('chat.participants', { count: conversation?.participants?.length || 0 })}
                   </Text>
                 </HStack>
@@ -1008,6 +1031,92 @@ const ChatScreen = ({ route }) => {
         </TouchableOpacity>
       )}
 
+<Modal
+  isOpen={isParticipantsModalVisible}
+  onClose={() => setParticipantsModalVisible(false)}
+>
+  <View width='100%' style={{ flex: 1 }}>
+    <BlurView
+      style={[
+        styles.blurBackground,
+        {
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }
+      ]}
+      blurType="light"
+      blurAmount={8}
+      reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+    >
+      <Modal.Content
+        width="90%"
+        style={{
+          ...styles.shadowBox,
+          shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
+          shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
+          shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
+          shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
+          elevation: 5,
+          backgroundColor: 'white',
+          borderRadius: 8,
+          padding: 16
+        }}
+      >
+        <Modal.CloseButton
+          _icon={{
+            color: "#94A3B8",
+            size: "sm"
+          }}
+        />
+
+        <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
+          {/* Header */}
+          <VStack space={1} justifyContent="start">
+            <Text style={styles.h5}>
+              {t('chat.participantsList')}
+            </Text>
+            <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
+              {t('chat.participants', { count: conversation?.participants?.length || 0 })}
+            </Text>
+          </VStack>
+
+          {/* Participants List */}
+          <VStack space={4} paddingVertical={20}>
+            {conversation?.participants?.map((participant) => (
+              <HStack
+                key={participant._id}
+                alignItems="center"
+                space={3}
+              >
+                <Image
+                  source={
+                    participant.profilePicture
+                      ? { uri: participant.profilePicture }
+                      : require('../../assets/images/default.png')
+                  }
+                  alt={participant.name}
+                  size={12}
+                  rounded="full"
+                />
+                <VStack>
+                  <Text style={styles.h5}>{participant.name}</Text>
+                  {participant._id === userData?._id && (
+                    <Text style={styles.littleCaption} color="#94A3B8">
+                      {t('chat.you')}
+                    </Text>
+                  )}
+                </VStack>
+              </HStack>
+            ))}
+          </VStack>
+        </VStack>
+      </Modal.Content>
+    </BlurView>
+  </View>
+</Modal>
+
       {/* Modal pour afficher le secret complet */}
       <Modal isOpen={isModalVisible} onClose={() => setModalVisible(false)}>
         <View width='100%' style={{ flex: 1 }}>
@@ -1066,54 +1175,54 @@ const ChatScreen = ({ route }) => {
                 {/* Footer */}
                 <HStack alignContent='center' alignItems='center' justifyContent='space-between' mt={4}>
                   <Text style={styles.caption}>{secretData?.label}</Text>
-                 
+
 
                   {/* Bouton de partage */}
                   <Animated.View style={{ transform: [{ scale: shareButtonScale }] }}>
-              <TouchableOpacity 
-                onPress={handleShare}
-                disabled={isSharing}
-                activeOpacity={0.8}
-                style={{
-                  width: '100%',
-                  height: 46,
-                  borderRadius: 23,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  overflow: 'hidden',
-                  marginTop: 8,
-                  paddingHorizontal: 20, // Padding horizontal
-                  paddingVertical: 2,   // Padding vertical
-                }}
-              >
-                <LinearGradient
-                  colors={shareSuccess ? ['#4CAF50', '#2E7D32'] : ['#FF587E', '#CC4B8D']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    bottom: 0
-                  }}
-                />
-                <HStack space={3} alignItems="center">
-                 
-                  <Text color='white' style={
-                    styles.ctalittle
-                  }>
-                    {shareSuccess ? t('chat.shared') : t('chat.share')}
-                  </Text>
+                    <TouchableOpacity
+                      onPress={handleShare}
+                      disabled={isSharing}
+                      activeOpacity={0.8}
+                      style={{
+                        width: '100%',
+                        height: 46,
+                        borderRadius: 23,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        overflow: 'hidden',
+                        marginTop: 8,
+                        paddingHorizontal: 20, // Padding horizontal
+                        paddingVertical: 2,   // Padding vertical
+                      }}
+                    >
+                      <LinearGradient
+                        colors={shareSuccess ? ['#4CAF50', '#2E7D32'] : ['#FF587E', '#CC4B8D']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={{
+                          position: 'absolute',
+                          left: 0,
+                          right: 0,
+                          top: 0,
+                          bottom: 0
+                        }}
+                      />
+                      <HStack space={3} alignItems="center">
 
-                  <FontAwesomeIcon 
-                    icon={shareSuccess ? faCheck : faPaperPlane} 
-                    size={16} 
-                    color="white" 
-                  />
-                </HStack>
-              </TouchableOpacity>
-            </Animated.View>
+                        <Text color='white' style={
+                          styles.ctalittle
+                        }>
+                          {shareSuccess ? t('chat.shared') : t('chat.share')}
+                        </Text>
+
+                        <FontAwesomeIcon
+                          icon={shareSuccess ? faCheck : faPaperPlane}
+                          size={16}
+                          color="white"
+                        />
+                      </HStack>
+                    </TouchableOpacity>
+                  </Animated.View>
                 </HStack>
               </VStack>
             </Modal.Content>

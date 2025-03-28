@@ -243,6 +243,8 @@ export default {
     "selectedImage": "Image sélectionnée",
     "share": "Partager",
     "shared": "Partagé",
+    "you": "Vous",
+    "participantsList": "Participants de la conversation",
     "errors": {
       "resizing": "Erreur lors du redimensionnement:",
       "saveScrollPosition": "Erreur lors de la sauvegarde de la position:",

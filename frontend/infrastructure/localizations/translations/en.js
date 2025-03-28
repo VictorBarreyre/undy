@@ -132,9 +132,9 @@ export default {
       "disabled": "Your location will not be shared"
     },
     "errors": {
-     "title": "Location Error",
-    "permissionDenied": "You must allow location access to use this feature.",
-    "gettingPosition": "Unable to retrieve your current location."
+      "title": "Location Error",
+      "permissionDenied": "You must allow location access to use this feature.",
+      "gettingPosition": "Unable to retrieve your current location."
     },
     "alerts": {
       "welcome": {
@@ -162,18 +162,18 @@ export default {
       "permissionDenied": "Location permission denied"
     }
   },
-"swipeDeck": {
-  "noSecrets": "No hushys available",
-  "tryChangingFilters": "Try changing your filters",
-  "checkBackLater": "Check back later to discover new hushys",
-  "noContactsUsingApp": "None of your contacts are using Hushy yet",
-  "noSecretsNearby": "No hushys available nearby",
-  "errors": {
-    "initialLoading": "Initial loading error:",
-    "purchase": "Error during purchase:",
-    "payment": "Payment error:"
-  }
-},
+  "swipeDeck": {
+    "noSecrets": "No hushys available",
+    "tryChangingFilters": "Try changing your filters",
+    "checkBackLater": "Check back later to discover new hushys",
+    "noContactsUsingApp": "None of your contacts are using Hushy yet",
+    "noSecretsNearby": "No hushys available nearby",
+    "errors": {
+      "initialLoading": "Initial loading error:",
+      "purchase": "Error during purchase:",
+      "payment": "Payment error:"
+    }
+  },
   "addSecret": {
     "addHushy": "Add a hushy",
     "postedBy": "Posted by",
@@ -284,6 +284,8 @@ export default {
     "selectedImage": "Selected image",
     "share": "Share",
     "shared": "Shared",
+    "you": "You",
+    "participantsList": "Conversation Participants",
     "errors": {
       "resizing": "Error resizing image:",
       "saveScrollPosition": "Error saving scroll position:",
@@ -357,11 +359,11 @@ export default {
     "dataSection": "Data",
     "logout": "Logout",
     "enabled": "Enabled",
-    "enabledFeminin": "Enabled",    
-    "enabledFemininePlural": "Enabled",  
+    "enabledFeminin": "Enabled",
+    "enabledFemininePlural": "Enabled",
     "disabled": "Disabled",
-    "disabledFeminin": "Disabled",  
-    "disabledFemininePlural": "Disabled", 
+    "disabledFeminin": "Disabled",
+    "disabledFemininePlural": "Disabled",
     "notSpecified": "Not specified",
     "notConfigured": "Not configured",
     "userDataLog": "User data:",
@@ -442,8 +444,8 @@ export default {
 
   "cardHome": {
     "postedFrom": "at",
-  "unknownLocation": "Unknown location",
-  "locationError": "Location not available",
+    "unknownLocation": "Unknown location",
+    "locationError": "Location not available",
     "postedBy": "Posted by {{name}}",
     "expiresIn": "Expires in",
     "noData": "No data available",
@@ -587,96 +589,96 @@ export default {
     }
   },
 
-"stripeVerification": {
-  "accountConfigured": {
-    "title": "Account Configured",
-    "description": "Your account is configured to receive payments.",
-    "descriptionIdentityPending": "Your account is almost ready. To transfer money to your bank account, please verify your identity.",
-    "resetAccount": "Reset account",
-    "manageAccount": "Manage account",
-    "verifyIdentity": "Verify my identity"
+  "stripeVerification": {
+    "accountConfigured": {
+      "title": "Account Configured",
+      "description": "Your account is configured to receive payments.",
+      "descriptionIdentityPending": "Your account is almost ready. To transfer money to your bank account, please verify your identity.",
+      "resetAccount": "Reset account",
+      "manageAccount": "Manage account",
+      "verifyIdentity": "Verify my identity"
+    },
+    "logs": {
+      "userCancelled": "User cancelled image selection"
+    },
+    "errors": {
+      "title": "Error",
+      "generic": "An error occurred",
+      "selectDocument": "Please select a document",
+      "uploadError": "Upload error:",
+      "uploadFailed": "An error occurred during upload",
+      "verificationFailed": "Identity verification failed"
+    },
+    "bankAccountSetup": {
+      "title": "Bank Account Setup",
+      "description": "You must first set up your bank account to publish paid secrets.",
+      "publishSecret": "Publish a secret"
+    },
+    "identityVerification": {
+      "title": "Identity Verification",
+      "description": "To receive your payments, we need to verify your identity in accordance with regulations.",
+      "documentTitle": "Identity Document",
+      "documentDescription": "Please provide an identity document (ID card, passport, or driver's license).",
+      "selfieTitle": "Photo of Yourself",
+      "selfieDescription": "Take a photo of yourself to confirm your identity.",
+      "reviewTitle": "Identity Verification",
+      "reviewDescription": "Please review the documents before submitting.",
+      "documentSelected": "Document selected: {{name}}",
+      "selfieSelected": "Photo of yourself selected",
+      "processingTitle": "Verification in Progress",
+      "processingDescription": "Your identity verification is being processed. This may take a few moments.",
+      "pending": "Your verification is being processed. Please check the status later.",
+      "chooseDocument": "Choose a document",
+      "changeDocument": "Change document",
+      "takeSelfie": "Take a selfie",
+      "selectDocument": "Select a document",
+      "restart": "Start over",
+      "submit": "Submit",
+      "submitting": "Submitting...",
+      "uploading": "Uploading...",
+      "checkStatus": "Check status",
+      "verifyOnline": "Verify online",
+      "uploadDocuments": "Upload documents"
+    },
+    "documentOptions": {
+      "takePhoto": "Take a photo",
+      "chooseFromGallery": "Choose from gallery",
+      "cancel": "Cancel"
+    },
+    "selfieOptions": {
+      "takePhoto": "Take a photo",
+      "chooseFromGallery": "Choose from gallery",
+      "cancel": "Cancel"
+    },
+    "accountConfigured": {
+      "title": "Account Configured",
+      "description": "Your account is configured to receive payments.",
+      "resetAccount": "Reset account",
+      "manageAccount": "Manage account"
+    },
+    "success": {
+      "title": "Success",
+      "documentSubmitted": "Your identity document has been successfully submitted.",
+      "identityVerified": "Your identity has been successfully verified."
+    },
+    "deleteConfirm": {
+      "title": "Delete this hushy?",
+      "message": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "deleteSuccess": {
+      "title": "Success",
+      "message": "Hushy deleted successfully",
+      "ok": "OK"
+    },
+    "deleteError": {
+      "title": "Error",
+      "message": "Could not delete this hushy",
+      "ok": "OK"
+    },
+    "delete": "Delete"
   },
-  "logs": {
-    "userCancelled": "User cancelled image selection"
-  },
-  "errors": {
-    "title": "Error",
-    "generic": "An error occurred",
-    "selectDocument": "Please select a document",
-    "uploadError": "Upload error:",
-    "uploadFailed": "An error occurred during upload",
-    "verificationFailed": "Identity verification failed"
-  },
-  "bankAccountSetup": {
-    "title": "Bank Account Setup",
-    "description": "You must first set up your bank account to publish paid secrets.",
-    "publishSecret": "Publish a secret"
-  },
-  "identityVerification": {
-    "title": "Identity Verification",
-    "description": "To receive your payments, we need to verify your identity in accordance with regulations.",
-    "documentTitle": "Identity Document",
-    "documentDescription": "Please provide an identity document (ID card, passport, or driver's license).",
-    "selfieTitle": "Photo of Yourself",
-    "selfieDescription": "Take a photo of yourself to confirm your identity.",
-    "reviewTitle": "Identity Verification",
-    "reviewDescription": "Please review the documents before submitting.",
-    "documentSelected": "Document selected: {{name}}",
-    "selfieSelected": "Photo of yourself selected",
-    "processingTitle": "Verification in Progress",
-    "processingDescription": "Your identity verification is being processed. This may take a few moments.",
-    "pending": "Your verification is being processed. Please check the status later.",
-    "chooseDocument": "Choose a document",
-    "changeDocument": "Change document",
-    "takeSelfie": "Take a selfie",
-    "selectDocument": "Select a document",
-    "restart": "Start over",
-    "submit": "Submit",
-    "submitting": "Submitting...",
-    "uploading": "Uploading...",
-    "checkStatus": "Check status",
-    "verifyOnline": "Verify online", 
-    "uploadDocuments": "Upload documents" 
-  },
-  "documentOptions": {
-    "takePhoto": "Take a photo",
-    "chooseFromGallery": "Choose from gallery",
-    "cancel": "Cancel"
-  },
-  "selfieOptions": {
-    "takePhoto": "Take a photo",
-    "chooseFromGallery": "Choose from gallery",
-    "cancel": "Cancel"
-  },
-  "accountConfigured": {
-    "title": "Account Configured",
-    "description": "Your account is configured to receive payments.",
-    "resetAccount": "Reset account",
-    "manageAccount": "Manage account"
-  },
-  "success": {
-    "title": "Success",
-    "documentSubmitted": "Your identity document has been successfully submitted.",
-    "identityVerified": "Your identity has been successfully verified."
-  },
-  "deleteConfirm": {
-    "title": "Delete this hushy?",
-    "message": "This action cannot be undone.",
-    "cancel": "Cancel",
-    "confirm": "Delete"
-  },
-  "deleteSuccess": {
-    "title": "Success",
-    "message": "Hushy deleted successfully",
-    "ok": "OK"
-  },
-  "deleteError": {
-    "title": "Error",
-    "message": "Could not delete this hushy",
-    "ok": "OK"
-  },
-  "delete": "Delete"
-},
   "notifications": {
     "alerts": {
       "simulatorWarning": "Notifications don't work on simulator",
@@ -768,19 +770,19 @@ export default {
     }
   },
   "permissions": {
-  "contactsNeededTitle": "Contacts Access Required",
-  "contactsNeededMessage": "This app needs access to your contacts to show content from them.",
-  "contactsSettingsMessage": "Please enable contacts access in your device settings to use this feature.",
-  "locationNeededTitle": "Location Access Required",
-  "locationNeededMessage": "This app needs access to your location to show content near you.",
-  "locationSettingsMessage": "Please enable location access in your device settings to use this feature.",
-  "notificationsNeededTitle": "Notifications Access Required",
-  "notificationsNeededMessage": "This app needs to send you notifications. Please enable them in your device settings.",
-  "cancel": "Cancel",
-  "openSettings": "Open Settings",
-  "allow": "Allow",
-  "ok": "OK",
-  "errorTitle": "Permission Error"
-}
+    "contactsNeededTitle": "Contacts Access Required",
+    "contactsNeededMessage": "This app needs access to your contacts to show content from them.",
+    "contactsSettingsMessage": "Please enable contacts access in your device settings to use this feature.",
+    "locationNeededTitle": "Location Access Required",
+    "locationNeededMessage": "This app needs access to your location to show content near you.",
+    "locationSettingsMessage": "Please enable location access in your device settings to use this feature.",
+    "notificationsNeededTitle": "Notifications Access Required",
+    "notificationsNeededMessage": "This app needs to send you notifications. Please enable them in your device settings.",
+    "cancel": "Cancel",
+    "openSettings": "Open Settings",
+    "allow": "Allow",
+    "ok": "OK",
+    "errorTitle": "Permission Error"
+  }
 
 }
