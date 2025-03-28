@@ -1,10 +1,23 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 import { AuthContext } from './AuthContext';
-import { Platform, Share } from 'react-native';
+import { Platform, Share, View, Dimensions } from 'react-native';
 import i18n from 'i18next'; // Import direct de i18n
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Ajoutez cette ligne
+import ConfettiCannon from 'react-native-confetti-cannon';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+// Définition des couleurs pour les confettis
+const CONFETTI_COLORS = [
+  '#50C8FF', // Bleu cyan électrique
+  '#A78BFF', // Violet électrique
+  '#FF7AC7', // Rose bonbon éclatant
+  '#FF5F5F', // Rouge corail vif
+  '#FFFFFF', // Blanc
+];
 
 
 const CardDataContext = createContext();
@@ -36,7 +49,28 @@ export const CardDataProvider = ({ children }) => {
   const { userData } = useContext(AuthContext);
   const [markedAsReadConversations, setMarkedAsReadConversations] = useState({});
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
-  const [userCurrency, setUserCurrency] = useState('€'); // Euro par défaut
+  const [userCurrency, setUserCurrency] = useState('€');
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [confettiConfig, setConfettiConfig] = useState({
+    count: 200,
+    origin: { x: SCREEN_WIDTH / 2, y: 0 },
+    explosionSpeed: 350,
+    fallSpeed: 3000,
+    gravity: 0.5,
+    velocity: 25,
+    angleRange: [0, 180],
+    colors: CONFETTI_COLORS,
+  });
+
+  const triggerConfetti = (customConfig = {}) => {
+    setConfettiConfig({ ...confettiConfig, ...customConfig });
+    setShowConfetti(true);
+    
+    // Arrêter les confettis après un délai
+    setTimeout(() => {
+      setShowConfetti(false);
+    }, 5000); // 5 secondes
+  };
 
   const detectUserCurrency = (country, language) => {
     // Priorité à la localisation si disponible
@@ -1076,6 +1110,7 @@ const checkIdentityVerificationStatus = async () => {
 };
 
   return (
+    <>
     <CardDataContext.Provider value={{
       data,
       setData,
@@ -1110,11 +1145,63 @@ const checkIdentityVerificationStatus = async () => {
       detectUserCurrency,
       deleteSecret,
       handleIdentityVerification,
-      checkIdentityVerificationStatus
+      checkIdentityVerificationStatus,
+      triggerConfetti,
+
     }}>
       {children}
     </CardDataContext.Provider>
+    {showConfetti && (
+        <ConfettiCannon
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+            elevation: 10, // Important pour Android
+          }}
+          count={confettiConfig.count}
+          origin={confettiConfig.origin}
+          explosionSpeed={confettiConfig.explosionSpeed}
+          fallSpeed={confettiConfig.fallSpeed}
+          fadeOut={true}
+          colors={confettiConfig.colors}
+          gravity={confettiConfig.gravity}
+          velocity={confettiConfig.velocity}
+          angleRange={confettiConfig.angleRange}
+          particleSize={8}
+        />
+      )}
+    </>
   );
+};
+
+export const ConfettiPresets = {
+  fromBottom: {
+    origin: { x: SCREEN_WIDTH / 2, y: 0 },
+    gravity: 0.5,
+    velocity: 25,
+    angleRange: [0, 180],
+  },
+  lowHeight: {
+    origin: { x: SCREEN_WIDTH / 2, y: 0 },
+    gravity: 0.7,
+    velocity: 15,
+    angleRange: [0, 180],
+  },
+  mediumHeight: {
+    origin: { x: SCREEN_WIDTH / 2, y: 0 },
+    gravity: 0.5,
+    velocity: 20,
+    angleRange: [0, 180],
+  },
+  amazing: {
+    colors: CONFETTI_COLORS,
+    count: 250,
+    explosionSpeed: 300,
+  }
 };
 
 export default CardDataProvider;
