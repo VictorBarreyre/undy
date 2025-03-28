@@ -367,19 +367,31 @@ const AddSecret = () => {
                             '#FFFFFF', // Blanc
                         ]
                     });
-                    // Afficher le message de succès
-                    Alert.alert(
-                        t('addSecret.alerts.success.title'),
-                        t('addSecret.alerts.success.message'),
-                        [
-                            {
-                                text: t('addSecret.alerts.success.shareNow'),
-                                onPress: async () => {
-                                    try {
-                                        await handleShareSecret(result.secret);
-                                    } catch (error) {
-                                        Alert.alert(t('addSecret.errors.title'), t('addSecret.errors.unableToShare'));
-                                    } finally {
+                    setTimeout(() => {
+                        Alert.alert(
+                            t('addSecret.alerts.success.title'),
+                            t('addSecret.alerts.success.message'),
+                            [
+                                {
+                                    text: t('addSecret.alerts.success.shareNow'),
+                                    onPress: async () => {
+                                        try {
+                                            await handleShareSecret(result.secret);
+                                        } catch (error) {
+                                            Alert.alert(t('addSecret.errors.title'), t('addSecret.errors.unableToShare'));
+                                        } finally {
+                                            // Reset form fields
+                                            setSecretText('');
+                                            setSelectedLabel('');
+                                            setPrice('');
+                                            setExpiresIn(7);
+                                        }
+                                    }
+                                },
+                                {
+                                    text: t('addSecret.alerts.later'),
+                                    style: "cancel",
+                                    onPress: () => {
                                         // Reset form fields
                                         setSecretText('');
                                         setSelectedLabel('');
@@ -387,65 +399,54 @@ const AddSecret = () => {
                                         setExpiresIn(7);
                                     }
                                 }
-                            },
-                            {
-                                text: t('addSecret.alerts.later'),
-                                style: "cancel",
-                                onPress: () => {
-                                    // Reset form fields
-                                    setSecretText('');
-                                    setSelectedLabel('');
-                                    setPrice('');
-                                    setExpiresIn(7);
-                                }
-                            }
-                        ]
-                    );
-                } else {
-                    // L'utilisateur a besoin de configurer Stripe
-                    handleStripeConfiguration(stripeStatus);
-                }
-            } catch (error) {
-                // Gérer spécifiquement l'erreur "Aucun compte Stripe associé"
-                if (error.message.includes("Aucun compte Stripe associé") ||
-                    (error.response?.data && error.response.data.status === 'no_account')) {
-                    // Créer un compte Stripe pour l'utilisateur
-                    Alert.alert(
-                        t('addSecret.alerts.noStripeAccount.title'),
-                        t('addSecret.alerts.noStripeAccount.message'),
-                        [
-                            {
-                                text: t('addSecret.alerts.noStripeAccount.create'),
-                                onPress: async () => {
-                                    try {
-                                        // Créer un nouveau compte Stripe via handlePostSecret
-                                        // qui va déclencher la création du compte
-                                        const result = await handlePostSecret(secretData);
-
-                                        if (result.requiresStripeSetup && result.stripeOnboardingUrl) {
-                                            await Linking.openURL(result.stripeOnboardingUrl);
-                                        } else {
-                                            Alert.alert(t('addSecret.alerts.info'), result.message);
+                            ]
+                        );
+                    }, 1500); // Délai de 1.5 secondes
+                    } else {
+                        // L'utilisateur a besoin de configurer Stripe
+                        handleStripeConfiguration(stripeStatus);
+                    }
+                    } catch (error) {
+                        // Gérer spécifiquement l'erreur "Aucun compte Stripe associé"
+                        if (error.message.includes("Aucun compte Stripe associé") ||
+                            (error.response?.data && error.response.data.status === 'no_account')) {
+                            // Créer un compte Stripe pour l'utilisateur
+                            Alert.alert(
+                                t('addSecret.alerts.noStripeAccount.title'),
+                                t('addSecret.alerts.noStripeAccount.message'),
+                                [
+                                    {
+                                        text: t('addSecret.alerts.noStripeAccount.create'),
+                                        onPress: async () => {
+                                            try {
+                                                // Créer un nouveau compte Stripe via handlePostSecret
+                                                // qui va déclencher la création du compte
+                                                const result = await handlePostSecret(secretData);
+                    
+                                                if (result.requiresStripeSetup && result.stripeOnboardingUrl) {
+                                                    await Linking.openURL(result.stripeOnboardingUrl);
+                                                } else {
+                                                    Alert.alert(t('addSecret.alerts.info'), result.message);
+                                                }
+                                            } catch (innerError) {
+                                                Alert.alert(t('addSecret.errors.title'), innerError.message);
+                                            }
                                         }
-                                    } catch (innerError) {
-                                        Alert.alert(t('addSecret.errors.title'), innerError.message);
+                                    },
+                                    {
+                                        text: t('addSecret.alerts.later'),
+                                        style: "cancel"
                                     }
-                                }
-                            },
-                            {
-                                text: t('addSecret.alerts.later'),
-                                style: "cancel"
-                            }
-                        ]
-                    );
-                } else {
-                    Alert.alert(t('addSecret.errors.title'), error.message);
-                }
-            }
-        } catch (error) {
-            Alert.alert(t('addSecret.errors.title'), error.message);
-        }
-    };
+                                ]
+                            );
+                        } else {
+                            Alert.alert(t('addSecret.errors.title'), error.message);
+                        }
+                    }
+                    } catch (error) {
+                        Alert.alert(t('addSecret.errors.title'), error.message);
+                    }
+                    };
 
     // Fonction auxiliaire pour gérer la configuration Stripe
     const handleStripeConfiguration = async (stripeStatus) => {
