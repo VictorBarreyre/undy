@@ -51,6 +51,7 @@
     "react-dom": "18.2.0",
     "react-i18next": "^15.4.1",
     "react-native": "0.74.5",
+    "react-native-confetti-cannon": "^1.5.2",
     "react-native-device-info": "^14.0.4",
     "react-native-dotenv": "^3.4.11",
     "react-native-fbsdk-next": "^10.1.0",

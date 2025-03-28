@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Background } from '../../navigation/Background';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
@@ -11,6 +11,7 @@ import * as Location from 'expo-location';
 import i18n from 'i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeepLinkHandler from '../components/DeepLinkHandler';
+import ConfettiCannon from 'react-native-confetti-cannon';
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -43,6 +44,8 @@ const AddSecret = () => {
     const [userLocation, setUserLocation] = useState(null);
     const [locationAvailable, setLocationAvailable] = useState(false);
     const [locationInfo, setLocationInfo] = useState(null);
+    const [showConfetti, setShowConfetti] = useState(false);
+    const confettiRef = useRef(null);
 
 
     const currentLanguage = i18n.language || navigator.language.split('-')[0] || 'fr';
@@ -313,6 +316,13 @@ const AddSecret = () => {
         }
     };
 
+    const triggerConfetti = () => {
+        setShowConfetti(true);
+        // Masquer les confettis après quelques secondes
+        setTimeout(() => {
+            setShowConfetti(false);
+        }, 5000); // 5 secondes d'animation
+    };
 
     // Remplacer la fonction handlePress par celle-ci
     const handlePress = async () => {
@@ -355,6 +365,7 @@ const AddSecret = () => {
                     const result = await handlePostSecret(secretData);
 
                     await AsyncStorage.removeItem(`pendingSecretData_${userData._id}`);
+                    triggerConfetti();
 
                     // Afficher le message de succès
                     Alert.alert(
@@ -538,6 +549,15 @@ const AddSecret = () => {
 
     return (
         <Background>
+               {showConfetti && (
+                <ConfettiCannon
+                    count={200} // nombre de confettis
+                    origin={{ x: SCREEN_WIDTH / 2, y: 0 }} // origine en haut de l'écran
+                    fallSpeed={3000} // vitesse de chute
+                    fadeOut={true}
+                    colors={['#FF78B2', '#FFD700', '#FF5733', '#C70039', '#900C3F', '#581845']} // couleurs personnalisées
+                />
+            )}
             <DeepLinkHandler
                 onStripeSuccess={handleStripeOnboardingSuccess}
                 userId={userData?._id}
