@@ -286,6 +286,14 @@ export default {
     "shared": "Shared",
     "you": "You",
     "participantsList": "Conversation Participants",
+    "locationSharing": {
+      "title": "Share location"
+    },
+    "documentOptions": {
+      "takePhoto": "Take a photo",
+      "chooseFromGallery": "Choose from gallery",
+      "cancel": "Cancel"
+    },
     "errors": {
       "resizing": "Error resizing image:",
       "saveScrollPosition": "Error saving scroll position:",

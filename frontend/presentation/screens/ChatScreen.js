@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef, memo, useCallback } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Share } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Share,ActionSheetIOS } from 'react-native';
 import { Box, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown, faPaperPlane, faCheck } from '@fortawesome/free-solid-svg-icons';
@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { BlurView } from '@react-native-community/blur';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { launchCamera,  launchImageLibrary, ImagePickerResponse } from 'react-native-image-picker';
 import * as RN from 'react-native';
 import MessageItem from '../components/MessageItem';
 import { getAxiosInstance } from '../../data/api/axiosInstance';
@@ -631,24 +631,66 @@ const ChatScreen = ({ route }) => {
   // Sélection d'image
   const handleImagePick = async () => {
     try {
-      const result = await launchImageLibrary({
-        mediaType: 'photo',
+      const options = {
+        mediaType: 'photo', // Specify photo as the media type
         quality: 0.8,
         includeBase64: true,
-      });
-
-      if (result.assets && result.assets[0]) {
-        setSelectedImage(result.assets[0]);
-        updateInputAreaHeight(true);
-
-        requestAnimationFrame(() => {
-          if (flatListRef.current) {
-            flatListRef.current.scrollToEnd({ animated: true });
+        saveToPhotos: true, // Optional: save captured photo to device gallery
+      };
+  
+      // Create an action sheet with options
+      const actionSheetOptions = {
+        options: [
+          t('addSecret.locationSharing.accessibility'), // Use an existing translation
+          t('documentOptions.takePhoto'),
+          t('documentOptions.chooseFromGallery'),
+          t('documentOptions.cancel')
+        ],
+        cancelButtonIndex: 3,
+      };
+  
+      // Use a platform-specific action sheet
+      if (Platform.OS === 'ios') {
+        // Use ActionSheetIOS for iOS
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            options: actionSheetOptions.options,
+            cancelButtonIndex: actionSheetOptions.cancelButtonIndex,
+          },
+          async (buttonIndex) => {
+            switch(buttonIndex) {
+              case 0: // Take Photo
+                const cameraResult = await launchCamera(options);
+                handleImageResult(cameraResult);
+                break;
+              case 1: // Choose from Gallery
+                const galleryResult = await launchImageLibrary(options);
+                handleImageResult(galleryResult);
+                break;
+            }
           }
-        });
+        );
+      } else {
+        // For Android, you might want to use a custom modal or a third-party library
+        const result = await launchCamera(options);
+        handleImageResult(result);
       }
     } catch (error) {
       console.error(t('chat.errors.imageSelection'), error);
+    }
+  };
+  
+  // Helper function to handle image selection result
+  const handleImageResult = (result) => {
+    if (result.assets && result.assets[0]) {
+      setSelectedImage(result.assets[0]);
+      updateInputAreaHeight(true);
+  
+      requestAnimationFrame(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({ animated: true });
+        }
+      });
     }
   };
 

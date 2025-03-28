@@ -244,6 +244,14 @@ export default {
     "share": "Partager",
     "shared": "Partagé",
     "you": "Vous",
+    "locationSharing": {
+      "title": "Partager ma localisation"
+    },
+    "documentOptions": {
+      "takePhoto": "Prendre une photo",
+      "chooseFromGallery": "Choisir depuis la galerie",
+      "cancel": "Annuler"
+    },
     "participantsList": "Participants de la conversation",
     "errors": {
       "resizing": "Erreur lors du redimensionnement:",
