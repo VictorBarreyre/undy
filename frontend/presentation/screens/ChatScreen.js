@@ -203,7 +203,7 @@ const ChatScreen = ({ route }) => {
     } catch (error) {
       console.error(t('chat.errors.loadScrollPosition'), error);
     }
-    return 0;
+    return 0; 
   };
 
   // Gestionnaire de défilement optimisé
@@ -628,30 +628,25 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-  // Sélection d'image
   const handleImagePick = async () => {
     try {
       const options = {
-        mediaType: 'photo', // Specify photo as the media type
+        mediaType: 'photo',
         quality: 0.8,
         includeBase64: true,
-        saveToPhotos: true, // Optional: save captured photo to device gallery
+        saveToPhotos: true,
       };
   
-      // Create an action sheet with options
       const actionSheetOptions = {
         options: [
-          t('addSecret.locationSharing.accessibility'), // Use an existing translation
-          t('documentOptions.takePhoto'),
-          t('documentOptions.chooseFromGallery'),
-          t('documentOptions.cancel')
+          t('chat.documentOptions.takePhoto'),        // Index 0 - Take Photo
+          t('chat.documentOptions.chooseFromGallery'), // Index 1 - Choose from Gallery
+          t('chat.documentOptions.cancel')             // Index 2 - Cancel
         ],
-        cancelButtonIndex: 3,
+        cancelButtonIndex: 2,
       };
   
-      // Use a platform-specific action sheet
       if (Platform.OS === 'ios') {
-        // Use ActionSheetIOS for iOS
         ActionSheetIOS.showActionSheetWithOptions(
           {
             options: actionSheetOptions.options,
@@ -671,7 +666,7 @@ const ChatScreen = ({ route }) => {
           }
         );
       } else {
-        // For Android, you might want to use a custom modal or a third-party library
+        // Android handling
         const result = await launchCamera(options);
         handleImageResult(result);
       }
