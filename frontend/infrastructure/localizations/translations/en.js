@@ -289,6 +289,15 @@ export default {
     "locationSharing": {
       "title": "Share location"
     },
+    "reply": "Reply",
+    "cancel": "Cancel",
+    "image": "Image",
+    "defaultUser": "User",
+    // Pour le menu contextuel des messages
+    "messageOptions": {
+      "reply": "Reply",
+      "cancel": "Cancel"
+    },
     "documentOptions": {
       "takePhoto": "Take a photo",
       "chooseFromGallery": "Choose from gallery",

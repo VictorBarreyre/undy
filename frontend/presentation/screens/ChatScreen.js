@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef, memo, useCallback } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Share,ActionSheetIOS } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Share, ActionSheetIOS } from 'react-native';
 import { Box, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown, faPaperPlane, faCheck } from '@fortawesome/free-solid-svg-icons';
@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { BlurView } from '@react-native-community/blur';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
-import { launchCamera,  launchImageLibrary, ImagePickerResponse } from 'react-native-image-picker';
+import { launchCamera, launchImageLibrary, ImagePickerResponse } from 'react-native-image-picker';
 import * as RN from 'react-native';
 import MessageItem from '../components/MessageItem';
 import { getAxiosInstance } from '../../data/api/axiosInstance';
@@ -20,6 +20,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ImageManipulator from 'react-native-image-manipulator';
 import { useTranslation } from 'react-i18next';
 import { useDateFormatter } from '../../utils/dateFormatters';
+import ReplyBanner from '../components/ReplyBanner';
+
 
 
 const ChatScreen = ({ route }) => {
@@ -47,6 +49,23 @@ const ChatScreen = ({ route }) => {
   const shareButtonScale = useRef(new Animated.Value(1)).current;
   const [isParticipantsModalVisible, setParticipantsModalVisible] = useState(false);
 
+  const [replyToMessage, setReplyToMessage] = useState(null);
+
+  const handleReplyToMessage = useCallback((message) => {
+    setReplyToMessage(message);
+
+    // Mettre le focus sur le champ de texte
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyToMessage(null);
+  }, []);
+
+
+  const inputRef = useRef(null);
 
 
   const handleShare = async () => {
@@ -203,7 +222,7 @@ const ChatScreen = ({ route }) => {
     } catch (error) {
       console.error(t('chat.errors.loadScrollPosition'), error);
     }
-    return 0; 
+    return 0;
   };
 
   // Gestionnaire de défilement optimisé
@@ -497,14 +516,14 @@ const ChatScreen = ({ route }) => {
       if (!conversationId) {
         throw new Error(t('chat.errors.missingConversationId'));
       }
-
+  
       // Vérifier s'il y a du contenu à envoyer
       if (!message.trim() && !selectedImage) return;
-
+  
       if (!userData?.name) {
         throw new Error(t('chat.errors.missingUserInfo'));
       }
-
+  
       // Déterminer le type de message
       let messageType = 'text';
       if (selectedImage && message.trim()) {
@@ -512,11 +531,11 @@ const ChatScreen = ({ route }) => {
       } else if (selectedImage) {
         messageType = 'image';
       }
-
+  
       // Créer un ID temporaire pour afficher immédiatement le message
       const tempId = `temp-${Date.now()}`;
       const messageText = message.trim() || "";
-
+  
       // Ajouter immédiatement le message à l'interface avec état "en cours d'envoi"
       setMessages(prev => [...prev, {
         id: tempId,
@@ -526,75 +545,90 @@ const ChatScreen = ({ route }) => {
         sender: 'user',
         timestamp: new Date().toISOString(),
         isSending: true,
+        replyToMessage: replyToMessage, // Stockage des informations du message auquel on répond
         senderInfo: {
           id: userData?._id || "",
           name: userData?.name || t('chat.defaultUser')
         }
       }]);
-
+  
       // Réinitialiser l'interface immédiatement pour une meilleure réactivité
       setMessage('');
       const imageToUpload = selectedImage;
       setSelectedImage(null);
+      setReplyToMessage(null); // Réinitialiser l'état de réponse
       updateInputAreaHeight(false);
-
+  
       // Défiler vers le bas
       requestAnimationFrame(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: true });
         }
       });
-
+  
       // Créer l'objet du message pour l'API
       let messageContent = {
         content: messageText || " ",
         senderName: userData.name,
         messageType: messageType
       };
-
+  
+      // Ajouter les informations de réponse si nécessaire
+      if (replyToMessage) {
+        messageContent.replyTo = replyToMessage.id;
+        messageContent.replyToSender = replyToMessage.senderInfo?.id;
+        
+        // Si vous avez besoin de stocker plus d'informations sur le message répondu
+        messageContent.replyData = {
+          text: replyToMessage.text,
+          sender: replyToMessage.senderInfo?.name || t('chat.defaultUser'),
+          hasImage: !!replyToMessage.image
+        };
+      }
+  
       // Si une image est sélectionnée, l'uploader
       if (imageToUpload) {
         setIsUploading(true);
         setUploadProgress(0);
-
+  
         try {
           // Utiliser directement la donnée base64
           let imageData;
           if (imageToUpload.base64) {
             // Utiliser directement base64 au lieu de redimensionner
             imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
-
+  
             // Uploader l'image
             const uploadResult = await uploadImage(
               imageData,
               (progress) => setUploadProgress(progress)
             );
-
+  
             messageContent.image = uploadResult.url;
           } else {
             throw new Error(t('chat.errors.unsupportedImageFormat'));
           }
         } catch (uploadError) {
           console.error(t('chat.errors.imageUpload'), uploadError);
-
+  
           // Marquer le message comme échoué
           setMessages(prev => prev.map(msg =>
             msg.id === tempId
               ? { ...msg, sendFailed: true, isSending: false }
               : msg
           ));
-
+  
           throw new Error(t('chat.errors.imageUploadFailed'));
         } finally {
           setIsUploading(false);
           setUploadProgress(0);
         }
       }
-
+  
       // Envoyer le message
       try {
         const newMessage = await handleAddMessage(conversationId, messageContent);
-
+  
         // Remplacer le message temporaire par le message réel
         setMessages(prev =>
           prev.map(msg =>
@@ -610,7 +644,7 @@ const ChatScreen = ({ route }) => {
         );
       } catch (error) {
         console.error(t('chat.errors.sendMessage'), error);
-
+  
         // Marquer le message comme échoué
         setMessages(prev =>
           prev.map(msg =>
@@ -619,10 +653,10 @@ const ChatScreen = ({ route }) => {
               : msg
           )
         );
-
+  
         throw error;
       }
-
+  
     } catch (error) {
       console.error(t('chat.errors.sendMessage'), error);
     }
@@ -636,7 +670,7 @@ const ChatScreen = ({ route }) => {
         includeBase64: true,
         saveToPhotos: true,
       };
-  
+
       const actionSheetOptions = {
         options: [
           t('chat.documentOptions.takePhoto'),        // Index 0 - Take Photo
@@ -645,7 +679,7 @@ const ChatScreen = ({ route }) => {
         ],
         cancelButtonIndex: 2,
       };
-  
+
       if (Platform.OS === 'ios') {
         ActionSheetIOS.showActionSheetWithOptions(
           {
@@ -653,7 +687,7 @@ const ChatScreen = ({ route }) => {
             cancelButtonIndex: actionSheetOptions.cancelButtonIndex,
           },
           async (buttonIndex) => {
-            switch(buttonIndex) {
+            switch (buttonIndex) {
               case 0: // Take Photo
                 const cameraResult = await launchCamera(options);
                 handleImageResult(cameraResult);
@@ -674,13 +708,13 @@ const ChatScreen = ({ route }) => {
       console.error(t('chat.errors.imageSelection'), error);
     }
   };
-  
+
   // Helper function to handle image selection result
   const handleImageResult = (result) => {
     if (result.assets && result.assets[0]) {
       setSelectedImage(result.assets[0]);
       updateInputAreaHeight(true);
-  
+
       requestAnimationFrame(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: true });
@@ -764,6 +798,7 @@ const ChatScreen = ({ route }) => {
         messages={messages}
         userData={userData}
         showTimestamps={showTimestamps}
+        onReplyToMessage={handleReplyToMessage} // Ajoutez ceci
       />
     );
   }, [messages, userData, showTimestamps]);
@@ -854,6 +889,7 @@ const ChatScreen = ({ route }) => {
             />
           </Box>
 
+
           {/* Zone d'input */}
           <View
             style={{
@@ -863,6 +899,12 @@ const ChatScreen = ({ route }) => {
               borderTopRightRadius: selectedImage ? 25 : 0,
             }}
           >
+            {replyToMessage && (
+              <ReplyBanner
+                replyToMessage={replyToMessage}
+                onCancelReply={handleCancelReply}
+              />
+            )}
             {/* Affichage de l'image sélectionnée */}
             {selectedImage && (
               <View
@@ -952,6 +994,7 @@ const ChatScreen = ({ route }) => {
                 position="relative"
               >
                 <RN.TextInput
+                  ref={inputRef} // Ajoutez cette ligne
                   value={message}
                   onChangeText={setMessage}
                   placeholder={selectedImage ? t('chat.send') : t('chat.message')}
@@ -1068,91 +1111,91 @@ const ChatScreen = ({ route }) => {
         </TouchableOpacity>
       )}
 
-<Modal
-  isOpen={isParticipantsModalVisible}
-  onClose={() => setParticipantsModalVisible(false)}
->
-  <View width='100%' style={{ flex: 1 }}>
-    <BlurView
-      style={[
-        styles.blurBackground,
-        {
-          backgroundColor: 'rgba(255, 255, 255, 0.2)',
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }
-      ]}
-      blurType="light"
-      blurAmount={8}
-      reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
-    >
-      <Modal.Content
-        width="90%"
-        style={{
-          ...styles.shadowBox,
-          shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
-          shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
-          shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
-          shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
-          elevation: 5,
-          backgroundColor: 'white',
-          borderRadius: 8,
-          padding: 16
-        }}
+      <Modal
+        isOpen={isParticipantsModalVisible}
+        onClose={() => setParticipantsModalVisible(false)}
       >
-        <Modal.CloseButton
-          _icon={{
-            color: "#94A3B8",
-            size: "sm"
-          }}
-        />
+        <View width='100%' style={{ flex: 1 }}>
+          <BlurView
+            style={[
+              styles.blurBackground,
+              {
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }
+            ]}
+            blurType="light"
+            blurAmount={8}
+            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
+          >
+            <Modal.Content
+              width="90%"
+              style={{
+                ...styles.shadowBox,
+                shadowColor: Platform.OS === 'ios' ? 'violet' : undefined,
+                shadowOffset: Platform.OS === 'ios' ? { width: 0, height: 2 } : undefined,
+                shadowOpacity: Platform.OS === 'ios' ? 0.2 : undefined,
+                shadowRadius: Platform.OS === 'ios' ? 5 : undefined,
+                elevation: 5,
+                backgroundColor: 'white',
+                borderRadius: 8,
+                padding: 16
+              }}
+            >
+              <Modal.CloseButton
+                _icon={{
+                  color: "#94A3B8",
+                  size: "sm"
+                }}
+              />
 
-        <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
-          {/* Header */}
-          <VStack space={1} justifyContent="start">
-            <Text style={styles.h5}>
-              {t('chat.participantsList')}
-            </Text>
-            <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
-              {t('chat.participants', { count: conversation?.participants?.length || 0 })}
-            </Text>
-          </VStack>
-
-          {/* Participants List */}
-          <VStack space={4} paddingVertical={20}>
-            {conversation?.participants?.map((participant) => (
-              <HStack
-                key={participant._id}
-                alignItems="center"
-                space={3}
-              >
-                <Image
-                  source={
-                    participant.profilePicture
-                      ? { uri: participant.profilePicture }
-                      : require('../../assets/images/default.png')
-                  }
-                  alt={participant.name}
-                  size={12}
-                  rounded="full"
-                />
-                <VStack>
-                  <Text style={styles.h5}>{participant.name}</Text>
-                  {participant._id === userData?._id && (
-                    <Text style={styles.littleCaption} color="#94A3B8">
-                      {t('chat.you')}
-                    </Text>
-                  )}
+              <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
+                {/* Header */}
+                <VStack space={1} justifyContent="start">
+                  <Text style={styles.h5}>
+                    {t('chat.participantsList')}
+                  </Text>
+                  <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
+                    {t('chat.participants', { count: conversation?.participants?.length || 0 })}
+                  </Text>
                 </VStack>
-              </HStack>
-            ))}
-          </VStack>
-        </VStack>
-      </Modal.Content>
-    </BlurView>
-  </View>
-</Modal>
+
+                {/* Participants List */}
+                <VStack space={4} paddingVertical={20}>
+                  {conversation?.participants?.map((participant) => (
+                    <HStack
+                      key={participant._id}
+                      alignItems="center"
+                      space={3}
+                    >
+                      <Image
+                        source={
+                          participant.profilePicture
+                            ? { uri: participant.profilePicture }
+                            : require('../../assets/images/default.png')
+                        }
+                        alt={participant.name}
+                        size={12}
+                        rounded="full"
+                      />
+                      <VStack>
+                        <Text style={styles.h5}>{participant.name}</Text>
+                        {participant._id === userData?._id && (
+                          <Text style={styles.littleCaption} color="#94A3B8">
+                            {t('chat.you')}
+                          </Text>
+                        )}
+                      </VStack>
+                    </HStack>
+                  ))}
+                </VStack>
+              </VStack>
+            </Modal.Content>
+          </BlurView>
+        </View>
+      </Modal>
 
       {/* Modal pour afficher le secret complet */}
       <Modal isOpen={isModalVisible} onClose={() => setModalVisible(false)}>

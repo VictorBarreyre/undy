@@ -244,6 +244,15 @@ export default {
     "share": "Partager",
     "shared": "Partagé",
     "you": "Vous",
+    "reply": "Répondre",
+    "cancel": "Annuler",
+    "image": "Image",
+    "defaultUser": "Utilisateur",
+    // Pour le menu contextuel des messages
+    "messageOptions": {
+      "reply": "Répondre",
+      "cancel": "Annuler"
+    },
     "locationSharing": {
       "title": "Partager ma localisation"
     },

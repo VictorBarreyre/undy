@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
-import { Animated, Easing, TouchableOpacity } from 'react-native';
+import { Animated, Easing, TouchableOpacity, Pressable, Alert } from 'react-native';
 import { Box, Text, HStack, Image, VStack } from 'native-base';
 import LinearGradient from 'react-native-linear-gradient';
 import { styles } from '../../infrastructure/theme/styles';
@@ -83,6 +83,20 @@ const bubbleStyles = {
       last: { borderRadius: 10, borderTopLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
       single: { borderRadius: 10, overflow: 'hidden', backgroundColor: 'transparent' }
     }
+  },
+  reply: {
+    user: {
+      first: { borderRadius: 10, borderBottomRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
+      middle: { borderRadius: 10, borderTopRightRadius: 3, borderBottomRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
+      last: { borderRadius: 10, borderTopRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
+      single: { borderRadius: 10, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' }
+    },
+    other: {
+      first: { borderRadius: 10, borderBottomLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
+      middle: { borderRadius: 10, borderTopLeftRadius: 3, borderBottomLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
+      last: { borderRadius: 10, borderTopLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
+      single: { borderRadius: 10, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' }
+    }
   }
 };
 
@@ -138,6 +152,72 @@ const MessageText = memo(({ text, isUser }) => (
   </>
 ));
 
+// Composant pour afficher la réponse au message
+// Dans MessageItem.js, remplacez le composant ReplyPreview par celui-ci
+
+// Composant pour afficher la réponse au message
+const ReplyPreview = memo(({ replyToMessage, isUser }) => {
+  if (!replyToMessage) return null;
+  
+  const { t } = useTranslation();
+  
+  // Préparation du contenu à afficher
+  const replyName = replyToMessage.senderInfo?.name || t('chat.defaultUser');
+  const replyText = replyToMessage.text && replyToMessage.text.length > 30
+    ? `${replyToMessage.text.substring(0, 30)}...`
+    : replyToMessage.text || '';
+  
+  const hasImage = replyToMessage.image && replyToMessage.image.length > 0;
+  
+  // Couleur de fond en fonction de l'expéditeur
+  const bgColor = isUser ? 'rgba(255,88,126,0.1)' : 'rgba(0,0,0,0.05)';
+  const textColor = isUser ? 'white' : '#2D3748';
+  const nameColor = isUser ? '#FF587E' : '#FF587E';
+  
+  return (
+    <Box pb={1} pt={1} px={2} opacity={0.9}>
+      <Box
+        bg={bgColor}
+        p={1}
+        px={2}
+        borderRadius={10}
+        borderLeftWidth={3}
+        borderLeftColor="#FF587E"
+      >
+        <Text color={nameColor} fontWeight="medium" fontSize={10}>
+          {replyName}
+        </Text>
+        
+        <HStack alignItems="center" space={1}>
+          {hasImage && (
+            <Box
+              bg={isUser ? 'rgba(255,255,255,0.2)' : '#F0F0F0'}
+              px={1}
+              py={0.5}
+              borderRadius={4}
+              mb={0.5}
+            >
+              <Text fontSize={9} color={isUser ? 'white' : '#94A3B8'}>📷 {t('chat.image')}</Text>
+            </Box>
+          )}
+          
+          {replyText && (
+            <Text
+              color={textColor}
+              fontSize={10}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              opacity={0.8}
+            >
+              {replyText}
+            </Text>
+          )}
+        </HStack>
+      </Box>
+    </Box>
+  );
+});
+
 // Composant avatar mémorisé
 const Avatar = memo(({ source }) => (
   <Image
@@ -175,10 +255,12 @@ const MessageItem = memo(({
   messages,
   userData,
   showTimestamps,
-  onRetryMessage
+  onRetryMessage,
+  onReplyToMessage
 }) => {
   const { t } = useTranslation();
   const dateFormatter = useDateFormatter();
+  const [showOptions, setShowOptions] = useState(false);
   
   // Protection contre les valeurs null/undefined
   if (!item) return null;
@@ -196,6 +278,9 @@ const MessageItem = memo(({
   const sendFailed = !!item.sendFailed;
 
   const messageOpacity = isSending ? 0.7 : 1;
+  
+  // Vérifier s'il s'agit d'une réponse
+  const isReply = !!item.replyToMessage;
 
   const renderMessageStatus = () => {
     if (sendFailed) {
@@ -209,7 +294,8 @@ const MessageItem = memo(({
               onRetryMessage && onRetryMessage({
                 text: item.text,
                 image: item.image,
-                messageType: item.messageType
+                messageType: item.messageType,
+                replyToMessage: item.replyToMessage
               });
             }}
           >
@@ -259,8 +345,13 @@ const MessageItem = memo(({
 
   // Utiliser les styles précalculés
   const isUser = item.sender === 'user';
-  const getBubbleStyle = useCallback((isTextMessage = true) => {
+  const getBubbleStyle = useCallback((isTextMessage = true, isReplyBubble = false) => {
     const senderType = isUser ? 'user' : 'other';
+    
+    if (isReplyBubble) {
+      return bubbleStyles.reply[senderType][position];
+    }
+    
     return isTextMessage ? bubbleStyles[senderType][position] : bubbleStyles.image[senderType][position];
   }, [isUser, position]);
 
@@ -286,6 +377,14 @@ const MessageItem = memo(({
   const closeImageViewer = useCallback(() => {
     setIsImageViewVisible(false);
   }, []);
+  
+  // Handler pour répondre à un message
+  const handleReply = useCallback(() => {
+    if (onReplyToMessage) {
+      onReplyToMessage(item);
+    }
+    setShowOptions(false);
+  }, [item, onReplyToMessage]);
 
   // Préparer le contenu de l'avatar une seule fois
   const avatarContent = useCallback(() => {
@@ -303,34 +402,95 @@ const MessageItem = memo(({
 
     return <Avatar source={imageSource} />;
   }, [showAvatar, isUser, userData, item.senderInfo]);
+  
+  // Gestionnaire de pression longue pour afficher les options
+  const handleLongPress = useCallback(() => {
+    if (!isSending && !sendFailed) {
+      setShowOptions(true);
+    }
+  }, [isSending, sendFailed]);
 
   // Rendu du contenu du message optimisé
   const messageContent = () => {
-    if (hasImage && hasRealText) {
-      return (
-        <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
-          <Box style={getBubbleStyle(false)}>
+    const messageComponent = (
+      <Pressable onLongPress={handleLongPress}>
+        {isReply && item.replyToMessage && (
+          <ReplyPreview replyToMessage={item.replyToMessage} isUser={isUser} />
+        )}
+        
+        {hasImage && hasRealText ? (
+          <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
+            <Box style={getBubbleStyle(false, isReply)}>
+              <MessageImage uri={item.image} onPress={openImageViewer} />
+            </Box>
+
+            <Box p={3} style={getBubbleStyle(true, isReply)}>
+              <MessageText text={item.text} isUser={isUser} />
+            </Box>
+          </VStack>
+        ) : hasImage ? (
+          <Box style={getBubbleStyle(false, isReply)}>
             <MessageImage uri={item.image} onPress={openImageViewer} />
           </Box>
-
-          <Box p={3} style={getBubbleStyle(true)}>
-            <MessageText text={item.text} isUser={isUser} />
+        ) : (
+          <Box p={3} style={getBubbleStyle(true, isReply)}>
+            <MessageText text={item.text || ''} isUser={isUser} />
+          </Box>
+        )}
+      </Pressable>
+    );
+    
+    // Afficher les options si nécessaire
+    if (showOptions) {
+      return (
+        <VStack>
+          {messageComponent}
+          
+          <Box 
+            position="absolute" 
+            top={-40} 
+            left={isUser ? 10 : 50}
+            right={isUser ? 50 : 10}
+            px={1}
+            py={1}
+            bg="#1E1E1E"
+            borderRadius={20}
+            zIndex={100}
+            shadow={3}
+          >
+            <HStack space={2} justifyContent="center" alignItems="center">
+              <TouchableOpacity 
+                onPress={handleReply}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRightWidth: 1,
+                  borderRightColor: "#444444"
+                }}
+              >
+                <Text color="#FF587E" fontSize="xs">
+                  {t('chat.messageOptions.reply')}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={() => setShowOptions(false)}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 6
+                }}
+              >
+                <Text color="white" fontSize="xs">
+                  {t('chat.messageOptions.cancel')}
+                </Text>
+              </TouchableOpacity>
+            </HStack>
           </Box>
         </VStack>
       );
-    } else if (hasImage) {
-      return (
-        <Box style={getBubbleStyle(false)}>
-          <MessageImage uri={item.image} onPress={openImageViewer} />
-        </Box>
-      );
-    } else {
-      return (
-        <Box p={3} style={getBubbleStyle(true)}>
-          <MessageText text={item.text || ''} isUser={isUser} />
-        </Box>
-      );
     }
+    
+    return messageComponent;
   };
 
   return (
@@ -425,6 +585,7 @@ const MessageItem = memo(({
     prevProps.item.text === nextProps.item.text &&
     prevProps.item.image === nextProps.item.image &&
     prevProps.userData?._id === nextProps.userData?._id &&
+    prevProps.showOptions === nextProps.showOptions &&
     true
   );
 });
