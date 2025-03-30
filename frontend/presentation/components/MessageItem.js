@@ -1,20 +1,96 @@
 import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
-import { Animated, Easing, TouchableOpacity, Pressable, Alert } from 'react-native';
+import { Animated, Easing, TouchableOpacity, Pressable } from 'react-native';
 import { Box, Text, HStack, Image, VStack } from 'native-base';
 import LinearGradient from 'react-native-linear-gradient';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faReply, faCopy, faShare, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import ImageView from 'react-native-image-viewing';
 import { useTranslation } from 'react-i18next';
-import { useDateFormatter } from '../../utils/dateFormatters'; // Ajustez le chemin selon votre structure
+import { useDateFormatter } from '../../utils/dateFormatters';
 
 // Composant séparateur de date mémorisé 
 const DateSeparator = memo(({ timestamp }) => {
   const dateFormatter = useDateFormatter();
-  
+
   return (
     <Text style={styles.littleCaption} textAlign="center" color="#94A3B8" mb={4} mt={10}>
       {dateFormatter.formatDate(timestamp)}
     </Text>
+  );
+});
+
+// Composant pour afficher la réponse au message
+const ReplyPreview = memo(({ replyToMessage, isUser }) => {
+  if (!replyToMessage) return null;
+
+  const { t } = useTranslation();
+
+  // Préparation du contenu
+  const replyName = replyToMessage.senderInfo?.name || t('chat.defaultUser');
+  const replyText = replyToMessage.text && replyToMessage.text.length > 30
+    ? `${replyToMessage.text.substring(0, 30)}...`
+    : replyToMessage.text || '';
+
+  const hasImage = replyToMessage.image && typeof replyToMessage.image === 'string' && replyToMessage.image.length > 0;
+
+  // Variables de style modernisées
+  const bgColor = isUser ? 'rgba(255,88,126,0.08)' : 'rgba(0,0,0,0.03)';
+  const textColor = isUser ? 'white' : '#2D3748';
+  const nameColor = '#FF587E';
+
+  return (
+    <Box pb={1} mb={1}>
+      <Box
+        bg={bgColor}
+        p={2}
+        borderRadius={10}
+        borderLeftWidth={2}
+        borderLeftColor={nameColor}
+        width="100%"
+      >
+        <HStack alignItems="center" space={1} mb={0.5}>
+          <Box
+            width={3}
+            height={3}
+            bg={nameColor}
+            borderRadius={10}
+            mr={1}
+          />
+          <Text color={nameColor} fontWeight="600" fontSize={10}>
+            {replyName}
+          </Text>
+        </HStack>
+
+        <HStack alignItems="center" space={1}>
+          {hasImage && (
+            <Box
+              bg={isUser ? 'rgba(255,255,255,0.2)' : '#F0F0F0'}
+              px={1.5}
+              py={0.5}
+              borderRadius={4}
+              mb={0.5}
+              alignItems="center"
+              flexDirection="row"
+            >
+              <Text fontSize={9} color={isUser ? 'white' : '#94A3B8'}>📷</Text>
+            </Box>
+          )}
+
+          {replyText && (
+            <Text
+              color={textColor}
+              fontSize={11}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              opacity={0.9}
+            >
+              {replyText}
+            </Text>
+          )}
+        </HStack>
+      </Box>
+    </Box>
   );
 });
 
@@ -152,72 +228,6 @@ const MessageText = memo(({ text, isUser }) => (
   </>
 ));
 
-// Composant pour afficher la réponse au message
-// Dans MessageItem.js, remplacez le composant ReplyPreview par celui-ci
-
-// Composant pour afficher la réponse au message
-const ReplyPreview = memo(({ replyToMessage, isUser }) => {
-  if (!replyToMessage) return null;
-  
-  const { t } = useTranslation();
-  
-  // Préparation du contenu à afficher
-  const replyName = replyToMessage.senderInfo?.name || t('chat.defaultUser');
-  const replyText = replyToMessage.text && replyToMessage.text.length > 30
-    ? `${replyToMessage.text.substring(0, 30)}...`
-    : replyToMessage.text || '';
-  
-  const hasImage = replyToMessage.image && replyToMessage.image.length > 0;
-  
-  // Couleur de fond en fonction de l'expéditeur
-  const bgColor = isUser ? 'rgba(255,88,126,0.1)' : 'rgba(0,0,0,0.05)';
-  const textColor = isUser ? 'white' : '#2D3748';
-  const nameColor = isUser ? '#FF587E' : '#FF587E';
-  
-  return (
-    <Box pb={1} pt={1} px={2} opacity={0.9}>
-      <Box
-        bg={bgColor}
-        p={1}
-        px={2}
-        borderRadius={10}
-        borderLeftWidth={3}
-        borderLeftColor="#FF587E"
-      >
-        <Text color={nameColor} fontWeight="medium" fontSize={10}>
-          {replyName}
-        </Text>
-        
-        <HStack alignItems="center" space={1}>
-          {hasImage && (
-            <Box
-              bg={isUser ? 'rgba(255,255,255,0.2)' : '#F0F0F0'}
-              px={1}
-              py={0.5}
-              borderRadius={4}
-              mb={0.5}
-            >
-              <Text fontSize={9} color={isUser ? 'white' : '#94A3B8'}>📷 {t('chat.image')}</Text>
-            </Box>
-          )}
-          
-          {replyText && (
-            <Text
-              color={textColor}
-              fontSize={10}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              opacity={0.8}
-            >
-              {replyText}
-            </Text>
-          )}
-        </HStack>
-      </Box>
-    </Box>
-  );
-});
-
 // Composant avatar mémorisé
 const Avatar = memo(({ source }) => (
   <Image
@@ -261,7 +271,11 @@ const MessageItem = memo(({
   const { t } = useTranslation();
   const dateFormatter = useDateFormatter();
   const [showOptions, setShowOptions] = useState(false);
-  
+  const [isImageViewVisible, setIsImageViewVisible] = useState(false);
+
+  const [menuPosition, setMenuPosition] = useState('bottom');
+  const messageRef = useRef(null);
+
   // Protection contre les valeurs null/undefined
   if (!item) return null;
 
@@ -272,16 +286,94 @@ const MessageItem = memo(({
 
   const isLastMessage = index === messages.length - 1;
 
+  // Animations
   const timestampAnimation = useRef(new Animated.Value(showTimestamps ? 1 : 0)).current;
-  const [isImageViewVisible, setIsImageViewVisible] = useState(false);
+  const menuAnimation = useRef(new Animated.Value(0)).current;
+  const highlightAnimation = useRef(new Animated.Value(0)).current;
+
   const isSending = !!item.isSending;
   const sendFailed = !!item.sendFailed;
-
   const messageOpacity = isSending ? 0.7 : 1;
-  
+
   // Vérifier s'il s'agit d'une réponse
   const isReply = !!item.replyToMessage;
 
+  // Animation de mise en évidence pour les messages sélectionnés pour réponse
+  useEffect(() => {
+    if (item.isHighlighted) {
+      // Animation de pulsation
+      Animated.sequence([
+        Animated.timing(highlightAnimation, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: false
+        }),
+        Animated.timing(highlightAnimation, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: false
+        })
+      ]).start();
+    }
+  }, [item.isHighlighted]);
+
+  // Couleur d'arrière-plan pour la mise en évidence
+  const bgHighlight = highlightAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['transparent', item.sender === 'user' ? 'rgba(255,88,126,0.15)' : 'rgba(0,0,0,0.05)']
+  });
+
+  // Animation des horodatages
+  useEffect(() => {
+    Animated.timing(timestampAnimation, {
+      toValue: showTimestamps ? 1 : 0,
+      duration: 250,
+      easing: Easing.bezier(0.4, 0, 0.2, 1),
+      useNativeDriver: true
+    }).start();
+  }, [showTimestamps]);
+
+  // Gestionnaire pour le menu contextuel
+  const handleLongPress = useCallback(() => {
+    if (!isSending && !sendFailed) {
+      // Déterminer si on est proche de la fin de la liste
+      const isNearEnd = index >= messages.length - 3; // Considérer les 3 derniers messages comme "près de la fin"
+
+      // Si on est près de la fin, afficher au-dessus
+      const menuPlacement = isNearEnd ? 'top' : 'bottom';
+
+      setMenuPosition(menuPlacement);
+      setShowOptions(true);
+
+      // Animer l'apparition
+      Animated.timing(menuAnimation, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true
+      }).start();
+    }
+  }, [isSending, sendFailed, index, messages.length]);
+
+  const closeMenu = () => {
+    Animated.timing(menuAnimation, {
+      toValue: 0,
+      duration: 150,
+      easing: Easing.in(Easing.ease),
+      useNativeDriver: true
+    }).start(() => {
+      setShowOptions(false);
+    });
+  };
+
+  // Handler pour répondre à un message
+  const handleReply = useCallback(() => {
+    if (onReplyToMessage) {
+      onReplyToMessage(item);
+    }
+    closeMenu();
+  }, [item, onReplyToMessage]);
+
+  // Gestionnaire pour l'état du message
   const renderMessageStatus = () => {
     if (sendFailed) {
       return (
@@ -289,7 +381,7 @@ const MessageItem = memo(({
           <Text style={[styles.littleCaption, { color: 'red' }]} mr={2}>
             {t('chat.messageFailed')}
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => {
               onRetryMessage && onRetryMessage({
                 text: item.text,
@@ -299,12 +391,12 @@ const MessageItem = memo(({
               });
             }}
           >
-            <Text 
+            <Text
               style={[
-                styles.littleCaption, 
-                { 
-                  color: 'red', 
-                  textDecorationLine: 'underline' 
+                styles.littleCaption,
+                {
+                  color: 'red',
+                  textDecorationLine: 'underline'
                 }
               ]}
             >
@@ -314,7 +406,7 @@ const MessageItem = memo(({
         </HStack>
       );
     }
-  
+
     if (isSending) {
       return (
         <Text style={[styles.littleCaption, { color: '#94A3B8' }]} mr={2}>
@@ -322,18 +414,19 @@ const MessageItem = memo(({
         </Text>
       );
     }
-  
+
     return null;
   };
 
-  useEffect(() => {
-    Animated.timing(timestampAnimation, {
-      toValue: showTimestamps ? 1 : 0,
-      duration: 250,
-      easing: Easing.bezier(0.4, 0, 0.2, 1),
-      useNativeDriver: true
-    }).start();
-  }, [showTimestamps, timestampAnimation]);
+  // Handler pour l'ouverture de la visionneuse d'images
+  const openImageViewer = useCallback(() => {
+    setIsImageViewVisible(true);
+  }, []);
+
+  // Handler pour la fermeture de la visionneuse d'images
+  const closeImageViewer = useCallback(() => {
+    setIsImageViewVisible(false);
+  }, []);
 
   // Calculer la position une seule fois
   const position = getMessagePosition(index, messages);
@@ -347,11 +440,11 @@ const MessageItem = memo(({
   const isUser = item.sender === 'user';
   const getBubbleStyle = useCallback((isTextMessage = true, isReplyBubble = false) => {
     const senderType = isUser ? 'user' : 'other';
-    
+
     if (isReplyBubble) {
       return bubbleStyles.reply[senderType][position];
     }
-    
+
     return isTextMessage ? bubbleStyles[senderType][position] : bubbleStyles.image[senderType][position];
   }, [isUser, position]);
 
@@ -367,24 +460,6 @@ const MessageItem = memo(({
     outputRange: [0, 10],
     extrapolate: 'clamp'
   });
-
-  // Handler pour l'ouverture de la visionneuse d'images
-  const openImageViewer = useCallback(() => {
-    setIsImageViewVisible(true);
-  }, []);
-
-  // Handler pour la fermeture de la visionneuse d'images
-  const closeImageViewer = useCallback(() => {
-    setIsImageViewVisible(false);
-  }, []);
-  
-  // Handler pour répondre à un message
-  const handleReply = useCallback(() => {
-    if (onReplyToMessage) {
-      onReplyToMessage(item);
-    }
-    setShowOptions(false);
-  }, [item, onReplyToMessage]);
 
   // Préparer le contenu de l'avatar une seule fois
   const avatarContent = useCallback(() => {
@@ -402,13 +477,124 @@ const MessageItem = memo(({
 
     return <Avatar source={imageSource} />;
   }, [showAvatar, isUser, userData, item.senderInfo]);
-  
-  // Gestionnaire de pression longue pour afficher les options
-  const handleLongPress = useCallback(() => {
-    if (!isSending && !sendFailed) {
-      setShowOptions(true);
-    }
-  }, [isSending, sendFailed]);
+
+  // Rendu du menu contextuel
+  const renderContextMenu = () => {
+    if (!showOptions) return null;
+
+    const translateY = menuAnimation.interpolate({
+      inputRange: [0, 1],
+      outputRange: menuPosition === 'bottom' ? [10, 0] : [-10, 0]
+    });
+
+    // Styles de position selon qu'on affiche en haut ou en bas
+    const positionStyles = {
+      top: menuPosition === 'bottom' ? '100%' : 'auto',
+      bottom: menuPosition === 'top' ? '100%' : 'auto',
+      marginTop: menuPosition === 'bottom' ? 5 : 0,
+      marginBottom: menuPosition === 'top' ? 5 : 0,
+    };
+
+    return (
+      <Animated.View
+        style={{
+          position: "absolute",
+          top: -70,  // Toujours en dessous
+          marginTop: 10,
+          left: isUser ? 60 : 40,
+          right: 20,
+          backgroundColor: "white",
+          borderRadius: 12,
+          padding: 10,
+          opacity: menuAnimation,
+          zIndex: 1000,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 2,
+          width: 'content',
+          alignSelf: 'flex-start',
+          flexDirection: "row",
+          width:'78%'
+        }}
+      >
+        {/* Petit triangle pointant vers le message */}
+        <Box
+          style={{
+            position: 'absolute',
+            bottom: -8,
+            left: isUser ? '95%' : '5%', // Position différente selon l'expéditeur
+            width: 0,
+            height: 0,
+            backgroundColor: 'transparent',
+            borderStyle: 'solid',
+            borderLeftWidth: 8,
+            borderRightWidth: 8,
+            borderBottomWidth: 8,
+            borderLeftColor: 'transparent',
+            borderRightColor: 'transparent',
+            borderBottomColor: "white",
+            transform: [{ rotate: '180deg' }],
+
+          }}
+        />
+        <TouchableOpacity
+          onPress={handleReply}
+          style={{
+            padding: 8,
+            borderRadius: 16,
+            backgroundColor: "#FF587E33",
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 12
+          }}
+        >
+          <FontAwesomeIcon icon={faReply} size={14} color="#94A3B8" />
+          <Text style={styles.littleCaption} color="#94A3B8" fontSize="xs" ml={2} fontWeight="medium">
+            Répondre
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => {
+            // Logique pour copier le texte
+            closeMenu();
+          }}
+          style={{
+            padding: 8,
+            marginLeft: 8,
+            borderRadius: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 12
+          }}
+        >
+          <FontAwesomeIcon icon={faCopy} size={14} color="#94A3B8" />
+          <Text style={styles.littleCaption} color="#94A3B8" fontSize="xs" ml={2}>
+            Copier
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={closeMenu}
+          style={{
+            padding: 8,
+            marginLeft: 8,
+            borderRadius: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 12
+          }}
+        >
+          <FontAwesomeIcon icon={faTimes} size={14} color="#94A3B8" />
+          <Text style={styles.littleCaption} color="#94A3B8" fontSize="xs" ml={2}>
+            Annuler
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
 
   // Rendu du contenu du message optimisé
   const messageContent = () => {
@@ -417,7 +603,7 @@ const MessageItem = memo(({
         {isReply && item.replyToMessage && (
           <ReplyPreview replyToMessage={item.replyToMessage} isUser={isUser} />
         )}
-        
+
         {hasImage && hasRealText ? (
           <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             <Box style={getBubbleStyle(false, isReply)}>
@@ -439,143 +625,98 @@ const MessageItem = memo(({
         )}
       </Pressable>
     );
-    
-    // Afficher les options si nécessaire
-    if (showOptions) {
-      return (
-        <VStack>
-          {messageComponent}
-          
-          <Box 
-            position="absolute" 
-            top={-40} 
-            left={isUser ? 10 : 50}
-            right={isUser ? 50 : 10}
-            px={1}
-            py={1}
-            bg="#1E1E1E"
-            borderRadius={20}
-            zIndex={100}
-            shadow={3}
-          >
-            <HStack space={2} justifyContent="center" alignItems="center">
-              <TouchableOpacity 
-                onPress={handleReply}
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  borderRightWidth: 1,
-                  borderRightColor: "#444444"
-                }}
-              >
-                <Text color="#FF587E" fontSize="xs">
-                  {t('chat.messageOptions.reply')}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                onPress={() => setShowOptions(false)}
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 6
-                }}
-              >
-                <Text color="white" fontSize="xs">
-                  {t('chat.messageOptions.cancel')}
-                </Text>
-              </TouchableOpacity>
-            </HStack>
-          </Box>
-        </VStack>
-      );
-    }
-    
+
     return messageComponent;
   };
 
   return (
-    <HStack
-      width="100%"
-      justifyContent="space-between"
-      alignItems="flex-end"
-      my={0.2}
-      mb={isLastMessage ? 4 : 0}  // Add extra bottom margin only for the last message
-      px={2}
-      opacity={messageOpacity}
-    >
+    <Animated.View style={{ backgroundColor: bgHighlight, borderRadius: 20 }}>
       <HStack
-        flex={1}
-        justifyContent={isUser ? 'flex-end' : 'flex-start'}
+        width="100%"
+        justifyContent="space-between"
         alignItems="flex-end"
-        space={1}
+        my={0.2}
+        mb={isLastMessage ? 4 : 0}
+        px={2}
+        opacity={messageOpacity}
+        position="relative"
       >
-        {!isUser && avatarContent()}
+        {renderContextMenu()}
 
-        <VStack
-          maxWidth="80%"
-          alignItems={isUser ? 'flex-end' : 'flex-start'}
+        <HStack
+          flex={1}
+          justifyContent={isUser ? 'flex-end' : 'flex-start'}
+          alignItems="flex-end"
+          space={1}
         >
-          {!isUser && (position === 'first' || position === 'single') && (
-            <HStack alignItems="center">
-              <Text
-                style={styles.littleCaption}
-                color="#94A3B8"
-                ml={2}
-                mb={1}
-              >
-                {item.senderInfo?.name || t('chat.defaultUser')}
-              </Text>
-              {renderMessageStatus()}
-            </HStack>
-          )}
+          {!isUser && avatarContent()}
 
-          {isUser && (
-            <HStack alignItems="center" >
-              {renderMessageStatus()}
-            </HStack>
-          )}
-
-          {messageContent()}
-        </VStack>
-
-        {isUser && avatarContent()}
-      </HStack>
-
-      {hasImage && (
-        <ImageView
-          images={[{ uri: item.image }]}
-          imageIndex={0}
-          visible={isImageViewVisible}
-          onRequestClose={closeImageViewer}
-          swipeToCloseEnabled={true}
-          doubleTapToZoomEnabled={true}
-        />
-      )}
-
-      {showTimestamps && (
-        <Animated.View
-          style={{
-            opacity: timestampOpacity,
-            alignItems: 'flex-end'
-          }}
-        >
-          <Animated.Text
-            style={[
-              styles.littleCaption,
-              {
-                color: '#94A3B8',
-                fontSize: 10,
-                marginBottom: 6,
-                marginRight: 10,
-                transform: [{ translateX: timestampWidth }]
-              }
-            ]}
+          <VStack
+            maxWidth="80%"
+            alignItems={isUser ? 'flex-end' : 'flex-start'}
           >
-            {dateFormatter.formatTimeOnly(item.timestamp)}
-          </Animated.Text>
-        </Animated.View>
-      )}
-    </HStack>
+            {!isUser && (position === 'first' || position === 'single') && (
+              <HStack alignItems="center">
+                <Text
+                  style={styles.littleCaption}
+                  color="#94A3B8"
+                  ml={2}
+                  mb={1}
+                >
+                  {item.senderInfo?.name || t('chat.defaultUser')}
+                </Text>
+                {renderMessageStatus()}
+              </HStack>
+            )}
+
+            {isUser && (
+              <HStack alignItems="center" >
+                {renderMessageStatus()}
+              </HStack>
+            )}
+
+            {messageContent()}
+          </VStack>
+
+          {isUser && avatarContent()}
+        </HStack>
+
+        {hasImage && (
+          <ImageView
+            images={[{ uri: item.image }]}
+            imageIndex={0}
+            visible={isImageViewVisible}
+            onRequestClose={closeImageViewer}
+            swipeToCloseEnabled={true}
+            doubleTapToZoomEnabled={true}
+          />
+        )}
+
+        {showTimestamps && (
+          <Animated.View
+            style={{
+              opacity: timestampOpacity,
+              alignItems: 'flex-end'
+            }}
+          >
+            <Animated.Text
+              style={[
+                styles.littleCaption,
+                {
+                  color: '#94A3B8',
+                  fontSize: 10,
+                  marginBottom: 6,
+                  marginRight: 10,
+                  transform: [{ translateX: timestampWidth }]
+                }
+              ]}
+            >
+              {dateFormatter.formatTimeOnly(item.timestamp)}
+            </Animated.Text>
+          </Animated.View>
+        )}
+      </HStack>
+    </Animated.View>
   );
 }, (prevProps, nextProps) => {
   // Fonction de comparaison optimisée pour React.memo
@@ -585,8 +726,9 @@ const MessageItem = memo(({
     prevProps.item.text === nextProps.item.text &&
     prevProps.item.image === nextProps.item.image &&
     prevProps.userData?._id === nextProps.userData?._id &&
-    prevProps.showOptions === nextProps.showOptions &&
-    true
+    prevProps.item.isHighlighted === nextProps.item.isHighlighted &&
+    !prevProps.item.isSending === !nextProps.item.isSending &&
+    !prevProps.item.sendFailed === !nextProps.item.sendFailed
   );
 });
 

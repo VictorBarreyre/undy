@@ -52,13 +52,53 @@ const ChatScreen = ({ route }) => {
   const [replyToMessage, setReplyToMessage] = useState(null);
 
   const handleReplyToMessage = useCallback((message) => {
+    // Création d'une référence visuelle à l'animation
+    const animateMessage = (messageId) => {
+      // Trouver le message dans la liste
+      const messageIndex = messages.findIndex(msg => msg.id === messageId);
+      if (messageIndex === -1) return;
+      
+      // Créer une animation temporaire dans l'état
+      setMessages(prevMessages => {
+        const newMessages = [...prevMessages];
+        if (newMessages[messageIndex]) {
+          newMessages[messageIndex] = {
+            ...newMessages[messageIndex],
+            isHighlighted: true
+          };
+        }
+        return newMessages;
+      });
+      
+      // Effacer l'animation après quelques secondes
+      setTimeout(() => {
+        setMessages(prevMessages => {
+          const newMessages = [...prevMessages];
+          if (newMessages[messageIndex]) {
+            newMessages[messageIndex] = {
+              ...newMessages[messageIndex],
+              isHighlighted: false
+            };
+          }
+          return newMessages;
+        });
+      }, 500);
+    };
+    
+    // Animer le message avant de le sélectionner
+    animateMessage(message.id);
+    
+    // Définir le message à répondre
     setReplyToMessage(message);
-
+    
     // Mettre le focus sur le champ de texte
     if (inputRef.current) {
-      inputRef.current.focus();
+      // Ajouter un court délai pour laisser le temps à l'animation de se faire remarquer
+      setTimeout(() => {
+        inputRef.current.focus();
+      }, 300);
     }
-  }, []);
+  }, [messages]);
 
   const handleCancelReply = useCallback(() => {
     setReplyToMessage(null);
