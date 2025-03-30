@@ -249,10 +249,11 @@ export default {
     "image": "Image",
     "defaultUser": "Utilisateur",
     // Pour le menu contextuel des messages
-    "messageOptions": {
-      "reply": "Répondre",
-      "cancel": "Annuler"
-    },
+   "messageOptions": {
+  "reply": "Répondre",
+  "copy": "Copier", // Nouvelle entrée
+  "cancel": "Annuler"
+},
     "locationSharing": {
       "title": "Partager ma localisation"
     },

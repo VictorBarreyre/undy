@@ -294,10 +294,11 @@ export default {
     "image": "Image",
     "defaultUser": "User",
     // Pour le menu contextuel des messages
-    "messageOptions": {
-      "reply": "Reply",
-      "cancel": "Cancel"
-    },
+   "messageOptions": {
+  "reply": "Reply",
+  "copy": "Copy", // Nouvelle entrée
+  "cancel": "Cancel"
+},
     "documentOptions": {
       "takePhoto": "Take a photo",
       "chooseFromGallery": "Choose from gallery",
