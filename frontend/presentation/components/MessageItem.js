@@ -290,6 +290,7 @@ const MessageItem = memo(({
   const timestampAnimation = useRef(new Animated.Value(showTimestamps ? 1 : 0)).current;
   const menuAnimation = useRef(new Animated.Value(0)).current;
   const highlightAnimation = useRef(new Animated.Value(0)).current;
+  const shadowAnimation = useRef(new Animated.Value(0)).current;
 
   const isSending = !!item.isSending;
   const sendFailed = !!item.sendFailed;
@@ -316,6 +317,25 @@ const MessageItem = memo(({
       ]).start();
     }
   }, [item.isHighlighted]);
+
+  // Animation pour l'ombre lorsque le menu contextuel est affiché
+  useEffect(() => {
+    if (showOptions) {
+      // Animer l'apparition de l'ombre
+      Animated.timing(shadowAnimation, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: false // Native driver ne supporte pas les ombres
+      }).start();
+    } else {
+      // Faire disparaître l'ombre
+      Animated.timing(shadowAnimation, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: false
+      }).start();
+    }
+  }, [showOptions]);
 
   // Couleur d'arrière-plan pour la mise en évidence
   const bgHighlight = highlightAnimation.interpolate({
@@ -355,12 +375,19 @@ const MessageItem = memo(({
   }, [isSending, sendFailed, index, messages.length]);
 
   const closeMenu = () => {
-    Animated.timing(menuAnimation, {
-      toValue: 0,
-      duration: 150,
-      easing: Easing.in(Easing.ease),
-      useNativeDriver: true
-    }).start(() => {
+    Animated.parallel([
+      Animated.timing(menuAnimation, {
+        toValue: 0,
+        duration: 150,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: true
+      }),
+      Animated.timing(shadowAnimation, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: false
+      })
+    ]).start(() => {
       setShowOptions(false);
     });
   };
@@ -461,6 +488,17 @@ const MessageItem = memo(({
     extrapolate: 'clamp'
   });
 
+  // Animation pour l'ombre
+  const shadowElevation = shadowAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 5]
+  });
+
+  const shadowOpacity = shadowAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.2]
+  });
+
   // Préparer le contenu de l'avatar une seule fois
   const avatarContent = useCallback(() => {
     if (!showAvatar) return <Box size={8} opacity={0} />;
@@ -544,7 +582,6 @@ const MessageItem = memo(({
           style={{
             padding: 8,
             borderRadius: 16,
-            backgroundColor: "#FF587E33",
             flexDirection: "row",
             alignItems: "center",
             paddingHorizontal: 12
@@ -630,7 +667,18 @@ const MessageItem = memo(({
   };
 
   return (
-    <Animated.View style={{ backgroundColor: bgHighlight, borderRadius: 20 }}>
+    <Animated.View
+      style={{ 
+        backgroundColor: bgHighlight, 
+        borderRadius: 20,
+        elevation: shadowElevation, // Pour Android
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: shadowOpacity,
+        shadowRadius: shadowElevation,
+        zIndex: showOptions ? 10 : 1 // Élever le z-index quand le menu est actif
+      }}
+    >
       <HStack
         width="100%"
         justifyContent="space-between"
