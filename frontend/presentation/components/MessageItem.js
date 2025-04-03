@@ -128,6 +128,7 @@ const bubbleStyles = {
       borderBottomLeftRadius: 3,
       marginBottom: 1,
       overflow: 'hidden'
+      
     },
     middle: {
       borderRadius: 20,
@@ -650,7 +651,7 @@ const MessageItem = memo(({
           width="full"
           alignSelf={isUser ? 'flex-end' : 'flex-start'}
         >
-          <LinkPreview url={url} onPress={() => Linking.openURL(url)} />
+          <LinkPreview url={url} onPress={() => Linking.openURL(url)} isUser={isUser}  />
         </Box>
       ));
     };
