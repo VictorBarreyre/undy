@@ -8,6 +8,7 @@ import { styles } from '../../infrastructure/theme/styles';
 import ImageView from 'react-native-image-viewing';
 import { useTranslation } from 'react-i18next';
 import { useDateFormatter } from '../../utils/dateFormatters';
+import LinkPreview from './embed/LinkPreview';
 
 // Composant séparateur de date mémorisé 
 const DateSeparator = memo(({ timestamp }) => {
@@ -635,34 +636,66 @@ const MessageItem = memo(({
 
   // Rendu du contenu du message optimisé
   const messageContent = () => {
+    // Extraction des URLs du texte pour les embeds
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const embedUrls = (item.text || '').match(urlRegex) || [];
+    const hasEmbeds = embedUrls.length > 0;
+    
+    // Fonction pour rendre les embeds
+    const renderEmbeds = () => {
+      return embedUrls.map((url, index) => (
+        <Box 
+          key={`${url}-${index}`} 
+          mt={2} 
+          width="full"
+          alignSelf={isUser ? 'flex-end' : 'flex-start'}
+        >
+          <LinkPreview url={url} onPress={() => Linking.openURL(url)} />
+        </Box>
+      ));
+    };
+  
     const messageComponent = (
       <Pressable onLongPress={handleLongPress}>
         {isReply && item.replyToMessage && (
           <ReplyPreview replyToMessage={item.replyToMessage} isUser={isUser} />
         )}
-
+  
         {hasImage && hasRealText ? (
           <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             <Box style={getBubbleStyle(false, isReply)}>
               <MessageImage uri={item.image} onPress={openImageViewer} />
             </Box>
-
+  
             <Box p={3} style={getBubbleStyle(true, isReply)}>
               <MessageText text={item.text} isUser={isUser} />
             </Box>
+            
+            {/* Embeds affichés ici après le texte et l'image */}
+            {hasEmbeds && renderEmbeds()}
           </VStack>
         ) : hasImage ? (
-          <Box style={getBubbleStyle(false, isReply)}>
-            <MessageImage uri={item.image} onPress={openImageViewer} />
-          </Box>
+          <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
+            <Box style={getBubbleStyle(false, isReply)}>
+              <MessageImage uri={item.image} onPress={openImageViewer} />
+            </Box>
+            
+            {/* Embeds affichés ici après l'image */}
+            {hasEmbeds && renderEmbeds()}
+          </VStack>
         ) : (
-          <Box p={3} style={getBubbleStyle(true, isReply)}>
-            <MessageText text={item.text || ''} isUser={isUser} />
-          </Box>
+          <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
+            <Box p={3} style={getBubbleStyle(true, isReply)}>
+              <MessageText text={item.text || ''} isUser={isUser} />
+            </Box>
+            
+            {/* Embeds affichés ici après le texte */}
+            {hasEmbeds && renderEmbeds()}
+          </VStack>
         )}
       </Pressable>
     );
-
+  
     return messageComponent;
   };
 
