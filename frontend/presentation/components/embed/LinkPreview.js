@@ -694,12 +694,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     marginVertical: 4,
     overflow: 'hidden',
+    position: 'relative',
+  },
+  userContainer: {
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+  },
+  userContainerBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
   },
   loadingText: {
     color: '#999999',
     textAlign: 'center',
     padding: 10,
     marginTop: 4,
+  },
+  userLoadingText: {
+    color: 'white',
   },
   iconContainer: {
     width: 20,
@@ -713,10 +729,16 @@ const styles = StyleSheet.create({
     color: '#666666',
     fontSize: 14,
   },
+  userPlatformName: {
+    color: 'white',
+  },
   tweetText: {
     fontSize: 15,
     lineHeight: 20,
     marginBottom: 8,
+  },
+  userTweetText: {
+    color: 'white',
   },
   tweetImage: {
     height: 150,
@@ -748,6 +770,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  userVideoTitle: {
+    color: 'white',
   },
   websiteImage: {
     width: 60,
@@ -795,6 +820,9 @@ const styles = StyleSheet.create({
     color: '#999999',
     marginTop: 4,
   },
+  userUrl: {
+    color: 'rgba(255,255,255,0.7)',
+  }
 });
 
 export default React.memo(LinkPreview);
