@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
-import { Animated, Easing, TouchableOpacity, Pressable } from 'react-native';
+import { Animated, Easing, TouchableOpacity, Pressable, Linking } from 'react-native';
 import { Box, Text, HStack, Image, VStack } from 'native-base';
 import LinearGradient from 'react-native-linear-gradient';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';

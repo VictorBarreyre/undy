@@ -1,10 +1,11 @@
 // LinkPreview.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Linking } from 'react-native';
-import { Box, HStack, VStack } from 'native-base';
-import axios from 'axios';
+import { Box, HStack, VStack, Spinner } from 'native-base';
 // Import FontAwesome
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
+// Import du service de prévisualisation
+import linkPreviewService from '../../../utils/linkPreviewService';
 
 // Constantes pour les plateformes
 export const EmbedPlatforms = {
@@ -17,67 +18,48 @@ export const EmbedPlatforms = {
   WEBSITE: 'website', // Pour les sites web génériques
 };
 
-// Fonction pour détecter la plateforme
-export const detectPlatform = (url) => {
-  if (!url) return null;
-  
-  const lowerUrl = url.toLowerCase();
-  
-  if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com')) {
-    return EmbedPlatforms.TWITTER;
-  } else if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
-    return EmbedPlatforms.YOUTUBE;
-  } else if (lowerUrl.includes('instagram.com')) {
-    return EmbedPlatforms.INSTAGRAM;
-  } else if (lowerUrl.includes('tiktok.com')) {
-    return EmbedPlatforms.TIKTOK;
-  } else if (lowerUrl.includes('facebook.com')) {
-    return EmbedPlatforms.FACEBOOK;
-  } else if (lowerUrl.includes('maps.apple.com')) {
-    return EmbedPlatforms.APPLE_MAPS;
-  } else {
-    return EmbedPlatforms.WEBSITE;
-  }
-};
-
 // Composant principal de prévisualisation de lien
 const LinkPreview = ({ url, onPress }) => {
   const [metadata, setMetadata] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const platform = detectPlatform(url);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchMetadata = async () => {
       if (!url) return;
       
       try {
         setLoading(true);
-        // Vous devriez utiliser un service comme 'unfurl' ou une API comme 'iframely'
-        // Cet exemple utilise une API fictive
-        const response = await axios.get(`https://api.yourdomain.com/metadata?url=${encodeURIComponent(url)}`);
-        setMetadata(response.data);
+        // Utiliser le service d'extraction directe côté client
+        const data = await linkPreviewService.getLinkMetadata(url);
+        
+        if (isMounted) {
+          setMetadata(data);
+          setLoading(false);
+        }
       } catch (err) {
-        console.error('Erreur lors de la récupération des métadonnées:', err);
-        setError(err);
-        // Valeurs par défaut en cas d'erreur
-        setMetadata({
-          title: url,
-          description: '',
-          image: null,
-          siteName: new URL(url).hostname
-        });
-      } finally {
-        setLoading(false);
+        if (isMounted) {
+          console.error('Erreur lors de la récupération des métadonnées:', err);
+          setError(err);
+          setLoading(false);
+        }
       }
     };
 
     fetchMetadata();
+    
+    // Nettoyage
+    return () => {
+      isMounted = false;
+    };
   }, [url]);
 
   if (loading) {
     return (
-      <Box style={styles.container} bg="gray.100" rounded="md">
+      <Box style={styles.container} bg="gray.100" rounded="md" alignItems="center" justifyContent="center" p={4}>
+        <Spinner size="sm" color="gray.500" />
         <Text style={styles.loadingText}>Chargement de l'aperçu...</Text>
       </Box>
     );
@@ -92,18 +74,20 @@ const LinkPreview = ({ url, onPress }) => {
   }
 
   // Sélectionner le rendu en fonction de la plateforme
+  const platform = metadata.platform || 'website';
+  
   switch (platform) {
-    case EmbedPlatforms.TWITTER:
+    case 'twitter':
       return <TwitterEmbed url={url} metadata={metadata} onPress={onPress} />;
-    case EmbedPlatforms.YOUTUBE:
+    case 'youtube':
       return <YoutubeEmbed url={url} metadata={metadata} onPress={onPress} />;
-    case EmbedPlatforms.INSTAGRAM:
+    case 'instagram':
       return <InstagramEmbed url={url} metadata={metadata} onPress={onPress} />;
-    case EmbedPlatforms.FACEBOOK:
+    case 'facebook':
       return <FacebookEmbed url={url} metadata={metadata} onPress={onPress} />;
-    case EmbedPlatforms.TIKTOK:
+    case 'tiktok':
       return <TikTokEmbed url={url} metadata={metadata} onPress={onPress} />;
-    case EmbedPlatforms.APPLE_MAPS:
+    case 'apple_maps':
       return <AppleMapsEmbed url={url} metadata={metadata} onPress={onPress} />;
     default:
       return <GenericEmbed url={url} metadata={metadata} onPress={onPress} />;
@@ -127,7 +111,7 @@ const TwitterEmbed = ({ url, metadata, onPress }) => {
           <FontAwesome5 name="twitter" size={12} color="white" />
         </Box>
         <Text style={styles.platformName}>
-          {metadata.author || "Tweet"} sur X
+          {metadata.author ? `${metadata.author} sur X` : "Tweet"}
         </Text>
       </HStack>
       
@@ -417,6 +401,7 @@ const styles = StyleSheet.create({
     color: '#999999',
     textAlign: 'center',
     padding: 10,
+    marginTop: 4,
   },
   iconContainer: {
     width: 20,
