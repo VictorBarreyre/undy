@@ -635,23 +635,36 @@ const MessageItem = memo(({
     );
   };
 
-  // Rendu du contenu du message optimisé
   const messageContent = () => {
     // Extraction des URLs du texte pour les embeds
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const embedUrls = (item.text || '').match(urlRegex) || [];
     const hasEmbeds = embedUrls.length > 0;
     
+    // Retirer les URLs du texte à afficher
+    let cleanText = item.text || '';
+    if (hasEmbeds) {
+      // Si le message contient uniquement des URLs, définir cleanText comme vide
+      const textWithoutUrls = embedUrls.reduce((text, url) => text.replace(url, ''), cleanText).trim();
+      
+      // Si après suppression des URLs, il reste uniquement des espaces ou rien,
+      // considérer qu'il n'y a pas de "vrai" texte
+      cleanText = textWithoutUrls.length > 0 ? textWithoutUrls : '';
+    }
+    
+    // Vérifier s'il reste du texte après avoir retiré les URLs
+    const hasCleanText = cleanText.length > 0;
+  
     // Fonction pour rendre les embeds
     const renderEmbeds = () => {
       return embedUrls.map((url, index) => (
-        <Box 
-          key={`${url}-${index}`} 
-          mt={2} 
+        <Box
+          key={`${url}-${index}`}
+          mt={hasCleanText ? 2 : 0} // Ajouter une marge supérieure seulement s'il y a du texte
           width="full"
           alignSelf={isUser ? 'flex-end' : 'flex-start'}
         >
-          <LinkPreview url={url} onPress={() => Linking.openURL(url)} isUser={isUser}  />
+          <LinkPreview url={url} onPress={() => Linking.openURL(url)} isUser={isUser} />
         </Box>
       ));
     };
@@ -661,15 +674,15 @@ const MessageItem = memo(({
         {isReply && item.replyToMessage && (
           <ReplyPreview replyToMessage={item.replyToMessage} isUser={isUser} />
         )}
-  
-        {hasImage && hasRealText ? (
+        
+        {hasImage && hasCleanText ? (
           <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             <Box style={getBubbleStyle(false, isReply)}>
               <MessageImage uri={item.image} onPress={openImageViewer} />
             </Box>
-  
+            
             <Box p={3} style={getBubbleStyle(true, isReply)}>
-              <MessageText text={item.text} isUser={isUser} />
+              <MessageText text={cleanText} isUser={isUser} />
             </Box>
             
             {/* Embeds affichés ici après le texte et l'image */}
@@ -684,13 +697,19 @@ const MessageItem = memo(({
             {/* Embeds affichés ici après l'image */}
             {hasEmbeds && renderEmbeds()}
           </VStack>
-        ) : (
+        ) : hasCleanText ? (
           <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             <Box p={3} style={getBubbleStyle(true, isReply)}>
-              <MessageText text={item.text || ''} isUser={isUser} />
+              <MessageText text={cleanText} isUser={isUser} />
             </Box>
             
             {/* Embeds affichés ici après le texte */}
+            {hasEmbeds && renderEmbeds()}
+          </VStack>
+        ) : (
+          // Si le message ne contient que des liens (pas de texte, pas d'image)
+          <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
+            {/* Afficher uniquement les embeds */}
             {hasEmbeds && renderEmbeds()}
           </VStack>
         )}
