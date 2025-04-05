@@ -248,7 +248,6 @@ const TwitterEmbed = ({ url, metadata, onPress, isUser }) => {
   };
 
 // Composant pour YouTube
-// Composant pour YouTube
 const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
     const handlePress = () => {
       if (onPress) {
@@ -274,19 +273,30 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
             style={styles.userContainerBackground}
           />
         )}
-        <HStack space={2} alignItems="center" mb={2}>
+        <HStack space={3} alignItems="center" mb={2}>
           <Box 
             style={styles.iconContainer} 
             bg="#FF0000"
           >
             <FontAwesome5 name="youtube" size={12} color="white" />
           </Box>
-          <Text style={[
-            styles.platformName,
-            isUser && styles.userPlatformName
-          ]}>
-            {metadata.author || "Vidéo"} | YouTube
-          </Text>
+          <VStack flex={1}>
+            <Text style={[
+              styles.platformName,
+              isUser && styles.userPlatformName
+            ]}>
+              {metadata.author || "Vidéo"} | YouTube
+            </Text>
+            
+            {metadata.viewCount && (
+              <Text style={[
+                styles.videoStats,
+                isUser && styles.userVideoStats
+              ]}>
+                {metadata.viewCount}
+              </Text>
+            )}
+          </VStack>
         </HStack>
         
         {metadata.image && (
@@ -313,6 +323,26 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
             {metadata.title}
           </Text>
         )}
+        
+        {metadata.publishDate && (
+          <Text style={[
+            styles.videoDate,
+            isUser && styles.userVideoDate
+          ]}>
+            {metadata.publishDate}
+          </Text>
+        )}
+        
+        <HStack mt={2} space={4}>
+          {metadata.likeCount && (
+            <HStack space={1} alignItems="center">
+              <FontAwesome name="thumbs-up" size={14} color={isUser ? "rgba(255,255,255,0.7)" : "#606060"} />
+              <Text style={[styles.metricText, isUser && styles.userMetricText]}>
+                {metadata.likeCount}
+              </Text>
+            </HStack>
+          )}
+        </HStack>
         
         <Text style={[
           styles.url,
@@ -334,6 +364,14 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
       }
     };
   
+    // Déterminer si c'est un profil, un post ou un réel
+    const isProfile = metadata.contentType === 'profile';
+    const isReel = metadata.contentType === 'reel';
+    
+    // Obtenir l'image de profil si disponible, sinon générer un avatar par défaut
+    const profileImage = metadata.authorImage || 
+      (metadata.username ? `https://unavatar.io/instagram/${metadata.username}` : null);
+  
     return (
       <TouchableOpacity 
         onPress={handlePress} 
@@ -350,13 +388,21 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
             style={styles.userContainerBackground}
           />
         )}
-        <HStack space={2} alignItems="center" mb={2}>
-          <Box 
-            style={styles.iconContainer} 
-            bg="#C13584"
-          >
-            <FontAwesome5 name="instagram" size={12} color="white" />
-          </Box>
+        <HStack space={3} alignItems="center" mb={2}>
+          {profileImage ? (
+            <Image 
+              source={{ uri: profileImage }} 
+              style={styles.avatarImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Box 
+              style={styles.iconContainer} 
+              bg="#C13584"
+            >
+              <FontAwesome5 name="instagram" size={12} color="white" />
+            </Box>
+          )}
           <Text style={[
             styles.platformName,
             isUser && styles.userPlatformName
@@ -373,7 +419,7 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
           />
         )}
         
-        {metadata.title && (
+        {metadata.title && metadata.title !== `Profil de ${metadata.author || 'utilisateur'}` && (
           <Text 
             style={[
               styles.videoTitle,
@@ -385,11 +431,23 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
           </Text>
         )}
         
+        {metadata.description && (
+          <Text 
+            style={[
+              styles.description,
+              isUser && { color: 'rgba(255,255,255,0.7)' }
+            ]} 
+            numberOfLines={3}
+          >
+            {metadata.description}
+          </Text>
+        )}
+        
         <Text style={[
           styles.url,
           isUser && styles.userUrl
         ]}>
-          {url.replace(/^https?:\/\/(www\.)?/, '')}
+          {isProfile ? `@${metadata.username || 'utilisateur'}` : url.replace(/^https?:\/\/(www\.)?/, '')}
         </Text>
       </TouchableOpacity>
     );
@@ -405,6 +463,10 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
       }
     };
   
+    // Obtenir l'image de profil si disponible, sinon générer un avatar par défaut
+    const profileImage = metadata.authorImage || 
+      (metadata.username ? `https://unavatar.io/facebook/${metadata.username}` : null);
+  
     return (
       <TouchableOpacity 
         onPress={handlePress} 
@@ -421,18 +483,26 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
             style={styles.userContainerBackground}
           />
         )}
-        <HStack space={2} alignItems="center" mb={2}>
-          <Box 
-            style={styles.iconContainer} 
-            bg="#4267B2"
-          >
-            <FontAwesome5 name="facebook-f" size={12} color="white" />
-          </Box>
+        <HStack space={3} alignItems="center" mb={2}>
+          {profileImage ? (
+            <Image 
+              source={{ uri: profileImage }} 
+              style={styles.avatarImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Box 
+              style={styles.iconContainer} 
+              bg="#4267B2"
+            >
+              <FontAwesome5 name="facebook-f" size={12} color="white" />
+            </Box>
+          )}
           <Text style={[
             styles.platformName,
             isUser && styles.userPlatformName
           ]}>
-            {metadata.author || "Publication"} | Facebook
+            {metadata.author || metadata.username || "Publication"} | Facebook
           </Text>
         </HStack>
         
@@ -444,15 +514,15 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
           />
         )}
         
-        {metadata.title && (
+        {metadata.description && (
           <Text 
             style={[
-              styles.videoTitle,
-              isUser && styles.userVideoTitle
+              styles.description,
+              isUser && { color: 'rgba(255,255,255,0.7)' }
             ]} 
-            numberOfLines={2}
+            numberOfLines={3}
           >
-            {metadata.title}
+            {metadata.description}
           </Text>
         )}
         
@@ -465,7 +535,7 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
       </TouchableOpacity>
     );
   };
-  
+
   // Composant pour TikTok
   const TikTokEmbed = ({ url, metadata, onPress, isUser }) => {
     const handlePress = () => {
@@ -475,6 +545,10 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
         Linking.openURL(url);
       }
     };
+  
+    // Obtenir l'image de profil si disponible, sinon générer un avatar par défaut
+    const profileImage = metadata.authorImage || 
+      (metadata.username ? `https://unavatar.io/tiktok/${metadata.username}` : null);
   
     return (
       <TouchableOpacity 
@@ -492,18 +566,26 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
             style={styles.userContainerBackground}
           />
         )}
-        <HStack space={2} alignItems="center" mb={2}>
-          <Box 
-            style={styles.iconContainer} 
-            bg="#000000"
-          >
-            <FontAwesome5 name="tiktok" size={12} color="white" />
-          </Box>
+        <HStack space={3} alignItems="center" mb={2}>
+          {profileImage ? (
+            <Image 
+              source={{ uri: profileImage }} 
+              style={styles.avatarImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Box 
+              style={styles.iconContainer} 
+              bg="#000000"
+            >
+              <FontAwesome5 name="tiktok" size={12} color="white" />
+            </Box>
+          )}
           <Text style={[
             styles.platformName,
             isUser && styles.userPlatformName
           ]}>
-            {metadata.author || "Vidéo"} | TikTok
+            {metadata.username ? `@${metadata.username}` : metadata.author || "Vidéo"} | TikTok
           </Text>
         </HStack>
         
@@ -520,15 +602,15 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
           </View>
         )}
         
-        {metadata.title && (
+        {metadata.description && (
           <Text 
             style={[
-              styles.videoTitle,
-              isUser && styles.userVideoTitle
+              styles.description,
+              isUser && { color: 'rgba(255,255,255,0.7)' }
             ]} 
-            numberOfLines={2}
+            numberOfLines={3}
           >
-            {metadata.title}
+            {metadata.description}
           </Text>
         )}
         
@@ -545,63 +627,74 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
 // Composant pour Apple Maps
 // Composant pour Apple Maps
 const AppleMapsEmbed = ({ url, metadata, onPress, isUser }) => {
-    const handlePress = () => {
-      if (onPress) {
-        onPress(url);
-      } else {
-        Linking.openURL(url);
-      }
-    };
-  
-    return (
-      <TouchableOpacity 
-        onPress={handlePress} 
-        style={[
-          styles.container,
-          isUser && styles.userContainer
-        ]}
-      >
-        {isUser && (
-          <LinearGradient
-            colors={['#FF587E', '#CC4B8D']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.userContainerBackground}
-          />
-        )}
-        <HStack space={2} alignItems="center" mb={2}>
-          <Box 
-            style={styles.iconContainer} 
-            bg="#157EFB"
-          >
-            <FontAwesome5 name="map-marked-alt" size={12} color="white" />
-          </Box>
-          <Text style={[
-            styles.platformName,
-            isUser && styles.userPlatformName
-          ]}>
-            {metadata.title || "Lieu"} | Apple Plans
-          </Text>
-        </HStack>
-        
-        {metadata.image && (
-          <Image 
-            source={{ uri: metadata.image }} 
-            style={styles.mapImage}
-            resizeMode="cover"
-          />
-        )}
-        
-        <Text style={[
-          styles.url,
-          isUser && styles.userUrl
-        ]}>
-          {url.replace(/^https?:\/\/(www\.)?/, '')}
-        </Text>
-      </TouchableOpacity>
-    );
+  const handlePress = () => {
+    if (onPress) {
+      onPress(url);
+    } else {
+      Linking.openURL(url);
+    }
   };
-  
+
+  return (
+    <TouchableOpacity 
+      onPress={handlePress} 
+      style={[
+        styles.container,
+        isUser && styles.userContainer
+      ]}
+    >
+      {isUser && (
+        <LinearGradient
+          colors={['#FF587E', '#CC4B8D']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.userContainerBackground}
+        />
+      )}
+      <HStack space={2} alignItems="center" mb={2}>
+        <Box 
+          style={styles.iconContainer} 
+          bg="#157EFB"
+        >
+          <FontAwesome5 name="map-marked-alt" size={12} color="white" />
+        </Box>
+        <Text style={[
+          styles.platformName,
+          isUser && styles.userPlatformName
+        ]}>
+          {metadata.locationName || metadata.title || "Lieu"} | Apple Plans
+        </Text>
+      </HStack>
+      
+      {metadata.image && (
+        <Image 
+          source={{ uri: metadata.image }} 
+          style={styles.mapImage}
+          resizeMode="cover"
+        />
+      )}
+      
+      {metadata.address && (
+        <Text 
+          style={[
+            styles.address,
+            isUser && styles.userAddress
+          ]} 
+        >
+          {metadata.address}
+        </Text>
+      )}
+      
+      <Text style={[
+        styles.url,
+        isUser && styles.userUrl
+      ]}>
+        {url.replace(/^https?:\/\/(www\.)?/, '')}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
   // Composant pour les sites génériques
   const GenericEmbed = ({ url, metadata, onPress, isUser }) => {
     const handlePress = () => {

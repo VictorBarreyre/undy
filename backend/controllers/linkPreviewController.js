@@ -2,7 +2,7 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const https = require('https');
-
+const { scrapeUrl, detectPlatform } = require('./platformScraper');
 /**
  * Récupère les métadonnées d'une URL pour l'affichage des previews de liens
  * @param {Object} req - Requête Express
@@ -20,7 +20,19 @@ exports.getDataLink = async (req, res) => {
   
   try {
     console.log(`[LinkPreview] Extraction des métadonnées pour: ${url}`);
-    // Extraire les métadonnées
+    
+    // Tenter d'extraire les données avec Puppeteer
+    const scrapedData = await scrapeUrl(url);
+    
+    if (scrapedData) {
+      return res.status(200).json({
+        success: true,
+        data: scrapedData
+      });
+    }
+    
+    // Si le scraping échoue, utiliser l'extraction simple
+    console.log(`[LinkPreview] Scraping échoué, utilisation de l'extraction simple pour: ${url}`);
     const metadata = await extractMetadata(url);
     
     return res.status(200).json({
@@ -42,8 +54,8 @@ exports.getDataLink = async (req, res) => {
       });
     } catch (fallbackError) {
       console.error('[LinkPreview] Même le fallback a échoué:', fallbackError.message);
-      return res.status(200).json({  // Renvoyer 200 même en cas d'erreur pour éviter les problèmes côté client
-        success: true,  // Renvoyer success=true avec des données minimales
+      return res.status(200).json({
+        success: true,
         data: {
           url,
           platform: 'website',
@@ -59,7 +71,6 @@ exports.getDataLink = async (req, res) => {
     }
   }
 };
-
 /**
  * Détecte la plateforme d'une URL
  * @param {string} url - URL à analyser
@@ -403,4 +414,4 @@ const cleanupMetadata = (metadata) => {
       text: ''
     };
   }
-};
+};  
