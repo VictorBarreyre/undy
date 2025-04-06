@@ -23,7 +23,6 @@ const ConversationsList = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [openSwipeId, setOpenSwipeId] = useState(null); // Déplacez le state ici
   const { userToken } = useContext(AuthContext);
-  const [lastUpdate, setLastUpdate] = useState(null);
   const { unreadCountsMap, refreshUnreadCounts } = useCardData();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -58,6 +57,17 @@ const ConversationsList = ({ navigation }) => {
     }
   };
 
+  useFocusEffect(
+    React.useCallback(() => {
+      // Rafraîchir les compteurs de messages non lus
+      refreshUnreadCounts();
+      
+      // Charger les conversations à chaque montage du composant
+      fetchConversations();
+      
+    }, [userToken]) // Retirez lastUpdate de la liste des dépendances
+  );
+
   useEffect(() => {
     fadeAnim.setValue(0);
     Animated.timing(fadeAnim, {
@@ -82,20 +92,7 @@ const ConversationsList = ({ navigation }) => {
     }
   };
 
-  // Supprimer un des deux useFocusEffect
-  useFocusEffect(
-    React.useCallback(() => {
-      // Rafraîchir les compteurs de messages non lus
-      refreshUnreadCounts();
-      
-      const now = Date.now();
-      // Ne recharge que si plus de 5 minutes se sont écoulées depuis le dernier chargement
-      if (!lastUpdate || now - lastUpdate > 5 * 60 * 1000) {
-        fetchConversations();
-        setLastUpdate(now);
-      }
-    }, [userToken, lastUpdate])
-  );
+
 
   if (isLoading) {
     return (
