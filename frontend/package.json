@@ -58,6 +58,7 @@
     "react-native-gesture-handler": "~2.16.1",
     "react-native-get-random-values": "^1.11.0",
     "react-native-haptic-feedback": "^2.3.3",
+    "react-native-image-crop-picker": "^0.42.0",
     "react-native-image-manipulator": "^1.0.6",
     "react-native-image-picker": "^8.0.0",
     "react-native-image-viewing": "^0.2.2",

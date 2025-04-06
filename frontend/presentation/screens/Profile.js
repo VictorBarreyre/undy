@@ -11,6 +11,7 @@ import TypewriterLoader from '../components/TypewriterLoader';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useTranslation } from 'react-i18next';
 
+
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function Profile({ navigation }) {
@@ -170,10 +171,21 @@ export default function Profile({ navigation }) {
 
             const result = await launchImageLibrary({
                 mediaType: 'photo',
-                maxWidth: 800,  // Limiter la taille pour optimiser l'upload
-                maxHeight: 800,
-                quality: 0.8,   // Réduire légèrement la qualité
-                includeBase64: true,
+                quality: 0.8,
+                includeBase64: false,
+                maxWidth: 1000,
+                maxHeight: 1000,
+                // Activer le recadrage natif
+                cropping: true, 
+                cropperCircleOverlay: false, // true pour un recadrage circulaire
+                freeStyleCropEnabled: true,
+                cropperToolbarTitle: t('profile.cropImage.title', 'Ajuster votre photo'),
+                cropperStatusBarColor: '#FF78B2',
+                cropperToolbarColor: '#FF78B2',
+                cropperToolbarWidgetColor: 'white',
+                // Proportion carré par défaut (1:1)
+                width: 800,
+                height: 800,
             });
 
             if (result.didCancel) {
@@ -185,20 +197,56 @@ export default function Profile({ navigation }) {
                 throw new Error(t('profile.imagePicker.noImageSelected'));
             }
 
+            // L'image est déjà recadrée ici
             const imageAsset = result.assets[0];
-
-            // Uploader et mettre à jour le profil
+            
+            // Uploader directement l'image recadrée
             const updatedUser = await handleProfileImageUpdate(imageAsset);
 
             if (updatedUser?.profilePicture) {
                 // Animer pour indiquer le succès
                 animateProfilePhoto();
             }
+            
         } catch (error) {
             console.error(t('profile.errors.fullError'), error);
+            
+            // Gestion d'erreur améliorée
+            let errorMessage = t('profile.errors.unableToChangeProfilePicture');
+            
+            // Détection d'erreur réseau
+            if (error?.message?.includes('Network request failed')) {
+                errorMessage = t('profile.errors.networkError', 'Impossible de se connecter au serveur. Vérifiez votre connexion internet ou votre compte Apple.');
+            } else if (error?.message?.includes('Cannot read property') || error?.message?.includes('null') || error?.message?.includes('undefined')) {
+                // Gestion spécifique pour l'erreur que vous avez rencontrée
+                errorMessage = t('profile.errors.deviceError', 'Une erreur s\'est produite avec la fonction de recadrage. Nous allons essayer sans recadrage.');
+                
+                // Réessayer sans recadrage
+                try {
+                    const fallbackResult = await launchImageLibrary({
+                        mediaType: 'photo',
+                        quality: 0.8,
+                        maxWidth: 800,
+                        maxHeight: 800,
+                        includeBase64: false,
+                        // Désactiver le recadrage cette fois
+                        cropping: false,
+                    });
+                    
+                    if (!fallbackResult.didCancel && fallbackResult.assets && fallbackResult.assets[0]) {
+                        const fallbackImageAsset = fallbackResult.assets[0];
+                        await handleProfileImageUpdate(fallbackImageAsset);
+                        animateProfilePhoto();
+                        return; // Exit early
+                    }
+                } catch (fallbackError) {
+                    console.error('Erreur lors de la tentative de fallback:', fallbackError);
+                }
+            }
+            
             Alert.alert(
                 t('profile.errors.title'),
-                error.message || t('profile.errors.unableToChangeProfilePicture')
+                errorMessage
             );
         } finally {
             setIsUploadingImage(false);
