@@ -324,11 +324,20 @@ export default {
       "canceled": "Upload annulé par l'utilisateur",
       "noImageSelected": "Aucune image sélectionnée"
     },
+    "cropImage": {
+      "title": "Ajuster votre photo",
+      "instructions": "Déplacez et redimensionnez votre photo",
+      "preview": "Aperçu de l'image"
+    },
     "errors": {
       "title": "Erreur",
-      "loadingData": "Erreur chargement données:",
+      "loadingData": "Erreur lors du chargement des données",
       "fullError": "Erreur complète:",
-      "unableToChangeProfilePicture": "Impossible de changer la photo de profil"
+      "unableToChangeProfilePicture": "Impossible de changer votre photo de profil",
+      "networkError": "Impossible de se connecter au serveur. Vérifiez votre connexion internet ou votre compte Apple.",
+      "timeoutError": "La requête a pris trop de temps. Essayez avec une image plus petite ou vérifiez votre connexion.",
+      "deviceError": "Une erreur s'est produite avec la fonction de recadrage. Nous allons essayer sans recadrage.",
+      "imageProcessingFailed": "Le traitement de l'image a échoué"
     }
   },
 

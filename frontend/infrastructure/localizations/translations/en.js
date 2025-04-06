@@ -359,16 +359,24 @@ export default {
     "seeLess": "See less",
     "defaultName": "User",
     "profilePictureAlt": "{{name}}'s profile picture",
-    "dummyText": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged",
     "imagePicker": {
-      "canceled": "Upload canceled by user",
-      "noImageSelected": "No image selected"
+       "canceled": "Image selection canceled",
+        "noImageSelected": "No image was selected"
+    },
+    "cropImage": {
+      "title": "Adjust your photo",
+      "instructions": "Move and resize your photo",
+      "preview": "Image preview"
     },
     "errors": {
       "title": "Error",
-      "loadingData": "Error loading data:",
-      "fullError": "Complete error:",
-      "unableToChangeProfilePicture": "Unable to change profile picture"
+      "loadingData": "Error loading data",
+      "fullError": "Full error:",
+      "unableToChangeProfilePicture": "Unable to change your profile picture",
+      "networkError": "Unable to connect to the server. Check your internet connection or your Apple account.",
+      "timeoutError": "The request took too long. Try with a smaller image or check your connection.",
+      "deviceError": "An error occurred with the cropping function. We will try without cropping.",
+      "imageProcessingFailed": "Image processing failed"
     }
   },
   "settings": {
