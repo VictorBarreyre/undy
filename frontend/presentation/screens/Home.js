@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Alert, Linking, Platform, PermissionsAndroid } from 'react-native';
-import { Box, VStack, Text, HStack } from 'native-base';
+import { Alert, Linking, Platform, PermissionsAndroid, TouchableOpacity } from 'react-native';
+import { Box, VStack, Text, HStack, Spinner } from 'native-base';
 import SwipeDeck from '../components/SwipeDeck';
 import FilterBar from '../components/Filter.bar';
 import { styles } from '../../infrastructure/theme/styles';
 import { Background } from '../../navigation/Background';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faEllipsis } from '@fortawesome/free-solid-svg-icons';
+import { faRotate } from '@fortawesome/free-solid-svg-icons';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { useTranslation } from 'react-i18next';
@@ -24,7 +24,8 @@ const Home = ({ navigation }) => {
   const [isContactsLoaded, setIsContactsLoaded] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [locationRadius, setLocationRadius] = useState(5); // km
-  const [isDataLoading, setIsDataLoading] = useState(false); // Ajout pour suivre l'état de chargement
+  const [isDataLoading, setIsDataLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false); // Nouvel état pour l'animation de rechargement
 
   const typeTexts = {
     [t('filter.all')]: t('home.sourceTexts.everyone'),
@@ -166,6 +167,45 @@ const Home = ({ navigation }) => {
     }
   };
 
+  // Nouvelle fonction pour gérer le rechargement des données
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      console.log("Rechargement des secrets...");
+      
+      if (activeType === t('filter.aroundMe')) {
+        // Pour le filtre "Autour de moi", on doit vérifier la localisation
+        const hasPermission = await checkLocationPermission();
+        
+        if (hasPermission) {
+          // Mettre à jour la localisation actuelle
+          const location = await Location.getCurrentPositionAsync({});
+          setUserLocation(location);
+          await fetchSecretsByLocation(locationRadius);
+        } else {
+          // Demander la permission si nécessaire
+          const permissionGranted = await requestLocationPermission();
+          if (permissionGranted) {
+            await fetchSecretsByLocation(locationRadius);
+          }
+        }
+      } else {
+        // Pour les autres filtres, on recharge simplement les données
+        await fetchUnpurchasedSecrets(true);
+      }
+      
+      console.log("Rechargement terminé");
+    } catch (error) {
+      console.error("Erreur lors du rechargement:", error);
+      Alert.alert(
+        t('home.errors.refreshTitle', 'Erreur'),
+        t('home.errors.refreshFailed', "Impossible de recharger les secrets. Veuillez réessayer.")
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <Background>
       <Box alignItems='center' alignContent='center' paddingTop={2} width="100%">
@@ -179,12 +219,24 @@ const Home = ({ navigation }) => {
         <VStack paddingLeft={1} space={0}>
           <HStack alignItems='center' justifyContent='space-between'>
             <Text paddingBottom={1} style={styles.h3}>{t('home.latestHushys')}</Text>
-            <FontAwesomeIcon
-              icon={faEllipsis}
-              size={16}
-              color='black'
-              style={{ marginRight: 10 }}
-            />
+            <TouchableOpacity 
+              onPress={handleRefresh}
+              disabled={isRefreshing}
+              style={{ 
+                marginRight: 10,
+                padding: 5, // Ajoute une zone de toucher plus grande
+              }}
+            >
+              {isRefreshing ? (
+                <Spinner size="sm" color="#FF78B2" />
+              ) : (
+                <FontAwesomeIcon
+                  icon={faRotate}
+                  size={18}
+                  color='#FF78B2'
+                />
+              )}
+            </TouchableOpacity>
           </HStack>
           <Text paddingBottom={2} color='#94A3B8' style={styles.caption}>
             {typeTexts[activeType] || t('home.sourceTexts.everyone')}
