@@ -63,6 +63,8 @@
 	<string>SplashScreen</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
     <string>Hushy a besoin de votre position pour afficher les secrets autour de vous</string>
+	<key>NSMicrophoneUsageDescription</key>
+    <string>Cette application a besoin d'accéder au microphone pour enregistrer des messages vocaux</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Hushy a besoin d'accéder à votre caméra pour prendre des photos de documents d'identité pour la vérification Stripe</string>
 	<key>NSPhotoLibraryUsageDescription</key>

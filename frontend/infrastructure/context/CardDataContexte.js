@@ -695,17 +695,23 @@ export const CardDataProvider = ({ children }) => {
     if (!instance) {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
-
+  
+    // Gérer les différents types de contenu
     const messageData = typeof content === 'string'
-      ? { content }
+      ? { content, messageType: 'text' }
       : content;
-
+  
+    // Si c'est un message audio, assurez-vous que les données nécessaires sont incluses
+    if (messageData.messageType === 'audio' && !messageData.audio) {
+      throw new Error(i18n.t('cardData.errors.missingAudioData'));
+    }
+  
     try {
       const response = await instance.post(
         `/api/secrets/conversations/${conversationId}/messages`,
         messageData
       );
-
+  
       if (response.data) {
         return response.data;
       }

@@ -927,8 +927,64 @@ exports.getConversation = async (req, res) => {
 };
 
 
-// Mise à jour de la fonction addMessageToConversation dans secretController.js
+// Dans votre contrôleur
+exports.uploadAudio = async (req, res) => {
+    try {
+        // Pour un upload en FormData
+        if (req.files && req.files.audio) {
+            const audioFile = req.files.audio;
+            
+            // Vérifier le type du fichier (optionnel)
+            if (!audioFile.mimetype.startsWith('audio/')) {
+                return res.status(400).json({ message: 'Le fichier doit être un format audio valide' });
+            }
 
+            // Générer un nom de fichier unique
+            const fileName = `audio_${Date.now()}_${Math.floor(Math.random() * 1000)}.${audioFile.name.split('.').pop()}`;
+            
+            // Dans une implémentation réelle, vous stockeriez le fichier dans S3 ou un autre service
+            // Pour cette démo, supposons qu'on a un dossier d'upload public
+            const uploadPath = `./public/uploads/audio/${fileName}`;
+            
+            // Déplacer le fichier
+            await audioFile.mv(uploadPath);
+            
+            // URL accessible publiquement
+            const audioUrl = `/uploads/audio/${fileName}`;
+            
+            return res.status(200).json({
+                url: audioUrl,
+                message: 'Audio téléchargé avec succès'
+            });
+        }
+        // Pour un upload en base64
+        else if (req.body.audio) {
+            // Si vous recevez un audio au format base64
+            const audioData = req.body.audio;
+
+            // Générer un nom de fichier unique
+            const fileName = `audio_${Date.now()}_${Math.floor(Math.random() * 1000)}.m4a`;
+            
+            // Dans une implémentation réelle, vous convertiriez le base64 en fichier
+            // et le stockeriez dans un service cloud
+
+            // Pour cette démo, simulons simplement une URL
+            const audioUrl = `/uploads/audio/${fileName}`;
+            
+            return res.status(200).json({
+                url: audioUrl,
+                message: 'Audio téléchargé avec succès'
+            });
+        }
+        
+        return res.status(400).json({ message: 'Aucun fichier audio fourni' });
+    } catch (error) {
+        console.error('Erreur lors du téléchargement de l\'audio:', error);
+        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+    }
+};
+
+// Mise à jour de la fonction addMessageToConversation dans secretController.js
 exports.addMessageToConversation = async (req, res) => {
     try {
         console.log("Données reçues:", JSON.stringify(req.body, null, 2));
@@ -943,6 +999,10 @@ exports.addMessageToConversation = async (req, res) => {
 
         if ((messageType === 'image' || messageType === 'mixed') && !image) {
             return res.status(400).json({ message: 'L\'URL de l\'image est requise pour les messages image ou mixtes.' });
+        }
+
+        if (messageType === 'audio' && !audio) {
+            return res.status(400).json({ message: 'L\'URL de l\'audio est requise pour les messages audio.' });
         }
 
         // Construire l'objet message
@@ -964,6 +1024,12 @@ exports.addMessageToConversation = async (req, res) => {
                 // Sinon, utiliser la valeur directement (URL ou base64)
                 messageData.image = image;
             }
+        }
+
+          // Ajouter l'audio si présent (pour le type 'audio')
+          if (messageType === 'audio') {
+            messageData.audio = audio;
+            messageData.audioDuration = audioDuration;
         }
 
         console.log("Message formaté:", messageData);

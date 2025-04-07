@@ -11,7 +11,7 @@ const MessageSchema = new mongoose.Schema({
     type: String,
     required: function() {
       // Le contenu est requis uniquement pour les messages texte
-      return this.messageType === 'text' || !this.messageType;
+      return this.messageType === 'text' || this.messageType === 'mixed' || !this.messageType;
     },
     default: ""
   },
@@ -24,18 +24,31 @@ const MessageSchema = new mongoose.Schema({
     type: String,  // URL de l'image
     required: function() {
       // L'image est requise uniquement pour les messages image
-      return this.messageType === 'image';
+      return this.messageType === 'image' || this.messageType === 'mixed';
     }
+  },
+  // Nouveaux champs pour les messages audio
+  audio: {
+    type: String,  // URL de l'audio
+    required: function() {
+      // L'audio est requis uniquement pour les messages audio
+      return this.messageType === 'audio';
+    }
+  },
+  audioDuration: {
+    type: String,  // Durée au format "00:00"
+    default: "00:00"
   },
   messageType: {
     type: String,
-    enum: ['text', 'image', 'mixed'], // Ajoutez 'mixed' ici
+    enum: ['text', 'image', 'mixed', 'audio'], // Ajout de 'audio'
     default: 'text'
   }
   // Si besoin d'autres infos sender utiles
   // senderPicture: String,
 }, { timestamps: true });
 
+// Le reste du schéma reste inchangé
 const ConversationSchema = new mongoose.Schema({
   secret: {
     type: mongoose.Schema.Types.ObjectId,

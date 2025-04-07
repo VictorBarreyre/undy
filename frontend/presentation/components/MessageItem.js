@@ -3,7 +3,7 @@ import { Animated, Easing, TouchableOpacity, Pressable, Linking } from 'react-na
 import { Box, Text, HStack, Image, VStack } from 'native-base';
 import LinearGradient from 'react-native-linear-gradient';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faReply, faCopy, faShare, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faReply, faCopy, faShare, faTimes, faPlay, faPause  } from '@fortawesome/free-solid-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import ImageView from 'react-native-image-viewing';
 import { useTranslation } from 'react-i18next';
@@ -654,6 +654,9 @@ const MessageItem = memo(({
     
     // Vérifier s'il reste du texte après avoir retiré les URLs
     const hasCleanText = cleanText.length > 0;
+    
+    // Vérifier si le message contient un audio
+    const hasAudio = item.messageType === 'audio' && item.audio;
   
     // Fonction pour rendre les embeds
     const renderEmbeds = () => {
@@ -668,6 +671,111 @@ const MessageItem = memo(({
         </Box>
       ));
     };
+    
+    // Composant pour afficher le lecteur audio
+    const AudioPlayer = ({ uri, duration = "00:00" }) => {
+      const [isPlaying, setIsPlaying] = useState(false);
+      const [playbackPosition, setPlaybackPosition] = useState(0);
+      const [playbackDuration, setPlaybackDuration] = useState(duration);
+      const soundRef = useRef(null);
+      
+      const formatTime = (seconds) => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+      };
+      
+      const handlePlayPause = async () => {
+        if (!soundRef.current) {
+          // Initialiser le son
+          const Sound = require('react-native-sound');
+          Sound.setCategory('Playback');
+          
+          const sound = new Sound(uri, null, (error) => {
+            if (error) {
+              console.log('Erreur lors du chargement du son', error);
+              return;
+            }
+            
+            soundRef.current = sound;
+            setPlaybackDuration(formatTime(sound.getDuration()));
+            sound.play((success) => {
+              setIsPlaying(false);
+              setPlaybackPosition(0);
+            });
+            setIsPlaying(true);
+            
+            // Mettre à jour la position de lecture toutes les 100ms
+            const interval = setInterval(() => {
+              if (soundRef.current) {
+                soundRef.current.getCurrentTime((seconds) => {
+                  setPlaybackPosition(seconds);
+                });
+              }
+            }, 100);
+            
+            // Nettoyer l'intervalle lorsque la lecture est terminée
+            sound.on('end', () => {
+              clearInterval(interval);
+              setIsPlaying(false);
+              setPlaybackPosition(0);
+            });
+          });
+        } else {
+          // Jouer/Pauser le son existant
+          if (isPlaying) {
+            soundRef.current.pause();
+            setIsPlaying(false);
+          } else {
+            soundRef.current.play((success) => {
+              setIsPlaying(false);
+              setPlaybackPosition(0);
+            });
+            setIsPlaying(true);
+          }
+        }
+      };
+      
+      // Nettoyage lorsque le composant est démonté
+      useEffect(() => {
+        return () => {
+          if (soundRef.current) {
+            soundRef.current.release();
+          }
+        };
+      }, []);
+      
+      return (
+        <HStack alignItems="center" space={2} width="100%">
+          <TouchableOpacity onPress={handlePlayPause}>
+            <Box
+              bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"}
+              p={2}
+              borderRadius="full"
+            >
+              <FontAwesomeIcon 
+                icon={isPlaying ? faPause : faPlay} 
+                size={16} 
+                color={isUser ? "white" : "#FF78B2"} 
+              />
+            </Box>
+          </TouchableOpacity>
+          
+          <Box flex={1} height={2} bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"} borderRadius={4}>
+            <Box 
+              height="100%" 
+              width={`${(playbackPosition / (soundRef.current?.getDuration() || 1)) * 100}%`}
+              bg={isUser ? "white" : "#FF78B2"}
+              borderRadius={4}
+            />
+          </Box>
+          
+          <Text fontSize="xs" color={isUser ? "white" : "gray.600"}>
+            {isPlaying ? formatTime(playbackPosition) : playbackDuration}
+          </Text>
+        </HStack>
+      );
+    };
   
     const messageComponent = (
       <Pressable onLongPress={handleLongPress}>
@@ -675,7 +783,14 @@ const MessageItem = memo(({
           <ReplyPreview replyToMessage={item.replyToMessage} isUser={isUser} />
         )}
         
-        {hasImage && hasCleanText ? (
+        {/* Ajout du cas pour les messages audio */}
+        {hasAudio ? (
+          <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
+            <Box p={3} style={getBubbleStyle(true, isReply)} minWidth={180} maxWidth={250}>
+              <AudioPlayer uri={item.audio} duration={item.audioDuration} />
+            </Box>
+          </VStack>
+        ) : hasImage && hasCleanText ? (
           <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             <Box style={getBubbleStyle(false, isReply)}>
               <MessageImage uri={item.image} onPress={openImageViewer} />

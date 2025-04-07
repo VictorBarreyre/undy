@@ -20,7 +20,8 @@ const {
     getNearbySecrets,
     deleteSecret,
     checkIdentityVerificationStatus, 
-    handleStripeReturn
+    handleStripeReturn,
+    uploadAudio
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -61,6 +62,7 @@ router.delete('/:id', protect, deleteSecret);
 router.get('/conversations', protect, getUserConversations);
 router.get('/conversations/secret/:secretId', protect, getSecretConversation);
 router.post('/conversations/:conversationId/messages', protect, addMessageToConversation);
+router.post('/upload/audio', protect, uploadAudio);
 router.delete('/conversations/:conversationId', protect, deleteConversation);
 router.patch('/conversations/:conversationId/read', protect, markConversationAsRead);
 router.post('/upload-image', protect, uploadImage);
