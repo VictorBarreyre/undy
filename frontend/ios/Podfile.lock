@@ -1325,6 +1325,8 @@ PODS:
     - React-utils (= 0.74.5)
   - RNAppleAuthentication (2.4.0):
     - React-Core
+  - RNAudio (4.3.0):
+    - React
   - RNAudioRecorderPlayer (3.6.12):
     - React-Core
   - RNCAsyncStorage (1.23.1):
@@ -1593,6 +1595,7 @@ DEPENDENCIES:
   - React-utils (from `../node_modules/react-native/ReactCommon/react/utils`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - "RNAppleAuthentication (from `../node_modules/@invertase/react-native-apple-authentication`)"
+  - RNAudio (from `../node_modules/react-native-audio`)
   - RNAudioRecorderPlayer (from `../node_modules/react-native-audio-recorder-player`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNCClipboard (from `../node_modules/@react-native-clipboard/clipboard`)"
@@ -1801,6 +1804,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   RNAppleAuthentication:
     :path: "../node_modules/@invertase/react-native-apple-authentication"
+  RNAudio:
+    :path: "../node_modules/react-native-audio"
   RNAudioRecorderPlayer:
     :path: "../node_modules/react-native-audio-recorder-player"
   RNCAsyncStorage:
@@ -1934,6 +1939,7 @@ SPEC CHECKSUMS:
   React-utils: f242eb7e7889419d979ca0e1c02ccc0ea6e43b29
   ReactCommon: f7da14a8827b72704169a48c929bcde802698361
   RNAppleAuthentication: e00c76acb03351f5544373c78fa7f359bef6d5d3
+  RNAudio: cae2991f2dccb75163f260b60da8051717b959fa
   RNAudioRecorderPlayer: 224c7de87722938aedce04000d09baa633148f5b
   RNCAsyncStorage: 826b603ae9c0f88b5ac4e956801f755109fa4d5c
   RNCClipboard: d7a8903d32692b0a1e71738c3825465a9acae10e
@@ -1965,6 +1971,6 @@ SPEC CHECKSUMS:
   TOCropViewController: 80b8985ad794298fb69d3341de183f33d1853654
   Yoga: 950bbfd7e6f04790fdb51149ed51df41f329fcc8
 
-PODFILE CHECKSUM: 8a58b740c38b4ed88c5b20ee52fb385327c38a0b
+PODFILE CHECKSUM: b78c8d2ae386ce0749f7e6abd100573b4200da51
 
 COCOAPODS: 1.16.2

@@ -40,16 +40,13 @@ target 'frontend' do
   use_expo_modules!
   config = use_native_modules!
 
+  pod 'RNSound', :path => '../node_modules/react-native-sound'
   
- # Sound library
- pod 'RNSound', :path => '../node_modules/react-native-sound'
-  
- # React Native Permissions - Uniquement le pod principal
- pod 'RNPermissions', :path => '../node_modules/react-native-permissions'
+  # Vous pouvez conserver RNPermissions si vous en avez besoin ailleurs
+  pod 'RNPermissions', :path => '../node_modules/react-native-permissions'
 
- use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
- use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
-
+  use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
+  use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
 
   use_react_native!(
     :path => config[:reactNativePath],
