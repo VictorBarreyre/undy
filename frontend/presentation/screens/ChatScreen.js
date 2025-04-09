@@ -1441,8 +1441,13 @@ const ChatScreen = ({ route }) => {
                     ref={inputRef}
                     value={message}
                     onChangeText={setMessage}
-                    placeholder={selectedImage ? t('chat.send') : (audioPath ? t('chat.audioReady') : t('chat.message'))}
-                    placeholderTextColor="#8E8E93"
+                    placeholder={
+                      selectedImage 
+                        ? t('chat.send') 
+                        : (audioPath && !message.trim() 
+                            ? '' // Ne pas afficher de placeholder quand l'audio est prêt
+                            : t('chat.message'))
+                    }                    placeholderTextColor="#8E8E93"
                     style={{
                       minHeight: 36,
                       maxHeight: 100,
