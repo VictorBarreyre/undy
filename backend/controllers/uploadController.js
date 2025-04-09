@@ -50,44 +50,45 @@ exports.uploadImage = async (req, res) => {
       if (req.files && req.files.audio) {
         const audioFile = req.files.audio;
         
+        console.log("Type MIME du fichier reçu:", audioFile.mimetype);
+        
         // Vérifier le type du fichier
         if (!audioFile.mimetype.startsWith('audio/')) {
           return res.status(400).json({ message: 'Le fichier doit être un format audio valide' });
         }
   
-        // Convertir le fichier en base64 pour Cloudinary si nécessaire
-        const base64Audio = `data:${audioFile.mimetype};base64,${audioFile.data.toString('base64')}`;
-        
-        // Upload de l'audio vers Cloudinary
-        const result = await cloudinary.uploader.upload(base64Audio, {
+        // Utiliser directement les données du fichier au lieu de le convertir en base64
+        const uploadResult = await cloudinary.uploader.upload(audioFile.tempFilePath, {
           folder: 'chat_audio',
-          resource_type: 'auto', // Permet à Cloudinary de détecter automatiquement le type
-          format: 'mp3', // Vous pouvez spécifier un format de sortie si nécessaire
+          resource_type: 'auto',
+          // Pas besoin de spécifier format ici
         });
         
         return res.status(200).json({
-          url: result.secure_url,
-          public_id: result.public_id,
-          duration: result.duration, // Cloudinary renvoie la durée pour les fichiers audio
+          url: uploadResult.secure_url,
+          public_id: uploadResult.public_id,
+          duration: uploadResult.duration,
           message: 'Audio téléchargé avec succès'
         });
       }
       // Pour un upload en base64
       else if (req.body.audio) {
-        // Si vous recevez un audio déjà au format base64
+        // S'assurer que la chaîne base64 est complète et valide
         const audioData = req.body.audio;
+        if (!audioData.startsWith('data:audio/')) {
+          return res.status(400).json({ message: 'Format audio base64 invalide' });
+        }
         
         // Upload vers Cloudinary
-        const result = await cloudinary.uploader.upload(audioData, {
+        const uploadResult = await cloudinary.uploader.upload(audioData, {
           folder: 'chat_audio',
-          resource_type: 'auto',
-          format: 'mp3',
+          resource_type: 'auto'
         });
         
         return res.status(200).json({
-          url: result.secure_url,
-          public_id: result.public_id,
-          duration: result.duration,
+          url: uploadResult.secure_url,
+          public_id: uploadResult.public_id,
+          duration: uploadResult.duration,
           message: 'Audio téléchargé avec succès'
         });
       }
