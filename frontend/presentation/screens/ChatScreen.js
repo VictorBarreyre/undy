@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext, useRef, memo, useCallback } fro
 import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Share, ActionSheetIOS } from 'react-native';
 import { Box, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown, faPaperPlane, faCheck,faMicrophone, faStop, faPlay, faPause } from '@fortawesome/free-solid-svg-icons';
+import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown, faPaperPlane, faCheck, faMicrophone, faStop, faPlay, faPause } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
 import { TouchableOpacity } from 'react-native';
 import { styles } from '../../infrastructure/theme/styles';
@@ -24,6 +24,7 @@ import ReplyBanner from '../components/ReplyBanner';
 import RNFS from 'react-native-fs';
 import { AudioRecorder, AudioUtils } from 'react-native-audio';
 import Sound from 'react-native-sound';
+
 
 const ChatScreen = ({ route }) => {
   const { t } = useTranslation();
@@ -61,7 +62,7 @@ const ChatScreen = ({ route }) => {
   const [isRecordingPermitted, setIsRecordingPermitted] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const soundRef = useRef(null);
-  
+
   useEffect(() => {
 
     setTimeout(() => {
@@ -79,27 +80,27 @@ const ChatScreen = ({ route }) => {
 
     // Configuration initiale
     Sound.setCategory('Playback', true); // Activez la lecture audio même quand l'appareil est en mode silencieux
-    
+
     // Préparer l'enregistreur pour iOS
     if (Platform.OS === 'ios') {
       AudioRecorder.requestAuthorization().then((isAuthorized) => {
         setIsRecordingPermitted(isAuthorized);
       });
     }
-    
+
     // Nettoyage lors du démontage du composant
     return () => {
       if (isRecording) {
         AudioRecorder.stopRecording();
       }
-      
+
       if (isPlaying && soundRef.current) {
         soundRef.current.stop();
         soundRef.current.release();
       }
     };
   }, []);
-  
+
   // Fonction pour vérifier les permissions
   const checkPermission = async () => {
     if (Platform.OS === 'android') {
@@ -109,7 +110,7 @@ const ChatScreen = ({ route }) => {
           PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
           PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
         ]);
-        
+
         return (
           grants['android.permission.WRITE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED &&
           grants['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED &&
@@ -124,10 +125,10 @@ const ChatScreen = ({ route }) => {
       // Pour iOS, utiliser l'autorisation déjà demandée
       return isRecordingPermitted;
     }
-    
+
     return false;
   };
-  
+
   // Fonction pour formater le temps (MM:SS)
   const formatTime = (milliseconds) => {
     const seconds = Math.floor(milliseconds / 1000);
@@ -135,7 +136,7 @@ const ChatScreen = ({ route }) => {
     const remainingSeconds = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
-  
+
   // Démarrer l'enregistrement
   const startRecording = async () => {
     try {
@@ -151,10 +152,10 @@ const ChatScreen = ({ route }) => {
         );
         return;
       }
-      
+
       // Définir le chemin d'enregistrement
       const audioPath = `${AudioUtils.DocumentDirectoryPath}/recording_${Date.now()}.aac`;
-      
+
       // Préparer l'enregistrement avec des options
       await AudioRecorder.prepareRecordingAtPath(audioPath, {
         SampleRate: 44100,
@@ -165,74 +166,73 @@ const ChatScreen = ({ route }) => {
         MeteringEnabled: true,
         IncludeBase64: false
       });
-      
+
       // Événement de progression
       AudioRecorder.onProgress = (data) => {
         setRecordTime(formatTime(data.currentTime * 1000));
         setRecordingDuration(data.currentTime);
       };
-      
+
       // Événement de fin d'enregistrement
       AudioRecorder.onFinished = (data) => {
         // data contient {status, audioFileURL}
         setAudioPath(data.audioFileURL || audioPath);
         setAudioLength(formatTime(recordingDuration * 1000));
       };
-      
+
       // Démarrer l'enregistrement
       await AudioRecorder.startRecording();
-      
+
       setIsRecording(true);
       setAudioPath(audioPath);
-      
+
     } catch (error) {
       console.error('Erreur lors du démarrage de l\'enregistrement:', error);
       Alert.alert("Erreur", "Impossible de démarrer l'enregistrement audio.");
     }
   };
+
+// Pour react-native-audio
+const stopRecording = async () => {
+  if (!isRecording) return;
   
-  // Arrêter l'enregistrement
-  const stopRecording = async () => {
-    if (!isRecording) return;
+  try {
+    const filePath = await AudioRecorder.stopRecording();
+    console.log('Enregistrement terminé à:', filePath);
     
-    try {
-      const filePath = await AudioRecorder.stopRecording();
-      console.log('Enregistrement terminé à:', filePath);
-      
-      setIsRecording(false);
-      setAudioLength(formatTime(recordingDuration * 1000));
-      
-      // Le chemin est maintenant disponible dans audioPath
-    } catch (error) {
-      console.error('Erreur lors de l\'arrêt de l\'enregistrement:', error);
-      setIsRecording(false);
-    }
-  };
-  
+    setIsRecording(false);
+    setAudioPath(filePath);
+    setAudioLength(formatTime(recordingDuration * 1000));
+    
+  } catch (error) {
+    console.error('Erreur lors de l\'arrêt de l\'enregistrement:', error);
+    setIsRecording(false);
+  }
+};
   // Lire l'enregistrement
   const startPlaying = () => {
     if (!audioPath) return;
-    
+
     try {
       // Si un son est déjà en cours de lecture, le nettoyer
       if (soundRef.current) {
         soundRef.current.stop();
         soundRef.current.release();
       }
-      
+
       // Créer un nouvel objet Sound
       const sound = new Sound(audioPath, '', (error) => {
         if (error) {
           console.log('Erreur lors du chargement du son', error);
           return;
         }
-        
+
         // Durée totale
         const duration = sound.getDuration();
-        
+
         // Définir la référence
         soundRef.current = sound;
-        
+
         // Démarrer la lecture
         sound.play((success) => {
           if (success) {
@@ -243,16 +243,16 @@ const ChatScreen = ({ route }) => {
             console.log('Lecture terminée avec erreur');
           }
         });
-        
+
         // Mettre à jour l'état
         setIsPlaying(true);
-        
+
         // Mettre à jour le temps de lecture
         const interval = setInterval(() => {
           if (soundRef.current) {
             soundRef.current.getCurrentTime((seconds) => {
               setPlayTime(formatTime(seconds * 1000));
-              
+
               // Si la lecture est terminée, nettoyer l'intervalle
               if (seconds >= duration) {
                 clearInterval(interval);
@@ -263,33 +263,33 @@ const ChatScreen = ({ route }) => {
           }
         }, 100);
       });
-      
+
     } catch (error) {
       console.error('Erreur lors de la lecture:', error);
       Alert.alert("Erreur", "Impossible de lire l'enregistrement audio.");
     }
   };
-  
+
   // Arrêter la lecture
   const stopPlaying = () => {
     try {
       if (!soundRef.current || !isPlaying) return;
-      
+
       // Arrêter la lecture
       soundRef.current.stop();
       setIsPlaying(false);
       setPlayTime('00:00');
-      
+
     } catch (error) {
       console.error('Erreur lors de l\'arrêt de la lecture:', error);
       setIsPlaying(false);
     }
   };
-  
+
   // Fonction pour préparer le fichier audio pour l'upload
   const prepareAudioForUpload = () => {
     if (!audioPath) return null;
-    
+
     // Créer un objet FormData pour l'upload
     const formData = new FormData();
     formData.append('audio', {
@@ -297,42 +297,69 @@ const ChatScreen = ({ route }) => {
       type: 'audio/aac',
       name: audioPath.split('/').pop(),
     });
-    
+
     return formData;
   };
-  
+
 
   const uploadAudio = async (audioUri, progressCallback) => {
     try {
-      // Créer un objet FormData pour l'upload
+      // Récupérer l'instance axios configurée
+      const instance = getAxiosInstance();
+      if (!instance) {
+        throw new Error('Axios n\'est pas initialisé');
+      }
+      
+      if (!audioUri) {
+        throw new Error('URI audio non défini');
+      }
+      
+      console.log('Type de audioUri:', typeof audioUri);
+      console.log('Valeur de audioUri:', audioUri);
+      
+      // Vérifier si le fichier existe
+      const fileExists = await RNFS.exists(audioUri);
+      console.log('Le fichier audio existe:', fileExists);
+      
+      if (!fileExists) {
+        throw new Error('Le fichier audio n\'existe pas');
+      }
+      
+      let fileName;
+      try {
+        fileName = audioUri.split('/').pop();
+      } catch (error) {
+        fileName = `audio_${Date.now()}.aac`;
+      }
+      
       const formData = new FormData();
       formData.append('audio', {
-        uri: audioUri,
-        type: 'audio/m4a',
-        name: audioUri.split('/').pop(),
+        uri: Platform.OS === 'ios' ? `file://${audioUri}` : audioUri,
+        type: 'audio/aac',
+        name: fileName,
       });
       
-      // Effectuer la requête d'upload
-      const response = await axios.post(
-        `${API_BASE_URL}/messages/upload-audio`, 
-        formData, 
+      // Utiliser votre instance axios configurée
+      const response = await instance.post(
+        `/api/secrets/audio`,  // Notez l'URL relative, car la base est déjà configurée
+        formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${userToken}`
+            'Content-Type': 'multipart/form-data'
+            // Pas besoin d'ajouter Authorization car c'est déjà configuré
           },
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round(
               (progressEvent.loaded * 100) / progressEvent.total
             );
-            progressCallback(percentCompleted);
+            if (progressCallback) progressCallback(percentCompleted);
           }
         }
       );
       
       return response.data;
     } catch (error) {
-      console.error('Erreur lors de l\'upload audio:', error);
+      console.error('Erreur détaillée lors de l\'upload audio:', error);
       throw error;
     }
   };
@@ -842,14 +869,14 @@ const ChatScreen = ({ route }) => {
       if (!conversationId) {
         throw new Error(t('chat.errors.missingConversationId'));
       }
-  
+
       // Vérifier s'il y a du contenu à envoyer
       if (!message.trim() && !selectedImage && !audioPath) return;
-  
+
       if (!userData?.name) {
         throw new Error(t('chat.errors.missingUserInfo'));
       }
-  
+
       // Déterminer le type de message
       let messageType = 'text';
       if (audioPath) {
@@ -859,11 +886,11 @@ const ChatScreen = ({ route }) => {
       } else if (selectedImage) {
         messageType = 'image';
       }
-  
+
       // Créer un ID temporaire pour afficher immédiatement le message
       const tempId = `temp-${Date.now()}`;
       const messageText = message.trim() || "";
-  
+
       // Ajouter immédiatement le message à l'interface avec état "en cours d'envoi"
       setMessages(prev => [...prev, {
         id: tempId,
@@ -881,7 +908,7 @@ const ChatScreen = ({ route }) => {
           name: userData?.name || t('chat.defaultUser')
         }
       }]);
-  
+
       // Réinitialiser l'interface immédiatement pour une meilleure réactivité
       setMessage('');
       const imageToUpload = selectedImage;
@@ -891,26 +918,26 @@ const ChatScreen = ({ route }) => {
       setAudioLength('');
       setReplyToMessage(null);
       updateInputAreaHeight(false);
-  
+
       // Défiler vers le bas
       requestAnimationFrame(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({ animated: true });
         }
       });
-  
+
       // Créer l'objet du message pour l'API
       let messageContent = {
         content: messageText || " ",
         senderName: userData.name,
         messageType: messageType
       };
-  
+
       // Ajouter les informations de réponse si nécessaire
       if (replyToMessage) {
         messageContent.replyTo = replyToMessage.id;
         messageContent.replyToSender = replyToMessage.senderInfo?.id;
-  
+
         // Si vous avez besoin de stocker plus d'informations sur le message répondu
         messageContent.replyData = {
           text: replyToMessage.text,
@@ -919,89 +946,100 @@ const ChatScreen = ({ route }) => {
           hasAudio: !!replyToMessage.audio
         };
       }
-  
+
       // Si une image est sélectionnée, l'uploader
       if (imageToUpload) {
         setIsUploading(true);
         setUploadProgress(0);
-  
+
         try {
           // Utiliser directement la donnée base64
           let imageData;
           if (imageToUpload.base64) {
             // Utiliser directement base64 au lieu de redimensionner
             imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
-  
+
             // Uploader l'image
             const uploadResult = await uploadImage(
               imageData,
               (progress) => setUploadProgress(progress)
             );
-  
+
             messageContent.image = uploadResult.url;
           } else {
             throw new Error(t('chat.errors.unsupportedImageFormat'));
           }
         } catch (uploadError) {
           console.error(t('chat.errors.imageUpload'), uploadError);
-  
+
           // Marquer le message comme échoué
           setMessages(prev => prev.map(msg =>
             msg.id === tempId
               ? { ...msg, sendFailed: true, isSending: false }
               : msg
           ));
-  
+
           throw new Error(t('chat.errors.imageUploadFailed'));
         } finally {
           setIsUploading(false);
           setUploadProgress(0);
         }
       }
-  
+
       // Si un audio est sélectionné, l'uploader
-      if (audioToUpload) {
+      if (audioPath) {
         setIsUploading(true);
-        setUploadProgress(0);
-  
-        try {
-          // Créer un objet FormData pour l'upload
-          const formData = new FormData();
-          formData.append('audio', {
-            uri: Platform.OS === 'android' ? `file://${audioToUpload}` : audioToUpload,
-            type: 'audio/m4a',
-            name: audioToUpload.split('/').pop(),
-          });
-  
-          // Uploader l'audio (vous devrez implémenter cette fonction)
-          const uploadResult = await uploadAudio(
-            formData,
-            (progress) => setUploadProgress(progress)
-          );
-  
-          messageContent.audio = uploadResult.url;
-          messageContent.audioDuration = audioLength || "00:00";
-        } catch (uploadError) {
-          console.error(t('chat.errors.audioUpload'), uploadError);
-  
-          // Marquer le message comme échoué
-          setMessages(prev => prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, sendFailed: true, isSending: false }
-              : msg
-          ));
-  
-          throw new Error(t('chat.errors.audioUploadFailed'));
-        } finally {
-          setIsUploading(false);
-          setUploadProgress(0);
+        
+        // Vérifiez que audioPath est correctement défini
+        console.log('Audio path avant envoi:', audioPath);
+        
+        if (!audioPath) {
+          throw new Error('Chemin audio non défini');
         }
+        
+        // Format correct pour l'URI
+        const audioUri = Platform.OS === 'ios' 
+          ? audioPath.replace('file://', '') 
+          : audioPath;
+        
+        console.log('Audio URI formaté:', audioUri);
+        
+        // Upload de l'audio d'abord
+        const audioResult = await uploadAudio(audioUri, setUploadProgress);
+        
+        console.log('Résultat upload audio:', audioResult);
+        
+        // Puis ajout du message avec l'URL audio retournée
+        await handleAddMessage(
+          conversationId, 
+          {
+            messageType: 'audio',
+            audio: audioResult.url, // Assurez-vous que la structure correspond à ce qu'attend votre API
+            content: '', // Si vous avez besoin d'un contenu texte
+          }
+        );
+        
+        // Réinitialiser les états
+        setAudioPath('');
+        setAudioLength('');
+        setIsUploading(false);
+        setUploadProgress(0);
+        
+        // Si un message est aussi entré, l'envoyer séparément
+        if (message.trim()) {
+          await handleAddMessage(conversationId, message);
+          setMessage('');
+        }
+        
+        if (replyToMessage) setReplyToMessage(null);
+        return;
       }
-  
+
+
       // Envoyer le message
       try {
         const newMessage = await handleAddMessage(conversationId, messageContent);
-  
+
         // Remplacer le message temporaire par le message réel
         setMessages(prev =>
           prev.map(msg =>
@@ -1018,7 +1056,7 @@ const ChatScreen = ({ route }) => {
         );
       } catch (error) {
         console.error(t('chat.errors.sendMessage'), error);
-  
+
         // Marquer le message comme échoué
         setMessages(prev =>
           prev.map(msg =>
@@ -1027,10 +1065,10 @@ const ChatScreen = ({ route }) => {
               : msg
           )
         );
-  
+
         throw error;
       }
-  
+
     } catch (error) {
       console.error(t('chat.errors.sendMessage'), error);
     }
@@ -1265,8 +1303,9 @@ const ChatScreen = ({ route }) => {
           </Box>
 
 
-      {/* Zone d'input */}
-      <View
+
+          {/* Zone d'input avec hauteur fixe */}
+          <View
             style={{
               padding: 10,
               backgroundColor: 'white',
@@ -1280,6 +1319,7 @@ const ChatScreen = ({ route }) => {
                 onCancelReply={handleCancelReply}
               />
             )}
+
             {/* Affichage de l'image sélectionnée */}
             {selectedImage && (
               <View
@@ -1323,7 +1363,7 @@ const ChatScreen = ({ route }) => {
             )}
 
             {/* Champ de saisie et boutons */}
-            <HStack space={2} alignItems="flex-start">
+            <HStack space={2} alignItems="center">
               {/* Bouton d'ajout */}
               <TouchableOpacity
                 onPress={handleImagePick}
@@ -1334,7 +1374,6 @@ const ChatScreen = ({ route }) => {
                   justifyContent: 'center',
                   alignItems: 'center',
                   overflow: 'hidden',
-                  marginBottom: 2,
                 }}
               >
                 <MaskedView
@@ -1372,7 +1411,6 @@ const ChatScreen = ({ route }) => {
                   justifyContent: 'center',
                   alignItems: 'center',
                   overflow: 'hidden',
-                  marginBottom: 2,
                 }}
               >
                 <MaskedView
@@ -1400,25 +1438,26 @@ const ChatScreen = ({ route }) => {
                 </MaskedView>
               </TouchableOpacity>
 
-              {/* Champ de saisie */}
+              {/* Zone de saisie/enregistrement/audio */}
               <Box
                 flex={1}
-                borderRadius={borderRadius}
+                borderWidth={1}
+                borderColor={isRecording ? '#FF587E' : (audioPath ? '#FF587E33' : '#94A3B833')}
+                borderRadius={18}
+                height={46}
                 overflow="hidden"
                 position="relative"
               >
+                {/* État d'enregistrement */}
                 {isRecording ? (
                   <View
                     style={{
-                      minHeight: 36,
-                      maxHeight: 100,
-                      borderWidth: 1,
-                      borderColor: '#FF587E',
-                      borderRadius: borderRadius,
+                      width: '100%',
+                      height: '100%',
                       padding: 10,
                       flexDirection: 'row',
                       alignItems: 'center',
-                      justifyContent: 'space-between'
+                      justifyContent: 'space-between',
                     }}
                   >
                     <Text style={{ color: "#FF587E" }}>{recordTime || "00:00"}</Text>
@@ -1437,71 +1476,71 @@ const ChatScreen = ({ route }) => {
                     </View>
                   </View>
                 ) : (
-                  <RN.TextInput
-                    ref={inputRef}
-                    value={message}
-                    onChangeText={setMessage}
-                    placeholder={
-                      selectedImage 
-                        ? t('chat.send') 
-                        : (audioPath && !message.trim() 
-                            ? '' // Ne pas afficher de placeholder quand l'audio est prêt
-                            : t('chat.message'))
-                    }                    placeholderTextColor="#8E8E93"
-                    style={{
-                      minHeight: 36,
-                      maxHeight: 100,
-                      borderWidth: 1,
-                      borderColor: audioPath ? '#FF587E33' : '#94A3B833',
-                      borderRadius: borderRadius,
-                      padding: 10,
-                      paddingRight: 40,
-                      color: "#8E8E93"
-                    }}
-                    multiline
-                    onContentSizeChange={(event) => {
-                      const height = event.nativeEvent.contentSize.height;
-                      setInputHeight(height);
-                      setBorderRadius(calculateBorderRadius(height));
-                    }}
-                  />
-                )}
+                  // État normal avec ou sans lecteur audio
+                  <View style={{ width: '100%', height: '100%', position: 'relative' }}>
+                    {/* Input texte (toujours présent mais parfois invisible) */}
+                    <RN.TextInput
+                      ref={inputRef}
+                      value={message}
+                      onChangeText={setMessage}
+                      placeholder={selectedImage ? t('chat.send') : (audioPath ? '' : t('chat.message'))}
+                      placeholderTextColor="#8E8E93"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        padding: 10,
+                        paddingRight: 40,
+                        color: "#8E8E93",
+                        opacity: (!isRecording && audioPath && !message.trim()) ? 0 : 1
+                      }}
+                    />
 
-                {/* Afficher le lecteur audio si un enregistrement est prêt */}
-                {!isRecording && audioPath && !message.trim() && (
-                  <View style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 40,
-                    bottom: 0,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingHorizontal: 10
-                  }}>
-                    <TouchableOpacity
-                      onPress={isPlaying ? stopPlaying : startPlaying}
-                      style={{ marginRight: 10 }}
-                    >
-                      <FontAwesomeIcon
-                        icon={isPlaying ? faPause : faPlay}
-                        size={16}
-                        color="#FF587E"
-                      />
-                    </TouchableOpacity>
-                    <Text style={{ color: "#8E8E93", fontSize: 14 }}>
-                      {isPlaying ? playTime : (audioLength || "00:00")}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setAudioPath('')}
-                      style={{ position: 'absolute', right: 10 }}
-                    >
-                      <FontAwesomeIcon
-                        icon={faTimes}
-                        size={16}
-                        color="#8E8E93"
-                      />
-                    </TouchableOpacity>
+                    {/* Lecteur audio (conditionnel) */}
+                    {!isRecording && audioPath && !message.trim() && (
+                      <View style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: '100%',
+                        height: '100%',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingHorizontal: 10,
+                        backgroundColor: 'white',
+                      }}>
+                        <TouchableOpacity
+                          onPress={isPlaying ? stopPlaying : startPlaying}
+                          style={{ marginRight: 10 }}
+                        >
+                          <FontAwesomeIcon
+                            icon={isPlaying ? faPause : faPlay}
+                            size={16}
+                            color="#FF587E"
+                          />
+                        </TouchableOpacity>
+                        <Text style={{ color: "#8E8E93", fontSize: 14 }}>
+                          {isPlaying ? playTime : (audioLength || "00:00")}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setAudioPath('')}
+                          style={{
+                            position: 'absolute',
+                            right: 40, // Positionne le bouton à 40px du bord droit
+                            top: '50%', // Centre verticalement
+                            transform: [{ translateY: -8 }] // Ajustement pour un centrage parfait (moitié de la hauteur de l'icône)
+                          }}
+                        >
+
+                          <FontAwesomeIcon
+                            icon={faTimes}
+                            size={16}
+                            color="#8E8E93"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 )}
 
@@ -1512,11 +1551,11 @@ const ChatScreen = ({ route }) => {
                   style={{
                     position: 'absolute',
                     right: 4,
-                    bottom: '65%',
-                    transform: [{ translateY: 18 }],
-                    width: 32,
-                    height: 32,
-                    borderRadius: 18,
+                    top: '50%',
+                    transform: [{ translateY: -14 }],
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
                     overflow: 'hidden'
                   }}
                 >
@@ -1536,14 +1575,13 @@ const ChatScreen = ({ route }) => {
                         alignItems: 'center'
                       }}
                     >
-                      <FontAwesomeIcon icon={faArrowUp} size={16} color="white" />
+                      <FontAwesomeIcon icon={faArrowUp} size={14} color="white" />
                     </LinearGradient>
                   </View>
                 </TouchableOpacity>
               </Box>
             </HStack>
           </View>
-
         </KeyboardAvoidingView>
       </SafeAreaView>
 
