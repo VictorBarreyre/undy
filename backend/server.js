@@ -11,6 +11,8 @@ const path = require('path');
 const helmet = require('helmet');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('./models/User'); // Assurez-vous d'ajouter cette importation
+const fileUpload = require('express-fileupload');
+
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -146,6 +148,12 @@ app.use('/uploads', (req, res, next) => {
     req.protocol = 'https'; // Forcer le protocole HTTPS
     next();
 }, express.static(path.join(__dirname, 'uploads')));
+
+app.use(fileUpload({
+  limits: { fileSize: 50 * 1024 * 1024 }, // Limite à 50 Mo
+  useTempFiles: true,
+  tempFileDir: '/tmp/'
+}));
 
 // **Configuration du Proxy en développement**
 // Ce middleware redirige les requêtes locales vers l'API sur Heroku

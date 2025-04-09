@@ -21,10 +21,13 @@ const {
     deleteSecret,
     checkIdentityVerificationStatus, 
     handleStripeReturn,
-    uploadAudio
+    
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
+const { uploadAudio } = require('../controllers/uploadController');
+
+
 
 
 // Routes publiques
