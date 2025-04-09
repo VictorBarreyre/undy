@@ -935,7 +935,7 @@ exports.addMessageToConversation = async (req, res) => {
         console.log("Données reçues:", JSON.stringify(req.body, null, 2));
 
         // Extraire les données de la requête
-        const { content, messageType = 'text', image = null } = req.body;
+        const { content, messageType = 'text', image = null, audio = null, audioDuration = null } = req.body;
 
         // Validation adaptée pour tous les types de messages
         if ((messageType === 'text' || messageType === 'mixed') && !content?.trim()) {
@@ -971,10 +971,12 @@ exports.addMessageToConversation = async (req, res) => {
             }
         }
 
-          // Ajouter l'audio si présent (pour le type 'audio')
-          if (messageType === 'audio') {
+        // Ajouter l'audio si présent (pour le type 'audio')
+        if (messageType === 'audio') {
             messageData.audio = audio;
-            messageData.audioDuration = audioDuration;
+            if (audioDuration) {
+                messageData.audioDuration = audioDuration;
+            }
         }
 
         console.log("Message formaté:", messageData);
