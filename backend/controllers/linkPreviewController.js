@@ -294,15 +294,19 @@ const extractYoutubeMetadata = ($, metadata, url) => {
 /**
  * Extrait les métadonnées spécifiques à Instagram
  */
-const extractInstagramMetadata = ($, metadata) => {
+const extractInstagramMetadata = async (url) => {
   try {
-    // Déterminer le type de contenu Instagram
-    const url = metadata.url;
+    // Faire une requête pour obtenir le HTML de la page
+    const response = await fetch(url);
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    
+    // Extraire les métadonnées de base (comme vous le faites déjà)
     const isReel = url.includes('/reel/');
     const isPost = url.includes('/p/');
     const isProfile = !isReel && !isPost;
     
-    // Essayer d'extraire l'identifiant du post
+    // Extraire l'ID du post
     let postId = null;
     if (isPost) {
       const postMatch = url.match(/instagram\.com\/p\/([^\/\?]+)/i);
@@ -312,24 +316,41 @@ const extractInstagramMetadata = ($, metadata) => {
       postId = reelMatch ? reelMatch[1] : null;
     }
     
-    // Essayer d'extraire l'identifiant de l'utilisateur
+    // Extraire le nom d'utilisateur
     const userMatch = url.match(/instagram\.com\/([^\/\?]+)/i);
-    const username = userMatch && !userMatch[1].startsWith('p/') && !userMatch[1].startsWith('reel/') 
-      ? userMatch[1] 
-      : metadata.author;
+    const username = userMatch && !userMatch[1].startsWith('p/') && !userMatch[1].startsWith('reel/')
+      ? userMatch[1]
+      : null;
+    
+    // Extraire les métadonnées plus riches à partir des balises meta
+    const title = $('meta[property="og:title"]').attr('content') || 
+                 (isReel ? 'Reels Instagram' : isPost ? 'Post Instagram' : `Profil de ${username || 'utilisateur'}`);
+    
+    const description = $('meta[property="og:description"]').attr('content') || '';
+    const image = $('meta[property="og:image"]').attr('content') || null;
+    const author = $('meta[property="og:creator"]').attr('content') || username;
+    
+    // Extraire le texte du post (si disponible)
+    const postText = $('._a9zs').text() || '';
     
     return {
-      ...metadata,
+      url,
+      platform: 'instagram',
+      title,
+      description,
+      image,
       siteName: 'Instagram',
-      username,
+      author,
+      text: postText,
       postId,
       contentType: isReel ? 'reel' : isPost ? 'post' : 'profile',
-      // Utiliser un service d'avatar par défaut
-      authorImage: username ? `https://unavatar.io/instagram/${username}` : null
+      embedUrl: postId ? `https://www.instagram.com/${isReel ? 'reel' : 'p'}/${postId}/embed` : null
     };
   } catch (error) {
     console.log('[LinkPreview] Erreur Instagram:', error.message);
-    return metadata;
+    
+    // Fallback aux métadonnées basiques basées sur l'URL
+    // Votre code actuel pour extraire les infos de base à partir de l'URL
   }
 };
 
