@@ -244,6 +244,7 @@ export default {
     "share": "Partager",
     "shared": "Partagé",
     "you": "Vous",
+    "replyingTo": "Répondre à",
     "reply": "Répondre",
     "cancel": "Annuler",
     "image": "Image",

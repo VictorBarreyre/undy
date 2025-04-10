@@ -1488,7 +1488,7 @@ const stopRecording = async () => {
                         backgroundColor: '#FF0000',
                         marginRight: 5
                       }} />
-                      <Text style={{ color: "#FF587E" }}>{t('chat.recording')}</Text>
+                    
                     </View>
                   </View>
                 ) : (

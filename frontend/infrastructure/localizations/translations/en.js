@@ -285,6 +285,7 @@ export default {
     "share": "Share",
     "shared": "Shared",
     "you": "You",
+    "replyingTo": "Answer to",
     "participantsList": "Conversation Participants",
     "locationSharing": {
       "title": "Share location"
