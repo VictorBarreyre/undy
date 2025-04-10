@@ -294,19 +294,15 @@ const extractYoutubeMetadata = ($, metadata, url) => {
 /**
  * Extrait les métadonnées spécifiques à Instagram
  */
-const extractInstagramMetadata = async (url) => {
+const extractInstagramMetadata = ($, metadata) => {
   try {
-    // Faire une requête pour obtenir le HTML de la page
-    const response = await fetch(url);
-    const html = await response.text();
-    const $ = cheerio.load(html);
-    
-    // Extraire les métadonnées de base (comme vous le faites déjà)
+    // Déterminer le type de contenu Instagram
+    const url = metadata.url;
     const isReel = url.includes('/reel/');
     const isPost = url.includes('/p/');
     const isProfile = !isReel && !isPost;
     
-    // Extraire l'ID du post
+    // Essayer d'extraire l'identifiant du post
     let postId = null;
     if (isPost) {
       const postMatch = url.match(/instagram\.com\/p\/([^\/\?]+)/i);
@@ -316,41 +312,24 @@ const extractInstagramMetadata = async (url) => {
       postId = reelMatch ? reelMatch[1] : null;
     }
     
-    // Extraire le nom d'utilisateur
+    // Essayer d'extraire l'identifiant de l'utilisateur
     const userMatch = url.match(/instagram\.com\/([^\/\?]+)/i);
-    const username = userMatch && !userMatch[1].startsWith('p/') && !userMatch[1].startsWith('reel/')
-      ? userMatch[1]
-      : null;
-    
-    // Extraire les métadonnées plus riches à partir des balises meta
-    const title = $('meta[property="og:title"]').attr('content') || 
-                 (isReel ? 'Reels Instagram' : isPost ? 'Post Instagram' : `Profil de ${username || 'utilisateur'}`);
-    
-    const description = $('meta[property="og:description"]').attr('content') || '';
-    const image = $('meta[property="og:image"]').attr('content') || null;
-    const author = $('meta[property="og:creator"]').attr('content') || username;
-    
-    // Extraire le texte du post (si disponible)
-    const postText = $('._a9zs').text() || '';
+    const username = userMatch && !userMatch[1].startsWith('p/') && !userMatch[1].startsWith('reel/') 
+      ? userMatch[1] 
+      : metadata.author;
     
     return {
-      url,
-      platform: 'instagram',
-      title,
-      description,
-      image,
+      ...metadata,
       siteName: 'Instagram',
-      author,
-      text: postText,
+      username,
       postId,
       contentType: isReel ? 'reel' : isPost ? 'post' : 'profile',
-      embedUrl: postId ? `https://www.instagram.com/${isReel ? 'reel' : 'p'}/${postId}/embed` : null
+      // Utiliser un service d'avatar par défaut
+      authorImage: username ? `https://unavatar.io/instagram/${username}` : null
     };
   } catch (error) {
     console.log('[LinkPreview] Erreur Instagram:', error.message);
-    
-    // Fallback aux métadonnées basiques basées sur l'URL
-    // Votre code actuel pour extraire les infos de base à partir de l'URL
+    return metadata;
   }
 };
 
