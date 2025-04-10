@@ -9,6 +9,26 @@ const facebookScraper = require('./scrappers/facebookScraper');
 const appleMapscraper = require('./scrappers/appleMapscraper');
 const websiteScraper = require('./scrappers/websiteScraper');
 
+
+async function ensureChromeInstalled() {
+    const installChrome = require('puppeteer-core').install;
+    await installChrome();
+  }
+  
+  async function launchBrowser() {
+    await ensureChromeInstalled();
+    return puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu'
+      ],
+      cachePath: '/tmp/.cache/puppeteer'
+    });
+  }
 /**
  * Détecte la plateforme d'une URL
  * @param {string} url - URL à analyser
@@ -37,21 +57,7 @@ function detectPlatform(url) {
 }
 
 /**
- * Lance une instance de navigateur Puppeteer
- * @returns {Promise<Browser>} - Instance du navigateur
- */
-async function launchBrowser() {
-  return puppeteer.launch({
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--disable-gpu'
-    ]
-  });
-}
+
 
 
 /**
