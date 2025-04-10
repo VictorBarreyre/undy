@@ -53,6 +53,7 @@ async function launchBrowser() {
   });
 }
 
+
 /**
  * Extrait les données d'une URL en utilisant le scraper approprié
  * @param {string} url - URL à scraper
