@@ -9,6 +9,8 @@ import ImageView from 'react-native-image-viewing';
 import { useTranslation } from 'react-i18next';
 import { useDateFormatter } from '../../utils/dateFormatters';
 import LinkPreview from './embed/LinkPreview';
+import  { bubbleStyles }  from '../../infrastructure/theme/styles'
+
 
 // Composant séparateur de date mémorisé 
 const DateSeparator = memo(({ timestamp }) => {
@@ -95,88 +97,7 @@ const ReplyPreview = memo(({ replyToMessage, isUser }) => {
   );
 });
 
-// Styles précalculés pour éviter de les recréer à chaque rendu
-const bubbleStyles = {
-  user: {
-    first: {
-      borderRadius: 20,
-      borderBottomRightRadius: 3,
-      marginBottom: 1,
-      overflow: 'hidden'
-    },
-    middle: {
-      borderRadius: 20,
-      borderTopRightRadius: 3,
-      borderBottomRightRadius: 3,
-      marginVertical: 1,
-      overflow: 'hidden'
-    },
-    last: {
-      borderRadius: 20,
-      borderTopRightRadius: 3,
-      marginTop: 1,
-      overflow: 'hidden'
-    },
-    single: {
-      borderRadius: 20,
-      overflow: 'hidden'
-    }
-  },
-  other: {
-    first: {
-      borderRadius: 20,
-      borderBottomLeftRadius: 3,
-      marginBottom: 1,
-      overflow: 'hidden'
 
-    },
-    middle: {
-      borderRadius: 20,
-      borderTopLeftRadius: 3,
-      borderBottomLeftRadius: 3,
-      marginVertical: 1,
-      overflow: 'hidden'
-    },
-    last: {
-      borderRadius: 20,
-      borderTopLeftRadius: 3,
-      marginTop: 1,
-      overflow: 'hidden'
-    },
-    single: {
-      borderRadius: 20,
-      overflow: 'hidden'
-    }
-  },
-  image: {
-    user: {
-      first: { borderRadius: 10, borderBottomRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
-      middle: { borderRadius: 10, borderTopRightRadius: 3, borderBottomRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
-      last: { borderRadius: 10, borderTopRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
-      single: { borderRadius: 10, overflow: 'hidden', backgroundColor: 'transparent' }
-    },
-    other: {
-      first: { borderRadius: 10, borderBottomLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
-      middle: { borderRadius: 10, borderTopLeftRadius: 3, borderBottomLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
-      last: { borderRadius: 10, borderTopLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
-      single: { borderRadius: 10, overflow: 'hidden', backgroundColor: 'transparent' }
-    }
-  },
-  reply: {
-    user: {
-      first: { borderRadius: 10, borderBottomRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
-      middle: { borderRadius: 10, borderTopRightRadius: 3, borderBottomRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
-      last: { borderRadius: 10, borderTopRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
-      single: { borderRadius: 10, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' }
-    },
-    other: {
-      first: { borderRadius: 10, borderBottomLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
-      middle: { borderRadius: 10, borderTopLeftRadius: 3, borderBottomLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
-      last: { borderRadius: 10, borderTopLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
-      single: { borderRadius: 10, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' }
-    }
-  }
-};
 
 // Composant image mémorisé pour éviter les re-renders inutiles
 const MessageImage = memo(({ uri, onPress }) => (
@@ -781,35 +702,35 @@ const MessageItem = memo(({
 
       return (
         <HStack alignItems="center" space={2} width="100%">
-      <TouchableOpacity onPress={handlePlayPause}>
-        <Box
-          bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"}
-          p={2}
-          borderRadius="full"
-        >
-          <FontAwesomeIcon 
-            icon={isPlaying ? faPause : faPlay} 
-            size={16} 
-            color={isUser ? "white" : "#FF78B2"} 
-          />
-        </Box>
-      </TouchableOpacity>
-      
-      <Box flex={1} height={2} bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"} borderRadius={4}>
-        <Box 
-          height="100%" 
-          width={`${(playbackPosition / (soundRef.current?.getDuration() || 1)) * 100}%`}
-          bg={isUser ? "white" : "#FF78B2"}
-          borderRadius={4}
-        />
-      </Box>
-      
-      <Text fontSize="xs" color={isUser ? "white" : "gray.600"}>
-        {isPlaying ? formatTime(playbackPosition) : playbackDuration}
-      </Text>
-    </HStack>
-  );
-};
+          <TouchableOpacity onPress={handlePlayPause}>
+            <Box
+              bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"}
+              p={2}
+              borderRadius="full"
+            >
+              <FontAwesomeIcon
+                icon={isPlaying ? faPause : faPlay}
+                size={16}
+                color={isUser ? "white" : "#FF78B2"}
+              />
+            </Box>
+          </TouchableOpacity>
+
+          <Box flex={1} height={2} bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"} borderRadius={4}>
+            <Box
+              height="100%"
+              width={`${(playbackPosition / (soundRef.current?.getDuration() || 1)) * 100}%`}
+              bg={isUser ? "white" : "#FF78B2"}
+              borderRadius={4}
+            />
+          </Box>
+
+          <Text fontSize="xs" color={isUser ? "white" : "gray.600"}>
+            {isPlaying ? formatTime(playbackPosition) : playbackDuration}
+          </Text>
+        </HStack>
+      );
+    };
 
     const messageComponent = (
       <Pressable onLongPress={handleLongPress}>

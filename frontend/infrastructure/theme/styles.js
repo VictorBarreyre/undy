@@ -4,6 +4,91 @@ import { Platform, Dimensions, StatusBar } from 'react-native';
 
 const { width } = Dimensions.get('window'); // Largeur de l'écran
 
+// Styles précalculés pour éviter de les recréer à chaque rendu
+export const bubbleStyles = {
+  user: {
+    first: {
+      borderRadius: 20,
+      borderBottomRightRadius: 3,
+      marginBottom: 1,
+      overflow: 'hidden'
+    },
+    middle: {
+      borderRadius: 20,
+      borderTopRightRadius: 3,
+      borderBottomRightRadius: 3,
+      marginVertical: 1,
+      overflow: 'hidden'
+    },
+    last: {
+      borderRadius: 20,
+      borderTopRightRadius: 3,
+      marginTop: 1,
+      overflow: 'hidden'
+    },
+    single: {
+      borderRadius: 20,
+      overflow: 'hidden'
+    }
+  },
+  other: {
+    first: {
+      borderRadius: 20,
+      borderBottomLeftRadius: 3,
+      marginBottom: 1,
+      overflow: 'hidden'
+
+    },
+    middle: {
+      borderRadius: 20,
+      borderTopLeftRadius: 3,
+      borderBottomLeftRadius: 3,
+      marginVertical: 1,
+      overflow: 'hidden'
+    },
+    last: {
+      borderRadius: 20,
+      borderTopLeftRadius: 3,
+      marginTop: 1,
+      overflow: 'hidden'
+    },
+    single: {
+      borderRadius: 20,
+      overflow: 'hidden'
+    }
+  },
+  image: {
+    user: {
+      first: { borderRadius: 10, borderBottomRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
+      middle: { borderRadius: 10, borderTopRightRadius: 3, borderBottomRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
+      last: { borderRadius: 10, borderTopRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
+      single: { borderRadius: 10, overflow: 'hidden', backgroundColor: 'transparent' }
+    },
+    other: {
+      first: { borderRadius: 10, borderBottomLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
+      middle: { borderRadius: 10, borderTopLeftRadius: 3, borderBottomLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
+      last: { borderRadius: 10, borderTopLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent' },
+      single: { borderRadius: 10, overflow: 'hidden', backgroundColor: 'transparent' }
+    }
+  },
+  reply: {
+    user: {
+      first: { borderRadius: 10, borderBottomRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
+      middle: { borderRadius: 10, borderTopRightRadius: 3, borderBottomRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
+      last: { borderRadius: 10, borderTopRightRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
+      single: { borderRadius: 10, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' }
+    },
+    other: {
+      first: { borderRadius: 10, borderBottomLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
+      middle: { borderRadius: 10, borderTopLeftRadius: 3, borderBottomLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
+      last: { borderRadius: 10, borderTopLeftRadius: 3, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' },
+      single: { borderRadius: 10, overflow: 'hidden', backgroundColor: 'transparent', borderLeftWidth: 3, borderLeftColor: '#FF587E' }
+    }
+  }
+};
+
+
+
 export const styles = StyleSheet.create({
   staticBackground: {
     position: 'absolute',
@@ -368,4 +453,5 @@ export const styles = StyleSheet.create({
   },
 
 });
+
 
