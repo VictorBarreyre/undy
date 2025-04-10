@@ -1,5 +1,6 @@
 // platformScraper.js
 const puppeteer = require('puppeteer');
+const { install } = require('puppeteer-core');
 const cache = require('./linkCache');
 const twitterScraper = require('./scrappers/twitterScraper');
 const youtubeScraper = require('./scrappers/youtubeScraper');
@@ -9,10 +10,8 @@ const facebookScraper = require('./scrappers/facebookScraper');
 const appleMapscraper = require('./scrappers/appleMapscraper');
 const websiteScraper = require('./scrappers/websiteScraper');
 
-
 async function ensureChromeInstalled() {
-    const installChrome = require('puppeteer-core').install;
-    await installChrome();
+    await install();
   }
   
   async function launchBrowser() {
