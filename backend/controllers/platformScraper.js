@@ -1,13 +1,13 @@
 // platformScraper.js
 const puppeteer = require('puppeteer');
 const cache = require('./linkCache');
-const twitterScraper = require('./scrapers/twitterScraper');
-const youtubeScraper = require('./scrapers/youtubeScraper');
-const instagramScraper = require('./scrapers/instagramScraper');
-const tiktokScraper = require('./scrapers/tiktokScraper');
-const facebookScraper = require('./scrapers/facebookScraper');
-const appleMapscraper = require('./scrapers/appleMapscraper');
-const websiteScraper = require('./scrapers/websiteScraper');
+const twitterScraper = require('./scrappers/twitterScraper');
+const youtubeScraper = require('./scrappers/youtubeScraper');
+const instagramScraper = require('./scrappers/instagramScraper');
+const tiktokScraper = require('./scrappers/tiktokScraper');
+const facebookScraper = require('./scrappers/facebookScraper');
+const appleMapscraper = require('./scrappers/appleMapscraper');
+const websiteScraper = require('./scrappers/websiteScraper');
 
 /**
  * Détecte la plateforme d'une URL
