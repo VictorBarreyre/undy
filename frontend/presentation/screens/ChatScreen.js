@@ -726,7 +726,7 @@ const stopRecording = async () => {
   // Formatage des messages
   useEffect(() => {
     if (!conversation?.messages || !userData) return;
-
+  
     const userMapping = {};
     conversation.participants?.forEach(participant => {
       userMapping[participant._id] = {
@@ -734,26 +734,26 @@ const stopRecording = async () => {
         profilePicture: participant.profilePicture
       };
     });
-
+  
     const formattedMessages = [];
     let lastMessageDate = null;
-
+  
     const sortedMessages = [...conversation.messages].sort((a, b) =>
       new Date(a.createdAt) - new Date(b.createdAt)
     );
-
+  
     sortedMessages.forEach((msg, index) => {
       if (!msg.createdAt) {
         console.warn(t('chat.errors.missingCreatedAt'), msg);
         return;
       }
-
+  
       const currentMessageDate = new Date(msg.createdAt);
-
+  
       // Détecter si le message provient de l'utilisateur actuel
       const isCurrentUser =
         (msg.sender && typeof msg.sender === 'object' ? msg.sender._id : msg.sender) === userData._id;
-
+  
       // Séparateur de date si nécessaire
       if (!lastMessageDate ||
         currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
@@ -765,11 +765,12 @@ const stopRecording = async () => {
           formattedDate: dateFormatter.formatDateOnly(msg.createdAt)
         });
       }
-
+  
       // Message avec le nom de l'expéditeur
       const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
-
-      formattedMessages.push({
+  
+      // Création du message formaté avec TOUTES les propriétés importantes
+      const formattedMessage = {
         id: msg._id || `msg-${index}`,
         text: msg.content,
         sender: isCurrentUser ? 'user' : 'other',
@@ -784,11 +785,24 @@ const stopRecording = async () => {
           name: userMapping[messageSenderId]?.name || msg.senderName || t('chat.defaultUser'),
           profilePicture: userMapping[messageSenderId]?.profilePicture || null
         }
-      });
-
+      };
+  
+      // AJOUT IMPORTANT: inclure les propriétés audio si le message est de type audio
+      if (msg.messageType === 'audio') {
+        formattedMessage.audio = msg.audio;
+        formattedMessage.audioDuration = msg.audioDuration || '00:00';
+        
+        console.log("Message audio formaté:", {
+          id: formattedMessage.id,
+          audio: formattedMessage.audio,
+          audioDuration: formattedMessage.audioDuration
+        });
+      }
+  
+      formattedMessages.push(formattedMessage);
       lastMessageDate = currentMessageDate;
     });
-
+  
     setMessages(formattedMessages);
   }, [conversation, userData?._id, t]);
 
@@ -1015,6 +1029,7 @@ const stopRecording = async () => {
           {
             messageType: 'audio',
             audio: audioResult.url, // Assurez-vous que la structure correspond à ce qu'attend votre API
+            audioDuration: audioResult.duration, // Inclure la durée ici
             content: '', // Si vous avez besoin d'un contenu texte
           }
         );
@@ -1187,7 +1202,6 @@ const stopRecording = async () => {
     })
   ).current;
 
-  // Composant de message mémorisé
   const MemoizedMessageItem = memo(MessageItem, (prevProps, nextProps) => {
     return (
       prevProps.item.id === nextProps.item.id &&
@@ -1195,14 +1209,16 @@ const stopRecording = async () => {
       prevProps.index === nextProps.index &&
       prevProps.userData?._id === nextProps.userData?._id &&
       prevProps.item.text === nextProps.item.text &&
-      prevProps.item.image === nextProps.item.image
+      prevProps.item.image === nextProps.item.image &&
+      prevProps.item.audio === nextProps.item.audio &&
+      prevProps.item.audioDuration === nextProps.item.audioDuration &&
+      prevProps.item.messageType === nextProps.item.messageType
     );
   });
 
-  // Fonction de rendu des messages
   const renderMessage = useCallback(({ item, index }) => {
-    if (!item || !item.id) return null;
 
+  
     return (
       <MemoizedMessageItem
         key={item.id}
@@ -1211,7 +1227,7 @@ const stopRecording = async () => {
         messages={messages}
         userData={userData}
         showTimestamps={showTimestamps}
-        onReplyToMessage={handleReplyToMessage} // Ajoutez ceci
+        onReplyToMessage={handleReplyToMessage}
       />
     );
   }, [messages, userData, showTimestamps]);

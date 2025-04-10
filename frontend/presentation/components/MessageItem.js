@@ -700,10 +700,10 @@ const MessageItem = memo(({
             }
           }
         };
-        
+
         checkAudioURL();
       }, [uri]);
-      
+
       // Nettoyage lorsque le composant est démonté
       useEffect(() => {
         return () => {
@@ -721,19 +721,19 @@ const MessageItem = memo(({
           // Initialiser le son
           const Sound = require('react-native-sound');
           Sound.setCategory('Playback');
-          
+
           console.log("Tentative de lecture de l'audio:", uri);
-          
+
           const sound = new Sound(uri, null, (error) => {
             if (error) {
               console.log('Erreur lors du chargement du son', error);
               return;
             }
-            
+
             soundRef.current = sound;
             const totalDuration = sound.getDuration();
             setPlaybackDuration(formatTime(totalDuration));
-            
+
             // Démarrer la lecture
             sound.play((success) => {
               if (success) {
@@ -747,9 +747,9 @@ const MessageItem = memo(({
                 clearInterval(intervalRef.current);
               }
             });
-            
+
             setIsPlaying(true);
-            
+
             // Mettre à jour la position de lecture toutes les 100ms
             intervalRef.current = setInterval(() => {
               if (soundRef.current) {
@@ -781,35 +781,35 @@ const MessageItem = memo(({
 
       return (
         <HStack alignItems="center" space={2} width="100%">
-        <TouchableOpacity onPress={handlePlayPause}>
-          <Box
-            bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"}
-            p={2}
-            borderRadius="full"
-          >
-            <FontAwesomeIcon 
-              icon={isPlaying ? faPause : faPlay} 
-              size={16} 
-              color={isUser ? "white" : "#FF78B2"} 
-            />
-          </Box>
-        </TouchableOpacity>
-        
-        <Box flex={1} height={2} bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"} borderRadius={4}>
-          <Box 
-            height="100%" 
-            width={`${(playbackPosition / (soundRef.current?.getDuration() || 1)) * 100}%`}
-            bg={isUser ? "white" : "#FF78B2"}
-            borderRadius={4}
+      <TouchableOpacity onPress={handlePlayPause}>
+        <Box
+          bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"}
+          p={2}
+          borderRadius="full"
+        >
+          <FontAwesomeIcon 
+            icon={isPlaying ? faPause : faPlay} 
+            size={16} 
+            color={isUser ? "white" : "#FF78B2"} 
           />
         </Box>
-        
-        <Text fontSize="xs" color={isUser ? "white" : "gray.600"}>
-          {isPlaying ? formatTime(playbackPosition) : playbackDuration}
-        </Text>
-      </HStack>
-      );
-    };
+      </TouchableOpacity>
+      
+      <Box flex={1} height={2} bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"} borderRadius={4}>
+        <Box 
+          height="100%" 
+          width={`${(playbackPosition / (soundRef.current?.getDuration() || 1)) * 100}%`}
+          bg={isUser ? "white" : "#FF78B2"}
+          borderRadius={4}
+        />
+      </Box>
+      
+      <Text fontSize="xs" color={isUser ? "white" : "gray.600"}>
+        {isPlaying ? formatTime(playbackPosition) : playbackDuration}
+      </Text>
+    </HStack>
+  );
+};
 
     const messageComponent = (
       <Pressable onLongPress={handleLongPress}>
@@ -820,8 +820,43 @@ const MessageItem = memo(({
         {/* Ajout du cas pour les messages audio */}
         {hasAudio ? (
           <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
-            <Box p={3} style={getBubbleStyle(true, isReply)} minWidth={180} maxWidth={250}>
-              <AudioPlayer uri={item.audio} duration={item.audioDuration} />
+            <Box
+              p={3}
+              style={getBubbleStyle(true, isReply)}
+              minWidth={180}
+              maxWidth={250}
+              position="relative"
+              overflow="hidden"
+            >
+              {/* Fond avec dégradé ou couleur unie */}
+              {isUser ? (
+                <LinearGradient
+                  colors={['#FF587E', '#CC4B8D']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                  }}
+                />
+              ) : (
+                <Box
+                  bg='#FFFFFF'
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                  }}
+                />
+              )}
+
+              {/* Lecteur audio au-dessus du fond */}
+              <AudioPlayer uri={item.audio} duration={item.audioDuration} isUser={isUser} />
             </Box>
           </VStack>
         ) : hasImage && hasCleanText ? (
