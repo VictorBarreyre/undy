@@ -76,21 +76,23 @@ exports.uploadImage = async (req, res) => {
           resource_type: 'auto',
           // Pas besoin de spécifier format ici
         });
-
-        const isAccessible = await verifyAudioURL(uploadResult.secure_url);
-
-        if (!isAccessible) {
-          console.error('L\'URL Cloudinary n\'est pas accessible:', uploadResult.secure_url);
-          // Gestion de l'erreur...
+  
+        // Vérification d'accessibilité si vous avez cette fonction
+        if (typeof verifyAudioURL === 'function') {
+          const isAccessible = await verifyAudioURL(uploadResult.secure_url);
+          if (!isAccessible) {
+            console.error('L\'URL Cloudinary n\'est pas accessible:', uploadResult.secure_url);
+          }
         }
-
-        const duration = result.duration || 0;
+  
+        // Utilisez uploadResult au lieu de result
+        const duration = uploadResult.duration || 0;
         const formattedDuration = formatTime(duration);
         
         return res.status(200).json({
-          url: result.secure_url,
-          public_id: result.public_id,
-          duration: formattedDuration, // Renvoyer la durée formatée
+          url: uploadResult.secure_url,
+          public_id: uploadResult.public_id,
+          duration: formattedDuration,
           message: 'Audio téléchargé avec succès'
         });
       }
@@ -121,6 +123,13 @@ exports.uploadImage = async (req, res) => {
       console.error('Erreur lors du téléchargement de l\'audio:', error);
       res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
+  };
+  
+  // Ajoutez cette fonction de formatage si elle n'existe pas déjà
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   // Fonction pour supprimer une image ou un audio (si nécessaire lors de la suppression d'une conversation)

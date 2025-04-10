@@ -130,9 +130,10 @@ const ChatScreen = ({ route }) => {
   };
 
   // Fonction pour formater le temps (MM:SS)
-  const formatTime = (seconds) => {
+  const formatTime = (milliseconds) => {
+    const seconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
+    const remainingSeconds = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 

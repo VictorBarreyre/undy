@@ -866,7 +866,7 @@ export const CardDataProvider = ({ children }) => {
     }
 
     try {
-      const response = await instance.post('/api/upload', { image: imageData });
+      const response = await instance.post('/api/upload/image', { image: imageData });
       return response.data;
     } catch (error) {
       console.error(i18n.t('cardData.errors.imageUpload'), error);
