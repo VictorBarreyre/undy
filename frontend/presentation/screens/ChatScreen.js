@@ -130,10 +130,9 @@ const ChatScreen = ({ route }) => {
   };
 
   // Fonction pour formater le temps (MM:SS)
-  const formatTime = (milliseconds) => {
-    const seconds = Math.floor(milliseconds / 1000);
+  const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
+    const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
@@ -341,7 +340,7 @@ const stopRecording = async () => {
       
       // Utiliser votre instance axios configurée
       const response = await instance.post(
-        `/api/secrets/audio`,  // Notez l'URL relative, car la base est déjà configurée
+        `/api/upload/audio`,  // Notez l'URL relative, car la base est déjà configurée
         formData,
         {
           headers: {

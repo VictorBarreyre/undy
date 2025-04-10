@@ -840,281 +840,285 @@ exports.getPurchasedSecrets = async (req, res) => {
     }
 };
 
-exports.getSecretConversation = async (req, res) => {
-    try {
-        const conversation = await Conversation.findOne({
-            secret: req.params.secretId,
-            participants: req.user.id
-        })
-            .populate('participants', 'name profilePicture')
-            .populate('messages.sender', 'name profilePicture')
-            .select('participants messages secret expiresAt')
-            .populate({
-                path: 'secret',
-                populate: {
-                    path: 'user',
-                    select: 'name profilePicture'
-                },
-                select: 'label content user'
-            });
-
-        if (!conversation) {
-            return res.status(404).json({ message: 'Conversation introuvable.' });
+const populateConversation = (query, includeMessages = true) => {
+    query = query
+      .populate('participants', 'name profilePicture')
+      .populate({
+        path: 'secret',
+        select: 'label content user',
+        model: 'Secret',
+        populate: {
+          path: 'user',
+          model: 'User',
+          select: 'name profilePicture'
         }
-
-        res.status(200).json(conversation);
-    } catch (error) {
-        console.error('Erreur détaillée:', error);
-        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+      });
+  
+    if (includeMessages) {
+      query = query
+        .populate('messages.sender', '_id name profilePicture')
+        .select('participants messages secret expiresAt unreadCount updatedAt');
+    } else {
+      query = query
+        .select('participants secret expiresAt unreadCount updatedAt messages.messageType messages.createdAt');
     }
-};
+  
+    return query;
+  };
 
-exports.getConversation = async (req, res) => {
+  // Fonction de gestion d'erreurs standardisée
+const handleError = (error, res) => {
+    console.error('Erreur détaillée:', error);
+    res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+  };
+  
+
+  exports.getSecretConversation = async (req, res) => {
     try {
-        console.log("Paramètres de la requête:", {
-            conversationId: req.params.conversationId,
-            userId: req.user.id
-        });
-
-        const conversation = await Conversation.findOne({
-            _id: req.params.conversationId,
-            participants: req.user.id
+      const conversation = await populateConversation(
+        Conversation.findOne({
+          secret: req.params.secretId,
+          participants: req.user.id
         })
-            .populate({
-                path: 'messages.sender',
-                select: '_id name',
-                model: 'User'
-            })
-            .populate({
-                path: 'secret',
-                populate: {
-                    path: 'user',
-                    select: 'name'
-                }
-            });
-
-        if (!conversation) {
-            return res.status(404).json({ message: 'Conversation introuvable.' });
-        }
-
-        // Log des infos de base
-        console.log("Info conversation:", {
-            conversationId: conversation._id,
-            nombreMessages: conversation.messages.length
-        });
-
-        // Log détaillé des messages
-        console.log("Messages:",
-            conversation.messages.map(msg => ({
-                messageId: msg._id,
-                content: msg.content,
-                sender: {
-                    id: msg.sender._id,
-                    name: msg.sender.name
-                },
-                createdAt: msg.createdAt
-            }))
-        );
-
-        res.status(200).json({
-            messages: conversation.messages,
-            conversationId: conversation._id
-        });
+      );
+  
+      if (!conversation) {
+        return res.status(404).json({ message: 'Conversation introuvable.' });
+      }
+  
+      // Log des messages audio pour débogage
+      const audioMessages = conversation.messages.filter(msg => msg.messageType === 'audio');
+      if (audioMessages.length > 0) {
+        console.log("Messages audio dans la conversation:", audioMessages.map(msg => ({
+          id: msg._id,
+          audio: msg.audio,
+          duration: msg.audioDuration || '00:00'
+        })));
+      }
+  
+      res.status(200).json(conversation);
     } catch (error) {
-        console.error('Erreur détaillée:', error);
-        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+      handleError(error, res);
     }
-};
+  };
+  
 
-
+  exports.getConversation = async (req, res) => {
+    try {
+      console.log("Récupération de conversation:", {
+        conversationId: req.params.conversationId,
+        userId: req.user.id
+      });
+  
+      const conversation = await populateConversation(
+        Conversation.findOne({
+          _id: req.params.conversationId,
+          participants: req.user.id
+        })
+      );
+  
+      if (!conversation) {
+        return res.status(404).json({ message: 'Conversation introuvable.' });
+      }
+  
+      // Log des informations de la conversation
+      console.log("Info conversation:", {
+        conversationId: conversation._id,
+        nombreMessages: conversation.messages.length
+      });
+  
+      // Log des messages audio pour débogage
+      const audioMessages = conversation.messages.filter(msg => msg.messageType === 'audio');
+      if (audioMessages.length > 0) {
+        console.log("Messages audio dans la conversation:", audioMessages.map(msg => ({
+          id: msg._id,
+          audio: msg.audio,
+          duration: msg.audioDuration || '00:00'
+        })));
+      }
+  
+      res.status(200).json({
+        messages: conversation.messages,
+        conversationId: conversation._id
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  };
 
 
 // Mise à jour de la fonction addMessageToConversation dans secretController.js
 exports.addMessageToConversation = async (req, res) => {
     try {
-        console.log("Données reçues:", JSON.stringify(req.body, null, 2));
-
-        // Extraire les données de la requête
-        const { content, messageType = 'text', image = null, audio = null, audioDuration = null } = req.body;
-
-        // Validation adaptée pour tous les types de messages
-        if ((messageType === 'text' || messageType === 'mixed') && !content?.trim()) {
-            return res.status(400).json({ message: 'Le contenu est requis pour les messages texte ou mixtes.' });
-        }
-
-        if ((messageType === 'image' || messageType === 'mixed') && !image) {
-            return res.status(400).json({ message: 'L\'URL de l\'image est requise pour les messages image ou mixtes.' });
-        }
-
-        if (messageType === 'audio' && !audio) {
-            return res.status(400).json({ message: 'L\'URL de l\'audio est requise pour les messages audio.' });
-        }
-
-        // Construire l'objet message
-        const messageData = {
-            sender: req.user.id,
-            content: content?.trim() || " ", // Un espace par défaut (requis par le modèle)
-            senderName: req.user.name,
-            messageType: messageType // Conserver explicitement le type de message
-        };
-
-        // Ajouter l'image si présente (pour les types 'image' ou 'mixed')
-        if (messageType === 'image' || messageType === 'mixed') {
-            // Si l'image est un objet FormData, extraire l'URL de l'image
-            if (typeof image === 'object' && image._parts && image._parts.length > 0) {
-                // Récupérer l'URL de l'image depuis FormData
-                // Normalement on utiliserait un service de stockage comme S3 ici
-                messageData.image = "placeholder_image_url";
-            } else {
-                // Sinon, utiliser la valeur directement (URL ou base64)
-                messageData.image = image;
-            }
-        }
-
-        // Ajouter l'audio si présent (pour le type 'audio')
-        if (messageType === 'audio') {
-            messageData.audio = audio;
-            if (audioDuration) {
-                messageData.audioDuration = audioDuration;
-            }
-        }
-
-        console.log("Message formaté:", messageData);
-
-        // Trouver et mettre à jour la conversation
-        const conversation = await Conversation.findOne({
-            _id: req.params.conversationId,
-            participants: req.user.id
+      console.log("Données reçues:", JSON.stringify(req.body, null, 2));
+  
+      // Extraire les données de la requête
+      const { 
+        content, 
+        messageType = 'text', 
+        image = null, 
+        audio = null, 
+        audioDuration = null,
+        replyTo = null 
+      } = req.body;
+  
+      // Validation selon le type de message
+      if ((messageType === 'text' || messageType === 'mixed') && !content?.trim()) {
+        return res.status(400).json({ message: 'Le contenu est requis pour les messages texte ou mixtes.' });
+      }
+  
+      if ((messageType === 'image' || messageType === 'mixed') && !image) {
+        return res.status(400).json({ message: 'L\'URL de l\'image est requise pour les messages image ou mixtes.' });
+      }
+  
+      if (messageType === 'audio' && !audio) {
+        return res.status(400).json({ message: 'L\'URL de l\'audio est requise pour les messages audio.' });
+      }
+  
+      // Construction de l'objet message
+      const messageData = {
+        sender: req.user.id,
+        content: content?.trim() || " ", // Un espace par défaut si vide
+        senderName: req.user.name,
+        messageType,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+  
+      // Ajout des médias selon le type de message
+      if (messageType === 'image' || messageType === 'mixed') {
+        messageData.image = image;
+      }
+  
+      if (messageType === 'audio') {
+        messageData.audio = audio;
+        messageData.audioDuration = audioDuration || '00:00';
+        
+        // Log pour débogage des problèmes audio
+        console.log("Ajout de message audio:", {
+          audio: messageData.audio,
+          duration: messageData.audioDuration
         });
-
-        if (!conversation) {
-            return res.status(404).json({ message: 'Conversation introuvable.' });
+      }
+  
+      // Gestion des réponses
+      if (replyTo) {
+        messageData.replyTo = replyTo;
+      }
+  
+      // Trouver et mettre à jour la conversation
+      const conversation = await Conversation.findOne({
+        _id: req.params.conversationId,
+        participants: req.user.id
+      });
+  
+      if (!conversation) {
+        return res.status(404).json({ message: 'Conversation introuvable.' });
+      }
+  
+      // Incrémenter les compteurs de messages non lus pour les autres participants
+      conversation.participants.forEach(participantId => {
+        const participantIdStr = participantId.toString();
+        if (participantIdStr !== req.user.id.toString()) {
+          const currentCount = conversation.unreadCount.get(participantIdStr) || 0;
+          conversation.unreadCount.set(participantIdStr, currentCount + 1);
         }
-
-        // Incrémenter les compteurs de messages non lus
-        conversation.participants.forEach(participantId => {
-            const participantIdStr = participantId.toString();
-            if (participantIdStr !== req.user.id.toString()) {
-                const currentCount = conversation.unreadCount.get(participantIdStr) || 0;
-                conversation.unreadCount.set(participantIdStr, currentCount + 1);
-            }
+      });
+  
+      // Ajouter le message et mettre à jour la date de modification
+      conversation.messages.push(messageData);
+      conversation.updatedAt = new Date();
+      await conversation.save();
+  
+      // Récupérer le message avec les informations du sender
+      const updatedConversation = await Conversation.findById(req.params.conversationId)
+        .populate('messages.sender', '_id name profilePicture');
+  
+      const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1];
+  
+      // Pour les messages audio, vérifier si l'URL est accessible
+      if (messageType === 'audio') {
+        console.log("Message audio ajouté avec succès:", {
+          id: lastMessage._id,
+          audio: lastMessage.audio,
+          duration: lastMessage.audioDuration
         });
-
-        // Ajouter le message
-        conversation.messages.push(messageData);
-        await conversation.save();
-
-        // Récupérer le message avec les infos de l'expéditeur
-        const updatedConversation = await Conversation.findById(req.params.conversationId)
-            .populate('messages.sender', '_id name profilePicture');
-
-        const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1];
-
-        res.status(201).json(lastMessage);
+      }
+  
+      res.status(201).json(lastMessage);
     } catch (error) {
-        console.error('Erreur lors de l\'ajout du message:', error);
-        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+      handleError(error, res);
     }
-};
-
-
-exports.uploadImage = async (req, res) => {
-    try {
-        const { image } = req.body; // L'image en base64 ou un URL temporaire
-
-        if (!image) {
-            return res.status(400).json({ message: 'Aucune image fournie' });
-        }
-
-        // Dans une implémentation réelle, vous stockeriez l'image dans un service cloud comme S3
-        // Pour cette démonstration, nous renvoyons simplement l'image telle quelle
-
-        // 1. Exemple simple retournant l'image reçue (pour tests uniquement)
-        const imageUrl = image;
-
-        // 2. Alternative : pour une implémentation plus complète, vous pourriez :
-        // - Valider le type/format de l'image
-        // - La redimensionner si nécessaire
-        // - La télécharger vers un service de stockage
-        // - Retourner l'URL permanente
-
-        res.status(200).json({
-            url: imageUrl,
-            message: 'Image téléchargée avec succès'
-        });
-    } catch (error) {
-        console.error('Erreur lors du téléchargement de l\'image:', error);
-        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
-    }
-};
-
-
+  };
 
 exports.getUserConversations = async (req, res) => {
     try {
-        const conversations = await Conversation.find({
-            participants: req.user.id
-        })
-            .populate('participants', 'name profilePicture')
-            .populate({
-                path: 'secret',
-                select: 'label content user',
-                model: 'Secret',
-                populate: {
-                    path: 'user',
-                    model: 'User',
-                    select: 'name profilePicture'
-                }
-            })
-            .sort({ updatedAt: -1 });
-
-        // Log détaillé du nombre de messages non lus
-        const conversationsWithUnreadCount = conversations.map(conv => {
-            const userIdStr = req.user.id.toString();
-            const unreadCount = conv.unreadCount?.get(userIdStr) || 0;
-
-            console.log('Conversation Details:', {
-                conversationId: conv._id,
-                unreadCountMap: conv.unreadCount,
-                userIdStr: userIdStr,
-                calculatedUnreadCount: unreadCount,
-                totalMessages: conv.messages.length
-            });
-
-            return {
-                ...conv.toObject(),
-                unreadCount
-            };
-        });
-
-        res.status(200).json(conversationsWithUnreadCount);
-    } catch (error) {
-        console.error('Erreur détaillée:', error);
-        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
-    }
-};
-
-
-exports.markConversationAsRead = async (req, res) => {
-    try {
-        const conversation = await Conversation.findOne({
-            _id: req.params.conversationId,
-            participants: req.user.id
-        });
-
-        if (!conversation) {
-            return res.status(404).json({ message: 'Conversation introuvable.' });
+      // Pour la liste des conversations, nous ne chargeons pas tous les messages
+      const conversations = await populateConversation(
+        Conversation.find({
+          participants: req.user.id
+        }).sort({ updatedAt: -1 }),
+        false // Ne pas inclure le contenu complet des messages
+      );
+  
+      // Calculer le nombre de messages non lus pour l'utilisateur
+      const userIdStr = req.user.id.toString();
+      const conversationsWithUnreadCount = conversations.map(conv => {
+        const unreadCount = conv.unreadCount?.get(userIdStr) || 0;
+        
+        // Récupérer le dernier message pour l'aperçu
+        let lastMessage = null;
+        if (conv.messages && conv.messages.length > 0) {
+          lastMessage = conv.messages[conv.messages.length - 1];
         }
-
-        // Réinitialiser le nombre de messages non lus pour cet utilisateur
-        conversation.unreadCount.set(req.user.id.toString(), 0);
-        await conversation.save();
-
-        res.status(200).json({ message: 'Messages marqués comme lus.' });
+  
+        return {
+          ...conv.toObject(),
+          unreadCount,
+          lastMessage
+        };
+      });
+  
+      // Log des statistiques pour débogage
+      conversationsWithUnreadCount.forEach(conv => {
+        console.log('Conversation Details:', {
+          conversationId: conv._id,
+          unreadCount: conv.unreadCount,
+          userIdStr: userIdStr,
+          calculatedUnreadCount: conv.unreadCount,
+          totalMessages: conv.messages?.length || 0
+        });
+      });
+  
+      res.status(200).json(conversationsWithUnreadCount);
     } catch (error) {
-        res.status(500).json({ message: 'Erreur serveur.', error: error.message });
+      handleError(error, res);
     }
-};
+  };
+
+  exports.markConversationAsRead = async (req, res) => {
+    try {
+      const conversation = await Conversation.findOne({
+        _id: req.params.conversationId,
+        participants: req.user.id
+      });
+  
+      if (!conversation) {
+        return res.status(404).json({ message: 'Conversation introuvable.' });
+      }
+  
+      // Réinitialiser le compteur de messages non lus pour cet utilisateur
+      conversation.unreadCount.set(req.user.id.toString(), 0);
+      await conversation.save();
+  
+      res.status(200).json({ 
+        message: 'Messages marqués comme lus.',
+        conversationId: conversation._id 
+      });
+    } catch (error) {
+      handleError(error, res);
+    }
+  };
 
 exports.getUserSecretsWithCount = async (req, res) => {
     try {

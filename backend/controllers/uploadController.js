@@ -1,5 +1,7 @@
 // controllers/uploadController.js
 const cloudinary = require('../config/cloudinary');
+const axios = require('axios');
+
 
 exports.uploadImage = async (req, res) => {
     try {
@@ -44,6 +46,17 @@ exports.uploadImage = async (req, res) => {
     }
   };
 
+  const verifyAudioURL = async (url) => {
+    try {
+      const response = await axios.head(url);
+      return response.status >= 200 && response.status < 300;
+    } catch (error) {
+      console.error('Erreur de vérification d\'URL audio:', error);
+      return false;
+    }
+  };
+
+
   exports.uploadAudio = async (req, res) => {
     try {
       // Pour un upload en FormData
@@ -63,11 +76,21 @@ exports.uploadImage = async (req, res) => {
           resource_type: 'auto',
           // Pas besoin de spécifier format ici
         });
+
+        const isAccessible = await verifyAudioURL(uploadResult.secure_url);
+
+        if (!isAccessible) {
+          console.error('L\'URL Cloudinary n\'est pas accessible:', uploadResult.secure_url);
+          // Gestion de l'erreur...
+        }
+
+        const duration = result.duration || 0;
+        const formattedDuration = formatTime(duration);
         
         return res.status(200).json({
-          url: uploadResult.secure_url,
-          public_id: uploadResult.public_id,
-          duration: uploadResult.duration,
+          url: result.secure_url,
+          public_id: result.public_id,
+          duration: formattedDuration, // Renvoyer la durée formatée
           message: 'Audio téléchargé avec succès'
         });
       }
@@ -99,7 +122,7 @@ exports.uploadImage = async (req, res) => {
       res.status(500).json({ message: 'Erreur serveur.', error: error.message });
     }
   };
-  
+
   // Fonction pour supprimer une image ou un audio (si nécessaire lors de la suppression d'une conversation)
   exports.deleteMedia = async (publicId) => {
     try {

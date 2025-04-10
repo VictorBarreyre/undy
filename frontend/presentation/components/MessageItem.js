@@ -3,7 +3,7 @@ import { Animated, Easing, TouchableOpacity, Pressable, Linking } from 'react-na
 import { Box, Text, HStack, Image, VStack } from 'native-base';
 import LinearGradient from 'react-native-linear-gradient';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faReply, faCopy, faShare, faTimes, faPlay, faPause  } from '@fortawesome/free-solid-svg-icons';
+import { faReply, faCopy, faShare, faTimes, faPlay, faPause } from '@fortawesome/free-solid-svg-icons';
 import { styles } from '../../infrastructure/theme/styles';
 import ImageView from 'react-native-image-viewing';
 import { useTranslation } from 'react-i18next';
@@ -128,7 +128,7 @@ const bubbleStyles = {
       borderBottomLeftRadius: 3,
       marginBottom: 1,
       overflow: 'hidden'
-      
+
     },
     middle: {
       borderRadius: 20,
@@ -556,7 +556,7 @@ const MessageItem = memo(({
           width: 'content',
           alignSelf: 'flex-start',
           flexDirection: "row",
-          width:'78%'
+          width: '78%'
         }}
       >
         {/* Petit triangle pointant vers le message */}
@@ -640,24 +640,24 @@ const MessageItem = memo(({
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const embedUrls = (item.text || '').match(urlRegex) || [];
     const hasEmbeds = embedUrls.length > 0;
-    
+
     // Retirer les URLs du texte à afficher
     let cleanText = item.text || '';
     if (hasEmbeds) {
       // Si le message contient uniquement des URLs, définir cleanText comme vide
       const textWithoutUrls = embedUrls.reduce((text, url) => text.replace(url, ''), cleanText).trim();
-      
+
       // Si après suppression des URLs, il reste uniquement des espaces ou rien,
       // considérer qu'il n'y a pas de "vrai" texte
       cleanText = textWithoutUrls.length > 0 ? textWithoutUrls : '';
     }
-    
+
     // Vérifier s'il reste du texte après avoir retiré les URLs
     const hasCleanText = cleanText.length > 0;
-    
+
     // Vérifier si le message contient un audio
     const hasAudio = item.messageType === 'audio' && item.audio;
-  
+
     // Fonction pour rendre les embeds
     const renderEmbeds = () => {
       return embedUrls.map((url, index) => (
@@ -671,25 +671,58 @@ const MessageItem = memo(({
         </Box>
       ));
     };
-    
+
     // Composant pour afficher le lecteur audio
     const AudioPlayer = ({ uri, duration = "00:00" }) => {
       const [isPlaying, setIsPlaying] = useState(false);
       const [playbackPosition, setPlaybackPosition] = useState(0);
       const [playbackDuration, setPlaybackDuration] = useState(duration);
       const soundRef = useRef(null);
-      
+      const intervalRef = useRef(null); // Pour stocker la référence à l'intervalle
+
       const formatTime = (seconds) => {
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = Math.floor(seconds % 60);
         return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
       };
+
+      useEffect(() => {
+        const checkAudioURL = async () => {
+          if (uri) {
+            try {
+              const response = await fetch(uri, { method: 'HEAD' });
+              if (!response.ok) {
+                console.warn(`L'URL audio n'est pas accessible: ${uri}`);
+                // Logique pour gérer l'URL non accessible
+              }
+            } catch (error) {
+              console.error('Erreur lors de la vérification de l\'URL audio:', error);
+            }
+          }
+        };
+        
+        checkAudioURL();
+      }, [uri]);
       
+      // Nettoyage lorsque le composant est démonté
+      useEffect(() => {
+        return () => {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+          }
+          if (soundRef.current) {
+            soundRef.current.release();
+          }
+        };
+      }, []);
+
       const handlePlayPause = async () => {
         if (!soundRef.current) {
           // Initialiser le son
           const Sound = require('react-native-sound');
           Sound.setCategory('Playback');
+          
+          console.log("Tentative de lecture de l'audio:", uri);
           
           const sound = new Sound(uri, null, (error) => {
             if (error) {
@@ -698,28 +731,38 @@ const MessageItem = memo(({
             }
             
             soundRef.current = sound;
-            setPlaybackDuration(formatTime(sound.getDuration()));
+            const totalDuration = sound.getDuration();
+            setPlaybackDuration(formatTime(totalDuration));
+            
+            // Démarrer la lecture
             sound.play((success) => {
+              if (success) {
+                console.log('Lecture terminée avec succès');
+              } else {
+                console.log('Erreur lors de la lecture');
+              }
               setIsPlaying(false);
               setPlaybackPosition(0);
+              if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+              }
             });
+            
             setIsPlaying(true);
             
             // Mettre à jour la position de lecture toutes les 100ms
-            const interval = setInterval(() => {
+            intervalRef.current = setInterval(() => {
               if (soundRef.current) {
                 soundRef.current.getCurrentTime((seconds) => {
                   setPlaybackPosition(seconds);
+                  if (seconds >= totalDuration) {
+                    if (intervalRef.current) {
+                      clearInterval(intervalRef.current);
+                    }
+                  }
                 });
               }
             }, 100);
-            
-            // Nettoyer l'intervalle lorsque la lecture est terminée
-            sound.on('end', () => {
-              clearInterval(interval);
-              setIsPlaying(false);
-              setPlaybackPosition(0);
-            });
           });
         } else {
           // Jouer/Pauser le son existant
@@ -735,54 +778,45 @@ const MessageItem = memo(({
           }
         }
       };
-      
-      // Nettoyage lorsque le composant est démonté
-      useEffect(() => {
-        return () => {
-          if (soundRef.current) {
-            soundRef.current.release();
-          }
-        };
-      }, []);
-      
+
       return (
         <HStack alignItems="center" space={2} width="100%">
-          <TouchableOpacity onPress={handlePlayPause}>
-            <Box
-              bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"}
-              p={2}
-              borderRadius="full"
-            >
-              <FontAwesomeIcon 
-                icon={isPlaying ? faPause : faPlay} 
-                size={16} 
-                color={isUser ? "white" : "#FF78B2"} 
-              />
-            </Box>
-          </TouchableOpacity>
-          
-          <Box flex={1} height={2} bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"} borderRadius={4}>
-            <Box 
-              height="100%" 
-              width={`${(playbackPosition / (soundRef.current?.getDuration() || 1)) * 100}%`}
-              bg={isUser ? "white" : "#FF78B2"}
-              borderRadius={4}
+        <TouchableOpacity onPress={handlePlayPause}>
+          <Box
+            bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"}
+            p={2}
+            borderRadius="full"
+          >
+            <FontAwesomeIcon 
+              icon={isPlaying ? faPause : faPlay} 
+              size={16} 
+              color={isUser ? "white" : "#FF78B2"} 
             />
           </Box>
-          
-          <Text fontSize="xs" color={isUser ? "white" : "gray.600"}>
-            {isPlaying ? formatTime(playbackPosition) : playbackDuration}
-          </Text>
-        </HStack>
+        </TouchableOpacity>
+        
+        <Box flex={1} height={2} bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"} borderRadius={4}>
+          <Box 
+            height="100%" 
+            width={`${(playbackPosition / (soundRef.current?.getDuration() || 1)) * 100}%`}
+            bg={isUser ? "white" : "#FF78B2"}
+            borderRadius={4}
+          />
+        </Box>
+        
+        <Text fontSize="xs" color={isUser ? "white" : "gray.600"}>
+          {isPlaying ? formatTime(playbackPosition) : playbackDuration}
+        </Text>
+      </HStack>
       );
     };
-  
+
     const messageComponent = (
       <Pressable onLongPress={handleLongPress}>
         {isReply && item.replyToMessage && (
           <ReplyPreview replyToMessage={item.replyToMessage} isUser={isUser} />
         )}
-        
+
         {/* Ajout du cas pour les messages audio */}
         {hasAudio ? (
           <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
@@ -795,11 +829,11 @@ const MessageItem = memo(({
             <Box style={getBubbleStyle(false, isReply)}>
               <MessageImage uri={item.image} onPress={openImageViewer} />
             </Box>
-            
+
             <Box p={3} style={getBubbleStyle(true, isReply)}>
               <MessageText text={cleanText} isUser={isUser} />
             </Box>
-            
+
             {/* Embeds affichés ici après le texte et l'image */}
             {hasEmbeds && renderEmbeds()}
           </VStack>
@@ -808,7 +842,7 @@ const MessageItem = memo(({
             <Box style={getBubbleStyle(false, isReply)}>
               <MessageImage uri={item.image} onPress={openImageViewer} />
             </Box>
-            
+
             {/* Embeds affichés ici après l'image */}
             {hasEmbeds && renderEmbeds()}
           </VStack>
@@ -817,7 +851,7 @@ const MessageItem = memo(({
             <Box p={3} style={getBubbleStyle(true, isReply)}>
               <MessageText text={cleanText} isUser={isUser} />
             </Box>
-            
+
             {/* Embeds affichés ici après le texte */}
             {hasEmbeds && renderEmbeds()}
           </VStack>
@@ -830,14 +864,14 @@ const MessageItem = memo(({
         )}
       </Pressable>
     );
-  
+
     return messageComponent;
   };
 
   return (
     <Animated.View
-      style={{ 
-        backgroundColor: bgHighlight, 
+      style={{
+        backgroundColor: bgHighlight,
         borderRadius: 20,
         elevation: shadowElevation, // Pour Android
         shadowColor: "#8A2BE2",
