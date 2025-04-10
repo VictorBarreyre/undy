@@ -1,9 +1,12 @@
-const { scrapeUrl } = require('./platformScraper'); // Assurez-vous que le chemin est correct
+const { scrapeUrl } = require('./platformScraper');
 
 exports.getDataLink = async (req, res) => {
+  console.log('[LinkPreviewController] Entrée dans getDataLink');
+
   const { url } = req.query;
 
   if (!url) {
+    console.log('[LinkPreviewController] URL manquante');
     return res.status(400).json({
       success: false,
       error: 'URL requise'
@@ -36,5 +39,7 @@ exports.getDataLink = async (req, res) => {
       success: false,
       error: 'Erreur lors de l\'extraction des métadonnées'
     });
+  } finally {
+    console.log('[LinkPreviewController] Sortie de getDataLink');
   }
 };
