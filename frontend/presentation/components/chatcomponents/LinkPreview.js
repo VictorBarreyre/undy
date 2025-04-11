@@ -289,10 +289,7 @@ const YoutubeEmbed = ({ url, metadata, onPress, isUser }) => {
             </Text>
             
             {metadata.viewCount && (
-              <Text style={[
-                styles.videoStats,
-                isUser && styles.userVideoStats
-              ]}>
+              <Text size={12} color="white">
                 {metadata.viewCount}
               </Text>
             )}
