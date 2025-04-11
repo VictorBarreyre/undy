@@ -14,7 +14,7 @@ const axios = require('axios');
 // Fonction pour générer les tokens
 const generateTokens = (userId) => {
     const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-        expiresIn: '1h', // Access token expire après 1 heure
+        expiresIn: '5m', 
     });
 
     const refreshToken = jwt.sign({ id: userId }, process.env.REFRESH_TOKEN_SECRET, {
