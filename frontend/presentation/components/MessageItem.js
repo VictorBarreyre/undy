@@ -387,156 +387,160 @@ const MessageItem = memo(({
     const hasAudio = item.messageType === 'audio' && item.audio;
 
     const renderEmbeds = () => {
-      return embedUrls.map((url, index) => (
-        <Box
-          key={`${url}-${index}`}
-          mt={hasCleanText ? 2 : 0}
-          width="full"
-          alignSelf={isUser ? 'flex-end' : 'flex-start'}
-        >
-          <LinkPreview url={url} onPress={() => Linking.openURL(url)} isUser={isUser} />
-        </Box>
-      ));
+      console.log("Rendu des embeds...");
+      return embedUrls.map((url, index) => {
+
+        return (
+          <Box
+            key={`${url}-${index}`}
+            mt={hasCleanText ? 2 : 0}
+            width="full"
+            alignSelf={isUser ? 'flex-end' : 'flex-start'}
+          >
+            <LinkPreview url={url} onPress={() => Linking.openURL(url)} isUser={isUser} />
+          </Box>
+        );
+      });
     };
 
-        // Composant pour afficher le lecteur audio
-        const AudioPlayer = ({ uri, duration = "00:00" }) => {
-          const [isPlaying, setIsPlaying] = useState(false);
-          const [playbackPosition, setPlaybackPosition] = useState(0);
-          const [playbackDuration, setPlaybackDuration] = useState(duration);
-          const soundRef = useRef(null);
-          const intervalRef = useRef(null); // Pour stocker la référence à l'intervalle
-    
-          const formatTime = (seconds) => {
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = Math.floor(seconds % 60);
-            return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-          };
-    
-          useEffect(() => {
-            const checkAudioURL = async () => {
-              if (uri) {
-                try {
-                  const response = await fetch(uri, { method: 'HEAD' });
-                  if (!response.ok) {
-                    console.warn(`L'URL audio n'est pas accessible: ${uri}`);
-                    // Logique pour gérer l'URL non accessible
-                  }
-                } catch (error) {
-                  console.error('Erreur lors de la vérification de l\'URL audio:', error);
-                }
+    // Composant pour afficher le lecteur audio
+    const AudioPlayer = ({ uri, duration = "00:00" }) => {
+      const [isPlaying, setIsPlaying] = useState(false);
+      const [playbackPosition, setPlaybackPosition] = useState(0);
+      const [playbackDuration, setPlaybackDuration] = useState(duration);
+      const soundRef = useRef(null);
+      const intervalRef = useRef(null); // Pour stocker la référence à l'intervalle
+
+      const formatTime = (seconds) => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+      };
+
+      useEffect(() => {
+        const checkAudioURL = async () => {
+          if (uri) {
+            try {
+              const response = await fetch(uri, { method: 'HEAD' });
+              if (!response.ok) {
+                console.warn(`L'URL audio n'est pas accessible: ${uri}`);
+                // Logique pour gérer l'URL non accessible
               }
-            };
-    
-            checkAudioURL();
-          }, [uri]);
-    
-          // Nettoyage lorsque le composant est démonté
-          useEffect(() => {
-            return () => {
+            } catch (error) {
+              console.error('Erreur lors de la vérification de l\'URL audio:', error);
+            }
+          }
+        };
+
+        checkAudioURL();
+      }, [uri]);
+
+      // Nettoyage lorsque le composant est démonté
+      useEffect(() => {
+        return () => {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+          }
+          if (soundRef.current) {
+            soundRef.current.release();
+          }
+        };
+      }, []);
+
+      const handlePlayPause = async () => {
+        if (!soundRef.current) {
+          // Initialiser le son
+          const Sound = require('react-native-sound');
+          Sound.setCategory('Playback');
+
+          console.log("Tentative de lecture de l'audio:", uri);
+
+          const sound = new Sound(uri, null, (error) => {
+            if (error) {
+              console.log('Erreur lors du chargement du son', error);
+              return;
+            }
+
+            soundRef.current = sound;
+            const totalDuration = sound.getDuration();
+            setPlaybackDuration(formatTime(totalDuration));
+
+            // Démarrer la lecture
+            sound.play((success) => {
+              if (success) {
+                console.log('Lecture terminée avec succès');
+              } else {
+                console.log('Erreur lors de la lecture');
+              }
+              setIsPlaying(false);
+              setPlaybackPosition(0);
               if (intervalRef.current) {
                 clearInterval(intervalRef.current);
               }
+            });
+
+            setIsPlaying(true);
+
+            // Mettre à jour la position de lecture toutes les 100ms
+            intervalRef.current = setInterval(() => {
               if (soundRef.current) {
-                soundRef.current.release();
-              }
-            };
-          }, []);
-    
-          const handlePlayPause = async () => {
-            if (!soundRef.current) {
-              // Initialiser le son
-              const Sound = require('react-native-sound');
-              Sound.setCategory('Playback');
-    
-              console.log("Tentative de lecture de l'audio:", uri);
-    
-              const sound = new Sound(uri, null, (error) => {
-                if (error) {
-                  console.log('Erreur lors du chargement du son', error);
-                  return;
-                }
-    
-                soundRef.current = sound;
-                const totalDuration = sound.getDuration();
-                setPlaybackDuration(formatTime(totalDuration));
-    
-                // Démarrer la lecture
-                sound.play((success) => {
-                  if (success) {
-                    console.log('Lecture terminée avec succès');
-                  } else {
-                    console.log('Erreur lors de la lecture');
-                  }
-                  setIsPlaying(false);
-                  setPlaybackPosition(0);
-                  if (intervalRef.current) {
-                    clearInterval(intervalRef.current);
+                soundRef.current.getCurrentTime((seconds) => {
+                  setPlaybackPosition(seconds);
+                  if (seconds >= totalDuration) {
+                    if (intervalRef.current) {
+                      clearInterval(intervalRef.current);
+                    }
                   }
                 });
-    
-                setIsPlaying(true);
-    
-                // Mettre à jour la position de lecture toutes les 100ms
-                intervalRef.current = setInterval(() => {
-                  if (soundRef.current) {
-                    soundRef.current.getCurrentTime((seconds) => {
-                      setPlaybackPosition(seconds);
-                      if (seconds >= totalDuration) {
-                        if (intervalRef.current) {
-                          clearInterval(intervalRef.current);
-                        }
-                      }
-                    });
-                  }
-                }, 100);
-              });
-            } else {
-              // Jouer/Pauser le son existant
-              if (isPlaying) {
-                soundRef.current.pause();
-                setIsPlaying(false);
-              } else {
-                soundRef.current.play((success) => {
-                  setIsPlaying(false);
-                  setPlaybackPosition(0);
-                });
-                setIsPlaying(true);
               }
-            }
-          };
-    
-          return (
-            <HStack alignItems="center" space={2} width="100%">
-              <TouchableOpacity onPress={handlePlayPause}>
-                <Box
-                  bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"}
-                  p={2}
-                  borderRadius="full"
-                >
-                  <FontAwesomeIcon
-                    icon={isPlaying ? faPause : faPlay}
-                    size={16}
-                    color={isUser ? "white" : "#FF78B2"}
-                  />
-                </Box>
-              </TouchableOpacity>
-    
-              <Box flex={1} height={2} bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"} borderRadius={4}>
-                <Box
-                  height="100%"
-                  width={`${(playbackPosition / (soundRef.current?.getDuration() || 1)) * 100}%`}
-                  bg={isUser ? "white" : "#FF78B2"}
-                  borderRadius={4}
-                />
-              </Box>
-    
-              <Text fontSize="xs" color={isUser ? "white" : "gray.600"}>
-                {isPlaying ? formatTime(playbackPosition) : playbackDuration}
-              </Text>
-            </HStack>
-          );
-        };
+            }, 100);
+          });
+        } else {
+          // Jouer/Pauser le son existant
+          if (isPlaying) {
+            soundRef.current.pause();
+            setIsPlaying(false);
+          } else {
+            soundRef.current.play((success) => {
+              setIsPlaying(false);
+              setPlaybackPosition(0);
+            });
+            setIsPlaying(true);
+          }
+        }
+      };
+
+      return (
+        <HStack alignItems="center" space={2} width="100%">
+          <TouchableOpacity onPress={handlePlayPause}>
+            <Box
+              bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"}
+              p={2}
+              borderRadius="full"
+            >
+              <FontAwesomeIcon
+                icon={isPlaying ? faPause : faPlay}
+                size={16}
+                color={isUser ? "white" : "#FF78B2"}
+              />
+            </Box>
+          </TouchableOpacity>
+
+          <Box flex={1} height={2} bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"} borderRadius={4}>
+            <Box
+              height="100%"
+              width={`${(playbackPosition / (soundRef.current?.getDuration() || 1)) * 100}%`}
+              bg={isUser ? "white" : "#FF78B2"}
+              borderRadius={4}
+            />
+          </Box>
+
+          <Text fontSize="xs" color={isUser ? "white" : "gray.600"}>
+            {isPlaying ? formatTime(playbackPosition) : playbackDuration}
+          </Text>
+        </HStack>
+      );
+    };
 
     const messageComponent = (
       <Pressable onLongPress={handleLongPress}>

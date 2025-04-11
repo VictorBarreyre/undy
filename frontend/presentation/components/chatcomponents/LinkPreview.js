@@ -1,21 +1,8 @@
 import React from 'react';
-import {
-  Text,
-  TouchableOpacity,
-  Linking,
-  StyleSheet,
-  View
-} from 'react-native';
+import { Text, TouchableOpacity, Linking, StyleSheet, View } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import LinearGradient from 'react-native-linear-gradient';
 
-/**
- * Composant simple pour afficher un lien cliquable
- * @param {Object} props - Propriétés du composant
- * @param {string} props.url - URL à afficher
- * @param {boolean} props.isUser - Si le lien est affiché dans un message de l'utilisateur
- * @param {Function} props.onPress - Fonction à appeler lors du clic (facultatif)
- * @returns {JSX.Element} - Composant de lien
- */
 const LinkPreview = ({ url, isUser = false, onPress }) => {
   const handlePress = () => {
     if (onPress) {
@@ -25,26 +12,47 @@ const LinkPreview = ({ url, isUser = false, onPress }) => {
     }
   };
 
-  // Obtenir le nom de domaine
-  let displayUrl = url;
-  try {
-    const urlObj = new URL(url);
-    displayUrl = urlObj.hostname + (urlObj.pathname !== '/' ? urlObj.pathname : '');
-  } catch (e) {
-    // Conserver l'URL telle quelle si elle n'est pas valide
-  }
-
   return (
-    <TouchableOpacity 
-      onPress={handlePress} 
+    <TouchableOpacity
+      onPress={handlePress}
       style={[styles.container, isUser && styles.userContainer]}
     >
-      <FontAwesome5 name="link" size={14} color={isUser ? "#fff" : "#555"} />
-      <Text 
-        style={[styles.linkText, isUser && styles.userLinkText]}
-        numberOfLines={1}
+      {isUser ? (
+        <LinearGradient
+          colors={['#FF587E', '#CC4B8D']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+            borderRadius: 8,
+          }}
+        />
+      ) : (
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+            backgroundColor: '#FFFFFF',
+            borderRadius: 8,
+          }}
+        />
+      )}
+      <FontAwesome5 marginRight={8} name="link" size={14} color={isUser ? "#fff" : "#555"} />
+      <Text
+        style={[
+         
+          styles.caption,
+          { color: isUser ? 'white' : 'black', } // Appliquer la couleur ici
+        ]}
       >
-        {displayUrl}
+        {url}
       </Text>
     </TouchableOpacity>
   );
@@ -59,19 +67,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderRadius: 8,
     marginVertical: 5,
+    position: 'relative',
+    overflow: 'hidden',
   },
   userContainer: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'transparent', // Utiliser le dégradé pour les utilisateurs
   },
-  linkText: {
-    marginLeft: 10,
+  caption: {
     fontSize: 14,
-    color: '#1E88E5',
-    flex: 1,
+    lineHeight: 18,
     fontWeight: '500',
-  },
-  userLinkText: {
-    color: '#4FC3F7',
+    fontFamily: 'SF-Pro-Display-Medium',
   },
 });
 
