@@ -387,7 +387,7 @@ const MessageItem = memo(({
     const hasAudio = item.messageType === 'audio' && item.audio;
 
     const renderEmbeds = () => {
-      console.log("Rendu des embeds...");
+   
       return embedUrls.map((url, index) => {
 
         return (

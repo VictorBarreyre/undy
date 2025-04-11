@@ -84,18 +84,14 @@ const createAxiosInstance = async () => {
 
         instance.interceptors.response.use(
             (response) => {
-                console.log('[Response] Succès:', response.config.url);
                 return response;
             },
             async (error) => {
                 const originalRequest = error.config;
-                console.log('[Response Error] Status:', error.response?.status);
-                console.log('[Response Error] Data:', error.response?.data);
-
-                if (error.response?.status === 401 && 
-                    error.response?.data?.shouldRefresh && 
+                if (error.response?.status === 401 &&
+                    error.response?.data?.shouldRefresh &&
                     !originalRequest._retry) {
-
+        
                     if (isRefreshing) {
                         try {
                             const token = await new Promise((resolve, reject) => {
@@ -107,16 +103,14 @@ const createAxiosInstance = async () => {
                             return Promise.reject(err);
                         }
                     }
-
+        
                     originalRequest._retry = true;
                     isRefreshing = true;
-
+        
                     try {
                         const token = await handleTokenRefresh();
-                        
                         instance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
                         originalRequest.headers.Authorization = `Bearer ${token}`;
-                        
                         processQueue(null, token);
                         return instance(originalRequest);
                     } catch (refreshError) {
@@ -131,10 +125,10 @@ const createAxiosInstance = async () => {
                         isRefreshing = false;
                     }
                 }
-
                 return Promise.reject(error);
             }
         );
+        
 
         return instance;
     } catch (error) {
