@@ -1,6 +1,5 @@
 // platformScraper.js
-const puppeteer = require('puppeteer');
-const { install } = require('puppeteer-core');
+
 const cache = require('./linkCache');
 const twitterScraper = require('./scrappers/twitterScraper');
 const youtubeScraper = require('./scrappers/youtubeScraper');
@@ -9,25 +8,28 @@ const tiktokScraper = require('./scrappers/tiktokScraper');
 const facebookScraper = require('./scrappers/facebookScraper');
 const appleMapscraper = require('./scrappers/appleMapscraper');
 const websiteScraper = require('./scrappers/websiteScraper');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 
 async function ensureChromeInstalled() {
-    await install();
-  }
-  
-  async function launchBrowser() {
-    await ensureChromeInstalled();
-    return puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--disable-gpu'
-      ],
-      cachePath: '/tmp/.cache/puppeteer'
-    });
-  }
+  // Pas de fonction install() à appeler
+  return true;
+}
+
+async function launchBrowser() {
+  return puppeteer.launch({
+    headless: true,
+    executablePath: await chromium.executablePath(),
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--disable-gpu'
+    ],
+    cachePath: '/tmp/.cache/puppeteer'
+  });
+}
 /**
  * Détecte la plateforme d'une URL
  * @param {string} url - URL à analyser
