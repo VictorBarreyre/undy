@@ -114,7 +114,10 @@ exports.appleLogin = async (req, res) => {
                 
                 // Use fallback values if data is missing
                 const emailToUse = email || `${appleId}@apple.user.temp`;
-                const nameToUse = fullName?.givenName || 'Apple User';
+                const nameToUse = 
+                (fullName && fullName.givenName && fullName.familyName) ? `${fullName.givenName} ${fullName.familyName}` :
+                (fullName && fullName.givenName) ? fullName.givenName :
+                'Apple User';
                 
                 const newUser = {
                     email: emailToUse,
