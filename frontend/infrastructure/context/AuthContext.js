@@ -73,15 +73,16 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (userData) {
-      const dailyActiveUserProps = {
-        user_id: userData.id,
+
+      const dailyActivUsersProps = {
+        user_id: userData._id,
         timestamp: Date.now(),
         session_id: 'SESSION_ID', // Remplacez par une méthode pour générer un ID de session
         platform: Platform.OS,
         app_version: '1.0', // Remplacez par la version actuelle de votre application
       };
 
-      mixpanel.track("Daily Active User", dailyActiveUserProps); // Utilisez l'instance importée
+      mixpanel.track("Daily activ users", dailyActivUsersProps); // Utilisez l'instance importée
     }
   }, [userData]);
 
