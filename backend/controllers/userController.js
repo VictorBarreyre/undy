@@ -14,15 +14,16 @@ const axios = require('axios');
 // Fonction pour générer les tokens
 const generateTokens = (userId) => {
     const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-        expiresIn: '5m', 
+        expiresIn: '1h', // Access token expire après 1 heure
     });
 
     const refreshToken = jwt.sign({ id: userId }, process.env.REFRESH_TOKEN_SECRET, {
-        expiresIn: '7d', // Refresh token expire après 7 jours
+        expiresIn: '30d', // Refresh token expire après 30 jours
     });
 
     return { accessToken, refreshToken };
 };
+
 
 exports.appleLogin = async (req, res) => {
     console.log('---------- APPLE LOGIN START ----------');
@@ -358,65 +359,47 @@ exports.registerUser = async (req, res) => {
 exports.refreshToken = async (req, res) => {
     try {
         const { refreshToken } = req.body;
-
+        
         if (!refreshToken) {
             return res.status(400).json({ message: 'Refresh token manquant' });
         }
-
-        // Vérifier le refresh token
-        let decoded;
-        try {
-            decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-        } catch (err) {
-            return res.status(401).json({ message: 'Refresh token invalide ou expiré' });
+        
+        // Vérifier si le token existe dans la base de données
+        const tokenDoc = await RefreshToken.findOne({ token: refreshToken });
+        
+        if (!tokenDoc) {
+            return res.status(401).json({ message: 'Refresh token invalide' });
         }
         
-        // Vérifier si le token existe en base et n'est pas expiré
-        const storedToken = await RefreshToken.findOne({ 
-            userId: decoded.id,
-            token: refreshToken,
-            expiresAt: { $gt: new Date() }
-        });
-
-        if (!storedToken) {
-            // Supprimer les tokens expirés
-            await RefreshToken.deleteMany({ 
+        // Vérifier si le token n'est pas expiré
+        if (new Date() > new Date(tokenDoc.expiresAt)) {
+            await RefreshToken.deleteOne({ _id: tokenDoc._id });
+            return res.status(401).json({ message: 'Refresh token expiré' });
+        }
+        
+        // Vérifier et décoder le token
+        try {
+            const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+            
+            // Générer un nouveau access token et refresh token
+            const { accessToken, refreshToken: newRefreshToken } = generateTokens(decoded.id);
+            
+            // Mettre à jour ou créer un nouveau document de refresh token
+            await RefreshToken.deleteOne({ _id: tokenDoc._id });
+            await RefreshToken.create({
                 userId: decoded.id,
-                expiresAt: { $lte: new Date() }
+                token: newRefreshToken,
+                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 jours
             });
+            
+            return res.json({ accessToken, refreshToken: newRefreshToken });
+            
+        } catch (error) {
             return res.status(401).json({ message: 'Refresh token invalide ou expiré' });
         }
-
-        // Générer un nouveau access token
-        const accessToken = jwt.sign(
-            { id: decoded.id },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
-
-        // Générer un nouveau refresh token
-        const newRefreshToken = jwt.sign(
-            { id: decoded.id },
-            process.env.REFRESH_TOKEN_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        // Mettre à jour le refresh token en base
-        await RefreshToken.findByIdAndUpdate(storedToken._id, {
-            token: newRefreshToken,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        });
-
-        res.json({ 
-            accessToken,
-            refreshToken: newRefreshToken,
-
-            message: 'Tokens rafraîchis avec succès'
-
-        });
     } catch (error) {
-        console.error('Erreur refresh token:', error);
-        res.status(401).json({ message: 'Erreur lors du refresh token' });
+        console.error('Erreur lors du rafraîchissement du token:', error);
+        res.status(500).json({ message: 'Erreur interne du serveur' });
     }
 };
 
