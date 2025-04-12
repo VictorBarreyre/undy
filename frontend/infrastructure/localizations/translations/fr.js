@@ -626,7 +626,11 @@ export default {
     "userCancelled": "Sélection d'image annulée par l'utilisateur"
   },
   "accountConfigured": {
+    "title": "Compte configuré",
+    "description": "Votre compte est configuré pour recevoir des paiements.",
     "descriptionIdentityPending": "Votre compte est presque prêt. Pour pouvoir transférer l'argent sur votre compte en banque, veuillez vérifier votre identité.",
+    "resetAccount": "Réinitialiser le compte",
+    "manageAccount": "Gérer le compte",
     "verifyIdentity": "Vérifier mon identité"
   },
   "errors": {
@@ -635,7 +639,12 @@ export default {
     "selectDocument": "Veuillez sélectionner un document",
     "uploadError": "Erreur de téléchargement :",
     "uploadFailed": "Une erreur est survenue lors du téléchargement",
-    "verificationFailed": "La vérification d'identité a échoué"
+    "verificationFailed": "La vérification d'identité a échoué",
+    "missingDocuments": "Veuillez fournir tous les documents requis",
+    "preparationFailed": "Échec de la préparation de la vérification",
+    "verificationError": "Erreur lors de la vérification d'identité",
+    "cannotOpenBrowser": "Impossible d'ouvrir le navigateur pour la vérification",
+    "checkStatus": "Impossible de vérifier le statut actuel"
   },
   "bankAccountSetup": {
     "title": "Configuration du compte bancaire",
@@ -665,7 +674,7 @@ export default {
     "submitting": "Envoi en cours...",
     "uploading": "Téléchargement en cours...",
     "checkStatus": "Vérifier le statut",
-    "verifyOnline": "Vérifier en ligne", // en français
+    "verifyOnline": "Vérifier en ligne",
     "uploadDocuments": "Téléverser des documents" 
   },
   "documentOptions": {
@@ -677,12 +686,6 @@ export default {
     "takePhoto": "Prendre une photo",
     "chooseFromGallery": "Choisir dans la galerie",
     "cancel": "Annuler"
-  },
-  "accountConfigured": {
-    "title": "Compte configuré",
-    "description": "Votre compte est configuré pour recevoir des paiements.",
-    "resetAccount": "Réinitialiser le compte",
-    "manageAccount": "Gérer le compte"
   },
   "success": {
     "title": "Succès",
@@ -705,7 +708,29 @@ export default {
     "message": "Impossible de supprimer ce hushy",
     "ok": "OK"
   },
-  "delete": "Supprimer"
+  "delete": "Supprimer",
+  "verification": {
+    "title": "Vérification d'identité",
+    "message": "Vous allez être redirigé vers Stripe pour vérifier votre identité. Souhaitez-vous continuer ?",
+    "cancel": "Annuler",
+    "continue": "Continuer",
+    "ok": "OK",
+    "inProgress": {
+      "title": "Vérification en cours",
+      "message": "Votre vérification d'identité est en cours de traitement. Nous vous informerons lorsqu'elle sera terminée."
+    },
+    "submitted": {
+      "title": "Vérification soumise",
+      "message": "Votre vérification a été soumise avec succès. Le traitement peut prendre quelques minutes à quelques heures."
+    }
+  },
+  "statusMessages": {
+    "title": "Statut de vérification",
+    "verified": "Votre identité a été vérifiée avec succès. Vous pouvez maintenant recevoir des paiements.",
+    "processing": "Votre vérification est en cours de traitement. Cela peut prendre quelques minutes à quelques heures.",
+    "requiresInput": "Des informations supplémentaires sont nécessaires pour compléter votre vérification. Veuillez suivre les instructions fournies.",
+    "default": "Statut actuel : {{status}}. Contactez le support si vous avez besoin d'aide."
+  }
 },
   "notifications": {
     "alerts": {

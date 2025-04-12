@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import {
     VStack, Text, Button, Actionsheet,
     Box, Progress, HStack
@@ -38,18 +38,25 @@ const StripeVerificationModal = ({
         verified: userData?.stripeIdentityVerified || false,
         status: userData?.stripeVerificationStatus || 'unverified'
     });
+    const isStatusChecked = useRef(false);
 
     // Met à jour les données locales quand userData change
     useEffect(() => {
-        setLocalUserData(userData);
+        // N'actualiser que si userData a vraiment changé
+        if (JSON.stringify(localUserData) !== JSON.stringify(userData)) {
+            setLocalUserData(userData);
+        }
     }, [userData]);
 
     // Rafraîchit les données utilisateur
-    const refreshUserDataAndUpdate = async () => {
+    const refreshUserDataAndUpdate = useCallback(async () => {
         setIsRefreshing(true);
         try {
             await fetchUserData();
-            setLocalUserData(userData);
+            // Évitez la mise à jour si les données sont identiques
+            if (JSON.stringify(userData) !== JSON.stringify(localUserData)) {
+                setLocalUserData(userData);
+            }
             return userData;
         } catch (error) {
             console.error('Erreur lors du rafraîchissement des données utilisateur:', error);
@@ -57,25 +64,22 @@ const StripeVerificationModal = ({
         } finally {
             setIsRefreshing(false);
         }
-    };
+    }, [fetchUserData, userData, localUserData]);
 
     // Vérifier le statut de vérification au chargement
-    useEffect(() => {
-        const checkInitialStatus = async () => {
-            if (isOpen && localUserData?.stripeAccountStatus === 'active') {
-                await checkStatus(false); // Ne pas afficher d'alerte au chargement initial
-            }
-        };
-
-        checkInitialStatus();
-    }, [isOpen, localUserData]);
+    const checkInitialStatus = useCallback(async () => {
+        if (isOpen && localUserData?.stripeAccountStatus === 'active' && !isStatusChecked.current) {
+            isStatusChecked.current = true; // Utiliser une ref pour éviter les vérifications multiples
+            await checkStatus(false);
+        }
+    }, [isOpen, localUserData, checkStatus]);
 
     // Rafraîchir les données à l'ouverture du modal
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && !isRefreshing) {
             refreshUserDataAndUpdate();
         }
-    }, [isOpen]);
+    }, [isOpen, isRefreshing, refreshUserDataAndUpdate]);
 
     // Gestionnaire de deep links pour les retours de Stripe
     useEffect(() => {

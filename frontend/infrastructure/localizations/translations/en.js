@@ -616,96 +616,117 @@ export default {
     }
   },
 
-  "stripeVerification": {
-    "accountConfigured": {
-      "title": "Account Configured",
-      "description": "Your account is configured to receive payments.",
-      "descriptionIdentityPending": "Your account is almost ready. To transfer money to your bank account, please verify your identity.",
-      "resetAccount": "Reset account",
-      "manageAccount": "Manage account",
-      "verifyIdentity": "Verify my identity"
-    },
-    "logs": {
-      "userCancelled": "User cancelled image selection"
-    },
-    "errors": {
-      "title": "Error",
-      "generic": "An error occurred",
-      "selectDocument": "Please select a document",
-      "uploadError": "Upload error:",
-      "uploadFailed": "An error occurred during upload",
-      "verificationFailed": "Identity verification failed"
-    },
-    "bankAccountSetup": {
-      "title": "Bank Account Setup",
-      "description": "You must first set up your bank account to publish paid secrets.",
-      "publishSecret": "Publish a secret"
-    },
-    "identityVerification": {
-      "title": "Identity Verification",
-      "description": "To receive your payments, we need to verify your identity in accordance with regulations.",
-      "documentTitle": "Identity Document",
-      "documentDescription": "Please provide an identity document (ID card, passport, or driver's license).",
-      "selfieTitle": "Photo of Yourself",
-      "selfieDescription": "Take a photo of yourself to confirm your identity.",
-      "reviewTitle": "Identity Verification",
-      "reviewDescription": "Please review the documents before submitting.",
-      "documentSelected": "Document selected: {{name}}",
-      "selfieSelected": "Photo of yourself selected",
-      "processingTitle": "Verification in Progress",
-      "processingDescription": "Your identity verification is being processed. This may take a few moments.",
-      "pending": "Your verification is being processed. Please check the status later.",
-      "chooseDocument": "Choose a document",
-      "changeDocument": "Change document",
-      "takeSelfie": "Take a selfie",
-      "selectDocument": "Select a document",
-      "restart": "Start over",
-      "submit": "Submit",
-      "submitting": "Submitting...",
-      "uploading": "Uploading...",
-      "checkStatus": "Check status",
-      "verifyOnline": "Verify online",
-      "uploadDocuments": "Upload documents"
-    },
-    "documentOptions": {
-      "takePhoto": "Take a photo",
-      "chooseFromGallery": "Choose from gallery",
-      "cancel": "Cancel"
-    },
-    "selfieOptions": {
-      "takePhoto": "Take a photo",
-      "chooseFromGallery": "Choose from gallery",
-      "cancel": "Cancel"
-    },
-    "accountConfigured": {
-      "title": "Account Configured",
-      "description": "Your account is configured to receive payments.",
-      "resetAccount": "Reset account",
-      "manageAccount": "Manage account"
-    },
-    "success": {
-      "title": "Success",
-      "documentSubmitted": "Your identity document has been successfully submitted.",
-      "identityVerified": "Your identity has been successfully verified."
-    },
-    "deleteConfirm": {
-      "title": "Delete this hushy?",
-      "message": "This action cannot be undone.",
-      "cancel": "Cancel",
-      "confirm": "Delete"
-    },
-    "deleteSuccess": {
-      "title": "Success",
-      "message": "Hushy deleted successfully",
-      "ok": "OK"
-    },
-    "deleteError": {
-      "title": "Error",
-      "message": "Could not delete this hushy",
-      "ok": "OK"
-    },
-    "delete": "Delete"
+"stripeVerification": {
+  "logs": {
+    "userCancelled": "Image selection cancelled by user"
   },
+  "accountConfigured": {
+    "title": "Account Configured",
+    "description": "Your account is configured to receive payments.",
+    "descriptionIdentityPending": "Your account is almost ready. To transfer money to your bank account, please verify your identity.",
+    "resetAccount": "Reset account",
+    "manageAccount": "Manage account",
+    "verifyIdentity": "Verify my identity"
+  },
+  "errors": {
+    "title": "Error",
+    "generic": "An error occurred",
+    "selectDocument": "Please select a document",
+    "uploadError": "Upload error:",
+    "uploadFailed": "An error occurred during upload",
+    "verificationFailed": "Identity verification failed",
+    "missingDocuments": "Please provide all required documents",
+    "preparationFailed": "Verification preparation failed",
+    "verificationError": "Error during identity verification",
+    "cannotOpenBrowser": "Cannot open browser for verification",
+    "checkStatus": "Unable to check current status"
+  },
+  "bankAccountSetup": {
+    "title": "Bank Account Setup",
+    "description": "You must first set up your bank account to publish paid secrets.",
+    "publishSecret": "Publish a secret"
+  },
+  "identityVerification": {
+    "title": "Identity Verification",
+    "description": "To receive your payments, we need to verify your identity in accordance with regulations.",
+    "documentTitle": "Identity Document",
+    "documentDescription": "Please provide an identity document (ID card, passport, or driver's license).",
+    "selfieTitle": "Photo of Yourself",
+    "selfieDescription": "Take a photo of yourself to confirm your identity.",
+    "reviewTitle": "Identity Verification",
+    "reviewDescription": "Please review the documents before submitting.",
+    "documentSelected": "Document selected: {{name}}",
+    "selfieSelected": "Photo of yourself selected",
+    "processingTitle": "Verification in Progress",
+    "processingDescription": "Your identity verification is being processed. This may take a few moments.",
+    "pending": "Your verification is being processed. Please check the status later.",
+    "chooseDocument": "Choose a document",
+    "changeDocument": "Change document",
+    "takeSelfie": "Take a selfie",
+    "selectDocument": "Select a document",
+    "restart": "Start over",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "uploading": "Uploading...",
+    "checkStatus": "Check status",
+    "verifyOnline": "Verify online",
+    "uploadDocuments": "Upload documents"
+  },
+  "documentOptions": {
+    "takePhoto": "Take a photo",
+    "chooseFromGallery": "Choose from gallery",
+    "cancel": "Cancel"
+  },
+  "selfieOptions": {
+    "takePhoto": "Take a photo",
+    "chooseFromGallery": "Choose from gallery",
+    "cancel": "Cancel"
+  },
+  "success": {
+    "title": "Success",
+    "documentSubmitted": "Your identity document has been successfully submitted.",
+    "identityVerified": "Your identity has been successfully verified."
+  },
+  "deleteConfirm": {
+    "title": "Delete this hushy?",
+    "message": "This action cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "deleteSuccess": {
+    "title": "Success",
+    "message": "Hushy deleted successfully",
+    "ok": "OK"
+  },
+  "deleteError": {
+    "title": "Error",
+    "message": "Could not delete this hushy",
+    "ok": "OK"
+  },
+  "delete": "Delete",
+  "verification": {
+    "title": "Identity Verification",
+    "message": "You will be redirected to Stripe to verify your identity. Would you like to continue?",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "ok": "OK",
+    "inProgress": {
+      "title": "Verification in Progress",
+      "message": "Your identity verification is being processed. We will notify you when it's complete."
+    },
+    "submitted": {
+      "title": "Verification Submitted",
+      "message": "Your verification has been successfully submitted. Processing may take a few minutes to a few hours."
+    }
+  },
+  "statusMessages": {
+    "title": "Verification Status",
+    "verified": "Your identity has been successfully verified. You can now receive payments.",
+    "processing": "Your verification is being processed. This may take a few minutes to a few hours.",
+    "requiresInput": "Additional information is needed to complete your verification. Please follow the provided instructions.",
+    "default": "Current status: {{status}}. Contact support if you need assistance."
+  }
+},
   "notifications": {
     "alerts": {
       "simulatorWarning": "Notifications don't work on simulator",

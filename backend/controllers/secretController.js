@@ -319,6 +319,200 @@ exports.handleStripeReturn = async (req, res) => {
     }
 };
 
+
+exports.verifyIdentity = async (req, res) => {
+    try {
+      const { stripeAccountId, skipImageUpload, documentImage, selfieImage } = req.body;
+      const userId = req.user.id;
+  
+      // Vérifier que l'utilisateur demande une vérification pour son propre compte
+      const user = await User.findById(userId).select('+stripeAccountId stripeAccountStatus stripeIdentityVerified');
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+      }
+  
+      // Vérifier la correspondance de l'ID du compte Stripe
+      if (user.stripeAccountId !== stripeAccountId) {
+        return res.status(403).json({ success: false, message: 'Vous ne pouvez vérifier que votre propre compte' });
+      }
+  
+      // Si l'utilisateur est déjà vérifié, on peut retourner un succès immédiat
+      if (user.stripeIdentityVerified) {
+        return res.status(200).json({
+          success: true,
+          message: 'Votre identité est déjà vérifiée',
+          isAlreadyVerified: true
+        });
+      }
+  
+      // Retrouver le compte Stripe pour vérification
+      const stripeAccount = await stripe.accounts.retrieve(user.stripeAccountId);
+      if (!stripeAccount) {
+        return res.status(404).json({ success: false, message: 'Compte Stripe introuvable' });
+      }
+  
+      // Définir les URLs de retour avec paramètres de continuité
+      const baseReturnUrl =
+        process.env.NODE_ENV === 'production'
+          ? `https://${req.get('host')}/redirect.html?path=`
+          : process.env.FRONTEND_URL || 'hushy://stripe-return';
+  
+      const returnUrl = `${baseReturnUrl}?action=verify_complete&identity=true`;
+      const refreshUrl = `${baseReturnUrl}?action=verify_refresh&identity=true`;
+  
+      // Créer une session de vérification Stripe Identity
+      if (skipImageUpload) {
+        // Méthode 1: Redirection vers le portail de vérification Stripe
+        const verificationSession = await stripe.identity.verificationSessions.create({
+          type: 'document',
+          metadata: {
+            userId: userId.toString()
+          },
+          options: {
+            document: {
+              allowed_types: ['driving_license', 'id_card', 'passport'],
+              require_id_number: true,
+              require_live_capture: true,
+              require_matching_selfie: true
+            }
+          },
+          return_url: returnUrl,
+          refresh_url: refreshUrl
+        });
+  
+        // Sauvegarder l'ID de session pour référence ultérieure
+        user.stripeVerificationSessionId = verificationSession.id;
+        user.stripeVerificationStatus = 'pending';
+        await user.save();
+  
+        return res.status(200).json({
+          success: true,
+          sessionId: verificationSession.id,
+          verificationUrl: verificationSession.url,
+          message: 'Session de vérification créée avec succès'
+        });
+      } else {
+        // Méthode 2: Upload direct des documents (moins recommandée avec les dernières mises à jour Stripe)
+        if (!documentImage) {
+          return res.status(400).json({ success: false, message: 'Document d\'identité requis' });
+        }
+  
+        // Cette méthode est moins fiable avec les dernières versions de Stripe Identity
+        // mais nous pouvons essayer de l'implémenter
+        
+        // Créer une session de vérification
+        const verificationSession = await stripe.identity.verificationSessions.create({
+          type: 'document',
+          metadata: {
+            userId: userId.toString()
+          },
+          options: {
+            document: {
+              require_id_number: true,
+              require_matching_selfie: !!selfieImage
+            }
+          }
+        });
+  
+        try {
+          // Préparation et upload des documents
+          const docImage = documentImage.replace(/^data:image\/\w+;base64,/, '');
+          const docBuffer = Buffer.from(docImage, 'base64');
+          
+          const docFile = await stripe.files.create({
+            purpose: 'identity_document',
+            file: {
+              data: docBuffer,
+              name: 'document.jpg',
+              type: 'application/octet-stream',
+            },
+          });
+  
+          // Upload du selfie si fourni
+          let selfieFile;
+          if (selfieImage) {
+            const selfieImg = selfieImage.replace(/^data:image\/\w+;base64,/, '');
+            const selfieBuffer = Buffer.from(selfieImg, 'base64');
+            
+            selfieFile = await stripe.files.create({
+              purpose: 'identity_document',
+              file: {
+                data: selfieBuffer,
+                name: 'selfie.jpg',
+                type: 'application/octet-stream',
+              },
+            });
+          }
+  
+          // Associer les documents à la session
+          await stripe.identity.verificationSessions.update(
+            verificationSession.id,
+            {
+              documents: {
+                id_document_front: docFile.id,
+                selfie: selfieFile ? selfieFile.id : undefined
+              }
+            }
+          );
+  
+          // Enregistrer les informations de session
+          user.stripeVerificationSessionId = verificationSession.id;
+          user.stripeVerificationStatus = 'pending';
+          await user.save();
+  
+          return res.status(200).json({
+            success: true,
+            sessionId: verificationSession.id,
+            clientSecret: verificationSession.client_secret,
+            message: 'Documents soumis avec succès pour vérification'
+          });
+        } catch (uploadError) {
+          // Si l'upload direct échoue, fallback sur la méthode de redirection
+          console.error('Erreur lors de l\'upload des documents:', uploadError);
+          
+          // Nettoyer la session qui a échoué
+          await stripe.identity.verificationSessions.cancel(verificationSession.id);
+          
+          // Créer une nouvelle session avec redirection
+          const newSession = await stripe.identity.verificationSessions.create({
+            type: 'document',
+            metadata: {
+              userId: userId.toString()
+            },
+            options: {
+              document: {
+                require_id_number: true,
+                require_matching_selfie: true
+              }
+            },
+            return_url: returnUrl,
+            refresh_url: refreshUrl
+          });
+          
+          // Mettre à jour les informations utilisateur
+          user.stripeVerificationSessionId = newSession.id;
+          user.stripeVerificationStatus = 'pending';
+          await user.save();
+          
+          return res.status(200).json({
+            success: true,
+            sessionId: newSession.id,
+            verificationUrl: newSession.url,
+            fallbackToRedirect: true,
+            message: 'Impossible de traiter les documents directement. Veuillez utiliser le lien de vérification.'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la vérification d\'identité:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Erreur lors de la création de la session de vérification'
+      });
+    }
+  };
+  
+
 exports.checkIdentityVerificationStatus = async (req, res) => {
     try {
       const user = await User.findById(req.user.id).select('stripeAccountId stripeIdentityVerified stripeVerificationStatus');
