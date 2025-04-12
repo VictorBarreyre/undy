@@ -24,7 +24,7 @@ const StripeVerificationModal = ({
     const stripe = useStripe();
     const { handleIdentityVerification, checkIdentityVerificationStatus, handleStripeOnboardingRefresh } = useCardData();
     const { fetchUserData } = useContext(AuthContext);
-    
+
     const [identityDocument, setIdentityDocument] = useState(null);
     const [selfieImage, setSelfieImage] = useState(null);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -38,11 +38,11 @@ const StripeVerificationModal = ({
         verified: userData?.stripeIdentityVerified || false,
         status: userData?.stripeVerificationStatus || 'unverified'
     });
+    const [hasCompletedVerification, setHasCompletedVerification] = useState(false);
     const isStatusChecked = useRef(false);
 
     // Met à jour les données locales quand userData change
     useEffect(() => {
-        // N'actualiser que si userData a vraiment changé
         if (JSON.stringify(localUserData) !== JSON.stringify(userData)) {
             setLocalUserData(userData);
         }
@@ -53,7 +53,6 @@ const StripeVerificationModal = ({
         setIsRefreshing(true);
         try {
             await fetchUserData();
-            // Évitez la mise à jour si les données sont identiques
             if (JSON.stringify(userData) !== JSON.stringify(localUserData)) {
                 setLocalUserData(userData);
             }
@@ -69,17 +68,18 @@ const StripeVerificationModal = ({
     // Vérifier le statut de vérification au chargement
     const checkInitialStatus = useCallback(async () => {
         if (isOpen && localUserData?.stripeAccountStatus === 'active' && !isStatusChecked.current) {
-            isStatusChecked.current = true; // Utiliser une ref pour éviter les vérifications multiples
+            isStatusChecked.current = true;
             await checkStatus(false);
         }
-    }, [isOpen, localUserData, checkStatus]);
+    }, [isOpen, localUserData]);
 
-    // Rafraîchir les données à l'ouverture du modal
+    // Rafraîchir les données à l'ouverture du modal si l'utilisateur a terminé la vérification
     useEffect(() => {
-        if (isOpen && !isRefreshing) {
+        if (isOpen && hasCompletedVerification && !isRefreshing) {
             refreshUserDataAndUpdate();
+            setHasCompletedVerification(false); // Réinitialiser l'état après le rafraîchissement
         }
-    }, [isOpen, isRefreshing, refreshUserDataAndUpdate]);
+    }, [isOpen, hasCompletedVerification, isRefreshing, refreshUserDataAndUpdate]);
 
     // Gestionnaire de deep links pour les retours de Stripe
     useEffect(() => {
@@ -87,19 +87,17 @@ const StripeVerificationModal = ({
             try {
                 const url = event?.url;
                 if (!url) return;
-                
+
                 if (url.includes('stripe-return') || url.includes('action=complete')) {
                     console.log("Retour de Stripe détecté, rafraîchissement des données...");
-                    
-                    // Attendre un peu que le backend mette à jour les données
+
                     setTimeout(async () => {
                         await refreshUserDataAndUpdate();
-                        
-                        // Vérifier également le statut Stripe
+
                         try {
                             const stripeStatus = await handleStripeOnboardingRefresh();
                             console.log("Statut Stripe après retour:", stripeStatus);
-                            
+
                             if (stripeStatus.status === 'active') {
                                 await checkStatus(true);
                             }
@@ -112,21 +110,19 @@ const StripeVerificationModal = ({
                 console.error("Erreur dans le gestionnaire de deep link:", error);
             }
         };
-        
-        // Configuration du listener de deep link
+
         const subscription = Linking.addEventListener('url', handleDeepLink);
-        
-        // Vérifier s'il y a une URL initiale
+
         Linking.getInitialURL().then(url => {
             if (url) {
                 handleDeepLink({ url });
             }
         });
-        
+
         return () => {
             subscription.remove();
         };
-    }, []);
+    }, [refreshUserDataAndUpdate, handleStripeOnboardingRefresh]);
 
     // Fonction pour vérifier le statut de vérification
     const checkStatus = async (showAlert = true) => {
@@ -140,12 +136,10 @@ const StripeVerificationModal = ({
                     status: result.status
                 });
 
-                // Si le statut a changé, rafraîchir les données
                 if (result.verified !== localUserData?.stripeIdentityVerified) {
                     await refreshUserDataAndUpdate();
                 }
 
-                // Afficher une alerte uniquement si demandé
                 if (showAlert) {
                     const statusMessages = {
                         'verified': t('stripeVerification.statusMessages.verified'),
@@ -159,7 +153,7 @@ const StripeVerificationModal = ({
                         statusMessages[result.status] || statusMessages['default']
                     );
                 }
-                
+
                 return result;
             } else {
                 if (showAlert) {
@@ -171,7 +165,7 @@ const StripeVerificationModal = ({
             console.error('Erreur de vérification:', error);
             if (showAlert) {
                 Alert.alert(
-                    t('stripeVerification.errors.title'), 
+                    t('stripeVerification.errors.title'),
                     t('stripeVerification.errors.checkStatus')
                 );
             }
@@ -186,66 +180,60 @@ const StripeVerificationModal = ({
         try {
             setIsUploading(true);
             console.log("Démarrage de la vérification Stripe");
-    
-            // Récupérer les données utilisateur fraîches
+
             const freshUserData = await refreshUserDataAndUpdate() || localUserData;
-            
-            // Créer une nouvelle session de vérification
+
             const sessionResponse = await handleIdentityVerification(freshUserData, {
                 skipImageUpload: true
             });
-    
+
             console.log("Réponse de création de session:", JSON.stringify(sessionResponse, null, 2));
-    
+
             if (!sessionResponse.success) {
                 throw new Error(sessionResponse.message || "Échec de création de la session de vérification");
             }
-    
-            // Récupérer l'URL de vérification et le sessionId
+
             const verificationUrl = sessionResponse.verificationUrl;
             const sessionId = sessionResponse.sessionId;
-    
+
             if (!verificationUrl) {
                 throw new Error("Aucune URL de vérification n'a été fournie par le serveur");
             }
-    
-            // Proposer à l'utilisateur d'ouvrir la page web pour la vérification
+
             Alert.alert(
                 t('stripeVerification.verification.title'),
                 t('stripeVerification.verification.message'),
                 [
-                    { 
+                    {
                         text: t('stripeVerification.verification.cancel'),
                         style: 'cancel',
                         onPress: () => setIsUploading(false)
                     },
-                    { 
+                    {
                         text: t('stripeVerification.verification.continue'),
                         onPress: async () => {
                             try {
-                                // Vérifier si l'URL peut être ouverte
                                 const supported = await Linking.canOpenURL(verificationUrl);
-                                
+
                                 if (supported) {
-                                    // Ouvrir l'URL officielle de vérification Stripe
                                     await Linking.openURL(verificationUrl);
-                                    
-                                    // Mettre à jour l'état pour indiquer que la vérification est en cours
+
                                     setVerificationStatus({
                                         verified: false,
                                         status: 'processing'
                                     });
-                                    
-                                    // Démarrer la vérification périodique du statut
+
                                     if (sessionId) {
                                         checkVerificationStatus(sessionId);
                                     }
-                                    
+
                                     Alert.alert(
                                         t('stripeVerification.verification.inProgress.title'),
                                         t('stripeVerification.verification.inProgress.message'),
                                         [{ text: t('stripeVerification.verification.ok') }]
                                     );
+
+                                    setHasCompletedVerification(true); // Marquer la vérification comme terminée
                                 } else {
                                     throw new Error(t('stripeVerification.errors.cannotOpenBrowser'));
                                 }
@@ -261,7 +249,7 @@ const StripeVerificationModal = ({
                     }
                 ]
             );
-            
+
             return true;
         } catch (error) {
             console.error("Erreur complète de vérification:", error);
@@ -283,14 +271,13 @@ const StripeVerificationModal = ({
 
             if (!identityDocument || !selfieImage) {
                 Alert.alert(
-                    t('stripeVerification.errors.title'), 
+                    t('stripeVerification.errors.title'),
                     t('stripeVerification.errors.missingDocuments')
                 );
                 setIsUploading(false);
                 return;
             }
 
-            // Préparer les données du document
             const documentData = {
                 documentImage: `data:${identityDocument.type};base64,${identityDocument.base64}`,
                 selfieImage: `data:${selfieImage.type};base64,${selfieImage.base64}`,
@@ -298,16 +285,13 @@ const StripeVerificationModal = ({
                 documentSide: 'front'
             };
 
-            // Envoyer les documents au backend
             const sessionResponse = await handleIdentityVerification(localUserData, documentData);
             setUploadProgress(50);
 
             if (sessionResponse.success && sessionResponse.clientSecret) {
                 setUploadProgress(70);
 
-                // Vérifier si la méthode est disponible
                 if (stripe && stripe.presentVerificationSheet) {
-                    // Utiliser la méthode directement depuis l'objet stripe
                     const { error } = await stripe.presentVerificationSheet({
                         verificationSessionClientSecret: sessionResponse.clientSecret,
                     });
@@ -315,38 +299,32 @@ const StripeVerificationModal = ({
                     if (error) {
                         console.error('Erreur lors de la présentation de la feuille de vérification:', error);
                         Alert.alert(
-                            t('stripeVerification.errors.title'), 
+                            t('stripeVerification.errors.title'),
                             error.message || t('stripeVerification.errors.verificationError')
                         );
                     } else {
-                        // Mettre à jour l'état de l'interface utilisateur
                         setVerificationStatus({
                             verified: false,
                             status: 'processing'
                         });
 
-                        // Afficher la progression à l'utilisateur
                         Alert.alert(
                             t('stripeVerification.verification.inProgress.title'),
                             t('stripeVerification.verification.inProgress.message'),
                             [{ text: t('stripeVerification.verification.ok') }]
                         );
 
-                        // Lancer la vérification périodique du statut
                         checkVerificationStatus(sessionResponse.sessionId);
                     }
                 } else {
-                    // Fallback si la méthode n'est pas disponible
                     console.log("La méthode de vérification native n'est pas disponible");
 
-                    // Informer l'utilisateur que la vérification a été soumise
                     Alert.alert(
                         t('stripeVerification.verification.submitted.title'),
                         t('stripeVerification.verification.submitted.message'),
                         [{ text: t('stripeVerification.verification.ok') }]
                     );
 
-                    // Mettre à jour le statut et lancer la vérification périodique
                     setVerificationStatus({
                         verified: false,
                         status: 'processing'
@@ -356,16 +334,17 @@ const StripeVerificationModal = ({
                 }
 
                 setUploadProgress(100);
+                setHasCompletedVerification(true); // Marquer la vérification comme terminée
             } else {
                 Alert.alert(
-                    t('stripeVerification.errors.title'), 
+                    t('stripeVerification.errors.title'),
                     sessionResponse.message || t('stripeVerification.errors.preparationFailed')
                 );
             }
         } catch (error) {
             console.error('Erreur de vérification d\'identité:', error);
             Alert.alert(
-                t('stripeVerification.errors.title'), 
+                t('stripeVerification.errors.title'),
                 t('stripeVerification.errors.verificationError')
             );
         } finally {
@@ -376,26 +355,22 @@ const StripeVerificationModal = ({
 
     // Fonction pour vérifier périodiquement le statut et mettre à jour l'interface
     const checkVerificationStatus = (sessionId) => {
-        const maxAttempts = 30; // 5 minutes avec un intervalle de 10 secondes
+        const maxAttempts = 30;
         let attempts = 0;
 
-        // Créer un ID pour pouvoir annuler l'intervalle plus tard
         const intervalId = setInterval(async () => {
             try {
                 attempts++;
 
-                // Arrêter les vérifications après le nombre maximum de tentatives
                 if (attempts >= maxAttempts) {
                     clearInterval(intervalId);
                     return;
                 }
 
-                // Vérifier le statut auprès du backend
                 const statusResult = await checkIdentityVerificationStatus();
                 console.log(`Vérification du statut (tentative ${attempts}):`, statusResult);
 
                 if (statusResult.success) {
-                    // Si la vérification est terminée avec succès
                     if (statusResult.verified) {
                         clearInterval(intervalId);
 
@@ -404,7 +379,6 @@ const StripeVerificationModal = ({
                             status: 'verified'
                         });
 
-                        // Rafraîchir les données utilisateur
                         await refreshUserDataAndUpdate();
 
                         Alert.alert(
@@ -412,21 +386,16 @@ const StripeVerificationModal = ({
                             t('stripeVerification.verification.success.message'),
                             [{ text: t('stripeVerification.verification.great') }]
                         );
-                    }
-                    // Si la vérification a échoué ou a besoin d'informations supplémentaires
-                    else if (statusResult.status === 'requires_input' || statusResult.status === 'failed') {
+                    } else if (statusResult.status === 'requires_input' || statusResult.status === 'failed') {
                         clearInterval(intervalId);
 
-                        // Mettre à jour l'état
                         setVerificationStatus({
                             verified: false,
                             status: statusResult.status
                         });
 
-                        // Rafraîchir les données utilisateur
                         await refreshUserDataAndUpdate();
 
-                        // Proposer à l'utilisateur de continuer via le web si nécessaire
                         if (statusResult.status === 'requires_input') {
                             Alert.alert(
                                 t('stripeVerification.verification.requiresInput.title'),
@@ -448,13 +417,11 @@ const StripeVerificationModal = ({
                             );
                         }
                     }
-                    // Si toujours en cours, continuer à vérifier
                 }
             } catch (error) {
                 console.error('Erreur lors de la vérification du statut:', error);
-                // Même en cas d'erreur, continuer à vérifier
             }
-        }, 10000); // Vérifier toutes les 10 secondes
+        }, 10000);
     };
 
     const resetVerification = () => {
@@ -473,7 +440,6 @@ const StripeVerificationModal = ({
             stripeIdentityVerified: localUserData?.stripeIdentityVerified
         });
 
-        // Si compte Stripe pas configuré
         if (!localUserData?.stripeAccountId || localUserData?.stripeAccountStatus !== 'active') {
             return (
                 <>
@@ -492,13 +458,12 @@ const StripeVerificationModal = ({
 
                     <Button
                         onPress={async () => {
-                            // Redirect to Stripe onboarding process
                             const stripeStatus = await handleStripeOnboardingRefresh();
                             if (stripeStatus.url) {
                                 Linking.openURL(stripeStatus.url);
                             } else {
                                 Alert.alert(
-                                    t('stripeVerification.errors.title'), 
+                                    t('stripeVerification.errors.title'),
                                     t('stripeVerification.errors.onboardingAccess')
                                 );
                             }
@@ -514,7 +479,6 @@ const StripeVerificationModal = ({
             );
         }
 
-        // Si compte configuré mais identité non vérifiée
         if (!localUserData?.stripeIdentityVerified) {
             return (
                 <>
@@ -534,7 +498,6 @@ const StripeVerificationModal = ({
                     <VStack space={2}>
                         <Button
                             onPress={() => {
-                                // Option 1: Web-based verification
                                 initiateStripeVerification();
                             }}
                             backgroundColor="black"
@@ -547,7 +510,6 @@ const StripeVerificationModal = ({
 
                         <Button
                             onPress={() => {
-                                // Option 2: Document and selfie upload
                                 setVerificationStep('document');
                                 setShowDocumentOptions(true);
                             }}
@@ -563,7 +525,6 @@ const StripeVerificationModal = ({
             );
         }
 
-        // Si compte complètement configuré et vérifié
         return (
             <>
                 <Text style={styles.h4} textAlign="center">
@@ -579,7 +540,6 @@ const StripeVerificationModal = ({
                     {t('stripeVerification.accountConfigured.description')}
                 </Text>
 
-                {/* Afficher les infos du compte bancaire si disponibles */}
                 {localUserData.stripeExternalAccount && (
                     <Box
                         borderWidth={1}
@@ -638,10 +598,9 @@ const StripeVerificationModal = ({
                 </Actionsheet.Content>
             </Actionsheet>
 
-            {/* Modal pour la sélection de document d'identité */}
             <Actionsheet isOpen={showDocumentOptions} onClose={() => setShowDocumentOptions(false)}>
                 <Actionsheet.Content>
-                    <Actionsheet.Item 
+                    <Actionsheet.Item
                         onPress={() => {
                             launchCamera({
                                 mediaType: 'photo',
@@ -663,7 +622,7 @@ const StripeVerificationModal = ({
                             <Text>{t('stripeVerification.documents.takePhoto')}</Text>
                         </HStack>
                     </Actionsheet.Item>
-                    <Actionsheet.Item 
+                    <Actionsheet.Item
                         onPress={() => {
                             launchImageLibrary({
                                 mediaType: 'photo',
@@ -688,10 +647,9 @@ const StripeVerificationModal = ({
                 </Actionsheet.Content>
             </Actionsheet>
 
-            {/* Modal pour la sélection de selfie */}
             <Actionsheet isOpen={showSelfieOptions} onClose={() => setShowSelfieOptions(false)}>
                 <Actionsheet.Content>
-                    <Actionsheet.Item 
+                    <Actionsheet.Item
                         onPress={() => {
                             launchCamera({
                                 mediaType: 'photo',
@@ -712,7 +670,7 @@ const StripeVerificationModal = ({
                             <Text>{t('stripeVerification.documents.takeSelfie')}</Text>
                         </HStack>
                     </Actionsheet.Item>
-                    <Actionsheet.Item 
+                    <Actionsheet.Item
                         onPress={() => {
                             launchImageLibrary({
                                 mediaType: 'photo',

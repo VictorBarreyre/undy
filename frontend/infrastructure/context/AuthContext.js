@@ -8,6 +8,7 @@ import i18n from 'i18next'; // Importation directe de i18n
 import ContactsPermissionModal from '../../presentation/components/ContactsPermissionsModal';
 import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location'; // Ajoutez cette ligne
+import mixpanel from "../../services/mixpanel"
 
 
 export const AuthContext = createContext();
@@ -69,6 +70,20 @@ export const AuthProvider = ({ children }) => {
       subscription.remove(); // Nettoyer l'écouteur d'événements
     };
   }, []);
+
+  useEffect(() => {
+    if (userData) {
+      const dailyActiveUserProps = {
+        user_id: userData.id,
+        timestamp: Date.now(),
+        session_id: 'SESSION_ID', // Remplacez par une méthode pour générer un ID de session
+        platform: Platform.OS,
+        app_version: '1.0', // Remplacez par la version actuelle de votre application
+      };
+
+      mixpanel.track("Daily Active User", dailyActiveUserProps); // Utilisez l'instance importée
+    }
+  }, [userData]);
 
   const cleanProfilePicture = (profilePicture) => {
     if (!profilePicture) return null;
