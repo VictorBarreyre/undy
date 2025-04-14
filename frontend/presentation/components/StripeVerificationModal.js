@@ -450,39 +450,29 @@ const StripeVerificationModal = ({
             stripeIdentityVerified: localUserData?.stripeIdentityVerified
         });
 
-        if (!localUserData?.stripeAccountId || localUserData?.stripeAccountStatus !== 'active') {
+        if (!localUserData?.stripeAccountId) {
             return (
                 <>
                     <Text style={styles.h4} textAlign="center">
-                        {t('stripeVerification.bankAccountSetup.title')}
+                        {t('stripeVerification.noAccount.title')}
                     </Text>
-
+    
                     <Text
                         style={styles.caption}
                         color="#94A3B8"
                         textAlign="center"
-                        mb={2}
+                        mb={4}
                     >
-                        {t('stripeVerification.bankAccountSetup.description')}
+                        {t('stripeVerification.noAccount.description')}
                     </Text>
-
+    
                     <Button
-                        onPress={async () => {
-                            const stripeStatus = await handleStripeOnboardingRefresh();
-                            if (stripeStatus.url) {
-                                Linking.openURL(stripeStatus.url);
-                            } else {
-                                Alert.alert(
-                                    t('stripeVerification.errors.title'),
-                                    t('stripeVerification.errors.onboardingAccess')
-                                );
-                            }
-                        }}
+                        onPress={onClose}
                         backgroundColor="black"
                         borderRadius="full"
                     >
                         <Text color="white" style={styles.cta}>
-                            {t('stripeVerification.bankAccountSetup.configure')}
+                            {t('stripeVerification.noAccount.understand')}
                         </Text>
                     </Button>
                 </>
