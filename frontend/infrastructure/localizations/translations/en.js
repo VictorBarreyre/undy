@@ -642,10 +642,10 @@ export default {
     "cannotOpenBrowser": "Cannot open browser for verification",
     "checkStatus": "Unable to check current status"
   },
-  "bankAccountSetup": {
-    "title": "Bank Account Setup",
-    "description": "You must first set up your bank account to publish paid secrets.",
-    "publishSecret": "Publish a secret"
+  "noAccount": {
+    "title": "Stripe Account Not Set Up",
+    "description": "You don't have an account yet. An account will be automatically created when you publish your first Hushy. You can then set up your payment information.",
+    "understand": "I understand"
   },
   "identityVerification": {
     "title": "Identity Verification",

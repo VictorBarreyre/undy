@@ -647,10 +647,10 @@ export default {
     "cannotOpenBrowser": "Impossible d'ouvrir le navigateur pour la vérification",
     "checkStatus": "Impossible de vérifier le statut actuel"
   },
-  "bankAccountSetup": {
-    "title": "Configuration du compte bancaire",
-    "description": "Vous devez d'abord configurer votre compte bancaire pour publier des secrets payants.",
-    "publishSecret": "Publier un secret"
+  "noAccount": {
+    "title": "Compte Stripe non configuré",
+    "description": "Vous n'avez pas encore de compte. Un compte sera automatiquement créé lorsque vous publierez votre premier Hushy. Vous pourrez alors configurer vos informations de paiement.",
+    "understand": "J'ai compris"
   },
   "identityVerification": {
     "title": "Vérification d'identité",
