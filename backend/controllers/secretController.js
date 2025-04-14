@@ -326,14 +326,17 @@ exports.verifyIdentity = async (req, res) => {
     const { stripeAccountId, skipImageUpload, documentImage, selfieImage } = req.body;
     const userId = req.user.id;
 
+  
+
+    // Vérifier que l'utilisateur demande une vérification pour son propre compte
+    const user = await User.findById(userId).select('+stripeAccountId stripeAccountStatus stripeIdentityVerified');
+
     console.log("ID Stripe dans la base [" + user.stripeAccountId + "]");
     console.log("ID Stripe reçu dans la requête [" + stripeAccountId + "]");
     console.log("Les IDs sont égaux:", user.stripeAccountId === stripeAccountId);
     console.log("Type de l'ID base:", typeof user.stripeAccountId);
     console.log("Type de l'ID requête:", typeof stripeAccountId);
-
-    // Vérifier que l'utilisateur demande une vérification pour son propre compte
-    const user = await User.findById(userId).select('+stripeAccountId stripeAccountStatus stripeIdentityVerified');
+    
     if (!user) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
     }
