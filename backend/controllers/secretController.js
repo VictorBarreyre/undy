@@ -733,11 +733,6 @@ exports.createPaymentIntent = async (req, res) => {
           return res.status(404).json({ message: 'Secret introuvable.' });
       }
 
-      // Vérifier que le secret a un vendeur associé avec un compte Stripe Connect
-      if (!secret.seller) {
-          return res.status(400).json({ message: 'Aucun vendeur associé à ce secret.' });
-      }
-
       // Récupérer l'ID du compte Connect du vendeur
       const seller = await User.findById(secret.seller);
       if (!seller || !secret.sellerStripeAccountId) {
