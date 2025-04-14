@@ -699,6 +699,43 @@ exports.getUserProfile = async (req, res) => {
     }
 };
 
+exports.getBankAccountDetails = async (req, res) => {
+    try {
+        const user = req.user;
+
+        if (!user.stripeAccountId) {
+            return res.status(400).json({ message: 'Compte Stripe non configuré' });
+        }
+
+        // Récupérer le compte Stripe
+        const account = await stripe.accounts.retrieve(user.stripeAccountId);
+
+        // Récupérer les comptes externes (comptes bancaires)
+        const externalAccounts = await stripe.accounts.listExternalAccounts(
+            user.stripeAccountId,
+            { object: 'bank_account' }
+        );
+
+        if (externalAccounts.data.length === 0) {
+            return res.status(404).json({ message: 'Aucun compte bancaire trouvé' });
+        }
+
+        const bankAccount = externalAccounts.data[0];
+
+        res.json({
+            bankName: bankAccount.bank_name,
+            accountNumber: `****${bankAccount.last4}`,
+            routingNumber: bankAccount.routing_number,
+            country: bankAccount.country,
+            currency: bankAccount.currency
+        });
+    } catch (error) {
+        console.error('Erreur lors de la récupération des détails du compte bancaire :', error);
+        res.status(500).json({ message: 'Erreur lors de la récupération des détails du compte bancaire' });
+    }
+};
+
+
 
 exports.getUserTransactions = async (req, res) => {
     try {

@@ -17,6 +17,7 @@ const {
     clearUserData,
     deleteUserAccount,
     checkContactsInApp,
+    getBankAccountDetails,
     getUserById } = require('../controllers/userController');
 const protect = require('../middleware/authMiddleware'); // Importation du middleware
 const { uploadMiddleware, handleMulterError } = require('../middleware/uploadMiddleware');
@@ -46,6 +47,8 @@ router.put('/profile', protect, updateUserProfile);
 
 // Route protégée pour obtenir le profil de l'utilisateur connecté
 router.get('/profile', protect, getUserProfile); // Utilisation du middleware "protect"
+
+router.get('/bank-account-details', protect, getBankAccountDetails);
 
 router.get('/transactions', protect, getUserTransactions);
 
