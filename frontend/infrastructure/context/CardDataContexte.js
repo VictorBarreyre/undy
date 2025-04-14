@@ -1215,6 +1215,8 @@ export const CardDataProvider = ({ children }) => {
             skipImageUpload: options.skipImageUpload || false
         };
 
+        console.log("Payload envoyé à l'API:", JSON.stringify(payload, null, 2));
+
         // Ajouter les images seulement si on ne skip pas l'upload
         if (!options.skipImageUpload) {
             if (options.documentImage) {

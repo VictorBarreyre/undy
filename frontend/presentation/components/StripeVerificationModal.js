@@ -87,23 +87,27 @@ const StripeVerificationModal = ({
             try {
                 const url = event?.url;
                 if (!url) return;
-
+    
                 if (url.includes('stripe-return') || url.includes('action=complete')) {
                     console.log("Retour de Stripe détecté, rafraîchissement des données...");
                     console.log("URL complète du retour:", url);
-                    console.log("User ID actuel:", req.user.id);
-                    console.log("Stripe Account ID stocké:", user.stripeAccountId);
-
-                    const account = await stripe.accounts.retrieve(user.stripeAccountId);
-                    console.log("Vérification du compte Stripe:", account.id);
-
+                    
+                    // Supprimez ces lignes qui utilisent des variables non définies
+                    // console.log("User ID actuel:", req.user.id);
+                    // console.log("Stripe Account ID stocké:", user.stripeAccountId);
+                    // const account = await stripe.accounts.retrieve(user.stripeAccountId);
+                    // console.log("Vérification du compte Stripe:", account.id);
+                    
+                    // Log qui a du sens dans le frontend
+                    console.log("ID du compte Stripe dans les données locales:", localUserData?.stripeAccountId);
+    
                     setTimeout(async () => {
                         await refreshUserDataAndUpdate();
-
+    
                         try {
                             const stripeStatus = await handleStripeOnboardingRefresh();
                             console.log("Statut Stripe après retour:", stripeStatus);
-
+    
                             if (stripeStatus.status === 'active') {
                                 await checkStatus(true);
                             }
@@ -116,19 +120,19 @@ const StripeVerificationModal = ({
                 console.error("Erreur dans le gestionnaire de deep link:", error);
             }
         };
-
+    
         const subscription = Linking.addEventListener('url', handleDeepLink);
-
+    
         Linking.getInitialURL().then(url => {
             if (url) {
                 handleDeepLink({ url });
             }
         });
-
+    
         return () => {
             subscription.remove();
         };
-    }, [refreshUserDataAndUpdate, handleStripeOnboardingRefresh]);
+    }, [refreshUserDataAndUpdate, handleStripeOnboardingRefresh, localUserData]);
 
     // Fonction pour vérifier le statut de vérification
     const checkStatus = async (showAlert = true) => {
