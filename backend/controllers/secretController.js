@@ -759,9 +759,8 @@ exports.createPaymentIntent = async (req, res) => {
           // Configuration pour le transfert automatique
           transfer_data: {
               destination:secret.sellerStripeAccountId,
-              amount: priceDetails.sellerAmount, // Montant pour le vendeur (en centimes)
+              amount: priceDetails.sellerAmount // Montant pour le vendeur
           },
-          application_fee_amount: priceDetails.platformFee, // Votre commission (en centimes)
           
           metadata: {
               secretId: secret._id.toString(),
