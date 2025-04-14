@@ -308,7 +308,7 @@ export default {
     "loading": "Chargement...",
     "emptyList": "Wow mais c'est désert ici",
     "tabs": {
-      "yourSecrets": "Vos hushy",
+      "yourSecrets": "Vos hushys",
       "othersSecrets": "Ceux des autres"
     },
     "stats": {
