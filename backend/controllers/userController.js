@@ -8,6 +8,7 @@ const appleSignin = require('apple-signin-auth');
 const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const axios = require('axios');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 
 
@@ -625,15 +626,16 @@ exports.getUserProfile = async (req, res) => {
         const user = req.user;
         const baseUrl = `${req.protocol}://${req.get('host')}`;
 
+        // Vérifier si le paramètre includePhoneNumber est présent et défini sur true
+        const includePhoneNumber = req.query.includePhoneNumber === 'true';
+
         // Si l'utilisateur a un compte Stripe actif, récupérer les infos supplémentaires
         let stripeData = {};
         if (user.stripeAccountId && user.stripeAccountStatus === 'active') {
             try {
-                const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-                
                 // Récupérer le compte Stripe
                 const account = await stripe.accounts.retrieve(user.stripeAccountId);
-                
+
                 // Récupérer le solde
                 const balance = await stripe.balance.retrieve({
                     stripeAccount: user.stripeAccountId
@@ -651,9 +653,15 @@ exports.getUserProfile = async (req, res) => {
                     externalAccount = `****${bankAccount.last4}`;
                 }
 
+                // Récupérer le numéro de téléphone si nécessaire
+                if (includePhoneNumber && account.phone) {
+                    stripeData.phoneNumber = account.phone;
+                }
+
                 stripeData = {
                     totalEarnings,
-                    stripeExternalAccount: externalAccount
+                    stripeExternalAccount: externalAccount,
+                    ...(includePhoneNumber && { phoneNumber: account.phone })
                 };
 
                 // Mettre à jour l'utilisateur avec les nouvelles données
@@ -673,11 +681,11 @@ exports.getUserProfile = async (req, res) => {
             profilePicture: user.profilePicture || null,
             birthdate: user.birthdate,
             totalEarnings: user.totalEarnings, // Ajoutez cette ligne
-            phone: user.phone,
+            phone: includePhoneNumber ? stripeData.phoneNumber || user.phone : undefined,
             notifs: user.notifs,
             contacts: user.contacts,
             subscriptions: user.subscriptions,
-            hasSubscriptions:user.hasSubscriptions,
+            hasSubscriptions: user.hasSubscriptions,
             stripeAccountId: user.stripeAccountId,
             stripeAccountStatus: user.stripeAccountStatus,
             stripeOnboardingComplete: user.stripeOnboardingComplete,
@@ -690,9 +698,6 @@ exports.getUserProfile = async (req, res) => {
         res.status(500).json({ message: 'Erreur lors de la récupération du profil utilisateur' });
     }
 };
-
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
 
 
 exports.getUserTransactions = async (req, res) => {

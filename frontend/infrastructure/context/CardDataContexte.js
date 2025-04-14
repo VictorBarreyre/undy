@@ -628,91 +628,147 @@ export const CardDataProvider = ({ children }) => {
   };
 
   const purchaseAndAccessConversation = async (secretId, price, paymentId) => {
+    console.log("DÉBUT: purchaseAndAccessConversation", { secretId, price, paymentId });
+    
     const instance = getAxiosInstance();
     if (!instance) {
+      console.error("ERREUR: Axios non initialisé");
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     if (!secretId || !paymentId) {
+      console.error("ERREUR: Paramètres manquants", { secretId, paymentId });
       throw new Error(i18n.t('cardData.errors.missingSecretOrPaymentId'));
     }
   
     try {
-      console.log(i18n.t('cardData.logs.attemptingPurchase'), { secretId, paymentId });
+      // Tentative d'achat
+      console.log("INFO: Tentative d'achat initiée", { secretId, paymentId });
+      
+      // Tracking de la tentative
+      try {
+        console.log("MIXPANEL: Tracking Purchase Attempt");
+        mixpanel.track("Purchase Attempt", {
+          product_id: secretId,
+          price,
+          currency: "EUR",
+          quantity: 1,
+          user_id: getUserId(),
+          payment_id: paymentId
+        });
+        console.log("MIXPANEL: Tracking Purchase Attempt - Terminé");
+      } catch (mpError) {
+        console.error("MIXPANEL ERREUR (non bloquante):", mpError);
+      }
   
-      // Tracking du début de la tentative d'achat
-      mixpanel.track("Purchase Attempt", {
-        product_id: secretId,
-        price: price,
-        currency: "EUR",
-        quantity: 1,
-        user_id: getUserId(),
-        payment_id: paymentId
-      });
-  
+      // Appel API pour l'achat
+      console.log("API: Envoi de la requête d'achat");
       const purchaseResponse = await instance.post(
         `/api/secrets/${secretId}/purchase`,
         { paymentIntentId: paymentId }
       );
+      console.log("API: Réponse d'achat reçue", purchaseResponse.data);
   
+      // Vérification de l'ID de conversation
       if (!purchaseResponse.data.conversationId) {
-        // Tracking de l'erreur spécifique
-        mixpanel.track("Purchase Error", {
-          product_id: secretId,
-          error_type: "missing_conversation_id",
-          payment_id: paymentId,
-          user_id: getUserId()
-        });
+        console.error("ERREUR: Pas d'ID de conversation reçu");
+        try {
+          mixpanel.track("Purchase Error", {
+            product_id: secretId,
+            error_type: "missing_conversation_id",
+            payment_id: paymentId,
+            user_id: getUserId()
+          });
+        } catch (mpError) {
+          console.error("MIXPANEL ERREUR (non bloquante):", mpError);
+        }
         throw new Error(i18n.t('cardData.errors.noConversationIdReceived'));
       }
   
       // Mise à jour des données locales
-      setData(currentData => currentData.filter(secret => secret._id !== secretId));
+      console.log("STATE: Mise à jour des données locales");
+      setData(currentData => {
+        const newData = currentData.filter(secret => secret._id !== secretId);
+        console.log("STATE: Données filtrées", { 
+          avantLength: currentData.length, 
+          aprèsLength: newData.length 
+        });
+        return newData;
+      });
       setLastFetchTime(null);
+      console.log("STATE: Mise à jour terminée");
   
       // Récupération des données de conversation
+      console.log("API: Récupération des données de conversation");
       const conversationResponse = await instance.get(
         `/api/secrets/conversations/secret/${secretId}`
       );
-  
-      // Tracking de l'achat réussi
-      mixpanel.track("Purchase", {
-        product_id: secretId,
-        price: price,
-        currency: "EUR",
-        quantity: 1,
-        user_id: getUserId(),
-        payment_id: paymentId,
-        conversation_id: purchaseResponse.data.conversationId
+      console.log("API: Réponse de conversation reçue", { 
+        status: conversationResponse.status,
+        dataSize: JSON.stringify(conversationResponse.data).length
       });
   
-      // Données à retourner pour la redirection
+      // Tracking de l'achat réussi
+      try {
+        console.log("MIXPANEL: Tracking Purchase Succès");
+        mixpanel.track("Purchase", {
+          product_id: secretId,
+          price,
+          currency: "EUR",
+          quantity: 1,
+          user_id: getUserId(),
+          payment_id: paymentId,
+          conversation_id: purchaseResponse.data.conversationId
+        });
+        console.log("MIXPANEL: Tracking Purchase Succès - Terminé");
+      } catch (mpError) {
+        console.error("MIXPANEL ERREUR (non bloquante):", mpError);
+      }
+  
+      // Préparation du résultat
       const result = {
         conversationId: purchaseResponse.data.conversationId,
         conversation: conversationResponse.data
       };
   
-      return result;
-    } catch (error) {
-      // Tracking de l'erreur
-      mixpanel.track("Purchase Failed", {
-        product_id: secretId,
-        price: price,
-        currency: "EUR",
-        error_message: error.message,
-        error_type: error.response?.data?.error || 'unknown',
-        user_id: getUserId()
+      console.log("RETOUR: Préparation des données de retour", { 
+        conversationId: result.conversationId,
+        hasConversation: !!result.conversation,
+        conversationLength: result.conversation ? Object.keys(result.conversation).length : 0
       });
   
-      console.error(i18n.t('cardData.errors.purchaseErrorDetails'), {
+      // Retour des données pour la redirection
+      console.log("FIN: purchaseAndAccessConversation - Succès");
+      return result;
+  
+    } catch (error) {
+      // Gestion des erreurs
+      console.error("ERREUR PRINCIPALE:", {
         message: error.message,
-        response: error.response?.data,
-        secretId,
-        paymentId
+        stack: error.stack,
+        response: error.response?.data
       });
-      
+  
+      // Tracking de l'erreur
+      try {
+        console.log("MIXPANEL: Tracking Purchase Failed");
+        mixpanel.track("Purchase Failed", {
+          product_id: secretId,
+          price,
+          currency: "EUR",
+          error_message: error.message,
+          error_type: error.response?.data?.error || 'unknown',
+          user_id: getUserId()
+        });
+        console.log("MIXPANEL: Tracking Purchase Failed - Terminé");
+      } catch (mpError) {
+        console.error("MIXPANEL ERREUR (non bloquante):", mpError);
+      }
+  
+      console.error("FIN: purchaseAndAccessConversation - Échec");
       throw error;
     }
   };
+
   
   const fetchPurchasedSecrets = async () => {
     const instance = getAxiosInstance();
