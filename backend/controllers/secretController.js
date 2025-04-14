@@ -906,7 +906,7 @@ exports.purchaseSecret = async (req, res) => {
       } else {
           // Si non configuré automatiquement, créer un transfert manuel
           const seller = await User.findById(secret.user);
-          if (seller && secret.sellerStripeAccountId,) {
+          if (seller && secret.sellerStripeAccountId) {
               try {
                   // Récupérer l'ID de la charge associée au PaymentIntent
                   const charges = paymentIntent.charges.data;
