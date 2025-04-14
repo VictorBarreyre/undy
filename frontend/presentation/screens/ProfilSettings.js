@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
-import { VStack, Box, Text, Button, Pressable, Actionsheet, Input, HStack, Spinner } from 'native-base';
+import { VStack, Box, Text, Button, Pressable, Actionsheet, HStack, Spinner } from 'native-base';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Linking, Animated, StyleSheet, ScrollView, Platform, Alert, Switch as RNSwitch, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
+import { Linking, Animated, StyleSheet, ScrollView, Platform, Alert, Switch as RNSwitch, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, useWindowDimensions, TextInput } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
@@ -40,10 +40,13 @@ export default function Profile({ navigation }) {
     const [inputValue, setInputValue] = useState('');
     const [earningsModalVisible, setEarningsModalVisible] = useState(false);
     const { resetStripeAccount, resetReadStatus, unreadCountsMap, setUnreadCountsMap, setTotalUnreadCount } = useCardData();
-
+    const inputRef = useRef(null);
     const [keyboardHeight, setKeyboardHeight] = useState(0);
     const { height: windowHeight } = useWindowDimensions();
     const [actionSheetPosition] = useState(new Animated.Value(0));
+
+
+
 
     useEffect(() => {
         const keyboardWillShowListener = Keyboard.addListener(
@@ -75,6 +78,15 @@ export default function Profile({ navigation }) {
         };
     }, []);
 
+    useEffect(() => {
+        if (modalVisible && inputRef.current) {
+            // Court délai pour laisser le rendu se terminer
+            const timer = setTimeout(() => {
+                inputRef.current?.focus();
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [modalVisible]);
 
     const alertsCheckedRef = useRef({
         notification: false,
@@ -732,13 +744,13 @@ export default function Profile({ navigation }) {
                     Keyboard.dismiss();
                     setModalVisible(false);
                 }}
+                bottom={selectedField === 'birthdate' ? undefined : "32%"}
+
             >
-                <AnimatedActionsheetContent
-                    style={{
-                        marginBottom: actionSheetPosition,
-                    }}
-                >
+                <Actionsheet.Content>
+
                     <VStack width="100%" space={4} px={4}>
+
                         {selectedField === 'abonnements' && (!userData?.subscriptions || userData.subscriptions === 0) ? (
                             <>
                                 <Text style={styles.h4} textAlign="center">
@@ -773,13 +785,20 @@ export default function Profile({ navigation }) {
                                 <Box width="100%">
                                     {selectedField === 'birthdate' ? (
                                         Platform.OS === 'web' ? (
-                                            <Input
-                                                type="date"
+                                            <TextInput
                                                 value={tempValue}
-                                                onChange={(e) => setTempValue(e.target.value)}
-                                                size="md"
-                                                backgroundColor="gray.100"
-                                                borderRadius="md"
+                                                onChangeText={setTempValue}
+                                                placeholder="YYYY-MM-DD"
+                                                style={{
+                                                    height: 48,
+                                                    paddingHorizontal: 16,
+                                                    backgroundColor: '#f5f5f5',
+                                                    borderRadius: 6,  // borderRadius="md" approximation
+                                                    fontSize: 16,
+                                                    borderWidth: 1,
+                                                    borderColor: 'transparent'
+                                                }}
+                                                keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
                                             />
                                         ) : (
                                             <DateTimePicker
@@ -792,21 +811,29 @@ export default function Profile({ navigation }) {
                                             />
                                         )
                                     ) : (
-                                        <Input
+                                        <TextInput
+                                            ref={inputRef}
                                             placeholder={t('settings.editFieldPlaceholder', { field: fieldMappings[selectedField]?.label?.toLowerCase() || t('settings.information') })}
                                             value={inputValue}
                                             onChangeText={(text) => {
+                                                console.log('Texte modifié:', text);
                                                 setInputValue(text);
                                             }}
-                                            marginTop={2}
-                                            marginBottom={1}
-                                            size="md"
-                                            backgroundColor="gray.100"
-                                            borderRadius="30"
-                                            _focus={{
-                                                backgroundColor: "gray.50",
-                                                borderColor: "gray.300"
+                                            style={{
+                                                marginTop: 16,
+                                                marginBottom: 16,
+                                                paddingHorizontal: 16,
+                                                paddingVertical: 12,
+                                                backgroundColor: '#f5f5f5',
+                                                borderRadius: 30,
+                                                fontSize: 16,
+                                                borderWidth: 1,
+                                                borderColor: 'transparent'
                                             }}
+                                            autoCorrect={false}
+                                            spellCheck={false}
+                                            onFocus={() => console.log('Focus acquis')}
+                                            onBlur={() => console.log('Focus perdu')}
                                         />
                                     )}
                                 </Box>
@@ -827,7 +854,7 @@ export default function Profile({ navigation }) {
                             </>
                         )}
                     </VStack>
-                </AnimatedActionsheetContent>
+                </Actionsheet.Content>
             </Actionsheet>
         </Background>
     );

@@ -6,6 +6,7 @@ import i18n from 'i18next'; // Import direct de i18n
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Ajoutez cette ligne
 import ConfettiCannon from 'react-native-confetti-cannon';
+import mixpanel from "../../services/mixpanel"
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -647,6 +648,16 @@ export const CardDataProvider = ({ children }) => {
         throw new Error(i18n.t('cardData.errors.noConversationIdReceived'));
       }
 
+      mixpanel.track("Purchase", {
+        product_id: secretId,
+        price: price, 
+        currency: "USD", // Ou la devise que vous utilisez
+        quantity: 1,
+        user_id: getUserId(), // Ajoutez une fonction pour obtenir l'ID utilisateur actuel
+        payment_id: paymentId,
+        conversation_id: purchaseResponse.data.conversationId
+      });
+
       setData(currentData => currentData.filter(secret => secret._id !== secretId));
       setLastFetchTime(null);
 
@@ -659,6 +670,15 @@ export const CardDataProvider = ({ children }) => {
         conversation: conversationResponse.data
       };
     } catch (error) {
+
+      mixpanel.track("Purchase Failed", {
+        product_id: secretId,
+        price: price,
+        error_message: error.message,
+        error_type: error.response?.data?.error || 'unknown'
+      });
+
+      
       console.error(i18n.t('cardData.errors.purchaseErrorDetails'), {
         message: error.message,
         response: error.response?.data,

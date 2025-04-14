@@ -633,6 +633,7 @@ const AddSecret = () => {
                                                 </VStack>
                                                 <Box ml={2} width="95%">
                                                     <Input
+                                                         returnKeyType="done"
                                                         value={secretText}
                                                         onChangeText={(text) => setSecretText(text)}
                                                         placeholder={t('addSecret.whatIsNew')}
