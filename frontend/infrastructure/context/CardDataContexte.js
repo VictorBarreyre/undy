@@ -396,11 +396,7 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
-  const updateStripeBankAccount = async (
-    stripeAccountId, 
-    returnUrl = 'your-app://stripe-return', 
-    refreshUrl = 'your-app://stripe-refresh'
-  ) => {
+  const updateStripeBankAccount = async (stripeAccountId) => {
     const instance = getAxiosInstance();
     
     if (!instance) {
@@ -408,10 +404,12 @@ export const CardDataProvider = ({ children }) => {
     }
     
     try {
+      // Pas besoin de passer les URLs de retour et de rafraîchissement
+      // Laissez votre backend les gérer comme il le fait déjà
       const response = await instance.post('/api/secrets/stripe/update-bank-account', {
         stripeAccountId,
-        returnUrl,
-        refreshUrl
+        // Vous pouvez éventuellement ajouter un paramètre pour indiquer qu'il s'agit d'une modification bancaire
+        action: 'update_bank_account'
       });
       
       console.log('Réponse de la requête de modification du compte bancaire:', response.data);

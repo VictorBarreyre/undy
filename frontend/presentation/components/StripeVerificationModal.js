@@ -90,6 +90,12 @@ const StripeVerificationModal = ({
 
                 if (url.includes('stripe-return') || url.includes('action=complete')) {
                     console.log("Retour de Stripe détecté, rafraîchissement des données...");
+                    console.log("URL complète du retour:", url);
+                    console.log("User ID actuel:", req.user.id);
+                    console.log("Stripe Account ID stocké:", user.stripeAccountId);
+
+                    const account = await stripe.accounts.retrieve(user.stripeAccountId);
+                    console.log("Vérification du compte Stripe:", account.id);
 
                     setTimeout(async () => {
                         await refreshUserDataAndUpdate();
@@ -145,7 +151,7 @@ const StripeVerificationModal = ({
                         'verified': t('stripeVerification.statusMessages.verified'),
                         'processing': t('stripeVerification.statusMessages.processing'),
                         'requires_input': t('stripeVerification.statusMessages.requiresInput'),
-                        'default': t('stripeVerification.statusMessages.default', {status: result.status})
+                        'default': t('stripeVerification.statusMessages.default', { status: result.status })
                     };
 
                     Alert.alert(
