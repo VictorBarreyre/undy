@@ -627,7 +627,8 @@ export default {
     "resetAccount": "Reset account",
     "manageAccount": "Manage account",
     "verifyIdentity": "Verify my identity",
-    "modifyBankAccount" : "Update my bank account"
+    "updateBankAccount": "Update my bank account",
+    "bankAccount": "Bank account"
   },
   "errors": {
     "title": "Error",

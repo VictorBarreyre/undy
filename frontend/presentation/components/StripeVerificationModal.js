@@ -27,6 +27,7 @@ const StripeVerificationModal = ({
 
     const [identityDocument, setIdentityDocument] = useState(null);
     const [selfieImage, setSelfieImage] = useState(null);
+    const [isLoading, setIsLoading] = useState()
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -87,27 +88,27 @@ const StripeVerificationModal = ({
             try {
                 const url = event?.url;
                 if (!url) return;
-    
+
                 if (url.includes('stripe-return') || url.includes('action=complete')) {
                     console.log("Retour de Stripe détecté, rafraîchissement des données...");
                     console.log("URL complète du retour:", url);
-                    
+
                     // Supprimez ces lignes qui utilisent des variables non définies
                     // console.log("User ID actuel:", req.user.id);
                     // console.log("Stripe Account ID stocké:", user.stripeAccountId);
                     // const account = await stripe.accounts.retrieve(user.stripeAccountId);
                     // console.log("Vérification du compte Stripe:", account.id);
-                    
+
                     // Log qui a du sens dans le frontend
                     console.log("ID du compte Stripe dans les données locales:", localUserData?.stripeAccountId);
-    
+
                     setTimeout(async () => {
                         await refreshUserDataAndUpdate();
-    
+
                         try {
                             const stripeStatus = await handleStripeOnboardingRefresh();
                             console.log("Statut Stripe après retour:", stripeStatus);
-    
+
                             if (stripeStatus.status === 'active') {
                                 await checkStatus(true);
                             }
@@ -120,15 +121,15 @@ const StripeVerificationModal = ({
                 console.error("Erreur dans le gestionnaire de deep link:", error);
             }
         };
-    
+
         const subscription = Linking.addEventListener('url', handleDeepLink);
-    
+
         Linking.getInitialURL().then(url => {
             if (url) {
                 handleDeepLink({ url });
             }
         });
-    
+
         return () => {
             subscription.remove();
         };
@@ -440,6 +441,39 @@ const StripeVerificationModal = ({
         setVerificationStep('document');
     };
 
+    const handleUpdateBankAccount = async () => {
+        try {
+            setIsLoading(true);
+            
+            const instance = getAxiosInstance();
+            if (!instance) {
+                throw new Error(t('errors.axiosNotInitialized'));
+            }
+            
+            const response = await instance.post('/api/secrets/stripe/update-bank-account', {
+                stripeAccountId: localUserData.stripeAccountId
+            });
+            
+            if (response.data && response.data.url) {
+                // Rediriger vers le formulaire Stripe
+                Linking.openURL(response.data.url);
+            } else {
+                Alert.alert(
+                    t('stripe.errorTitle'),
+                    t('stripe.unexpectedResponse')
+                );
+            }
+        } catch (error) {
+            console.error('Erreur lors de la redirection vers le formulaire bancaire:', error);
+            Alert.alert(
+                t('stripe.errorTitle'),
+                error.response?.data?.message || t('stripe.redirectError')
+            );
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     // Fonction pour le rendu du contenu basée sur l'état du compte
     const renderContent = () => {
         console.log("État du compte Stripe:", {
@@ -456,7 +490,7 @@ const StripeVerificationModal = ({
                     <Text style={styles.h4} textAlign="center">
                         {t('stripeVerification.noAccount.title')}
                     </Text>
-    
+
                     <Text
                         style={styles.caption}
                         color="#94A3B8"
@@ -465,7 +499,7 @@ const StripeVerificationModal = ({
                     >
                         {t('stripeVerification.noAccount.description')}
                     </Text>
-    
+
                     <Button
                         onPress={onClose}
                         backgroundColor="black"
@@ -556,26 +590,17 @@ const StripeVerificationModal = ({
 
                 <VStack space={2}>
                     <Button
-                        onPress={resetStripeAccount}
-                        backgroundColor="orange.500"
-                        borderRadius="full"
+                        onPress={handleUpdateBankAccount}
+                        backgroundColor="gray.100"
+                        borderRadius="md"
+                        mt={2}
+                        _text={{ color: "gray.700" }}
                     >
-                        <Text color="white" style={styles.cta}>
-                            {t('stripeVerification.accountConfigured.resetAccount')}
-                        </Text>
+                        {t('stripeVerification.accountConfigured.updateBankAccount')}
                     </Button>
-
-                    <Button
-                        onPress={() => {
-                            onClose();
-                        }}
-                        backgroundColor="black"
-                        borderRadius="full"
-                    >
-                        <Text color="white" style={styles.cta}>
-                            {t('stripeVerification.accountConfigured.manageAccount')}
-                        </Text>
-                    </Button>
+                    <Text color="white" style={styles.cta}>
+                        {t('stripeVerification.accountConfigured.manageAccount')}
+                    </Text>
                 </VStack>
             </>
         );

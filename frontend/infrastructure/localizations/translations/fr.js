@@ -632,7 +632,8 @@ export default {
     "resetAccount": "Réinitialiser le compte",
     "manageAccount": "Gérer le compte",
     "verifyIdentity": "Vérifier mon identité",
-    "modifyBankAccount" : "Modifier mon compte bancaire"
+    "updateBankAccount" : "Modifier mon compte bancaire",
+     "bankAccount": "Compte bancaire"
   },
   "errors": {
     "title": "Erreur",
