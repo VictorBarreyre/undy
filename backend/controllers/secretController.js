@@ -331,6 +331,9 @@ exports.verifyIdentity = async (req, res) => {
       if (!user) {
         return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
       }
+
+      console.log("ID Stripe dans la base:", user.stripeAccountId);
+      console.log("ID Stripe reçu dans la requête:", stripeAccountId);
   
       // Vérifier la correspondance de l'ID du compte Stripe
       if (user.stripeAccountId !== stripeAccountId) {

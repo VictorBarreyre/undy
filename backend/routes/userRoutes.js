@@ -10,7 +10,6 @@ const {
     updateUserProfile,
     getUserProfile,
     uploadProfilePicture,
-    verifyStripeIdentity,
     downloadUserData,
     getUserTransactions,
     createTransferIntent,
@@ -93,32 +92,6 @@ router.post('/profile-picture', protect, async (req, res) => {
       });
     }
   });
-
-router.post(
-    '/verify-stripe-identity', 
-    protect,
-    (req, res, next) => {
-        uploadMiddleware.single('identityDocument')(req, res, (err) => {
-            if (err instanceof multer.MulterError) {
-                // Erreur de Multer lors du téléchargement
-                return res.status(400).json({
-                    success: false,
-                    message: 'Erreur lors du téléchargement du fichier',
-                    error: err.message
-                });
-            } else if (err) {
-                // Autres erreurs
-                return res.status(500).json({
-                    success: false,
-                    message: 'Erreur lors du traitement du fichier',
-                    error: err.message
-                });
-            }
-            next();
-        });
-    },
-    verifyStripeIdentity
-);
 
 
 router.post('/check-contacts', protect, checkContactsInApp);

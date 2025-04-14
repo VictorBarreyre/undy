@@ -998,63 +998,6 @@ exports.checkContactsInApp = async (req, res) => {
   };
 
 
-// Dans votre contrôleur utilisateur
-exports.verifyStripeIdentity = async (req, res) => {
-    try {
-        const user = req.user;
-        const file = req.file;
-
-        if (!file) {
-            return res.status(400).json({ success: false, message: 'Aucun fichier uploadé' });
-        }
-
-        // Vérifier que l'utilisateur a un compte Stripe
-        if (!user.stripeAccountId) {
-            return res.status(400).json({ success: false, message: 'Compte Stripe non configuré' });
-        }
-
-        const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
-        try {
-            // Créer un document de vérification Stripe
-            const verificationDocument = await stripe.files.create({
-                purpose: 'identity_document',
-                file: {
-                    data: file.buffer,
-                    name: file.originalname,
-                    type: file.mimetype
-                }
-            }, {
-                stripeAccount: user.stripeAccountId
-            });
-
-            // Mettre à jour l'utilisateur
-            user.stripeIdentityVerified = false;
-            user.stripeIdentityDocumentId = verificationDocument.id;
-            await user.save();
-
-            // Répondre avec succès
-            return res.status(200).json({ 
-                success: true, 
-                message: 'Document soumis avec succès. Vérification en cours.' 
-            });
-
-        } catch (stripeError) {
-            console.error('Erreur Stripe:', stripeError);
-            return res.status(500).json({ 
-                success: false, 
-                message: 'Erreur lors de la soumission du document' 
-            });
-        }
-    } catch (error) {
-        console.error('Erreur de vérification d\'identité:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Erreur interne du serveur' 
-        });
-    }
-};
-
 
 exports.downloadUserData = async (req, res) => {
     try {
