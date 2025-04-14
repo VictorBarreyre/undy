@@ -139,7 +139,7 @@ export default {
     "alerts": {
       "welcome": {
         "title": "Location Access",
-        "message": "Hushy can use your location to show you nearby hushys. Would you like to enable this feature?",
+        "message": "hushy can use your location to show you nearby hushys. Would you like to enable this feature?",
         "yes": "Yes, enable",
         "no": "No, thanks"
       },
@@ -166,7 +166,7 @@ export default {
     "noSecrets": "No hushys available",
     "tryChangingFilters": "Try changing your filters",
     "checkBackLater": "Check back later to discover new hushys",
-    "noContactsUsingApp": "None of your contacts are using Hushy yet",
+    "noContactsUsingApp": "None of your contacts are using hushy yet",
     "noSecretsNearby": "No hushys available nearby",
     "errors": {
       "initialLoading": "Initial loading error:",
@@ -256,8 +256,8 @@ export default {
 
   "conversations": {
     "title": "Conversations",
-    "noConversations": "You haven't unlocked any Hushy yet",
-    "unlockToStart": "Unlock a Hushy to start a conversation!",
+    "noConversations": "You haven't unlocked any hushy yet",
+    "unlockToStart": "Unlock a hushy to start a conversation!",
     "untitled": "Untitled",
     "unknownUser": "Unknown user",
     "profilePicture": "Profile picture",
@@ -352,7 +352,7 @@ export default {
       "othersSecrets": "Others' hushys"
     },
     "stats": {
-      "secrets": "Hushys",
+      "secrets": "hushys",
       "followers": "Followers",
       "following": "Following"
     },
@@ -551,11 +551,11 @@ export default {
 
   "inviteContacts": {
     "title": "Invite Contacts",
-    "noContactsUsingApp": "None of your contacts are using Hushy yet. Invite them to join the app!",
+    "noContactsUsingApp": "None of your contacts are using hushy yet. Invite them to join the app!",
     "cancel": "Cancel",
     "inviteWithCount": "Invite ({{count}})",
-    "invitationMessage": "Hey! I'm inviting you to join Hushy, an awesome app for sharing hushys! Download it now: https://hushy.app",
-    "invitationTitle": "Invitation to Hushy",
+    "invitationMessage": "Hey! I'm inviting you to join hushy, an awesome app for sharing hushys! Download it now: https://hushy.app",
+    "invitationTitle": "Invitation to hushy",
     "errors": {
       "title": "Error",
       "invitationError": "Error during invitation:",
@@ -695,7 +695,7 @@ export default {
   },
   "deleteSuccess": {
     "title": "Success",
-    "message": "Hushy deleted successfully",
+    "message": "hushy deleted successfully",
     "ok": "OK"
   },
   "deleteError": {
@@ -809,10 +809,10 @@ export default {
       "deleteSuccess": "Stripe account successfully deleted"
     },
     "share": {
-      "messageIOS": "🔐 Discover my hushy on Hushy!\n\n{{link}}",
-      "messageAndroid": "🔐 Discover my hushy on Hushy!\n\n{{link}}\n\nDownload the app: https://play.google.com/store/apps/details?id=com.hushy",
+      "messageIOS": "🔐 Discover my hushy on hushy!\n\n{{link}}",
+      "messageAndroid": "🔐 Discover my hushy on hushy!\n\n{{link}}\n\nDownload the app: https://play.google.com/store/apps/details?id=com.hushy",
       "title": "Share a hushy",
-      "subject": "A hushy to share on Hushy",
+      "subject": "A hushy to share on hushy",
       "confidentialSecret": "Confidential hushy 🔐",
       "dialogTitle": "Share this confidential hushy"
     }

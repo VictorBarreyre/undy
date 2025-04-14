@@ -805,7 +805,7 @@ export default function Profile({ navigation }) {
                                                 value={tempValue ? new Date(tempValue) : new Date()}
                                                 mode="date"
                                                 display="spinner"
-                                                textColor="#000"
+                                                textColor="#000"c
                                                 style={styles.datePicker}
                                                 onChange={handleDateChange}
                                             />

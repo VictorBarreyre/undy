@@ -723,297 +723,374 @@ const calculatePrices = (originalPrice, currency = '€') => {
 };
 
 exports.createPaymentIntent = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-    try {
-        const secret = await Secret.findById(req.params.id);
-        if (!secret) {
-            return res.status(404).json({ message: 'Secret introuvable.' });
-        }
-        // Utiliser la devise du secret
-        const currency = secret.currency || '€';
-        const priceDetails = calculatePrices(secret.price, currency);
+  try {
+      const secret = await Secret.findById(req.params.id);
+      if (!secret) {
+          return res.status(404).json({ message: 'Secret introuvable.' });
+      }
 
-        // Déterminer la devise Stripe (convertir les symboles en codes ISO)
-        const stripeCurrency = {
-            '€': 'eur',
-            '$': 'usd',
-            '£': 'gbp',
-            '¥': 'jpy'
-        }[currency] || 'eur';
+      // Vérifier que le secret a un vendeur associé avec un compte Stripe Connect
+      if (!secret.seller) {
+          return res.status(400).json({ message: 'Aucun vendeur associé à ce secret.' });
+      }
 
-        // Créer l'intention de paiement Stripe avec le montant total pour l'acheteur
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: priceDetails.buyerTotal, // Déjà en centimes
-            currency: 'eur',
-            metadata: {
-                secretId: secret._id.toString(),
-                userId: req.user.id,
-                originalPrice: secret.price.toString(),
-                buyerTotal: priceDetails.buyerTotal.toString(),
-                sellerAmount: priceDetails.sellerAmount.toString(),
-                platformFee: priceDetails.platformFee.toString(),
-                currency: currency
+      // Récupérer l'ID du compte Connect du vendeur
+      const seller = await User.findById(secret.seller);
+      if (!seller || !seller.stripeConnectAccountId) {
+          return res.status(400).json({ message: 'Le vendeur n\'a pas de compte Stripe Connect configuré.' });
+      }
 
-            }
-        });
+      // Utiliser la devise du secret
+      const currency = secret.currency || '€';
+      const priceDetails = calculatePrices(secret.price, currency);
 
-        // Créer un enregistrement de paiement
-        const payment = await Payment.create([{
-            secret: secret._id,
-            user: req.user.id,
-            amount: priceDetails.buyerTotal / 100, // Convertir en euros pour la DB
-            paymentIntentId: paymentIntent.id,
-            status: 'pending',
-            currency: currency,
-            metadata: {
-                originalPrice: secret.price,
-                sellerAmount: priceDetails.sellerAmount / 100,
-                platformFee: priceDetails.platformFee / 100,
-                buyerMargin: 0.15,
-                sellerMargin: 0.10
-            }
-        }], { session });
+      // Déterminer la devise Stripe
+      const stripeCurrency = {
+          '€': 'eur',
+          '$': 'usd',
+          '£': 'gbp',
+          '¥': 'jpy'
+      }[currency] || 'eur';
 
-        await session.commitTransaction();
+      // Créer l'intention de paiement Stripe avec transfert automatique
+      const paymentIntent = await stripe.paymentIntents.create({
+          amount: priceDetails.buyerTotal, // Montant total en centimes
+          currency: stripeCurrency,
+          
+          // Configuration pour le transfert automatique
+          transfer_data: {
+              destination: seller.stripeConnectAccountId,
+              amount: priceDetails.sellerAmount, // Montant pour le vendeur (en centimes)
+          },
+          application_fee_amount: priceDetails.platformFee, // Votre commission (en centimes)
+          
+          metadata: {
+              secretId: secret._id.toString(),
+              userId: req.user.id,
+              originalPrice: secret.price.toString(),
+              buyerTotal: priceDetails.buyerTotal.toString(),
+              sellerAmount: priceDetails.sellerAmount.toString(),
+              platformFee: priceDetails.platformFee.toString(),
+              currency: currency,
+              sellerConnectAccountId: seller.stripeConnectAccountId
+          }
+      });
 
-        res.json({
-            clientSecret: paymentIntent.client_secret,
-            paymentId: paymentIntent.id,
-            buyerTotal: priceDetails.buyerTotal / 100,
-            currency: currency
-        });
+      // Créer un enregistrement de paiement (reste identique)
+      const payment = await Payment.create([{
+          secret: secret._id,
+          user: req.user.id,
+          amount: priceDetails.buyerTotal / 100,
+          paymentIntentId: paymentIntent.id,
+          status: 'pending',
+          currency: currency,
+          metadata: {
+              originalPrice: secret.price,
+              sellerAmount: priceDetails.sellerAmount / 100,
+              platformFee: priceDetails.platformFee / 100,
+              buyerMargin: 0.15,
+              sellerMargin: 0.10,
+              sellerConnectAccountId: seller.stripeConnectAccountId
+          }
+      }], { session });
 
-    } catch (error) {
-        await session.abortTransaction();
-        console.error('Erreur createPaymentIntent:', error);
-        res.status(500).json({ message: error.message });
-    } finally {
-        session.endSession();
-    }
+      await session.commitTransaction();
+
+      res.json({
+          clientSecret: paymentIntent.client_secret,
+          paymentId: paymentIntent.id,
+          buyerTotal: priceDetails.buyerTotal / 100,
+          currency: currency
+      });
+
+  } catch (error) {
+      await session.abortTransaction();
+      console.error('Erreur createPaymentIntent:', error);
+      res.status(500).json({ message: error.message });
+  } finally {
+      session.endSession();
+  }
 };
 
 
 exports.purchaseSecret = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-    try {
-        const { paymentIntentId } = req.body;
-        const secretId = req.params.id;
-        const userId = req.user.id;
+  try {
+      const { paymentIntentId } = req.body;
+      const secretId = req.params.id;
+      const userId = req.user.id;
 
-        // Logs détaillés d'entrée
-        console.log('Purchase Secret Request:', {
-            secretId,
-            paymentIntentId,
-            userId
-        });
+      // Vérification des paramètres d'entrée
+      if (!paymentIntentId) {
+          return res.status(400).json({ message: 'ID de paiement manquant' });
+      }
 
-        // Vérification des paramètres d'entrée
-        if (!paymentIntentId) {
-            return res.status(400).json({ message: 'ID de paiement manquant' });
-        }
+      // Recherche du secret
+      const secret = await Secret.findById(secretId);
+      if (!secret) {
+          return res.status(404).json({ message: 'Secret introuvable.' });
+      }
 
-        // Recherche du secret
-        const secret = await Secret.findById(secretId);
-        if (!secret) {
-            return res.status(404).json({ message: 'Secret introuvable.' });
-        }
+      // Vérification si le secret est déjà acheté
+      if (secret.purchasedBy.includes(userId)) {
+          let conversation = await Conversation.findOne({
+              secret: secretId,
+              participants: { $elemMatch: { $eq: userId } }
+          });
 
-        // Vérification si le secret est déjà acheté
-        if (secret.purchasedBy.includes(userId)) {
-            let conversation = await Conversation.findOne({
-                secret: secretId,
-                participants: { $elemMatch: { $eq: userId } }
-            });
+          if (!conversation) {
+              conversation = await Conversation.create([{
+                  secret: secretId,
+                  participants: [secret.user, userId],
+                  expiresAt: secret.expiresAt,
+                  messages: []
+              }], { session });
+              conversation = conversation[0];
+          }
 
+          await session.commitTransaction();
+          return res.status(200).json({
+              message: 'Conversation récupérée/créée avec succès.',
+              conversationId: conversation._id
+          });
+      }
 
+      // Calcul des prix avec marges
+      const currency = secret.currency || '€';
+      const priceDetails = calculatePrices(secret.price, currency);
 
-            if (!conversation) {
-                conversation = await Conversation.create([{
-                    secret: secretId,
-                    participants: [secret.user, userId],
-                    expiresAt: secret.expiresAt,
-                    messages: []
-                }], { session });
-                conversation = conversation[0];
-            }
+      // Déterminer la devise Stripe
+      const stripeCurrency = {
+          '€': 'eur',
+          '$': 'usd',
+          '£': 'gbp',
+          '¥': 'jpy'
+      }[currency] || 'eur';
 
-            await session.commitTransaction();
-            return res.status(200).json({
-                message: 'Conversation récupérée/créée avec succès.',
-                conversationId: conversation._id
-            });
-        }
+      // Vérification du statut du paiement Stripe
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-        // Calcul des prix avec marges
-        const currency = secret.currency || '€';
-        const priceDetails = calculatePrices(secret.price, currency);
+      // Vérifications de sécurité supplémentaires
+      if (
+          paymentIntent.status !== 'succeeded' ||
+          paymentIntent.amount !== priceDetails.buyerTotal ||
+          paymentIntent.metadata.secretId !== secretId ||
+          paymentIntent.metadata.userId !== userId
+      ) {
+          await session.abortTransaction();
+          return res.status(400).json({
+              message: 'Paiement invalide',
+              details: {
+                  stripeStatus: paymentIntent.status,
+                  amountCheck: paymentIntent.amount === priceDetails.buyerTotal,
+                  secretIdCheck: paymentIntent.metadata.secretId === secretId,
+                  currencyCheck: paymentIntent.currency === stripeCurrency,
+                  userIdCheck: paymentIntent.metadata.userId === userId
+              }
+          });
+      }
 
-        // Déterminer la devise Stripe
-        const stripeCurrency = {
-            '€': 'eur',
-            '$': 'usd',
-            '£': 'gbp',
-            '¥': 'jpy'
-        }[currency] || 'eur';
+      // Vérifier si le transfert Connect a été effectué automatiquement
+      if (paymentIntent.transfer_data && paymentIntent.transfer_data.destination) {
+          console.log(`Transfert automatique effectué vers: ${paymentIntent.transfer_data.destination}`);
+      } else {
+          // Si non configuré automatiquement, créer un transfert manuel
+          const seller = await User.findById(secret.user);
+          if (seller && seller.stripeConnectAccountId) {
+              try {
+                  // Récupérer l'ID de la charge associée au PaymentIntent
+                  const charges = paymentIntent.charges.data;
+                  if (charges && charges.length > 0) {
+                      const transfer = await stripe.transfers.create({
+                          amount: priceDetails.sellerAmount,
+                          currency: stripeCurrency,
+                          destination: seller.stripeConnectAccountId,
+                          source_transaction: charges[0].id,
+                          metadata: {
+                              secretId: secretId,
+                              paymentIntentId: paymentIntentId
+                          }
+                      });
+                      console.log(`Transfert manuel effectué: ${transfer.id}`);
+                  } else {
+                      console.warn('Aucune charge trouvée pour le transfert manuel');
+                  }
+              } catch (transferError) {
+                  console.error('Erreur lors du transfert:', transferError);
+                  // Ne pas échouer l'opération complète, enregistrer pour traitement manuel
+              }
+          } else {
+              console.warn(`Vendeur sans compte Stripe Connect: ${secret.user}`);
+          }
+      }
 
-        // Vérification du statut du paiement Stripe
-        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      // Enregistrement du paiement avec les détails des marges
+      const payment = await Payment.findOneAndUpdate(
+          { paymentIntentId },
+          {
+              secret: secretId,
+              user: userId,
+              amount: priceDetails.buyerTotal / 100,
+              status: 'succeeded',
+              metadata: {
+                  originalPrice: secret.price,
+                  sellerAmount: priceDetails.sellerAmount / 100,
+                  platformFee: priceDetails.platformFee / 100,
+                  buyerMargin: 0.15,
+                  sellerMargin: 0.10
+              }
+          },
+          {
+              upsert: true,
+              new: true,
+              session
+          }
+      );
 
-        console.log('Statut PaymentIntent Stripe:', {
-            status: paymentIntent.status,
-            amount: paymentIntent.amount,
-            expectedAmount: priceDetails.buyerTotal,
-            originalPrice: secret.price,
-            calculatedBuyerTotal: priceDetails.buyerTotal / 100,
-            currency: paymentIntent.currency,
-            expectedCurrency: stripeCurrency
-        });
+      // Marquer le secret comme acheté
+      secret.purchasedBy.push(userId);
+      await secret.save({ session });
 
-        // Vérifications de sécurité supplémentaires
-        if (
-            paymentIntent.status !== 'succeeded' ||
-            paymentIntent.amount !== priceDetails.buyerTotal ||
-            paymentIntent.metadata.secretId !== secretId ||
-            paymentIntent.metadata.userId !== userId
-        ) {
-            await session.abortTransaction();
-            return res.status(400).json({
-                message: 'Paiement invalide',
-                details: {
-                    stripeStatus: paymentIntent.status,
-                    amountCheck: paymentIntent.amount === priceDetails.buyerTotal,
-                    secretIdCheck: paymentIntent.metadata.secretId === secretId,
-                    currencyCheck: paymentIntent.currency === stripeCurrency,
-                    userIdCheck: paymentIntent.metadata.userId === userId
-                }
-            });
-        }
+      // Gestion de la conversation
+      let conversation = await Conversation.findOne({
+          secret: secretId
+      }).session(session);
 
-        // Enregistrement du paiement avec les détails des marges
-        const payment = await Payment.findOneAndUpdate(
-            { paymentIntentId },
-            {
-                secret: secretId,
-                user: userId,
-                amount: priceDetails.buyerTotal / 100,
-                status: 'succeeded',
-                metadata: {
-                    originalPrice: secret.price,
-                    sellerAmount: priceDetails.sellerAmount / 100,
-                    platformFee: priceDetails.platformFee / 100,
-                    buyerMargin: 0.15,
-                    sellerMargin: 0.10
-                }
-            },
-            {
-                upsert: true,
-                new: true,
-                session
-            }
-        );
+      if (!conversation) {
+          conversation = await Conversation.create([{
+              secret: secretId,
+              participants: [secret.user, userId],
+              expiresAt: secret.expiresAt,
+              messages: []
+          }], { session });
+          conversation = conversation[0];
+      } else if (!conversation.participants.includes(userId)) {
+          conversation.participants.push(userId);
+          await conversation.save({ session });
+      }
 
-        // Marquer le secret comme acheté
-        secret.purchasedBy.push(userId);
-        await secret.save({ session });
+      conversation = await Conversation.findById(conversation._id)
+          .populate('participants', 'name profilePicture')
+          .populate('messages.sender', 'name profilePicture')
+          .populate({
+              path: 'secret',
+              populate: {
+                  path: 'user',
+                  select: 'name profilePicture'
+              },
+              select: 'label content user'
+          })
+          .session(session);
 
-        // Gestion de la conversation
-        let conversation = await Conversation.findOne({
-            secret: secretId
-        }).session(session);
+      await session.commitTransaction();
 
-        if (!conversation) {
-            conversation = await Conversation.create([{
-                secret: secretId,
-                participants: [secret.user, userId],
-                expiresAt: secret.expiresAt,
-                messages: []
-            }], { session });
-            conversation = conversation[0];
-        } else if (!conversation.participants.includes(userId)) {
-            conversation.participants.push(userId);
-            await conversation.save({ session });
-        }
+      res.status(200).json({
+          message: 'Secret acheté avec succès.',
+          conversationId: conversation._id,
+          conversation
+      });
 
-        conversation = await Conversation.findById(conversation._id)
-            .populate('participants', 'name profilePicture')
-            .populate('messages.sender', 'name profilePicture')
-            .populate({
-                path: 'secret',
-                populate: {
-                    path: 'user',
-                    select: 'name profilePicture'
-                },
-                select: 'label content user'
-            })
-            .session(session);
-
-        await session.commitTransaction();
-
-        console.log('Achat du secret réussi', {
-            conversationId: conversation._id,
-            secretId,
-            paymentId: payment._id,
-            finalAmount: priceDetails.buyerTotal / 100
-        });
-
-        res.status(200).json({
-            message: 'Secret acheté avec succès.',
-            conversationId: conversation._id,
-            conversation
-        });
-
-    } catch (error) {
-        await session.abortTransaction();
-        console.error('Erreur détaillée lors de l\'achat:', {
-            errorMessage: error.message,
-            stack: error.stack,
-            secretId: req.params.id,
-            userId: req.user?.id
-        });
-        res.status(500).json({
-            message: 'Erreur serveur.',
-            error: error.message
-        });
-    } finally {
-        session.endSession();
-    }
+  } catch (error) {
+      await session.abortTransaction();
+      console.error('Erreur détaillée lors de l\'achat:', {
+          errorMessage: error.message,
+          stack: error.stack,
+          secretId: req.params.id,
+          userId: req.user?.id
+      });
+      res.status(500).json({
+          message: 'Erreur serveur.',
+          error: error.message
+      });
+  } finally {
+      session.endSession();
+  }
 };
 
 exports.confirmPayment = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-    try {
-        const { paymentIntentId } = req.body;
-        const payment = await Payment.findOne({ paymentIntentId });
+  try {
+      const { paymentIntentId } = req.body;
+      const payment = await Payment.findOne({ paymentIntentId });
 
-        if (!payment) {
-            return res.status(404).json({ message: 'Paiement introuvable.' });
-        }
+      if (!payment) {
+          return res.status(404).json({ message: 'Paiement introuvable.' });
+      }
 
-        // Vérifier le statut du paiement avec Stripe
-        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      // Vérifier le statut du paiement avec Stripe
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-        if (paymentIntent.status === 'succeeded') {
-            payment.status = 'succeeded';
-            await payment.save({ session });
+      if (paymentIntent.status === 'succeeded') {
+          // Mise à jour du statut du paiement
+          payment.status = 'succeeded';
+          await payment.save({ session });
 
-            await session.commitTransaction();
-            res.json({ success: true });
-        } else {
-            throw new Error('Paiement non réussi');
-        }
+          // Vérifier si un transfert Connect doit être effectué
+          if (!paymentIntent.transfer_data || !paymentIntent.transfer_data.destination) {
+              // Récupérer le secret et le vendeur
+              const secret = await Secret.findById(payment.secret);
+              if (secret && secret.user) {
+                  const seller = await User.findById(secret.user);
+                  
+                  if (seller && seller.stripeConnectAccountId) {
+                      try {
+                          // Récupérer l'ID de la charge associée au PaymentIntent
+                          const charges = paymentIntent.charges.data;
+                          if (charges && charges.length > 0) {
+                              // Créer un transfert manuel
+                              const transfer = await stripe.transfers.create({
+                                  amount: payment.metadata.sellerAmount * 100, // Convertir en centimes
+                                  currency: payment.currency === '€' ? 'eur' : 
+                                           payment.currency === '$' ? 'usd' : 
+                                           payment.currency === '£' ? 'gbp' : 'eur',
+                                  destination: seller.stripeConnectAccountId,
+                                  source_transaction: charges[0].id,
+                                  metadata: {
+                                      secretId: payment.secret.toString(),
+                                      paymentIntentId: paymentIntentId
+                                  }
+                              });
+                              
+                              console.log(`Transfert manuel effectué lors de la confirmation: ${transfer.id}`);
+                              
+                              // Mettre à jour le paiement avec l'ID du transfert
+                              payment.metadata.transferId = transfer.id;
+                              await payment.save({ session });
+                          }
+                      } catch (transferError) {
+                          console.error('Erreur lors du transfert dans confirmPayment:', transferError);
+                          // Ne pas échouer l'opération complète
+                      }
+                  }
+              }
+          }
 
-    } catch (error) {
-        await session.abortTransaction();
-        res.status(500).json({ message: error.message });
-    } finally {
-        session.endSession();
-    }
+          await session.commitTransaction();
+          res.json({ 
+              success: true,
+              transferCompleted: payment.metadata.transferId ? true : false 
+          });
+      } else {
+          throw new Error('Paiement non réussi');
+      }
+
+  } catch (error) {
+      await session.abortTransaction();
+      console.error('Erreur confirmPayment:', error);
+      res.status(500).json({ 
+          message: error.message,
+          details: error.stack 
+      });
+  } finally {
+      session.endSession();
+  }
 };
 
 exports.getPurchasedSecrets = async (req, res) => {

@@ -115,7 +115,7 @@ const ConversationsList = ({ navigation }) => {
             <Text style={styles.h3} textAlign="center" mt={4}>
               {t('conversations.noConversations')}
             </Text>
-            <Text style={styles.caption} textAlign="center" color="gray.500" mt={2}>
+            <Text style={styles.caption} textAlign="center" color="#94A3B8" mt={2}>
               {t('conversations.unlockToStart')}
             </Text>
           </VStack>

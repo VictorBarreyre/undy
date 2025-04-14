@@ -127,7 +127,7 @@ export default {
   "noSecrets": "Aucun hushy disponible",
   "tryChangingFilters": "Essayez de modifier vos filtres",
   "checkBackLater": "Revenez plus tard pour découvrir de nouveaux hushys",
-  "noContactsUsingApp": "Aucun de vos contacts n'utilise encore Hushy",
+  "noContactsUsingApp": "Aucun de vos contacts n'utilise encore hushy",
   "noSecretsNearby": "Aucun hushy disponible autour de vous",
   "errors": {
     "initialLoading": "Erreur de chargement initial:",
@@ -216,8 +216,8 @@ export default {
 
   "conversations": {
     "title": "Conversations",
-    "noConversations": "Vous n'avez pas encore déverrouillé de Hushy",
-    "unlockToStart": "Déverrouillez un Hushy pour commencer une conversation !",
+    "noConversations": "Vous n'avez pas encore déverrouillé de hushy",
+    "unlockToStart": "Déverrouillez un hushy pour commencer une conversation !",
     "untitled": "Sans titre",
     "unknownUser": "Utilisateur inconnu",
     "profilePicture": "Photo de profil",
@@ -312,7 +312,7 @@ export default {
       "othersSecrets": "Ceux des autres"
     },
     "stats": {
-      "secrets": "Hushys",
+      "secrets": "hushys",
       "followers": "Abonnés",
       "following": "Abonnements"
     },
@@ -519,11 +519,11 @@ export default {
 
   "inviteContacts": {
     "title": "Inviter des contacts",
-    "noContactsUsingApp": "Aucun de vos contacts n'utilise encore Hushy. Invitez-les à rejoindre l'application !",
+    "noContactsUsingApp": "Aucun de vos contacts n'utilise encore hushy. Invitez-les à rejoindre l'application !",
     "cancel": "Annuler",
     "inviteWithCount": "Inviter ({{count}})",
-    "invitationMessage": "Hey ! Je t'invite à rejoindre Hushy, une super app pour partager des hushys ! Télécharge-la maintenant : https://hushy.app",
-    "invitationTitle": "Invitation à Hushy",
+    "invitationMessage": "Hey ! Je t'invite à rejoindre hushy, une super app pour partager des hushys ! Télécharge-la maintenant : https://hushy.app",
+    "invitationTitle": "Invitation à hushy",
     "errors": {
       "title": "Erreur",
       "invitationError": "Erreur lors de l'invitation:",
@@ -543,7 +543,7 @@ export default {
   "alerts": {
     "welcome": {
       "title": "Accès à la localisation",
-      "message": "Hushy peut utiliser votre position pour vous montrer les hushys à proximité. Voulez-vous activer cette fonctionnalité ?",
+      "message": "hushy peut utiliser votre position pour vous montrer les hushys à proximité. Voulez-vous activer cette fonctionnalité ?",
       "yes": "Oui, activer",
       "no": "Non, merci"
     },
@@ -700,7 +700,7 @@ export default {
   },
   "deleteSuccess": {
     "title": "Succès",
-    "message": "Hushy supprimé avec succès",
+    "message": "hushy supprimé avec succès",
     "ok": "OK"
   },
   "deleteError": {
@@ -814,10 +814,10 @@ export default {
       "deleteSuccess": "Compte Stripe supprimé avec succès"
     },
     "share": {
-      "messageIOS": "🔐 Découvre mon hushy sur Hushy !\n\n{{link}}",
-      "messageAndroid": "🔐 Découvre mon hushy sur Hushy !\n\n{{link}}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy",
+      "messageIOS": "🔐 Découvre mon hushy sur hushy !\n\n{{link}}",
+      "messageAndroid": "🔐 Découvre mon hushy sur hushy !\n\n{{link}}\n\nTélécharge l'app: https://play.google.com/store/apps/details?id=com.hushy",
       "title": "Partager un hushy",
-      "subject": "Un hushy à partager sur Hushy",
+      "subject": "Un hushy à partager sur hushy",
       "confidentialSecret": "hushy confidentiel 🔐",
       "dialogTitle": "Partager ce hushy confidentiel"
     }
