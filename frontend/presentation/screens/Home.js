@@ -217,7 +217,7 @@ const Home = ({ navigation }) => {
       </Box>
       <VStack style={styles.containerHome} space={4}>
         <VStack paddingLeft={1} space={0}>
-          <HStack alignItems='center' justifyContent='space-between'>
+          <HStack paddingTop={2} alignItems='center' justifyContent='space-between'>
             <Text paddingBottom={1} style={styles.h3}>{t('home.latestHushys')}</Text>
             <TouchableOpacity 
               onPress={handleRefresh}
@@ -238,7 +238,7 @@ const Home = ({ navigation }) => {
               )}
             </TouchableOpacity>
           </HStack>
-          <Text paddingBottom={2} color='#94A3B8' style={styles.caption}>
+          <Text paddingBottom={1} color='#94A3B8' style={styles.caption}>
             {typeTexts[activeType] || t('home.sourceTexts.everyone')}
           </Text>
         </VStack>
