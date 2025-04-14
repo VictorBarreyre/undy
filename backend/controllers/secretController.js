@@ -734,10 +734,10 @@ exports.createPaymentIntent = async (req, res) => {
       }
 
       // Récupérer l'ID du compte Connect du vendeur
-      const seller = await User.findById(secret.seller);
-      if (!seller || !secret.sellerStripeAccountId) {
-          return res.status(400).json({ message: 'Le vendeur n\'a pas de compte Stripe Connect configuré.' });
-      }
+      if (!secret.sellerStripeAccountId) {
+        await session.abortTransaction();
+        return res.status(400).json({ message: 'Aucun vendeur associé à ce secret.' });
+    }
 
       // Utiliser la devise du secret
       const currency = secret.currency || '€';
