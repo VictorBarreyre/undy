@@ -336,15 +336,22 @@ exports.verifyIdentity = async (req, res) => {
     console.log("Les IDs sont égaux:", user.stripeAccountId === stripeAccountId);
     console.log("Type de l'ID base:", typeof user.stripeAccountId);
     console.log("Type de l'ID requête:", typeof stripeAccountId);
-    
+
     if (!user) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
     }
 
-    // Vérifier la correspondance de l'ID du compte Stripe
-    if (user.stripeAccountId !== stripeAccountId) {
-      return res.status(403).json({ success: false, message: 'Vous ne pouvez vérifier que votre propre compte' });
-    }
+ if (user.stripeAccountId) {
+  if (user.stripeAccountId !== stripeAccountId) {
+    return res.status(403).json({ success: false, message: 'Vous ne pouvez vérifier que votre propre compte' });
+  }
+} else {
+  // L'utilisateur n'a pas encore de stripeAccountId enregistré, 
+  // nous allons donc mettre à jour son profil avec l'ID fourni
+  user.stripeAccountId = stripeAccountId;
+  await user.save();
+  console.log("Mise à jour du compte utilisateur avec le stripeAccountId:", stripeAccountId);
+}
 
     // Si l'utilisateur est déjà vérifié, on peut retourner un succès immédiat
     if (user.stripeIdentityVerified) {
