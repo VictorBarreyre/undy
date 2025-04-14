@@ -631,7 +631,8 @@ export default {
     "descriptionIdentityPending": "Votre compte est presque prêt. Pour pouvoir transférer l'argent sur votre compte en banque, veuillez vérifier votre identité.",
     "resetAccount": "Réinitialiser le compte",
     "manageAccount": "Gérer le compte",
-    "verifyIdentity": "Vérifier mon identité"
+    "verifyIdentity": "Vérifier mon identité",
+    "modifyBankAccount" : "Modifier mon compte bancaire"
   },
   "errors": {
     "title": "Erreur",

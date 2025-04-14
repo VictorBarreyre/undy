@@ -626,7 +626,8 @@ export default {
     "descriptionIdentityPending": "Your account is almost ready. To transfer money to your bank account, please verify your identity.",
     "resetAccount": "Reset account",
     "manageAccount": "Manage account",
-    "verifyIdentity": "Verify my identity"
+    "verifyIdentity": "Verify my identity",
+    "modifyBankAccount" : "Update my bank account"
   },
   "errors": {
     "title": "Error",

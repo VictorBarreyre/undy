@@ -21,7 +21,8 @@ const {
     deleteSecret,
     checkIdentityVerificationStatus, 
     handleStripeReturn,
-    verifyIdentity
+    verifyIdentity,
+    updateBankAccount
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -40,6 +41,7 @@ router.post('/:id/purchase', protect, purchaseSecret);
 router.post('/stripe/refresh-onboarding', protect, refreshStripeOnboarding);
 router.post('/verify-identity', protect, verifyIdentity);
 router.get('/check-identity-verification-status', protect, checkIdentityVerificationStatus); 
+router.post('/api/secrets/stripe/update-bank-account', protect, updateBankAccount);
 router.get('/stripe-return', protect, handleStripeReturn);
 
 

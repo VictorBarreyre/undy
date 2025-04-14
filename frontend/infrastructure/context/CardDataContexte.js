@@ -396,6 +396,57 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
+  const updateStripeBankAccount = async (
+    stripeAccountId, 
+    returnUrl = 'your-app://stripe-return', 
+    refreshUrl = 'your-app://stripe-refresh'
+  ) => {
+    const instance = getAxiosInstance();
+    
+    if (!instance) {
+      throw new Error(i18n.t('errors.axiosNotInitialized'));
+    }
+    
+    try {
+      const response = await instance.post('/api/secrets/stripe/update-bank-account', {
+        stripeAccountId,
+        returnUrl,
+        refreshUrl
+      });
+      
+      console.log('Réponse de la requête de modification du compte bancaire:', response.data);
+      
+      if (response.data && response.data.url) {
+        return {
+          success: true,
+          redirectUrl: response.data.url,
+          message: i18n.t('stripe.redirectToBankForm')
+        };
+      } else if (response.data && response.data.error) {
+        return {
+          success: false,
+          message: response.data.error
+        };
+      } else {
+        return {
+          success: false,
+          message: i18n.t('stripe.unexpectedResponse')
+        };
+      }
+    } catch (error) {
+      console.error('Erreur lors de la requête de modification du compte bancaire:', error);
+      
+      const errorMessage = error?.response?.data?.message || 
+                           error?.message || 
+                           i18n.t('stripe.genericError');
+      
+      return {
+        success: false,
+        message: errorMessage
+      };
+    }
+  };
+
   const handleStripeReturn = async (url) => {
     try {
       // Extraire les paramètres de l'URL
@@ -1254,7 +1305,7 @@ const checkIdentityVerificationStatus = async () => {
       handleIdentityVerification,
       checkIdentityVerificationStatus,
       triggerConfetti,
-
+      updateStripeBankAccount
     }}>
       {children}
     </CardDataContext.Provider>

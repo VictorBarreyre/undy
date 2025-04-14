@@ -512,6 +512,51 @@ exports.verifyIdentity = async (req, res) => {
       });
     }
   };
+
+
+exports.updateBankAccount = async (req, res) => {
+  try {
+    const { stripeAccountId } = req.body;
+    
+    // Vérifier que l'utilisateur a les droits d'accès à ce compte Stripe
+    // Remarque: implémentez cette fonction selon votre logique d'authentification
+    const userHasAccess = await checkUserStripeAccountAccess(req.user.id, stripeAccountId);
+    
+    if (!userHasAccess) {
+      return res.status(403).json({ error: 'Accès non autorisé à ce compte Stripe' });
+    }
+    
+    // Construire les URLs de redirection selon l'environnement
+    const baseReturnUrl =
+      process.env.NODE_ENV === 'production'
+        ? `https://${req.get('host')}/redirect.html?path=`
+        : process.env.FRONTEND_URL || 'hushy://stripe-return';
+  
+    const returnUrl = `${baseReturnUrl}?action=bank_update_complete`;
+    const refreshUrl = `${baseReturnUrl}?action=bank_update_refresh`;
+    
+    // Créer un account link spécifique pour la section bancaire
+    const accountLink = await stripe.accountLinks.create({
+      account: stripeAccountId,
+      refresh_url: refreshUrl,
+      return_url: returnUrl,
+      type: 'account_onboarding',
+      collect: 'eventually_due',
+      destination_section: 'payment_schedule' // Dirige vers la section bancaire
+    });
+    
+    // Retourner l'URL pour redirection
+    res.json({ url: accountLink.url });
+    
+  } catch (error) {
+    console.error('Erreur lors de la création du lien de mise à jour bancaire:', error);
+    res.status(500).json({ 
+      error: 'Échec de la création du lien de mise à jour du compte bancaire',
+      details: error.message
+    });
+  }
+};
+
   
 
 exports.checkIdentityVerificationStatus = async (req, res) => {

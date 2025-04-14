@@ -6,11 +6,12 @@ import { useStripe } from '@stripe/stripe-react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { styles } from '../../infrastructure/theme/styles';
+import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 
 const StripeVerificationModal = ({ isOpen, onClose, userData, resetStripeAccount, navigation }) => {
     const { t } = useTranslation();
     const stripe = useStripe();
-    const { handleStripeOnboardingRefresh, fetchBankAccountDetails } = useCardData();
+    const { handleStripeOnboardingRefresh,updateStripeBankAccount } = useCardData();
     const { fetchUserData } = useContext(AuthContext);
 
     const [localUserData, setLocalUserData] = useState(userData);
@@ -22,7 +23,26 @@ const StripeVerificationModal = ({ isOpen, onClose, userData, resetStripeAccount
         if (JSON.stringify(localUserData) !== JSON.stringify(userData)) {
             setLocalUserData(userData);
         }
+        console.log(localUserData.stripeExternalAccount)
     }, [userData]);
+
+
+    const fetchBankAccountDetails = useCallback(async () => {
+        const instance = getAxiosInstance();
+
+        try {
+            const response = await instance.get('/api/users/bank-account-details', {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localUserData.token}` // Assurez-vous d'utiliser le bon token d'autorisation
+                }
+            });
+            setBankAccountDetails(response.data);
+        } catch (error) {
+            console.error('Erreur lors de la récupération des détails du compte bancaire:', error);
+        }
+    }, [localUserData.token]);
+
 
     // Rafraîchit les données utilisateur
     const refreshUserDataAndUpdate = useCallback(async () => {
@@ -92,14 +112,28 @@ const StripeVerificationModal = ({ isOpen, onClose, userData, resetStripeAccount
     // Fonction pour rediriger l'utilisateur vers le formulaire de modification du compte bancaire
     const redirectToStripeBankAccountForm = async () => {
         try {
-            const stripeStatus = await handleStripeOnboardingRefresh();
-            if (stripeStatus.url) {
-                Linking.openURL(stripeStatus.url);
+            setIsLoading(true);
+            
+            if (!localUserData?.stripeAccountId) {
+                // Si pas de compte Stripe, conserver votre logique existante pour la création
+                const stripeStatus = await handleStripeOnboardingRefresh();
+                // ... votre code existant ...
             } else {
-                Alert.alert(
-                    t('stripeVerification.errors.title'),
-                    t('stripeVerification.errors.onboardingAccess')
+                // Pour modifier un compte bancaire existant
+                const result = await updateStripeBankAccount(
+                    localUserData.stripeAccountId,
+                    'your-app://stripe-return',
+                    'your-app://stripe-refresh'
                 );
+                
+                if (result.success && result.redirectUrl) {
+                    Linking.openURL(result.redirectUrl);
+                } else {
+                    Alert.alert(
+                        t('stripe.errorTitle'),
+                        result.message
+                    );
+                }
             }
         } catch (error) {
             console.error('Erreur lors de la redirection vers le formulaire Stripe:', error);
@@ -107,6 +141,8 @@ const StripeVerificationModal = ({ isOpen, onClose, userData, resetStripeAccount
                 t('stripeVerification.errors.title'),
                 t('stripeVerification.errors.onboardingAccess')
             );
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -154,15 +190,6 @@ const StripeVerificationModal = ({ isOpen, onClose, userData, resetStripeAccount
                     {t('stripeVerification.accountConfigured.title')}
                 </Text>
 
-                <Text
-                    style={styles.caption}
-                    color="#94A3B8"
-                    textAlign="center"
-                    mb={2}
-                >
-                    {t('stripeVerification.accountConfigured.description')}
-                </Text>
-
                 {bankAccountDetails && (
                     <Box
                         borderWidth={1}
@@ -184,16 +211,6 @@ const StripeVerificationModal = ({ isOpen, onClose, userData, resetStripeAccount
                 )}
 
                 <VStack space={2}>
-                    <Button
-                        onPress={resetStripeAccount}
-                        backgroundColor="orange.500"
-                        borderRadius="full"
-                    >
-                        <Text color="white" style={styles.cta}>
-                            {t('stripeVerification.accountConfigured.resetAccount')}
-                        </Text>
-                    </Button>
-
                     <Button
                         onPress={redirectToStripeBankAccountForm}
                         backgroundColor="black"
