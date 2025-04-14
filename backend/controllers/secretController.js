@@ -135,6 +135,7 @@ exports.createSecret = async (req, res) => {
             price,
             currency,
             user: req.user.id,
+            sellerStripeAccountId: user.stripeAccountId,
             expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
             status: 'active',
             language: language || 'fr'
@@ -739,7 +740,7 @@ exports.createPaymentIntent = async (req, res) => {
 
       // Récupérer l'ID du compte Connect du vendeur
       const seller = await User.findById(secret.seller);
-      if (!seller || !seller.stripeConnectAccountId) {
+      if (!seller || !secret.sellerStripeAccountId) {
           return res.status(400).json({ message: 'Le vendeur n\'a pas de compte Stripe Connect configuré.' });
       }
 
@@ -762,7 +763,7 @@ exports.createPaymentIntent = async (req, res) => {
           
           // Configuration pour le transfert automatique
           transfer_data: {
-              destination: seller.stripeConnectAccountId,
+              destination:secret.sellerStripeAccountId,
               amount: priceDetails.sellerAmount, // Montant pour le vendeur (en centimes)
           },
           application_fee_amount: priceDetails.platformFee, // Votre commission (en centimes)
@@ -775,7 +776,7 @@ exports.createPaymentIntent = async (req, res) => {
               sellerAmount: priceDetails.sellerAmount.toString(),
               platformFee: priceDetails.platformFee.toString(),
               currency: currency,
-              sellerConnectAccountId: seller.stripeConnectAccountId
+              sellerConnectAccountId: secret.sellerStripeAccountId
           }
       });
 
@@ -793,7 +794,7 @@ exports.createPaymentIntent = async (req, res) => {
               platformFee: priceDetails.platformFee / 100,
               buyerMargin: 0.15,
               sellerMargin: 0.10,
-              sellerConnectAccountId: seller.stripeConnectAccountId
+              sellerConnectAccountId: secret.sellerStripeAccountId
           }
       }], { session });
 
@@ -836,6 +837,10 @@ exports.purchaseSecret = async (req, res) => {
           return res.status(404).json({ message: 'Secret introuvable.' });
       }
 
+      if (!secret.sellerStripeAccountId) {
+        return res.status(400).json({ message: 'Aucun vendeur associé à ce secret.' });
+      }
+      
       // Vérification si le secret est déjà acheté
       if (secret.purchasedBy.includes(userId)) {
           let conversation = await Conversation.findOne({
@@ -901,7 +906,7 @@ exports.purchaseSecret = async (req, res) => {
       } else {
           // Si non configuré automatiquement, créer un transfert manuel
           const seller = await User.findById(secret.user);
-          if (seller && seller.stripeConnectAccountId) {
+          if (seller && secret.sellerStripeAccountId,) {
               try {
                   // Récupérer l'ID de la charge associée au PaymentIntent
                   const charges = paymentIntent.charges.data;
@@ -909,7 +914,7 @@ exports.purchaseSecret = async (req, res) => {
                       const transfer = await stripe.transfers.create({
                           amount: priceDetails.sellerAmount,
                           currency: stripeCurrency,
-                          destination: seller.stripeConnectAccountId,
+                          destination: secret.sellerStripeAccountId,
                           source_transaction: charges[0].id,
                           metadata: {
                               secretId: secretId,

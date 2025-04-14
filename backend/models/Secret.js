@@ -26,6 +26,10 @@ const SecretSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  sellerStripeAccountId: {
+    type: String,
+    required: true
+  },
   purchasedBy: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
