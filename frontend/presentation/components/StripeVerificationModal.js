@@ -513,6 +513,62 @@ const StripeVerificationModal = ({
             );
         }
 
+        if (verificationStatus.status === 'processing' || verificationStatus.status === 'requires_input') {
+            return (
+                <>
+                    <Text style={styles.h4} textAlign="center">
+                        {t('stripeVerification.verificationInProgress.title')}
+                    </Text>
+                    
+                    <Text
+                        style={styles.caption}
+                        color="#94A3B8"
+                        textAlign="center"
+                        mb={4}
+                    >
+                        {verificationStatus.status === 'processing' 
+                            ? t('stripeVerification.verificationInProgress.processingDescription')
+                            : t('stripeVerification.verificationInProgress.requiresInputDescription')}
+                    </Text>
+                    
+                    <Box bg="blue.50" p={4} borderRadius="md" mb={4}>
+                        <HStack alignItems="center" space={2}>
+                            <Box w={2} h={2} borderRadius="full" bg={verificationStatus.status === 'processing' ? "blue.500" : "orange.500"} />
+                            <Text color={verificationStatus.status === 'processing' ? "blue.700" : "orange.700"} fontWeight="medium">
+                                {verificationStatus.status === 'processing' 
+                                    ? t('stripeVerification.verificationInProgress.statusProcessing')
+                                    : t('stripeVerification.verificationInProgress.statusRequiresInput')}
+                            </Text>
+                        </HStack>
+                    </Box>
+                    
+                    <VStack space={2}>
+                        <Button
+                            onPress={checkStatus}
+                            backgroundColor="black"
+                            borderRadius="full"
+                        >
+                            <Text color="white" style={styles.cta}>
+                                {t('stripeVerification.verificationInProgress.refreshStatus')}
+                            </Text>
+                        </Button>
+                        
+                        {verificationStatus.status === 'requires_input' && (
+                            <Button
+                                onPress={() => initiateStripeVerification()}
+                                backgroundColor="gray.500"
+                                borderRadius="full"
+                            >
+                                <Text color="white" style={styles.cta}>
+                                    {t('stripeVerification.verificationInProgress.continueVerification')}
+                                </Text>
+                            </Button>
+                        )}
+                    </VStack>
+                </>
+            );
+        }
+
         if (!localUserData?.stripeIdentityVerified) {
             return (
                 <>

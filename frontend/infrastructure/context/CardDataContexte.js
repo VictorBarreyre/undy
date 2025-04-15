@@ -1247,24 +1247,98 @@ export const CardDataProvider = ({ children }) => {
 };
 
 
-const checkIdentityVerificationStatus = async () => {
-  const instance = getAxiosInstance();
-  try {
-      const response = await instance.get('/api/secrets/check-identity-verification-status');
-      return {
-          success: true,
-          ...response.data
-      };
-  } catch (error) {
-      console.error('Erreur de vérification du statut:', error);
-      // Retourner un objet avec succès=false mais sans propager l'erreur
-      return {
-          success: false,
-          verified: false,
-          status: 'unverified',
-          message: error.response?.data?.message || 'Impossible de vérifier le statut'
-      };
-  }
+const checkIdentityVerificationStatus = (sessionId) => {
+  const maxAttempts = 30;
+  let attempts = 0;
+  
+  console.log(`[StripeVerificationModal] Démarrage de la vérification périodique pour la session ${sessionId}`);
+  
+  const intervalId = setInterval(async () => {
+      try {
+          attempts++;
+          
+          console.log(`[StripeVerificationModal] Vérification #${attempts}/${maxAttempts} pour la session ${sessionId}`);
+          
+          if (attempts >= maxAttempts) {
+              console.log(`[StripeVerificationModal] Nombre maximum de tentatives atteint (${maxAttempts})`);
+              clearInterval(intervalId);
+              return;
+          }
+          
+          const statusResult = await checkIdentityVerificationStatus();
+          console.log(`[StripeVerificationModal] Résultat de la vérification:`, JSON.stringify(statusResult, null, 2));
+          
+          if (statusResult.success) {
+              // Log détaillé pour déboguer
+              console.log(`[StripeVerificationModal] État de la vérification:
+                  - Vérifié: ${statusResult.verified}
+                  - Statut: ${statusResult.status}
+                  - Statut local: ${verificationStatus.status}
+                  - Statut dans localUserData: ${localUserData?.stripeVerificationStatus}
+              `);
+              
+              if (statusResult.verified) {
+                  console.log(`[StripeVerificationModal] Vérification réussie!`);
+                  clearInterval(intervalId);
+                  
+                  setVerificationStatus({
+                      verified: true,
+                      status: 'verified'
+                  });
+                  
+                  await refreshUserDataAndUpdate();
+                  
+                  Alert.alert(
+                      t('stripeVerification.verification.success.title'),
+                      t('stripeVerification.verification.success.message'),
+                      [{ text: t('stripeVerification.verification.great') }]
+                  );
+              } else if (statusResult.status === 'requires_input' || statusResult.status === 'failed') {
+                  console.log(`[StripeVerificationModal] La vérification nécessite une action ou a échoué: ${statusResult.status}`);
+                  clearInterval(intervalId);
+                  
+                  setVerificationStatus({
+                      verified: false,
+                      status: statusResult.status
+                  });
+                  
+                  await refreshUserDataAndUpdate();
+                  
+                  if (statusResult.status === 'requires_input') {
+                      Alert.alert(
+                          t('stripeVerification.verification.requiresInput.title'),
+                          t('stripeVerification.verification.requiresInput.message'),
+                          [
+                              {
+                                  text: t('stripeVerification.verification.ok'),
+                                  onPress: () => {
+                                      // Option pour rediriger l'utilisateur si nécessaire
+                                  }
+                              }
+                          ]
+                      );
+                  } else {
+                      Alert.alert(
+                          t('stripeVerification.verification.failed.title'),
+                          t('stripeVerification.verification.failed.message'),
+                          [{ text: t('stripeVerification.verification.ok') }]
+                      );
+                  }
+              } else {
+                  // Mise à jour de l'état de vérification pour l'interface
+                  setVerificationStatus({
+                      verified: statusResult.verified,
+                      status: statusResult.status
+                  });
+                  console.log(`[StripeVerificationModal] Statut de vérification mis à jour: ${statusResult.status}`);
+              }
+          } else {
+              console.error(`[StripeVerificationModal] Échec de la vérification du statut: ${statusResult.message || 'Erreur inconnue'}`);
+          }
+      } catch (error) {
+          console.error('[StripeVerificationModal] Erreur lors de la vérification du statut:', error);
+      }
+  }, 10000);
 };
 
   return (

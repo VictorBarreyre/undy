@@ -326,7 +326,6 @@ exports.verifyIdentity = async (req, res) => {
     const { stripeAccountId, skipImageUpload, documentImage, selfieImage } = req.body;
     const userId = req.user.id;
 
-  
 
     // Vérifier que l'utilisateur demande une vérification pour son propre compte
     const user = await User.findById(userId).select('+stripeAccountId stripeAccountStatus stripeIdentityVerified');
@@ -574,18 +573,17 @@ exports.updateBankAccount = async (req, res) => {
 };
 
 
-
 exports.checkIdentityVerificationStatus = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('stripeAccountId stripeIdentityVerified stripeVerificationStatus');
-
+    const user = await User.findById(req.user.id).select('stripeAccountId stripeIdentityVerified stripeVerificationStatus stripeVerificationSessionId');
+    
     if (!user) {
       return res.status(404).json({
         success: false,
         message: 'Utilisateur introuvable'
       });
     }
-
+    
     if (!user.stripeAccountId) {
       return res.status(200).json({
         success: true,
@@ -594,8 +592,37 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
         message: 'Aucun compte Stripe associé'
       });
     }
-
-    // Retourner le statut actuel stocké dans le modèle utilisateur
+    
+    // Si nous avons un ID de session, vérifier le statut auprès de Stripe
+    if (user.stripeVerificationSessionId) {
+      try {
+        const session = await stripe.identity.verificationSessions.retrieve(
+          user.stripeVerificationSessionId
+        );
+        
+        // Mettre à jour le statut dans la base de données
+        user.stripeVerificationStatus = session.status;
+        
+        if (session.status === 'verified') {
+          user.stripeIdentityVerified = true;
+        }
+        
+        await user.save();
+        
+        return res.status(200).json({
+          success: true,
+          verified: session.status === 'verified',
+          status: session.status,
+          lastUpdated: new Date(),
+          message: `Statut de vérification: ${session.status}`
+        });
+      } catch (stripeError) {
+        console.error('Erreur lors de la récupération de la session Stripe:', stripeError);
+        // En cas d'erreur avec Stripe, on revient aux données locales
+      }
+    }
+    
+    // Retourner le statut stocké si on ne peut pas récupérer depuis Stripe
     return res.status(200).json({
       success: true,
       verified: user.stripeIdentityVerified || false,

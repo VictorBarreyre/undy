@@ -620,6 +620,16 @@ export default {
   "logs": {
     "userCancelled": "Image selection cancelled by user"
   },
+
+  "verificationInProgress":{  "title": "Verification in Progress",
+    "processingDescription": "Your identity verification is being processed by Stripe. This process may take a few minutes to several hours.",
+    "requiresInputDescription": "Your verification requires additional information. Please continue the process by clicking the button below.",
+    "statusProcessing": "Processing",
+    "statusRequiresInput": "Action required",
+    "refreshStatus": "Refresh status",
+    "continueVerification": "Continue verification",
+    "notificationInfo": "You'll receive a notification as soon as your verification is complete."},
+
   "accountConfigured": {
     "title": "Account Configured",
     "description": "Your account is configured to receive payments.",

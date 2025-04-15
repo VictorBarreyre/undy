@@ -39,7 +39,6 @@ app.use(
   })
 );
 
-// IMPORTANT: Route webhook Stripe AVANT les middlewares de parsing body
 // pour conserver le corps brut de la requête
 app.post('/webhooks/stripe', express.raw({type: 'application/json'}), async (req, res) => {
   const sig = req.headers['stripe-signature'];

@@ -113,7 +113,7 @@ export default {
       "everyone": "De tout le monde",
       "fromContacts": "De vos contacts",
       "fromFollowing": "Des personnes que vous suivez",
-       "fromNearby": "Autour de vous"
+      "fromNearby": "Autour de vous"
     },
     "errors": {
       "contactsLoading": "Erreur lors du chargement des contacts:"
@@ -123,18 +123,18 @@ export default {
       "selectedType": "Type sélectionné :"
     }
   },
-"swipeDeck": {
-  "noSecrets": "Aucun hushy disponible",
-  "tryChangingFilters": "Essayez de modifier vos filtres",
-  "checkBackLater": "Revenez plus tard pour découvrir de nouveaux hushys",
-  "noContactsUsingApp": "Aucun de vos contacts n'utilise encore hushy",
-  "noSecretsNearby": "Aucun hushy disponible autour de vous",
-  "errors": {
-    "initialLoading": "Erreur de chargement initial:",
-    "purchase": "Erreur lors de l'achat:",
-    "payment": "Erreur de paiement:"
-  }
-},
+  "swipeDeck": {
+    "noSecrets": "Aucun hushy disponible",
+    "tryChangingFilters": "Essayez de modifier vos filtres",
+    "checkBackLater": "Revenez plus tard pour découvrir de nouveaux hushys",
+    "noContactsUsingApp": "Aucun de vos contacts n'utilise encore hushy",
+    "noSecretsNearby": "Aucun hushy disponible autour de vous",
+    "errors": {
+      "initialLoading": "Erreur de chargement initial:",
+      "purchase": "Erreur lors de l'achat:",
+      "payment": "Erreur de paiement:"
+    }
+  },
   "addSecret": {
     "addHushy": "Ajouter un hushy",
     "postedBy": "Posté par",
@@ -250,11 +250,11 @@ export default {
     "image": "Image",
     "defaultUser": "Utilisateur",
     // Pour le menu contextuel des messages
-   "messageOptions": {
-  "reply": "Répondre",
-  "copy": "Copier", // Nouvelle entrée
-  "cancel": "Annuler"
-},
+    "messageOptions": {
+      "reply": "Répondre",
+      "copy": "Copier", // Nouvelle entrée
+      "cancel": "Annuler"
+    },
     "locationSharing": {
       "title": "Partager ma localisation"
     },
@@ -435,8 +435,8 @@ export default {
 
   "cardHome": {
     "postedFrom": "à",
-  "unknownLocation": "Lieu inconnu",
-  "locationError": "Localisation non disponible",
+    "unknownLocation": "Lieu inconnu",
+    "locationError": "Localisation non disponible",
     "postedBy": "Posté par {{name}}",
     "expiresIn": "Expire dans",
     "noData": "Aucune donnée disponible",
@@ -540,35 +540,35 @@ export default {
     "errors": {
       "title": "Erreur de localisation"
     },
-  "alerts": {
-    "welcome": {
-      "title": "Accès à la localisation",
-      "message": "hushy peut utiliser votre position pour vous montrer les hushys à proximité. Voulez-vous activer cette fonctionnalité ?",
-      "yes": "Oui, activer",
-      "no": "Non, merci"
+    "alerts": {
+      "welcome": {
+        "title": "Accès à la localisation",
+        "message": "hushy peut utiliser votre position pour vous montrer les hushys à proximité. Voulez-vous activer cette fonctionnalité ?",
+        "yes": "Oui, activer",
+        "no": "Non, merci"
+      },
+      "shareLocation": {
+        "title": "Partager votre position",
+        "message": "Souhaitez-vous partager votre position avec ce hushy ? Cela permettra aux utilisateurs à proximité de le découvrir plus facilement.",
+        "yes": "Partager",
+        "no": "Ne pas partager"
+      }
     },
-    "shareLocation": {
-      "title": "Partager votre position",
-      "message": "Souhaitez-vous partager votre position avec ce hushy ? Cela permettra aux utilisateurs à proximité de le découvrir plus facilement.",
-      "yes": "Partager",
-      "no": "Ne pas partager"
+    "errors": {
+      "title": "Erreur de localisation",
+      "permissionDenied": "Vous devez autoriser l'accès à la localisation pour utiliser cette fonctionnalité.",
+      "gettingPosition": "Impossible d'obtenir votre position actuelle.",
+      "permissionError": "Erreur de permission de localisation:",
+      "locationError": "Erreur de localisation:",
+      "gettingPosition": "Erreur lors de l'obtention de la position:",
+      "fetchingNearbySecrets": "Erreur lors de la récupération des hushys à proximité:",
+      "permissionCheckError": "Erreur lors de la vérification des permissions de localisation:",
+      "accessUpdateError": "Erreur lors de la mise à jour de l'accès à la localisation:"
+    },
+    "logs": {
+      "permissionDenied": "Permission de localisation refusée"
     }
   },
-  "errors": {
-    "title": "Erreur de localisation",
-    "permissionDenied": "Vous devez autoriser l'accès à la localisation pour utiliser cette fonctionnalité.",
-    "gettingPosition": "Impossible d'obtenir votre position actuelle.",
-    "permissionError": "Erreur de permission de localisation:",
-    "locationError": "Erreur de localisation:",
-    "gettingPosition": "Erreur lors de l'obtention de la position:",
-    "fetchingNearbySecrets": "Erreur lors de la récupération des hushys à proximité:",
-    "permissionCheckError": "Erreur lors de la vérification des permissions de localisation:",
-    "accessUpdateError": "Erreur lors de la mise à jour de l'accès à la localisation:"
-  },
-  "logs": {
-    "permissionDenied": "Permission de localisation refusée"
-  }
-},
 
   "paymentSheet": {
     "loading": "Chargement...",
@@ -621,119 +621,129 @@ export default {
       "years_plural": "Il y a {{count}} ans"
     }
   },
-"stripeVerification": {
-  "logs": {
-    "userCancelled": "Sélection d'image annulée par l'utilisateur"
-  },
-  "accountConfigured": {
-    "title": "Compte configuré",
-    "description": "Votre compte est configuré pour recevoir des paiements.",
-    "descriptionIdentityPending": "Votre compte est presque prêt. Pour pouvoir transférer l'argent sur votre compte en banque, veuillez vérifier votre identité.",
-    "resetAccount": "Réinitialiser le compte",
-    "manageAccount": "Gérer le compte",
-    "verifyIdentity": "Vérifier mon identité",
-    "updateBankAccount" : "Modifier mon compte bancaire",
-     "bankAccount": "Compte bancaire"
-  },
-  "errors": {
-    "title": "Erreur",
-    "generic": "Une erreur est survenue",
-    "selectDocument": "Veuillez sélectionner un document",
-    "uploadError": "Erreur de téléchargement :",
-    "uploadFailed": "Une erreur est survenue lors du téléchargement",
-    "verificationFailed": "La vérification d'identité a échoué",
-    "missingDocuments": "Veuillez fournir tous les documents requis",
-    "preparationFailed": "Échec de la préparation de la vérification",
-    "verificationError": "Erreur lors de la vérification d'identité",
-    "cannotOpenBrowser": "Impossible d'ouvrir le navigateur pour la vérification",
-    "checkStatus": "Impossible de vérifier le statut actuel"
-  },
-  "noAccount": {
-    "title": "Compte Stripe non configuré",
-    "description": "Vous n'avez pas encore de compte. Un compte sera automatiquement créé lorsque vous publierez votre premier Hushy. Vous pourrez alors configurer vos informations de paiement.",
-    "understand": "J'ai compris"
-  },
-  "identityVerification": {
-    "title": "Vérification d'identité",
-    "description": "Pour recevoir vos paiements, nous devons vérifier votre identité conformément aux réglementations.",
-    "documentTitle": "Document d'identité",
-    "documentDescription": "Veuillez fournir un document d'identité (carte d'identité, passeport ou permis de conduire).",
-    "selfieTitle": "Photo de vous",
-    "selfieDescription": "Prenez une photo de vous pour confirmer votre identité.",
-    "reviewTitle": "Vérification d'identité",
-    "reviewDescription": "Veuillez vérifier les documents avant de les soumettre.",
-    "documentSelected": "Document sélectionné : {{name}}",
-    "selfieSelected": "Photo de vous sélectionnée",
-    "processingTitle": "Vérification en cours",
-    "processingDescription": "Votre vérification d'identité est en cours de traitement. Cela peut prendre quelques instants.",
-    "pending": "Votre vérification est en cours de traitement. Veuillez vérifier le statut ultérieurement.",
-    "chooseDocument": "Choisir un document",
-    "changeDocument": "Changer de document",
-    "takeSelfie": "Prendre une photo de vous",
-    "selectDocument": "Choisir un document",
-    "restart": "Recommencer",
-    "submit": "Soumettre",
-    "submitting": "Envoi en cours...",
-    "uploading": "Téléchargement en cours...",
-    "checkStatus": "Vérifier le statut",
-    "verifyOnline": "Vérifier en ligne",
-    "uploadDocuments": "Téléverser des documents" 
-  },
-  "documentOptions": {
-    "takePhoto": "Prendre une photo",
-    "chooseFromGallery": "Choisir dans la galerie",
-    "cancel": "Annuler"
-  },
-  "selfieOptions": {
-    "takePhoto": "Prendre une photo",
-    "chooseFromGallery": "Choisir dans la galerie",
-    "cancel": "Annuler"
-  },
-  "success": {
-    "title": "Succès",
-    "documentSubmitted": "Votre document d'identité a été soumis avec succès.",
-    "identityVerified": "Votre identité a été vérifiée avec succès."
-  },
-  "deleteConfirm": {
-    "title": "Supprimer ce hushy ?",
-    "message": "Cette action ne peut pas être annulée.",
-    "cancel": "Annuler",
-    "confirm": "Supprimer"
-  },
-  "deleteSuccess": {
-    "title": "Succès",
-    "message": "hushy supprimé avec succès",
-    "ok": "OK"
-  },
-  "deleteError": {
-    "title": "Erreur",
-    "message": "Impossible de supprimer ce hushy",
-    "ok": "OK"
-  },
-  "delete": "Supprimer",
-  "verification": {
-    "title": "Vérification d'identité",
-    "message": "Vous allez être redirigé vers Stripe pour vérifier votre identité. Souhaitez-vous continuer ?",
-    "cancel": "Annuler",
-    "continue": "Continuer",
-    "ok": "OK",
-    "inProgress": {
-      "title": "Vérification en cours",
-      "message": "Votre vérification d'identité est en cours de traitement. Nous vous informerons lorsqu'elle sera terminée."
+  "stripeVerification": {
+    "logs": {
+      "userCancelled": "Sélection d'image annulée par l'utilisateur"
     },
-    "submitted": {
-      "title": "Vérification soumise",
-      "message": "Votre vérification a été soumise avec succès. Le traitement peut prendre quelques minutes à quelques heures."
+    "verificationInProgress": {
+      "title": "Vérification en cours",
+      "processingDescription": "Votre vérification d'identité est en cours de traitement par Stripe. Ce processus peut prendre quelques minutes à plusieurs heures.",
+      "requiresInputDescription": "Votre vérification requiert des informations supplémentaires. Veuillez continuer le processus en cliquant sur le bouton ci-dessous.",
+      "statusProcessing": "En cours de traitement",
+      "statusRequiresInput": "Action requise",
+      "refreshStatus": "Actualiser le statut",
+      "continueVerification": "Continuer la vérification",
+      "notificationInfo": "Vous recevrez une notification dès que votre vérification sera terminée."
+    },
+    "accountConfigured": {
+      "title": "Compte configuré",
+      "description": "Votre compte est configuré pour recevoir des paiements.",
+      "descriptionIdentityPending": "Votre compte est presque prêt. Pour pouvoir transférer l'argent sur votre compte en banque, veuillez vérifier votre identité.",
+      "resetAccount": "Réinitialiser le compte",
+      "manageAccount": "Gérer le compte",
+      "verifyIdentity": "Vérifier mon identité",
+      "updateBankAccount": "Modifier mon compte bancaire",
+      "bankAccount": "Compte bancaire"
+    },
+    "errors": {
+      "title": "Erreur",
+      "generic": "Une erreur est survenue",
+      "selectDocument": "Veuillez sélectionner un document",
+      "uploadError": "Erreur de téléchargement :",
+      "uploadFailed": "Une erreur est survenue lors du téléchargement",
+      "verificationFailed": "La vérification d'identité a échoué",
+      "missingDocuments": "Veuillez fournir tous les documents requis",
+      "preparationFailed": "Échec de la préparation de la vérification",
+      "verificationError": "Erreur lors de la vérification d'identité",
+      "cannotOpenBrowser": "Impossible d'ouvrir le navigateur pour la vérification",
+      "checkStatus": "Impossible de vérifier le statut actuel"
+    },
+    "noAccount": {
+      "title": "Compte Stripe non configuré",
+      "description": "Vous n'avez pas encore de compte. Un compte sera automatiquement créé lorsque vous publierez votre premier Hushy. Vous pourrez alors configurer vos informations de paiement.",
+      "understand": "J'ai compris"
+    },
+    "identityVerification": {
+      "title": "Vérification d'identité",
+      "description": "Pour recevoir vos paiements, nous devons vérifier votre identité conformément aux réglementations.",
+      "documentTitle": "Document d'identité",
+      "documentDescription": "Veuillez fournir un document d'identité (carte d'identité, passeport ou permis de conduire).",
+      "selfieTitle": "Photo de vous",
+      "selfieDescription": "Prenez une photo de vous pour confirmer votre identité.",
+      "reviewTitle": "Vérification d'identité",
+      "reviewDescription": "Veuillez vérifier les documents avant de les soumettre.",
+      "documentSelected": "Document sélectionné : {{name}}",
+      "selfieSelected": "Photo de vous sélectionnée",
+      "processingTitle": "Vérification en cours",
+      "processingDescription": "Votre vérification d'identité est en cours de traitement. Cela peut prendre quelques instants.",
+      "pending": "Votre vérification est en cours de traitement. Veuillez vérifier le statut ultérieurement.",
+      "chooseDocument": "Choisir un document",
+      "changeDocument": "Changer de document",
+      "takeSelfie": "Prendre une photo de vous",
+      "selectDocument": "Choisir un document",
+      "restart": "Recommencer",
+      "submit": "Soumettre",
+      "submitting": "Envoi en cours...",
+      "uploading": "Téléchargement en cours...",
+      "checkStatus": "Vérifier le statut",
+      "verifyOnline": "Vérifier en ligne",
+      "uploadDocuments": "Téléverser des documents"
+    },
+    "documentOptions": {
+      "takePhoto": "Prendre une photo",
+      "chooseFromGallery": "Choisir dans la galerie",
+      "cancel": "Annuler"
+    },
+    "selfieOptions": {
+      "takePhoto": "Prendre une photo",
+      "chooseFromGallery": "Choisir dans la galerie",
+      "cancel": "Annuler"
+    },
+    "success": {
+      "title": "Succès",
+      "documentSubmitted": "Votre document d'identité a été soumis avec succès.",
+      "identityVerified": "Votre identité a été vérifiée avec succès."
+    },
+    "deleteConfirm": {
+      "title": "Supprimer ce hushy ?",
+      "message": "Cette action ne peut pas être annulée.",
+      "cancel": "Annuler",
+      "confirm": "Supprimer"
+    },
+    "deleteSuccess": {
+      "title": "Succès",
+      "message": "hushy supprimé avec succès",
+      "ok": "OK"
+    },
+    "deleteError": {
+      "title": "Erreur",
+      "message": "Impossible de supprimer ce hushy",
+      "ok": "OK"
+    },
+    "delete": "Supprimer",
+    "verification": {
+      "title": "Vérification d'identité",
+      "message": "Vous allez être redirigé vers Stripe pour vérifier votre identité. Souhaitez-vous continuer ?",
+      "cancel": "Annuler",
+      "continue": "Continuer",
+      "ok": "OK",
+      "inProgress": {
+        "title": "Vérification en cours",
+        "message": "Votre vérification d'identité est en cours de traitement. Nous vous informerons lorsqu'elle sera terminée."
+      },
+      "submitted": {
+        "title": "Vérification soumise",
+        "message": "Votre vérification a été soumise avec succès. Le traitement peut prendre quelques minutes à quelques heures."
+      }
+    },
+    "statusMessages": {
+      "title": "Statut de vérification",
+      "verified": "Votre identité a été vérifiée avec succès. Vous pouvez maintenant recevoir des paiements.",
+      "processing": "Votre vérification est en cours de traitement. Cela peut prendre quelques minutes à quelques heures.",
+      "requiresInput": "Des informations supplémentaires sont nécessaires pour compléter votre vérification. Veuillez suivre les instructions fournies.",
+      "default": "Statut actuel : {{status}}. Contactez le support si vous avez besoin d'aide."
     }
   },
-  "statusMessages": {
-    "title": "Statut de vérification",
-    "verified": "Votre identité a été vérifiée avec succès. Vous pouvez maintenant recevoir des paiements.",
-    "processing": "Votre vérification est en cours de traitement. Cela peut prendre quelques minutes à quelques heures.",
-    "requiresInput": "Des informations supplémentaires sont nécessaires pour compléter votre vérification. Veuillez suivre les instructions fournies.",
-    "default": "Statut actuel : {{status}}. Contactez le support si vous avez besoin d'aide."
-  }
-},
   "notifications": {
     "alerts": {
       "simulatorWarning": "Les notifications ne fonctionnent pas sur simulateur",
@@ -826,20 +836,20 @@ export default {
   },
   "permissions": {
     "contactsNeededTitle": "Accès aux contacts requis",
-  "contactsNeededMessage": "Cette application a besoin d'accéder à vos contacts pour afficher leur contenu.",
-  "contactsSettingsMessage": "Veuillez activer l'accès aux contacts dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
-  "locationNeededTitle": "Accès à la position requis",
-  "locationNeededMessage": "Cette application a besoin d'accéder à votre position pour afficher du contenu près de vous.",
-  "locationSettingsMessage": "Veuillez activer l'accès à la position dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
-  "notificationsNeededTitle": "Accès aux notifications requis",
-  "notificationsNeededMessage": "Cette application a besoin de vous envoyer des notifications. Veuillez les activer dans les paramètres de votre appareil.",
-  "cancel": "Annuler",
-  "openSettings": "Ouvrir les Paramètres",
-  "allow": "Autoriser",
-  "ok": "OK",
-  "errorTitle": "Erreur de permission",
-  "contactsLoadError": "Erreur lors du chargement des contacts.",
-  "locationError": "Erreur de localisation."
+    "contactsNeededMessage": "Cette application a besoin d'accéder à vos contacts pour afficher leur contenu.",
+    "contactsSettingsMessage": "Veuillez activer l'accès aux contacts dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
+    "locationNeededTitle": "Accès à la position requis",
+    "locationNeededMessage": "Cette application a besoin d'accéder à votre position pour afficher du contenu près de vous.",
+    "locationSettingsMessage": "Veuillez activer l'accès à la position dans les paramètres de votre appareil pour utiliser cette fonctionnalité.",
+    "notificationsNeededTitle": "Accès aux notifications requis",
+    "notificationsNeededMessage": "Cette application a besoin de vous envoyer des notifications. Veuillez les activer dans les paramètres de votre appareil.",
+    "cancel": "Annuler",
+    "openSettings": "Ouvrir les Paramètres",
+    "allow": "Autoriser",
+    "ok": "OK",
+    "errorTitle": "Erreur de permission",
+    "contactsLoadError": "Erreur lors du chargement des contacts.",
+    "locationError": "Erreur de localisation."
   }
 
 }
