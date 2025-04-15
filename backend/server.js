@@ -11,6 +11,7 @@ const helmet = require('helmet');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('./models/User'); // Assurez-vous d'ajouter cette importation
 const fileUpload = require('express-fileupload');
+const webhookRoutes = require('./routes/webHookRoutes');
 
 
 // Charger les variables d'environnement
@@ -39,73 +40,8 @@ app.use(
   })
 );
 
-// pour conserver le corps brut de la requête
-app.post('/webhooks/stripe', express.raw({type: 'application/json'}), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  let event;
+app.use('/webhooks', webhookRoutes);
 
-  try {
-    event = stripe.webhooks.constructEvent(
-      req.body, 
-      sig, 
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    console.error('Erreur de signature du webhook:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  // Traiter l'événement selon son type
-  try {
-    if (event.type === 'identity.verification_session.updated') {
-      const session = event.data.object;
-      console.log('Mise à jour de session de vérification d\'identité:', {
-        sessionId: session.id,
-        status: session.status
-      });
-      
-      // Rechercher l'utilisateur associé à cette session
-      const user = await User.findOne({ stripeVerificationSessionId: session.id });
-      
-      if (user) {
-        // Mettre à jour le statut de vérification
-        user.stripeVerificationStatus = session.status;
-        user.stripeIdentityVerified = session.status === 'verified';
-        
-        if (session.status === 'verified') {
-          user.stripeIdentityVerificationDate = new Date();
-          
-          // Si le compte est vérifié, mettre à jour les capacités du compte Stripe Connect
-          if (user.stripeAccountId) {
-            try {
-              await stripe.accounts.update(user.stripeAccountId, {
-                capabilities: {
-                  card_payments: { requested: true },
-                  transfers: { requested: true }
-                }
-              });
-              user.stripePaymentsVerified = true;
-            } catch (stripeError) {
-              console.error('Erreur lors de la mise à jour des capacités Stripe:', stripeError);
-            }
-          }
-        }
-        await user.save();
-        console.log(`Statut de vérification mis à jour pour l'utilisateur ${user._id}: ${session.status}`);
-      } else {
-        console.error(`Aucun utilisateur trouvé pour la session de vérification ${session.id}`);
-      }
-    } else {
-      console.log(`Type d'événement non traité: ${event.type}`);
-    }
-
-    // Renvoyer une réponse de succès
-    res.json({received: true});
-  } catch (error) {
-    console.error('Erreur lors du traitement du webhook:', error);
-    res.status(500).send('Une erreur est survenue lors du traitement du webhook');
-  }
-});
 
 // Maintenant les middlewares de parsing body pour le reste de l'application
 app.use(express.json({ limit: '50mb' }));
