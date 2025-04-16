@@ -5,199 +5,232 @@ const Conversation = require('../models/Conversation')
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Payment = require('../models/Payment');
 
-
 exports.createSecret = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const { label, content, price, expiresIn = 7, location, language, currency = '€' } = req.body;
-
-    // Validation des champs requis
-    if (!label || !content || price == null) {
-      return res.status(400).json({
-        message: 'Tous les champs sont requis.',
-        missingFields: {
-          label: !label,
-          content: !content,
-          price: price == null
-        }
-      });
-    }
-
-    const supportedCurrencies = ['€', '$', '£', '¥'];
-    if (!supportedCurrencies.includes(currency)) {
-      return res.status(400).json({
-        message: 'Devise non supportée',
-        supportedCurrencies
-      });
-    }
-
-    // Trouver l'utilisateur avec les champs Stripe
-    const user = await User.findById(req.user.id).select('email stripeAccountId stripeAccountStatus stripeOnboardingComplete');
-    if (!user) {
-      return res.status(404).json({ message: "Utilisateur introuvable." });
-    }
-
-    const baseReturnUrl =
-      process.env.NODE_ENV === 'production'
-        ? `https://${req.get('host')}/redirect.html?path=`
-        : process.env.FRONTEND_URL || 'hushy://stripe-return';
-
-    const refreshUrl = `${baseReturnUrl}?action=refresh&secretPending=true`;
-    const returnUrl = `${baseReturnUrl}?action=complete&secretPending=true`;
-
-    // ÉTAPE 1: Vérifier si l'utilisateur a un compte Stripe actif
-    if (!user.stripeAccountId || !user.stripeOnboardingComplete || user.stripeAccountStatus !== 'active') {
-      let accountLink;
-
-      // Créer un compte Stripe si l'utilisateur n'en a pas
-      if (!user.stripeAccountId) {
-        const account = await stripe.accounts.create({
-          type: 'express',
-          country: 'FR',
-          email: user.email,
-          capabilities: {
-            card_payments: { requested: true },
-            transfers: { requested: true }
-          },
-          settings: {
-            payouts: {
-              schedule: {
-                interval: 'manual'
-              }
-            }
-          },
-          business_type: 'individual',
-          business_profile: {
-            mcc: '5734', // Code pour services digitaux
-            url: 'https://hushy.app'
-          },
-          tos_acceptance: {
-            service_agreement: 'full'
+    const session = await mongoose.startSession();
+    session.startTransaction();
+  
+    try {
+      const { label, content, price, expiresIn = 7, location, language, currency = '€' } = req.body;
+  
+      // Validation des champs requis
+      if (!label || !content || price == null) {
+        return res.status(400).json({
+          message: 'Tous les champs sont requis.',
+          missingFields: {
+            label: !label,
+            content: !content,
+            price: price == null
           }
         });
-
-        accountLink = await stripe.accountLinks.create({
-          account: account.id,
-          refresh_url: refreshUrl,
-          return_url: returnUrl,
-          type: 'account_onboarding',
-          collect: 'eventually_due'
-        });
-
-        user.stripeAccountId = account.id;
-        user.stripeAccountStatus = 'pending';
-        user.stripeOnboardingComplete = false;
-        user.lastStripeOnboardingUrl = accountLink.url;
-
-        await user.save({ session });
-
-        console.log('Utilisateur mis à jour avec compte Stripe:', {
-          userId: user._id,
-          stripeAccountId: user.stripeAccountId,
-          status: user.stripeAccountStatus
-        });
-      } else {
-        // L'utilisateur a un compte mais pas complètement configuré
-        accountLink = await stripe.accountLinks.create({
-          account: user.stripeAccountId,
-          refresh_url: refreshUrl,
-          return_url: returnUrl,
-          type: 'account_onboarding',
-          collect: 'eventually_due'
-        });
-
-        user.lastStripeOnboardingUrl = accountLink.url;
-        await user.save({ session });
       }
-
+  
+      const supportedCurrencies = ['€', '$', '£', '¥'];
+      if (!supportedCurrencies.includes(currency)) {
+        return res.status(400).json({
+          message: 'Devise non supportée',
+          supportedCurrencies
+        });
+      }
+  
+      // Trouver l'utilisateur avec les champs Stripe
+      const user = await User.findById(req.user.id).select('email phoneNumber country stripeAccountId stripeAccountStatus stripeOnboardingComplete');
+      if (!user) {
+        return res.status(404).json({ message: "Utilisateur introuvable." });
+      }
+  
+      const baseReturnUrl =
+        process.env.NODE_ENV === 'production'
+          ? `https://${req.get('host')}/redirect.html?path=`
+          : process.env.FRONTEND_URL || 'hushy://stripe-return';
+  
+      const refreshUrl = `${baseReturnUrl}?action=refresh&secretPending=true`;
+      const returnUrl = `${baseReturnUrl}?action=complete&secretPending=true`;
+  
+      // ÉTAPE 1: Vérifier si l'utilisateur a un compte Stripe actif
+      if (!user.stripeAccountId || !user.stripeOnboardingComplete || user.stripeAccountStatus !== 'active') {
+        let accountLink;
+  
+        // Créer un compte Stripe si l'utilisateur n'en a pas
+        if (!user.stripeAccountId) {
+          // Déterminer le pays en fonction du numéro de téléphone ou de la langue de l'utilisateur
+          let country = 'FR'; // Valeur par défaut: France
+          
+          if (user.country) {
+            // Si l'utilisateur a déjà un pays défini (ex: après vérification KYC), l'utiliser
+            country = user.country;
+            console.log(`Utilisation du pays de l'utilisateur: ${country}`);
+          } else if (user.phoneNumber) {
+            // Format international: +1 pour USA, +33 pour France
+            if (user.phoneNumber.startsWith('+1')) {
+              country = 'US';
+              console.log("Numéro américain détecté, configuration pour les USA");
+            } else if (user.phoneNumber.startsWith('+33')) {
+              country = 'FR';
+              console.log("Numéro français détecté, configuration pour la France");
+            } else {
+              console.log(`Format de numéro non reconnu: ${user.phoneNumber}, utilisation du pays par défaut: ${country}`);
+            }
+          } else {
+            // Détection basée sur la langue de l'interface
+            const preferredLocale = req.headers["accept-language"] || "fr";
+            if (preferredLocale.startsWith("en")) {
+              country = 'US'; // États-Unis pour anglophones
+              console.log("Langue anglaise détectée, configuration suggérée pour les USA");
+            } else {
+              console.log(`Langue détectée: ${preferredLocale}, configuration suggérée pour la France`);
+            }
+          }
+          
+          const account = await stripe.accounts.create({
+            type: 'express',
+            country: country,
+            email: user.email,
+            capabilities: {
+              card_payments: { requested: true },
+              transfers: { requested: true }
+            },
+            settings: {
+              payouts: {
+                schedule: {
+                  interval: 'manual'
+                }
+              }
+            },
+            business_type: 'individual',
+            business_profile: {
+              mcc: '5734', // Code pour services digitaux
+              url: 'https://hushy.app'
+            },
+            tos_acceptance: {
+              service_agreement: 'full'
+            }
+          });
+  
+          // Si le pays n'était pas déjà défini, le stocker
+          if (!user.country) {
+            user.country = country;
+          }
+  
+          accountLink = await stripe.accountLinks.create({
+            account: account.id,
+            refresh_url: refreshUrl,
+            return_url: returnUrl,
+            type: 'account_onboarding',
+            collect: 'eventually_due'
+          });
+  
+          user.stripeAccountId = account.id;
+          user.stripeAccountStatus = 'pending';
+          user.stripeOnboardingComplete = false;
+          user.lastStripeOnboardingUrl = accountLink.url;
+  
+          await user.save({ session });
+  
+          console.log('Utilisateur mis à jour avec compte Stripe:', {
+            userId: user._id,
+            stripeAccountId: user.stripeAccountId,
+            country: user.country,
+            status: user.stripeAccountStatus
+          });
+        } else {
+          // L'utilisateur a un compte mais pas complètement configuré
+          accountLink = await stripe.accountLinks.create({
+            account: user.stripeAccountId,
+            refresh_url: refreshUrl,
+            return_url: returnUrl,
+            type: 'account_onboarding',
+            collect: 'eventually_due'
+          });
+  
+          user.lastStripeOnboardingUrl = accountLink.url;
+          await user.save({ session });
+        }
+  
+        await session.commitTransaction();
+        session.endSession();
+  
+        // Retourner une réponse indiquant que Stripe doit être configuré d'abord
+        return res.status(202).json({
+          requiresStripeSetup: true,
+          message: 'Configuration du compte Stripe requise avant de créer un secret',
+          stripeOnboardingUrl: accountLink.url,
+          stripeStatus: {
+            requiresStripeSetup: true,
+            accountLink
+          }
+        });
+      }
+  
+      // ÉTAPE 2: L'utilisateur a un compte Stripe actif, créer le secret
+      // Configuration de base du secret
+      const secretData = {
+        label,
+        content,
+        price,
+        currency,
+        user: req.user.id,
+        sellerStripeAccountId: user.stripeAccountId,
+        expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
+        status: 'active',
+        language: language || 'fr'
+      };
+  
+      // Gestion détaillée de la localisation
+      if (location && location.type === 'Point' && location.coordinates) {
+        const [lng, lat] = location.coordinates;
+  
+        // Validation géographique stricte
+        if (
+          Array.isArray(location.coordinates) &&
+          location.coordinates.length === 2 &&
+          typeof lng === 'number' &&
+          typeof lat === 'number' &&
+          lng >= -180 && lng <= 180 &&
+          lat >= -90 && lat <= 90
+        ) {
+          secretData.location = {
+            type: 'Point',
+            coordinates: [lng, lat]
+          };
+          console.log('Location validée:', secretData.location);
+        } else {
+          console.warn('Coordonnées géographiques invalides:', location.coordinates);
+        }
+      }
+  
+      // Créer le secret directement comme actif
+      const secret = await Secret.create([secretData], { session });
+  
+      // Ajouter le lien de partage
+      const shareLink = `hushy://secret/${secret[0]._id}`;
+      await Secret.findByIdAndUpdate(secret[0]._id, { shareLink }, { session });
+  
       await session.commitTransaction();
       session.endSession();
-
-      // Retourner une réponse indiquant que Stripe doit être configuré d'abord
-      return res.status(202).json({
-        requiresStripeSetup: true,
-        message: 'Configuration du compte Stripe requise avant de créer un secret',
-        stripeOnboardingUrl: accountLink.url,
-        stripeStatus: {
-          requiresStripeSetup: true,
-          accountLink
-        }
+  
+      // Retourner une réponse de succès avec le secret créé
+      return res.status(201).json({
+        message: 'Secret créé avec succès',
+        secret: {
+          ...secret[0]._doc,
+          shareLink
+        },
+        requiresStripeSetup: false
+      });
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      console.error('Erreur détaillée lors de la création du secret:', {
+        message: error.message,
+        stack: error.stack,
+        body: req.body
+      });
+      res.status(500).json({
+        message: 'Erreur serveur lors de la création du secret',
+        details: error.message
       });
     }
-
-    // ÉTAPE 2: L'utilisateur a un compte Stripe actif, créer le secret
-    // Configuration de base du secret
-    const secretData = {
-      label,
-      content,
-      price,
-      currency,
-      user: req.user.id,
-      sellerStripeAccountId: user.stripeAccountId,
-      expiresAt: new Date(Date.now() + expiresIn * 24 * 60 * 60 * 1000),
-      status: 'active',
-      language: language || 'fr'
-    };
-
-    // Gestion détaillée de la localisation
-    if (location && location.type === 'Point' && location.coordinates) {
-      const [lng, lat] = location.coordinates;
-
-      // Validation géographique stricte
-      if (
-        Array.isArray(location.coordinates) &&
-        location.coordinates.length === 2 &&
-        typeof lng === 'number' &&
-        typeof lat === 'number' &&
-        lng >= -180 && lng <= 180 &&
-        lat >= -90 && lat <= 90
-      ) {
-        secretData.location = {
-          type: 'Point',
-          coordinates: [lng, lat]
-        };
-        console.log('Location validée:', secretData.location);
-      } else {
-        console.warn('Coordonnées géographiques invalides:', location.coordinates);
-      }
-    }
-
-    // Créer le secret directement comme actif
-    const secret = await Secret.create([secretData], { session });
-
-    // Ajouter le lien de partage
-    const shareLink = `hushy://secret/${secret[0]._id}`;
-    await Secret.findByIdAndUpdate(secret[0]._id, { shareLink }, { session });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    // Retourner une réponse de succès avec le secret créé
-    return res.status(201).json({
-      message: 'Secret créé avec succès',
-      secret: {
-        ...secret[0]._doc,
-        shareLink
-      },
-      requiresStripeSetup: false
-    });
-
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error('Erreur détaillée lors de la création du secret:', {
-      message: error.message,
-      stack: error.stack,
-      body: req.body
-    });
-    res.status(500).json({
-      message: 'Erreur serveur lors de la création du secret',
-      details: error.message
-    });
-  }
-};
+  };
 
 exports.refreshStripeOnboarding = async (req, res) => {
   try {
@@ -322,175 +355,127 @@ exports.handleStripeReturn = async (req, res) => {
 
 
 exports.verifyIdentity = async (req, res) => {
-  try {
-    const { stripeAccountId, skipImageUpload, documentImage, selfieImage } = req.body;
-    const userId = req.user.id;
-
-
-    // Vérifier que l'utilisateur demande une vérification pour son propre compte
-    const user = await User.findById(userId).select('+stripeAccountId stripeAccountStatus stripeIdentityVerified');
-
-    console.log("ID Stripe dans la base [" + user.stripeAccountId + "]");
-    console.log("ID Stripe reçu dans la requête [" + stripeAccountId + "]");
-    console.log("Les IDs sont égaux:", user.stripeAccountId === stripeAccountId);
-    console.log("Type de l'ID base:", typeof user.stripeAccountId);
-    console.log("Type de l'ID requête:", typeof stripeAccountId);
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
-    }
-
- if (user.stripeAccountId) {
-  if (user.stripeAccountId !== stripeAccountId) {
-    return res.status(403).json({ success: false, message: 'Vous ne pouvez vérifier que votre propre compte' });
-  }
-} else {
-  // L'utilisateur n'a pas encore de stripeAccountId enregistré, 
-  // nous allons donc mettre à jour son profil avec l'ID fourni
-  user.stripeAccountId = stripeAccountId;
-  await user.save();
-  console.log("Mise à jour du compte utilisateur avec le stripeAccountId:", stripeAccountId);
-}
-
-    // Si l'utilisateur est déjà vérifié, on peut retourner un succès immédiat
-    if (user.stripeIdentityVerified) {
-      return res.status(200).json({
-        success: true,
-        message: 'Votre identité est déjà vérifiée',
-        isAlreadyVerified: true
-      });
-    }
-
-    // Retrouver le compte Stripe pour vérification
-    const stripeAccount = await stripe.accounts.retrieve(user.stripeAccountId);
-    if (!stripeAccount) {
-      return res.status(404).json({ success: false, message: 'Compte Stripe introuvable' });
-    }
-
-    // Définir les URLs de retour avec paramètres de continuité
-    const baseReturnUrl =
-      process.env.NODE_ENV === 'production'
-        ? `https://${req.get('host')}/redirect.html?path=`
-        : process.env.FRONTEND_URL || 'hushy://stripe-return';
-
-    const returnUrl = `${baseReturnUrl}?action=verify_complete&identity=true`;
-    const refreshUrl = `${baseReturnUrl}?action=verify_refresh&identity=true`;
-
-    // Créer une session de vérification Stripe Identity
-    if (skipImageUpload) {
-      // Méthode 1: Redirection vers le portail de vérification Stripe
-      const verificationSession = await stripe.identity.verificationSessions.create({
-        type: 'document',
-        metadata: {
-          userId: userId.toString()
-        },
-        options: {
-          document: {
-            allowed_types: ['driving_license', 'id_card', 'passport'],
-            require_id_number: true,
-            require_live_capture: true,
-            require_matching_selfie: true
-          }
-        },
-        return_url: returnUrl,
-        refresh_url: refreshUrl
-      });
-
-      // Sauvegarder l'ID de session pour référence ultérieure
-      user.stripeVerificationSessionId = verificationSession.id;
-      user.stripeVerificationStatus = 'pending';
-      await user.save();
-
-      return res.status(200).json({
-        success: true,
-        sessionId: verificationSession.id,
-        verificationUrl: verificationSession.url,
-        message: 'Session de vérification créée avec succès'
-      });
-    } else {
-      // Méthode 2: Upload direct des documents (moins recommandée avec les dernières mises à jour Stripe)
-      if (!documentImage) {
-        return res.status(400).json({ success: false, message: 'Document d\'identité requis' });
+    try {
+      const { stripeAccountId, skipImageUpload, documentImage, selfieImage } = req.body;
+      const userId = req.user.id;
+  
+      // Vérifier que l'utilisateur demande une vérification pour son propre compte
+      const user = await User.findById(userId).select('+stripeAccountId stripeAccountStatus stripeIdentityVerified country phoneNumber');
+  
+      console.log("ID Stripe dans la base [" + user.stripeAccountId + "]");
+      console.log("ID Stripe reçu dans la requête [" + stripeAccountId + "]");
+      console.log("Les IDs sont égaux:", user.stripeAccountId === stripeAccountId);
+  
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
       }
-
-      // Cette méthode est moins fiable avec les dernières versions de Stripe Identity
-      // mais nous pouvons essayer de l'implémenter
-
-      // Créer une session de vérification
-      const verificationSession = await stripe.identity.verificationSessions.create({
-        type: 'document',
-        metadata: {
-          userId: userId.toString()
-        },
-        options: {
-          document: {
-            require_id_number: true,
-            require_matching_selfie: !!selfieImage
-          }
+  
+      if (user.stripeAccountId) {
+        if (user.stripeAccountId !== stripeAccountId) {
+          return res.status(403).json({ success: false, message: 'Vous ne pouvez vérifier que votre propre compte' });
         }
-      });
-
-      try {
-        // Préparation et upload des documents
-        const docImage = documentImage.replace(/^data:image\/\w+;base64,/, '');
-        const docBuffer = Buffer.from(docImage, 'base64');
-
-        const docFile = await stripe.files.create({
-          purpose: 'identity_document',
-          file: {
-            data: docBuffer,
-            name: 'document.jpg',
-            type: 'application/octet-stream',
-          },
+      } else {
+        // L'utilisateur n'a pas encore de stripeAccountId enregistré,
+        // nous allons donc mettre à jour son profil avec l'ID fourni
+        user.stripeAccountId = stripeAccountId;
+        await user.save();
+        console.log("Mise à jour du compte utilisateur avec le stripeAccountId:", stripeAccountId);
+      }
+  
+      // Si l'utilisateur est déjà vérifié, on peut retourner un succès immédiat
+      if (user.stripeIdentityVerified) {
+        return res.status(200).json({
+          success: true,
+          message: 'Votre identité est déjà vérifiée',
+          isAlreadyVerified: true
         });
-
-        // Upload du selfie si fourni
-        let selfieFile;
-        if (selfieImage) {
-          const selfieImg = selfieImage.replace(/^data:image\/\w+;base64,/, '');
-          const selfieBuffer = Buffer.from(selfieImg, 'base64');
-
-          selfieFile = await stripe.files.create({
-            purpose: 'identity_document',
-            file: {
-              data: selfieBuffer,
-              name: 'selfie.jpg',
-              type: 'application/octet-stream',
-            },
-          });
-        }
-
-        // Associer les documents à la session
-        await stripe.identity.verificationSessions.update(
-          verificationSession.id,
-          {
-            documents: {
-              id_document_front: docFile.id,
-              selfie: selfieFile ? selfieFile.id : undefined
-            }
+      }
+  
+      // Retrouver le compte Stripe pour vérification
+      const stripeAccount = await stripe.accounts.retrieve(user.stripeAccountId);
+      if (!stripeAccount) {
+        return res.status(404).json({ success: false, message: 'Compte Stripe introuvable' });
+      }
+  
+      // Définir les URLs de retour avec paramètres de continuité
+      const baseReturnUrl =
+        process.env.NODE_ENV === 'production'
+          ? `https://${req.get('host')}/redirect.html?path=`
+          : process.env.FRONTEND_URL || 'hushy://stripe-return';
+  
+      const returnUrl = `${baseReturnUrl}?action=verify_complete&identity=true`;
+      const refreshUrl = `${baseReturnUrl}?action=verify_refresh&identity=true`;
+  
+      // Créer une session de vérification Stripe Identity
+      if (skipImageUpload) {
+        // Déterminer les pays suggérés basés sur les informations disponibles
+        let suggestedCountries = ['FR', 'US']; // Par défaut, suggérer France et USA
+        
+        // Si un pays est déjà défini dans le profil, le mettre en premier
+        if (user.country) {
+          // Mettre le pays de l'utilisateur en premier dans la liste
+          suggestedCountries = [user.country, ...suggestedCountries.filter(c => c !== user.country)];
+        } else if (user.phoneNumber) {
+          // Prioritiser en fonction du numéro de téléphone
+          if (user.phoneNumber.startsWith('+1')) {
+            suggestedCountries = ['US', 'FR'];
+          } else if (user.phoneNumber.startsWith('+33')) {
+            suggestedCountries = ['FR', 'US'];
           }
-        );
-
-        // Enregistrer les informations de session
+        }
+        
+        console.log("Pays suggérés pour la vérification:", suggestedCountries);
+        
+        // Créer la configuration pour la session de vérification
+        const verificationOptions = {
+          type: 'document',
+          metadata: {
+            userId: userId.toString()
+          },
+          options: {
+            document: {
+              allowed_types: ['driving_license', 'id_card', 'passport'],
+              require_id_number: true,
+              require_live_capture: true,
+              require_matching_selfie: true,
+              allowed_countries: null, // null = tous les pays sont autorisés
+              suggested_countries: suggestedCountries // Suggérer les pays appropriés en premier
+            }
+          },
+          return_url: returnUrl,
+          refresh_url: refreshUrl
+        };
+        
+        // Créer la session de vérification
+        const verificationSession = await stripe.identity.verificationSessions.create(verificationOptions);
+  
+        // Sauvegarder l'ID de session pour référence ultérieure
         user.stripeVerificationSessionId = verificationSession.id;
         user.stripeVerificationStatus = 'pending';
         await user.save();
-
+  
+        console.log("Session de vérification d'identité créée:", {
+          sessionId: verificationSession.id,
+          options: verificationOptions.options.document
+        });
+  
         return res.status(200).json({
           success: true,
           sessionId: verificationSession.id,
-          clientSecret: verificationSession.client_secret,
-          message: 'Documents soumis avec succès pour vérification'
+          verificationUrl: verificationSession.url,
+          message: 'Session de vérification créée avec succès'
         });
-      } catch (uploadError) {
-        // Si l'upload direct échoue, fallback sur la méthode de redirection
-        console.error('Erreur lors de l\'upload des documents:', uploadError);
-
-        // Nettoyer la session qui a échoué
-        await stripe.identity.verificationSessions.cancel(verificationSession.id);
-
-        // Créer une nouvelle session avec redirection
-        const newSession = await stripe.identity.verificationSessions.create({
+      } else {
+        // Méthode 2: Upload direct des documents (moins recommandée avec les dernières mises à jour Stripe)
+        if (!documentImage) {
+          return res.status(400).json({ success: false, message: 'Document d\'identité requis' });
+        }
+  
+        // Cette méthode est moins fiable avec les dernières versions de Stripe Identity
+        // mais nous pouvons essayer de l'implémenter
+  
+        // Créer une session de vérification
+        const verificationSession = await stripe.identity.verificationSessions.create({
           type: 'document',
           metadata: {
             userId: userId.toString()
@@ -498,36 +483,112 @@ exports.verifyIdentity = async (req, res) => {
           options: {
             document: {
               require_id_number: true,
-              require_matching_selfie: true
+              require_matching_selfie: !!selfieImage,
+              allowed_countries: null, // Permettre tous les pays
+              suggested_countries: ['FR', 'US'] // Suggérer France et USA
             }
-          },
-          return_url: returnUrl,
-          refresh_url: refreshUrl
+          }
         });
-
-        // Mettre à jour les informations utilisateur
-        user.stripeVerificationSessionId = newSession.id;
-        user.stripeVerificationStatus = 'pending';
-        await user.save();
-
-        return res.status(200).json({
-          success: true,
-          sessionId: newSession.id,
-          verificationUrl: newSession.url,
-          fallbackToRedirect: true,
-          message: 'Impossible de traiter les documents directement. Veuillez utiliser le lien de vérification.'
-        });
+  
+        try {
+          // Préparation et upload des documents
+          const docImage = documentImage.replace(/^data:image\/\w+;base64,/, '');
+          const docBuffer = Buffer.from(docImage, 'base64');
+  
+          const docFile = await stripe.files.create({
+            purpose: 'identity_document',
+            file: {
+              data: docBuffer,
+              name: 'document.jpg',
+              type: 'application/octet-stream',
+            },
+          });
+  
+          // Upload du selfie si fourni
+          let selfieFile;
+          if (selfieImage) {
+            const selfieImg = selfieImage.replace(/^data:image\/\w+;base64,/, '');
+            const selfieBuffer = Buffer.from(selfieImg, 'base64');
+  
+            selfieFile = await stripe.files.create({
+              purpose: 'identity_document',
+              file: {
+                data: selfieBuffer,
+                name: 'selfie.jpg',
+                type: 'application/octet-stream',
+              },
+            });
+          }
+  
+          // Associer les documents à la session
+          await stripe.identity.verificationSessions.update(
+            verificationSession.id,
+            {
+              documents: {
+                id_document_front: docFile.id,
+                selfie: selfieFile ? selfieFile.id : undefined
+              }
+            }
+          );
+  
+          // Enregistrer les informations de session
+          user.stripeVerificationSessionId = verificationSession.id;
+          user.stripeVerificationStatus = 'pending';
+          await user.save();
+  
+          return res.status(200).json({
+            success: true,
+            sessionId: verificationSession.id,
+            clientSecret: verificationSession.client_secret,
+            message: 'Documents soumis avec succès pour vérification'
+          });
+        } catch (uploadError) {
+          // Si l'upload direct échoue, fallback sur la méthode de redirection
+          console.error('Erreur lors de l\'upload des documents:', uploadError);
+  
+          // Nettoyer la session qui a échoué
+          await stripe.identity.verificationSessions.cancel(verificationSession.id);
+  
+          // Créer une nouvelle session avec redirection
+          const newSession = await stripe.identity.verificationSessions.create({
+            type: 'document',
+            metadata: {
+              userId: userId.toString()
+            },
+            options: {
+              document: {
+                require_id_number: true,
+                require_matching_selfie: true,
+                allowed_countries: null, // Permettre tous les pays
+                suggested_countries: ['FR', 'US'] // Suggérer France et USA
+              }
+            },
+            return_url: returnUrl,
+            refresh_url: refreshUrl
+          });
+  
+          // Mettre à jour les informations utilisateur
+          user.stripeVerificationSessionId = newSession.id;
+          user.stripeVerificationStatus = 'pending';
+          await user.save();
+  
+          return res.status(200).json({
+            success: true,
+            sessionId: newSession.id,
+            verificationUrl: newSession.url,
+            fallbackToRedirect: true,
+            message: 'Impossible de traiter les documents directement. Veuillez utiliser le lien de vérification.'
+          });
+        }
       }
+    } catch (error) {
+      console.error('Erreur lors de la vérification d\'identité:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'Erreur lors de la création de la session de vérification'
+      });
     }
-  } catch (error) {
-    console.error('Erreur lors de la vérification d\'identité:', error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Erreur lors de la création de la session de vérification'
-    });
-  }
-};
-
+  };
 
 exports.updateBankAccount = async (req, res) => {
   try {
