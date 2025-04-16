@@ -2,7 +2,7 @@ const Secret = require('../models/Secret');
 const User = require('../models/User'); // Assurez-vous que le chemin est correct
 const mongoose = require('mongoose');
 const Conversation = require('../models/Conversation')
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_TEST_SECRET_KEY);
 const Payment = require('../models/Payment');
 
 exports.createSecret = async (req, res) => {

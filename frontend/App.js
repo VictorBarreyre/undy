@@ -10,7 +10,7 @@ import TypewriterLoader from "./presentation/components/TypewriterLoader";
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import StackNavigator from './navigation/StackNavigator/StackNavigator';
 import { StripeProvider } from "@stripe/stripe-react-native";
-import { STRIPE_PUBLISHABLE_KEY } from '@env';
+import { STRIPE_TEST_PUBLISHABLE_KEY } from '@env';
 import DeepLinkHandler from "./presentation/components/DeepLinkHandler";
 import { Linking } from 'react-native';
 
@@ -85,7 +85,7 @@ const App = () => {
 
   return (
     <StripeProvider
-      publishableKey={STRIPE_PUBLISHABLE_KEY}
+      publishableKey={STRIPE_TEST_PUBLISHABLE_KEY}
       merchantIdentifier="merchant.com.anonymous.frontend" // Ajout de cette ligne
       urlScheme="frontend"
     >
