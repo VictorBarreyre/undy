@@ -567,7 +567,7 @@ exports.verifyIdentity = async (req, res) => {
     }
   };
 
-  
+
 exports.updateBankAccount = async (req, res) => {
   try {
     const { stripeAccountId } = req.body;
@@ -617,62 +617,57 @@ exports.checkIdentityVerificationStatus = async (req, res) => {
     const user = await User.findById(req.user.id).select('stripeAccountId stripeIdentityVerified stripeVerificationStatus stripeVerificationSessionId');
     
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur introuvable'
-      });
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
     }
     
     if (!user.stripeAccountId) {
-      return res.status(200).json({
-        success: true,
-        verified: false,
-        status: 'unverified',
-        message: 'Aucun compte Stripe associé'
+      return res.status(400).json({ success: false, message: 'Compte Stripe non configuré' });
+    }
+
+    // Récupérer le sessionId depuis la requête
+    const sessionId = req.query.sessionId || req.body.sessionId || user.stripeVerificationSessionId;
+    
+    if (!sessionId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'ID de session manquant'
       });
     }
-    
-    // Si nous avons un ID de session, vérifier le statut auprès de Stripe
-    if (user.stripeVerificationSessionId) {
-      try {
-        const session = await stripe.identity.verificationSessions.retrieve(
-          user.stripeVerificationSessionId
-        );
-        
-        // Mettre à jour le statut dans la base de données
+
+    // Vérifier le statut auprès de Stripe avec le sessionId spécifique
+    try {
+      const session = await stripe.identity.verificationSessions.retrieve(sessionId);
+      
+      // Mettre à jour le statut de l'utilisateur si nécessaire
+      if (session.status === 'verified') {
+        user.stripeIdentityVerified = true;
+        user.stripeVerificationStatus = 'verified';
+      } else {
         user.stripeVerificationStatus = session.status;
-        
-        if (session.status === 'verified') {
-          user.stripeIdentityVerified = true;
-        }
-        
-        await user.save();
-        
-        return res.status(200).json({
-          success: true,
-          verified: session.status === 'verified',
-          status: session.status,
-          lastUpdated: new Date(),
-          message: `Statut de vérification: ${session.status}`
-        });
-      } catch (stripeError) {
-        console.error('Erreur lors de la récupération de la session Stripe:', stripeError);
-        // En cas d'erreur avec Stripe, on revient aux données locales
       }
+      
+      await user.save();
+
+      return res.status(200).json({
+        success: true,
+        verified: user.stripeIdentityVerified,
+        status: session.status,
+        message: `Vérification ${session.status}`
+      });
+    } catch (stripeError) {
+      console.error('Erreur Stripe:', stripeError);
+      return res.status(500).json({
+        success: false,
+        verified: false,
+        status: 'error',
+        message: stripeError.message
+      });
     }
-    
-    // Retourner le statut stocké si on ne peut pas récupérer depuis Stripe
-    return res.status(200).json({
-      success: true,
-      verified: user.stripeIdentityVerified || false,
-      status: user.stripeVerificationStatus || 'unverified',
-      message: user.stripeIdentityVerified ? 'Identité vérifiée' : 'Vérification d\'identité en attente'
-    });
   } catch (error) {
-    console.error('Erreur lors de la vérification du statut d\'identité:', error);
+    console.error('Erreur lors de la vérification du statut:', error);
     return res.status(500).json({
       success: false,
-      message: 'Erreur serveur lors de la vérification du statut d\'identité'
+      message: error.message
     });
   }
 };

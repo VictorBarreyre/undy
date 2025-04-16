@@ -366,73 +366,57 @@ const StripeVerificationModal = ({
 
     // Fonction pour vérifier périodiquement le statut et mettre à jour l'interface
     const checkVerificationStatus = (sessionId) => {
+        // Vérification immédiate du sessionId
+        if (!sessionId) {
+            console.error("Session ID manquant, impossible de démarrer la vérification périodique.");
+            return; // Sortie immédiate si pas de sessionId
+        }
+    
+        console.log('[StripeVerificationModal] Démarrage de la vérification périodique pour la session', sessionId);
+        
         const maxAttempts = 30;
         let attempts = 0;
-
+    
         const intervalId = setInterval(async () => {
             try {
                 attempts++;
-
+    
                 if (attempts >= maxAttempts) {
                     clearInterval(intervalId);
+                    console.log('[StripeVerificationModal] Nombre maximum de tentatives atteint');
                     return;
                 }
-
-                const statusResult = await checkIdentityVerificationStatus();
-                console.log(`Vérification du statut (tentative ${attempts}):`, statusResult);
-
+    
+                console.log(`Vérification du statut (tentative ${attempts}):`, sessionId);
+                const statusResult = await checkIdentityVerificationStatus(sessionId); // Passer le sessionId
+    
                 if (statusResult.success) {
                     if (statusResult.verified) {
                         clearInterval(intervalId);
-
+                        console.log('[StripeVerificationModal] Vérification réussie');
+    
                         setVerificationStatus({
                             verified: true,
                             status: 'verified'
                         });
-
+    
                         await refreshUserDataAndUpdate();
-
+    
                         Alert.alert(
                             t('stripeVerification.verification.success.title'),
                             t('stripeVerification.verification.success.message'),
                             [{ text: t('stripeVerification.verification.great') }]
                         );
-                    } else if (statusResult.status === 'requires_input' || statusResult.status === 'failed') {
-                        clearInterval(intervalId);
-
-                        setVerificationStatus({
-                            verified: false,
-                            status: statusResult.status
-                        });
-
-                        await refreshUserDataAndUpdate();
-
-                        if (statusResult.status === 'requires_input') {
-                            Alert.alert(
-                                t('stripeVerification.verification.requiresInput.title'),
-                                t('stripeVerification.verification.requiresInput.message'),
-                                [
-                                    {
-                                        text: t('stripeVerification.verification.ok'),
-                                        onPress: () => {
-                                            // Option pour rediriger l'utilisateur si nécessaire
-                                        }
-                                    }
-                                ]
-                            );
-                        } else {
-                            Alert.alert(
-                                t('stripeVerification.verification.failed.title'),
-                                t('stripeVerification.verification.failed.message'),
-                                [{ text: t('stripeVerification.verification.ok') }]
-                            );
-                        }
                     }
                 }
             } catch (error) {
-                console.error('Erreur lors de la vérification du statut:', error);
+                console.error('[StripeVerificationModal] Erreur lors de la vérification:', error);
+                clearInterval(intervalId); // Arrêter l'intervalle en cas d'erreur
             }
         }, 10000);
+    
+        // Retourner l'ID de l'intervalle pour pouvoir l'arrêter si nécessaire
+        return intervalId;
     };
 
     const resetVerification = () => {
