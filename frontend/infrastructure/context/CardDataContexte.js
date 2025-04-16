@@ -1289,7 +1289,7 @@ const checkIdentityVerificationStatus = (sessionId) => {
         return;
       }
       
-      const statusResult = await checkStatusFromAPI();
+      const statusResult = await checkStatusFromAPI(sessionId);
       console.log(`[StripeVerificationModal] Résultat de la vérification:`, JSON.stringify(statusResult || {}, null, 2));
       
       if (statusResult && statusResult.success) {
@@ -1297,8 +1297,6 @@ const checkIdentityVerificationStatus = (sessionId) => {
         console.log(`[StripeVerificationModal] État de la vérification:
             - Vérifié: ${statusResult.verified}
             - Statut: ${statusResult.status}
-            - Statut local: ${verificationStatus.status}
-            - Statut dans localUserData: ${localUserData?.stripeVerificationStatus}
         `);
         
         if (statusResult.verified) {
