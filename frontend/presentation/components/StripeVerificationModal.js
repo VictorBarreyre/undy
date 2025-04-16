@@ -648,7 +648,7 @@ const StripeVerificationModal = ({
                     <Button
                         onPress={handleUpdateBankAccount}
                         backgroundColor="gray.100"
-                        borderRadius="md"
+                        borderRadius="full"
                         mt={2}
                         _text={{ color: "gray.700" }}
                     >

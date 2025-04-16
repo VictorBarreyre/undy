@@ -1,4 +1,4 @@
-const stripe = require('stripe')(process.env.STRIPE_TEST_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('../models/User');
 
 // Handler pour les événements identity.verification_session.updated
@@ -147,7 +147,7 @@ const handleStripeWebhook = async (req, res) => {
     const event = stripe.webhooks.constructEvent(
       req.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET
+      process.env.STRIPE_WEBHOOK_SECRET_TEST
     );
     
     console.log(`Événement Stripe reçu: ${event.type}`);

@@ -8,7 +8,7 @@ const appleSignin = require('apple-signin-auth');
 const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const axios = require('axios');
-const stripe = require('stripe')(process.env.STRIPE_TEST_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 
 
