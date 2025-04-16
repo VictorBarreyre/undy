@@ -625,7 +625,6 @@ const StripeVerificationModal = ({
                     style={styles.caption}
                     color="#94A3B8"
                     textAlign="center"
-                    mb={2}
                 >
                     {t('stripeVerification.accountConfigured.description')}
                 </Text>
@@ -636,7 +635,7 @@ const StripeVerificationModal = ({
                         borderColor="gray.200"
                         p={4}
                         borderRadius="md"
-                        mb={4}
+                        mb={2}
                     >
                         <Text style={styles.caption} color="gray.700">
                             {t('stripeVerification.accountConfigured.bankAccount')}: {localUserData.stripeExternalAccount}
@@ -647,9 +646,8 @@ const StripeVerificationModal = ({
                 <VStack space={2}>
                     <Button
                         onPress={handleUpdateBankAccount}
-                        backgroundColor="gray.100"
+                        backgroundColor="black"
                         borderRadius="full"
-                        mt={2}
                         _text={{ color: "gray.700" }}
                     >
                         {t('stripeVerification.accountConfigured.updateBankAccount')}
