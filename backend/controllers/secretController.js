@@ -1471,16 +1471,6 @@ exports.getUserConversations = async (req, res) => {
       };
     });
 
-    // Log des statistiques pour débogage
-    conversationsWithUnreadCount.forEach(conv => {
-      console.log('Conversation Details:', {
-        conversationId: conv._id,
-        unreadCount: conv.unreadCount,
-        userIdStr: userIdStr,
-        calculatedUnreadCount: conv.unreadCount,
-        totalMessages: conv.messages?.length || 0
-      });
-    });
 
     res.status(200).json(conversationsWithUnreadCount);
   } catch (error) {
