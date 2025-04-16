@@ -356,11 +356,11 @@ exports.handleStripeReturn = async (req, res) => {
 
 exports.verifyIdentity = async (req, res) => {
     try {
-      const { stripeAccountId, skipImageUpload, documentImage, selfieImage } = req.body;
+      const { stripeAccountId, skipImageUpload, documentImage, selfieImage, documentType, documentSide } = req.body;
       const userId = req.user.id;
   
       // Vérifier que l'utilisateur demande une vérification pour son propre compte
-      const user = await User.findById(userId).select('+stripeAccountId stripeAccountStatus stripeIdentityVerified country phoneNumber');
+      const user = await User.findById(userId).select('+stripeAccountId stripeAccountStatus stripeIdentityVerified phoneNumber');
   
       console.log("ID Stripe dans la base [" + user.stripeAccountId + "]");
       console.log("ID Stripe reçu dans la requête [" + stripeAccountId + "]");
@@ -408,44 +408,25 @@ exports.verifyIdentity = async (req, res) => {
   
       // Créer une session de vérification Stripe Identity
       if (skipImageUpload) {
-        // Déterminer les pays suggérés basés sur les informations disponibles
-        let suggestedCountries = ['FR', 'US']; // Par défaut, suggérer France et USA
-        
-        // Si un pays est déjà défini dans le profil, le mettre en premier
-        if (user.country) {
-          // Mettre le pays de l'utilisateur en premier dans la liste
-          suggestedCountries = [user.country, ...suggestedCountries.filter(c => c !== user.country)];
-        } else if (user.phoneNumber) {
-          // Prioritiser en fonction du numéro de téléphone
-          if (user.phoneNumber.startsWith('+1')) {
-            suggestedCountries = ['US', 'FR'];
-          } else if (user.phoneNumber.startsWith('+33')) {
-            suggestedCountries = ['FR', 'US'];
-          }
-        }
-        
-        console.log("Pays suggérés pour la vérification:", suggestedCountries);
-        
-        // Créer la configuration pour la session de vérification
+        // Méthode 1: Redirection vers le portail de vérification Stripe
         const verificationOptions = {
           type: 'document',
           metadata: {
-            userId: userId.toString()
+            userId: userId.toString(),
+            phoneNumber: user.phoneNumber || 'not_provided'
           },
           options: {
             document: {
               allowed_types: ['driving_license', 'id_card', 'passport'],
               require_id_number: true,
               require_live_capture: true,
-              require_matching_selfie: true,
-              allowed_countries: null, // null = tous les pays sont autorisés
-              suggested_countries: suggestedCountries // Suggérer les pays appropriés en premier
+              require_matching_selfie: true
             }
           },
           return_url: returnUrl,
           refresh_url: refreshUrl
         };
-        
+  
         // Créer la session de vérification
         const verificationSession = await stripe.identity.verificationSessions.create(verificationOptions);
   
@@ -456,7 +437,7 @@ exports.verifyIdentity = async (req, res) => {
   
         console.log("Session de vérification d'identité créée:", {
           sessionId: verificationSession.id,
-          options: verificationOptions.options.document
+          status: verificationSession.status
         });
   
         return res.status(200).json({
@@ -483,9 +464,7 @@ exports.verifyIdentity = async (req, res) => {
           options: {
             document: {
               require_id_number: true,
-              require_matching_selfie: !!selfieImage,
-              allowed_countries: null, // Permettre tous les pays
-              suggested_countries: ['FR', 'US'] // Suggérer France et USA
+              require_matching_selfie: !!selfieImage
             }
           }
         });
@@ -558,9 +537,7 @@ exports.verifyIdentity = async (req, res) => {
             options: {
               document: {
                 require_id_number: true,
-                require_matching_selfie: true,
-                allowed_countries: null, // Permettre tous les pays
-                suggested_countries: ['FR', 'US'] // Suggérer France et USA
+                require_matching_selfie: true
               }
             },
             return_url: returnUrl,
@@ -590,6 +567,7 @@ exports.verifyIdentity = async (req, res) => {
     }
   };
 
+  
 exports.updateBankAccount = async (req, res) => {
   try {
     const { stripeAccountId } = req.body;
