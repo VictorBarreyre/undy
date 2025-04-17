@@ -665,6 +665,8 @@ export default {
     },
     "identityVerification": {
       "title": "Vérification d'identité",
+      "selectCountry": "Pays de résidence",
+      "selectCountryPlaceholder": "Sélectionnez votre pays",
       "description": "Pour recevoir vos paiements, nous devons vérifier votre identité conformément aux réglementations.",
       "documentTitle": "Document d'identité",
       "documentDescription": "Veuillez fournir un document d'identité (carte d'identité, passeport ou permis de conduire).",

@@ -295,11 +295,11 @@ export default {
     "image": "Image",
     "defaultUser": "User",
     // Pour le menu contextuel des messages
-   "messageOptions": {
-  "reply": "Reply",
-  "copy": "Copy", // Nouvelle entrée
-  "cancel": "Cancel"
-},
+    "messageOptions": {
+      "reply": "Reply",
+      "copy": "Copy", // Nouvelle entrée
+      "cancel": "Cancel"
+    },
     "documentOptions": {
       "takePhoto": "Take a photo",
       "chooseFromGallery": "Choose from gallery",
@@ -361,8 +361,8 @@ export default {
     "defaultName": "User",
     "profilePictureAlt": "{{name}}'s profile picture",
     "imagePicker": {
-       "canceled": "Image selection canceled",
-        "noImageSelected": "No image was selected"
+      "canceled": "Image selection canceled",
+      "noImageSelected": "No image was selected"
     },
     "cropImage": {
       "title": "Adjust your photo",
@@ -616,129 +616,133 @@ export default {
     }
   },
 
-"stripeVerification": {
-  "logs": {
-    "userCancelled": "Image selection cancelled by user"
-  },
-
-  "verificationInProgress":{  "title": "Verification in Progress",
-    "processingDescription": "Your identity verification is being processed by bank. This process may take a few minutes to several hours.",
-    "requiresInputDescription": "Your verification requires additional information. Please continue the process by clicking the button below.",
-    "statusProcessing": "Processing",
-    "statusRequiresInput": "Action required",
-    "refreshStatus": "Refresh status",
-    "continueVerification": "Continue verification",
-    "notificationInfo": "You'll receive a notification as soon as your verification is complete."},
-
-  "accountConfigured": {
-    "title": "Account Configured",
-    "description": "Your account is configured to receive payments.",
-    "descriptionIdentityPending": "Your account is almost ready. To transfer money to your bank account, please verify your identity.",
-    "resetAccount": "Reset account",
-    "manageAccount": "Manage account",
-    "verifyIdentity": "Verify my identity",
-    "updateBankAccount": "Update my bank account",
-    "bankAccount": "Bank account"
-  },
-  "errors": {
-    "title": "Error",
-    "generic": "An error occurred",
-    "selectDocument": "Please select a document",
-    "uploadError": "Upload error:",
-    "uploadFailed": "An error occurred during upload",
-    "verificationFailed": "Identity verification failed",
-    "missingDocuments": "Please provide all required documents",
-    "preparationFailed": "Verification preparation failed",
-    "verificationError": "Error during identity verification",
-    "cannotOpenBrowser": "Cannot open browser for verification",
-    "checkStatus": "Unable to check current status"
-  },
-  "noAccount": {
-    "title": "bank Account Not Set Up",
-    "description": "You don't have an account yet. An account will be automatically created when you publish your first Hushy. You can then set up your payment information.",
-    "understand": "I understand"
-  },
-  "identityVerification": {
-    "title": "Identity Verification",
-    "description": "To receive your payments, we need to verify your identity in accordance with regulations.",
-    "documentTitle": "Identity Document",
-    "documentDescription": "Please provide an identity document (ID card, passport, or driver's license).",
-    "selfieTitle": "Photo of Yourself",
-    "selfieDescription": "Take a photo of yourself to confirm your identity.",
-    "reviewTitle": "Identity Verification",
-    "reviewDescription": "Please review the documents before submitting.",
-    "documentSelected": "Document selected: {{name}}",
-    "selfieSelected": "Photo of yourself selected",
-    "processingTitle": "Verification in Progress",
-    "processingDescription": "Your identity verification is being processed. This may take a few moments.",
-    "pending": "Your verification is being processed. Please check the status later.",
-    "chooseDocument": "Choose a document",
-    "changeDocument": "Change document",
-    "takeSelfie": "Take a selfie",
-    "selectDocument": "Select a document",
-    "restart": "Start over",
-    "submit": "Submit",
-    "submitting": "Submitting...",
-    "uploading": "Uploading...",
-    "checkStatus": "Check status",
-    "verifyOnline": "Verify online",
-    "uploadDocuments": "Upload documents"
-  },
-  "documentOptions": {
-    "takePhoto": "Take a photo",
-    "chooseFromGallery": "Choose from gallery",
-    "cancel": "Cancel"
-  },
-  "selfieOptions": {
-    "takePhoto": "Take a photo",
-    "chooseFromGallery": "Choose from gallery",
-    "cancel": "Cancel"
-  },
-  "success": {
-    "title": "Success",
-    "documentSubmitted": "Your identity document has been successfully submitted.",
-    "identityVerified": "Your identity has been successfully verified."
-  },
-  "deleteConfirm": {
-    "title": "Delete this hushy?",
-    "message": "This action cannot be undone.",
-    "cancel": "Cancel",
-    "confirm": "Delete"
-  },
-  "deleteSuccess": {
-    "title": "Success",
-    "message": "hushy deleted successfully",
-    "ok": "OK"
-  },
-  "deleteError": {
-    "title": "Error",
-    "message": "Could not delete this hushy",
-    "ok": "OK"
-  },
-  "delete": "Delete",
-  "verification": {
-    "title": "Identity Verification",
-    "message": "You will be redirected to bank to verify your identity. Would you like to continue?",
-    "cancel": "Cancel",
-    "continue": "Continue",
-    "ok": "OK",
-    "inProgress": {
-      "title": "Verification in Progress",
-      "message": "Your identity verification is being processed. We will notify you when it's complete."
+  "stripeVerification": {
+    "logs": {
+      "userCancelled": "Image selection cancelled by user"
     },
-    "submitted": {
-      "title": "Verification Submitted",
-      "message": "Your verification has been successfully submitted. Processing may take a few minutes to a few hours."
+
+    "verificationInProgress": {
+      "title": "Verification in Progress",
+      "processingDescription": "Your identity verification is being processed by bank. This process may take a few minutes to several hours.",
+      "requiresInputDescription": "Your verification requires additional information. Please continue the process by clicking the button below.",
+      "statusProcessing": "Processing",
+      "statusRequiresInput": "Action required",
+      "refreshStatus": "Refresh status",
+      "continueVerification": "Continue verification",
+      "notificationInfo": "You'll receive a notification as soon as your verification is complete."
+    },
+
+    "accountConfigured": {
+      "title": "Account Configured",
+      "description": "Your account is configured to receive payments.",
+      "descriptionIdentityPending": "Your account is almost ready. To transfer money to your bank account, please verify your identity.",
+      "resetAccount": "Reset account",
+      "manageAccount": "Manage account",
+      "verifyIdentity": "Verify my identity",
+      "updateBankAccount": "Update my bank account",
+      "bankAccount": "Bank account"
+    },
+    "errors": {
+      "title": "Error",
+      "generic": "An error occurred",
+      "selectDocument": "Please select a document",
+      "uploadError": "Upload error:",
+      "uploadFailed": "An error occurred during upload",
+      "verificationFailed": "Identity verification failed",
+      "missingDocuments": "Please provide all required documents",
+      "preparationFailed": "Verification preparation failed",
+      "verificationError": "Error during identity verification",
+      "cannotOpenBrowser": "Cannot open browser for verification",
+      "checkStatus": "Unable to check current status"
+    },
+    "noAccount": {
+      "title": "bank Account Not Set Up",
+      "description": "You don't have an account yet. An account will be automatically created when you publish your first Hushy. You can then set up your payment information.",
+      "understand": "I understand"
+    },
+    "identityVerification": {
+      "title": "Identity Verification",
+      "selectCountry": "Country of residence",
+      "selectCountryPlaceholder": "Select your country",
+      "description": "To receive your payments, we need to verify your identity in accordance with regulations.",
+      "documentTitle": "Identity Document",
+      "documentDescription": "Please provide an identity document (ID card, passport, or driver's license).",
+      "selfieTitle": "Photo of Yourself",
+      "selfieDescription": "Take a photo of yourself to confirm your identity.",
+      "reviewTitle": "Identity Verification",
+      "reviewDescription": "Please review the documents before submitting.",
+      "documentSelected": "Document selected: {{name}}",
+      "selfieSelected": "Photo of yourself selected",
+      "processingTitle": "Verification in Progress",
+      "processingDescription": "Your identity verification is being processed. This may take a few moments.",
+      "pending": "Your verification is being processed. Please check the status later.",
+      "chooseDocument": "Choose a document",
+      "changeDocument": "Change document",
+      "takeSelfie": "Take a selfie",
+      "selectDocument": "Select a document",
+      "restart": "Start over",
+      "submit": "Submit",
+      "submitting": "Submitting...",
+      "uploading": "Uploading...",
+      "checkStatus": "Check status",
+      "verifyOnline": "Verify online",
+      "uploadDocuments": "Upload documents"
+    },
+    "documentOptions": {
+      "takePhoto": "Take a photo",
+      "chooseFromGallery": "Choose from gallery",
+      "cancel": "Cancel"
+    },
+    "selfieOptions": {
+      "takePhoto": "Take a photo",
+      "chooseFromGallery": "Choose from gallery",
+      "cancel": "Cancel"
+    },
+    "success": {
+      "title": "Success",
+      "documentSubmitted": "Your identity document has been successfully submitted.",
+      "identityVerified": "Your identity has been successfully verified."
+    },
+    "deleteConfirm": {
+      "title": "Delete this hushy?",
+      "message": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "deleteSuccess": {
+      "title": "Success",
+      "message": "hushy deleted successfully",
+      "ok": "OK"
+    },
+    "deleteError": {
+      "title": "Error",
+      "message": "Could not delete this hushy",
+      "ok": "OK"
+    },
+    "delete": "Delete",
+    "verification": {
+      "title": "Identity Verification",
+      "message": "You will be redirected to bank to verify your identity. Would you like to continue?",
+      "cancel": "Cancel",
+      "continue": "Continue",
+      "ok": "OK",
+      "inProgress": {
+        "title": "Verification in Progress",
+        "message": "Your identity verification is being processed. We will notify you when it's complete."
+      },
+      "submitted": {
+        "title": "Verification Submitted",
+        "message": "Your verification has been successfully submitted. Processing may take a few minutes to a few hours."
+      }
+    },
+    "statusMessages": {
+      "title": "Verification Status",
+      "verified": "Your identity has been successfully verified. You can now receive payments.",
+      "processing": "Your verification is being processed. This may take a few minutes to a few hours.",
+      "requiresInput": "Additional information is needed to complete your verification. Please follow the provided instructions.",
+      "default": "Current status: {{status}}. Contact support if you need assistance."
     }
   },
-  "statusMessages": {
-    "title": "Verification Status",
-    "verified": "Your identity has been successfully verified. You can now receive payments.",
-    "processing": "Your verification is being processed. This may take a few minutes to a few hours.",
-    "requiresInput": "Additional information is needed to complete your verification. Please follow the provided instructions.",
-    "default": "Current status: {{status}}. Contact support if you need assistance."
-  }
-},
   "notifications": {
     "alerts": {
       "simulatorWarning": "Notifications don't work on simulator",

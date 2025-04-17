@@ -62,6 +62,10 @@ const UserSchema = new mongoose.Schema({
         required: false,
         default: false // Désactivé par défaut
     },
+    country: {
+        type: String,
+        default: 'FR' // Définir la France comme pays par défaut
+      },
     hasSubscriptions: {
         type: Number,
         required: false,

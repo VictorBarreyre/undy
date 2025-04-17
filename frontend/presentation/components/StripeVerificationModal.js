@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import {
     VStack, Text, Button, Actionsheet,
-    Box, Progress, HStack
+    Box, Progress, HStack, Select, CheckIcon
 } from 'native-base';
 import { Platform, Alert, Linking } from 'react-native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
@@ -42,6 +42,18 @@ const StripeVerificationModal = ({
     });
     const [hasCompletedVerification, setHasCompletedVerification] = useState(false);
     const isStatusChecked = useRef(false);
+    const [selectedCountry, setSelectedCountry] = useState('FR'); // France par défaut
+
+    const supportedCountries = [
+        { code: 'FR', name: 'France' },
+        { code: 'US', name: 'États-Unis' },
+        { code: 'GB', name: 'Royaume-Uni' },
+        { code: 'DE', name: 'Allemagne' },
+        { code: 'ES', name: 'Espagne' },
+        { code: 'IT', name: 'Italie' },
+        // Ajoutez d'autres pays selon vos besoins
+    ];
+
 
     // Met à jour les données locales quand userData change
     useEffect(() => {
@@ -122,120 +134,120 @@ const StripeVerificationModal = ({
     }, [refreshUserDataAndUpdate, handleStripeOnboardingRefresh, localUserData]);
 
     // Fonction qui fait l'appel API pour vérifier le statut
-const checkStatusFromAPI = async (sessionId) => {
-    const instance = getAxiosInstance();
-    try {
-      if (!instance) {
-        throw new Error("Axios instance not initialized");
-      }
-      
-      const response = await instance.get('/api/secrets/check-identity-verification-status', {
-        params: { sessionId }  // Ajouter le sessionId comme paramètre
-      });
-      
-      if (!response || !response.data) {
-        throw new Error("Réponse invalide du serveur");
-      }
-      
-      return response.data;
-    } catch (error) {
-      console.error('Erreur de vérification du statut:', error);
-      throw error;
-    }
-  };
-  
-  // Fonction de vérification périodique
-  const checkIdentityVerificationStatus = (sessionId) => {
-    const maxAttempts = 30;
-    let attempts = 0;
-    
-    console.log(`[StripeVerificationModal] Démarrage de la vérification périodique pour la session ${sessionId}`);
-    
-    const intervalId = setInterval(async () => {
-      try {
-        attempts++;
-        
-        console.log(`[StripeVerificationModal] Vérification #${attempts}/${maxAttempts} pour la session ${sessionId}`);
-        
-        if (attempts >= maxAttempts) {
-          console.log(`[StripeVerificationModal] Nombre maximum de tentatives atteint (${maxAttempts})`);
-          clearInterval(intervalId);
-          return;
+    const checkStatusFromAPI = async (sessionId) => {
+        const instance = getAxiosInstance();
+        try {
+            if (!instance) {
+                throw new Error("Axios instance not initialized");
+            }
+
+            const response = await instance.get('/api/secrets/check-identity-verification-status', {
+                params: { sessionId }  // Ajouter le sessionId comme paramètre
+            });
+
+            if (!response || !response.data) {
+                throw new Error("Réponse invalide du serveur");
+            }
+
+            return response.data;
+        } catch (error) {
+            console.error('Erreur de vérification du statut:', error);
+            throw error;
         }
-        
-        const statusResult = await checkStatusFromAPI(sessionId);
-        console.log(`[StripeVerificationModal] Résultat de la vérification:`, JSON.stringify(statusResult || {}, null, 2));
-        
-        if (statusResult && statusResult.success) {
-          // Log détaillé pour déboguer
-          console.log(`[StripeVerificationModal] État de la vérification:
+    };
+
+    // Fonction de vérification périodique
+    const checkIdentityVerificationStatus = (sessionId) => {
+        const maxAttempts = 30;
+        let attempts = 0;
+
+        console.log(`[StripeVerificationModal] Démarrage de la vérification périodique pour la session ${sessionId}`);
+
+        const intervalId = setInterval(async () => {
+            try {
+                attempts++;
+
+                console.log(`[StripeVerificationModal] Vérification #${attempts}/${maxAttempts} pour la session ${sessionId}`);
+
+                if (attempts >= maxAttempts) {
+                    console.log(`[StripeVerificationModal] Nombre maximum de tentatives atteint (${maxAttempts})`);
+                    clearInterval(intervalId);
+                    return;
+                }
+
+                const statusResult = await checkStatusFromAPI(sessionId);
+                console.log(`[StripeVerificationModal] Résultat de la vérification:`, JSON.stringify(statusResult || {}, null, 2));
+
+                if (statusResult && statusResult.success) {
+                    // Log détaillé pour déboguer
+                    console.log(`[StripeVerificationModal] État de la vérification:
               - Vérifié: ${statusResult.verified}
               - Statut: ${statusResult.status}
           `);
-          
-          if (statusResult.verified) {
-            console.log(`[StripeVerificationModal] Vérification réussie!`);
-            clearInterval(intervalId);
-            
-            setVerificationStatus({
-              verified: true,
-              status: 'verified'
-            });
-            
-            await refreshUserDataAndUpdate();
-            
-            Alert.alert(
-              t('stripeVerification.verification.success.title'),
-              t('stripeVerification.verification.success.message'),
-              [{ text: t('stripeVerification.verification.great') }]
-            );
-          } else if (statusResult.status === 'requires_input' || statusResult.status === 'failed') {
-            console.log(`[StripeVerificationModal] La vérification nécessite une action ou a échoué: ${statusResult.status}`);
-            clearInterval(intervalId);
-            
-            setVerificationStatus({
-              verified: false,
-              status: statusResult.status
-            });
-            
-            await refreshUserDataAndUpdate();
-            
-            if (statusResult.status === 'requires_input') {
-              Alert.alert(
-                t('stripeVerification.verification.requiresInput.title'),
-                t('stripeVerification.verification.requiresInput.message'),
-                [
-                  {
-                    text: t('stripeVerification.verification.ok'),
-                    onPress: () => {
-                      // Option pour rediriger l'utilisateur si nécessaire
+
+                    if (statusResult.verified) {
+                        console.log(`[StripeVerificationModal] Vérification réussie!`);
+                        clearInterval(intervalId);
+
+                        setVerificationStatus({
+                            verified: true,
+                            status: 'verified'
+                        });
+
+                        await refreshUserDataAndUpdate();
+
+                        Alert.alert(
+                            t('stripeVerification.verification.success.title'),
+                            t('stripeVerification.verification.success.message'),
+                            [{ text: t('stripeVerification.verification.great') }]
+                        );
+                    } else if (statusResult.status === 'requires_input' || statusResult.status === 'failed') {
+                        console.log(`[StripeVerificationModal] La vérification nécessite une action ou a échoué: ${statusResult.status}`);
+                        clearInterval(intervalId);
+
+                        setVerificationStatus({
+                            verified: false,
+                            status: statusResult.status
+                        });
+
+                        await refreshUserDataAndUpdate();
+
+                        if (statusResult.status === 'requires_input') {
+                            Alert.alert(
+                                t('stripeVerification.verification.requiresInput.title'),
+                                t('stripeVerification.verification.requiresInput.message'),
+                                [
+                                    {
+                                        text: t('stripeVerification.verification.ok'),
+                                        onPress: () => {
+                                            // Option pour rediriger l'utilisateur si nécessaire
+                                        }
+                                    }
+                                ]
+                            );
+                        } else {
+                            Alert.alert(
+                                t('stripeVerification.verification.failed.title'),
+                                t('stripeVerification.verification.failed.message'),
+                                [{ text: t('stripeVerification.verification.ok') }]
+                            );
+                        }
+                    } else {
+                        // Mise à jour de l'état de vérification pour l'interface
+                        setVerificationStatus({
+                            verified: statusResult.verified,
+                            status: statusResult.status
+                        });
+                        console.log(`[StripeVerificationModal] Statut de vérification mis à jour: ${statusResult.status}`);
                     }
-                  }
-                ]
-              );
-            } else {
-              Alert.alert(
-                t('stripeVerification.verification.failed.title'),
-                t('stripeVerification.verification.failed.message'),
-                [{ text: t('stripeVerification.verification.ok') }]
-              );
+                } else {
+                    console.error(`[StripeVerificationModal] Échec de la vérification du statut: ${statusResult?.message || 'Erreur inconnue'}`);
+                }
+            } catch (error) {
+                console.error('[StripeVerificationModal] Erreur lors de la vérification du statut:', error);
             }
-          } else {
-            // Mise à jour de l'état de vérification pour l'interface
-            setVerificationStatus({
-              verified: statusResult.verified,
-              status: statusResult.status
-            });
-            console.log(`[StripeVerificationModal] Statut de vérification mis à jour: ${statusResult.status}`);
-          }
-        } else {
-          console.error(`[StripeVerificationModal] Échec de la vérification du statut: ${statusResult?.message || 'Erreur inconnue'}`);
-        }
-      } catch (error) {
-        console.error('[StripeVerificationModal] Erreur lors de la vérification du statut:', error);
-      }
-    }, 10000);
-  };
+        }, 10000);
+    };
 
     // Fonction pour vérifier le statut de vérification
     const checkStatus = async (showAlert = true) => {
@@ -297,7 +309,8 @@ const checkStatusFromAPI = async (sessionId) => {
             const freshUserData = await refreshUserDataAndUpdate() || localUserData;
 
             const sessionResponse = await handleIdentityVerification(freshUserData, {
-                skipImageUpload: true
+                skipImageUpload: true,
+                country: selectedCountry
             });
 
             console.log("Réponse de création de session:", JSON.stringify(sessionResponse, null, 2));
@@ -395,7 +408,9 @@ const checkStatusFromAPI = async (sessionId) => {
                 documentImage: `data:${identityDocument.type};base64,${identityDocument.base64}`,
                 selfieImage: `data:${selfieImage.type};base64,${selfieImage.base64}`,
                 documentType: 'identity_document',
-                documentSide: 'front'
+                documentSide: 'front',
+                country: selectedCountry // Ajoutez le pays sélectionné
+
             };
 
             const sessionResponse = await handleIdentityVerification(localUserData, documentData);
@@ -473,37 +488,37 @@ const checkStatusFromAPI = async (sessionId) => {
             console.error("Session ID manquant, impossible de démarrer la vérification périodique.");
             return; // Sortie immédiate si pas de sessionId
         }
-    
+
         console.log('[StripeVerificationModal] Démarrage de la vérification périodique pour la session', sessionId);
-        
+
         const maxAttempts = 30;
         let attempts = 0;
-    
+
         const intervalId = setInterval(async () => {
             try {
                 attempts++;
-    
+
                 if (attempts >= maxAttempts) {
                     clearInterval(intervalId);
                     console.log('[StripeVerificationModal] Nombre maximum de tentatives atteint');
                     return;
                 }
-    
+
                 console.log(`Vérification du statut (tentative ${attempts}):`, sessionId);
                 const statusResult = await checkIdentityVerificationStatus(sessionId); // Passer le sessionId
-    
+
                 if (statusResult.success) {
                     if (statusResult.verified) {
                         clearInterval(intervalId);
                         console.log('[StripeVerificationModal] Vérification réussie');
-    
+
                         setVerificationStatus({
                             verified: true,
                             status: 'verified'
                         });
-    
+
                         await refreshUserDataAndUpdate();
-    
+
                         Alert.alert(
                             t('stripeVerification.verification.success.title'),
                             t('stripeVerification.verification.success.message'),
@@ -516,7 +531,7 @@ const checkStatusFromAPI = async (sessionId) => {
                 clearInterval(intervalId); // Arrêter l'intervalle en cas d'erreur
             }
         }, 10000);
-    
+
         // Retourner l'ID de l'intervalle pour pouvoir l'arrêter si nécessaire
         return intervalId;
     };
@@ -530,16 +545,16 @@ const checkStatusFromAPI = async (sessionId) => {
     const handleUpdateBankAccount = async () => {
         try {
             setIsLoading(true);
-            
+
             const instance = getAxiosInstance();
             if (!instance) {
                 throw new Error(t('errors.axiosNotInitialized'));
             }
-            
+
             const response = await instance.post('/api/secrets/stripe/update-bank-account', {
                 stripeAccountId: localUserData.stripeAccountId
             });
-            
+
             if (response.data && response.data.url) {
                 // Rediriger vers le formulaire Stripe
                 Linking.openURL(response.data.url);
@@ -605,29 +620,29 @@ const checkStatusFromAPI = async (sessionId) => {
                     <Text style={styles.h4} textAlign="center">
                         {t('stripeVerification.verificationInProgress.title')}
                     </Text>
-                    
+
                     <Text
                         style={styles.caption}
                         color="#94A3B8"
                         textAlign="center"
                         mb={4}
                     >
-                        {verificationStatus.status === 'processing' 
+                        {verificationStatus.status === 'processing'
                             ? t('stripeVerification.verificationInProgress.processingDescription')
                             : t('stripeVerification.verificationInProgress.requiresInputDescription')}
                     </Text>
-                    
+
                     <Box bg="blue.50" p={4} borderRadius="md" mb={4}>
                         <HStack alignItems="center" space={2}>
                             <Box w={2} h={2} borderRadius="full" bg={verificationStatus.status === 'processing' ? "blue.500" : "orange.500"} />
                             <Text color={verificationStatus.status === 'processing' ? "blue.700" : "orange.700"} fontWeight="medium">
-                                {verificationStatus.status === 'processing' 
+                                {verificationStatus.status === 'processing'
                                     ? t('stripeVerification.verificationInProgress.statusProcessing')
                                     : t('stripeVerification.verificationInProgress.statusRequiresInput')}
                             </Text>
                         </HStack>
                     </Box>
-                    
+
                     <VStack space={2}>
                         <Button
                             onPress={checkStatus}
@@ -638,7 +653,7 @@ const checkStatusFromAPI = async (sessionId) => {
                                 {t('stripeVerification.verificationInProgress.refreshStatus')}
                             </Text>
                         </Button>
-                        
+
                         {verificationStatus.status === 'requires_input' && (
                             <Button
                                 onPress={() => initiateStripeVerification()}
@@ -670,6 +685,32 @@ const checkStatusFromAPI = async (sessionId) => {
                     >
                         {t('stripeVerification.identityVerification.description')}
                     </Text>
+
+                    <Box mb={4} mt={2}>
+                        <Text style={styles.subtitle} mb={2}>
+                            {t('stripeVerification.identityVerification.selectCountry')}
+                        </Text>
+                        <Select
+                            selectedValue={selectedCountry}
+                            minWidth="full"
+                            accessibilityLabel={t('stripeVerification.identityVerification.selectCountryPlaceholder')}
+                            placeholder={t('stripeVerification.identityVerification.selectCountryPlaceholder')}
+                            _selectedItem={{
+                                bg: "gray.200",
+                                endIcon: <CheckIcon size="5" />
+                            }}
+                            borderRadius="md"
+                            onValueChange={(itemValue) => setSelectedCountry(itemValue)}
+                        >
+                            {supportedCountries.map((country) => (
+                                <Select.Item
+                                    key={country.code}
+                                    label={country.name}
+                                    value={country.code}
+                                />
+                            ))}
+                        </Select>
+                    </Box>
 
                     <VStack space={2}>
                         <Button
