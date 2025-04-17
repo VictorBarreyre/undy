@@ -367,6 +367,8 @@ exports.verifyIdentity = async (req, res) => {
     } = req.body;
     const userId = req.user.id;
 
+    const userCountry = country || 'FR';
+
     // Vérifier que l'utilisateur demande une vérification pour son propre compte
     const user = await User.findById(userId).select('+stripeAccountId stripeAccountStatus stripeIdentityVerified phoneNumber');
 
