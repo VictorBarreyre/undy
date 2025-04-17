@@ -363,11 +363,13 @@ exports.verifyIdentity = async (req, res) => {
       selfieImage, 
       documentType, 
       documentSide,
-      country // Nouveau paramètre
+      country // Paramètre de pays
     } = req.body;
+    
     const userId = req.user.id;
-
-    const userCountry = country || 'FR';
+    const userCountry = country || 'FR'; // France par défaut si non spécifié
+    
+    console.log("Pays sélectionné pour la vérification:", userCountry);
 
     // Vérifier que l'utilisateur demande une vérification pour son propre compte
     const user = await User.findById(userId).select('+stripeAccountId stripeAccountStatus stripeIdentityVerified phoneNumber');
@@ -413,8 +415,8 @@ exports.verifyIdentity = async (req, res) => {
         ? `https://${req.get('host')}/redirect.html?path=`
         : process.env.FRONTEND_URL || 'hushy://stripe-return';
 
-    const returnUrl = `${baseReturnUrl}?action=verify_complete&identity=true`;
-    const refreshUrl = `${baseReturnUrl}?action=verify_refresh&identity=true`;
+    const returnUrl = `${baseReturnUrl}?action=verify_complete&identity=true&country=${userCountry}`;
+    const refreshUrl = `${baseReturnUrl}?action=verify_refresh&identity=true&country=${userCountry}`;
 
     // Créer une session de vérification Stripe Identity
     if (skipImageUpload) {
@@ -424,7 +426,7 @@ exports.verifyIdentity = async (req, res) => {
         metadata: {
           userId: userId.toString(),
           phoneNumber: user.phoneNumber || 'not_provided',
-          country: userCountry // Ajouter le pays aux métadonnées
+          country: userCountry // Stocker le pays dans les métadonnées
         },
         options: {
           document: {
@@ -438,27 +440,26 @@ exports.verifyIdentity = async (req, res) => {
         refresh_url: refreshUrl
       };
 
-      if (userCountry) {
-        verificationOptions.options.document.issuing_country = userCountry;
-      }
-
       // Créer la session de vérification
       const verificationSession = await stripe.identity.verificationSessions.create(verificationOptions);
 
-      // Sauvegarder l'ID de session pour référence ultérieure
+      // Sauvegarder l'ID de session et le pays pour référence ultérieure
       user.stripeVerificationSessionId = verificationSession.id;
       user.stripeVerificationStatus = 'pending';
+      user.country = userCountry; // Stocker le pays de l'utilisateur
       await user.save();
 
       console.log("Session de vérification d'identité créée:", {
         sessionId: verificationSession.id,
-        status: verificationSession.status
+        status: verificationSession.status,
+        country: userCountry
       });
 
       return res.status(200).json({
         success: true,
         sessionId: verificationSession.id,
         verificationUrl: verificationSession.url,
+        country: userCountry,
         message: 'Session de vérification créée avec succès'
       });
     } else {
@@ -471,22 +472,21 @@ exports.verifyIdentity = async (req, res) => {
       // mais nous pouvons essayer de l'implémenter
 
       // Créer une session de vérification
-      const verificationSession = await stripe.identity.verificationSessions.create({
+      const verificationOptions = {
         type: 'document',
         metadata: {
           userId: userId.toString(),
-          country: userCountry 
+          country: userCountry // Stocker le pays dans les métadonnées
         },
-        verification_flow: {
-          metadata: {
-            country: userCountry
+        options: {
+          document: {
+            require_id_number: true,
+            require_matching_selfie: !!selfieImage
           }
-        },
-      });
+        }
+      };
 
-      if (userCountry) {
-        verificationOptions.options.document.issuing_country = userCountry;
-      }
+      const verificationSession = await stripe.identity.verificationSessions.create(verificationOptions);
 
       try {
         // Préparation et upload des documents
@@ -529,15 +529,17 @@ exports.verifyIdentity = async (req, res) => {
           }
         );
 
-        // Enregistrer les informations de session
+        // Enregistrer les informations de session et le pays
         user.stripeVerificationSessionId = verificationSession.id;
         user.stripeVerificationStatus = 'pending';
+        user.country = userCountry; // Stocker le pays de l'utilisateur
         await user.save();
 
         return res.status(200).json({
           success: true,
           sessionId: verificationSession.id,
           clientSecret: verificationSession.client_secret,
+          country: userCountry,
           message: 'Documents soumis avec succès pour vérification'
         });
       } catch (uploadError) {
@@ -548,11 +550,11 @@ exports.verifyIdentity = async (req, res) => {
         await stripe.identity.verificationSessions.cancel(verificationSession.id);
 
         // Créer une nouvelle session avec redirection
-        const newSession = await stripe.identity.verificationSessions.create({
+        const fallbackOptions = {
           type: 'document',
           metadata: {
             userId: userId.toString(),
-            country: userCountry // Ajouter le pays aux métadonnées
+            country: userCountry // Stocker le pays dans les métadonnées
           },
           options: {
             document: {
@@ -560,24 +562,23 @@ exports.verifyIdentity = async (req, res) => {
               require_matching_selfie: true
             }
           },
-    
           return_url: returnUrl,
           refresh_url: refreshUrl
-        });
+        };
 
-        if (userCountry) {
-          verificationOptions.options.document.issuing_country = userCountry;
-        }
+        const newSession = await stripe.identity.verificationSessions.create(fallbackOptions);
 
         // Mettre à jour les informations utilisateur
         user.stripeVerificationSessionId = newSession.id;
         user.stripeVerificationStatus = 'pending';
+        user.country = userCountry; // Stocker le pays de l'utilisateur
         await user.save();
 
         return res.status(200).json({
           success: true,
           sessionId: newSession.id,
           verificationUrl: newSession.url,
+          country: userCountry,
           fallbackToRedirect: true,
           message: 'Impossible de traiter les documents directement. Veuillez utiliser le lien de vérification.'
         });
@@ -591,7 +592,6 @@ exports.verifyIdentity = async (req, res) => {
     });
   }
 };
-
 
 exports.updateBankAccount = async (req, res) => {
   try {
