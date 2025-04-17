@@ -12,6 +12,7 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { useTranslation } from 'react-i18next';
 import { useStripe } from '@stripe/stripe-react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
+import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 
 const StripeVerificationModal = ({
     isOpen,
@@ -49,6 +50,7 @@ const StripeVerificationModal = ({
         }
     }, [userData]);
 
+    console.log(userData)
     // Rafraîchit les données utilisateur
     const refreshUserDataAndUpdate = useCallback(async () => {
         setIsRefreshing(true);
@@ -65,14 +67,6 @@ const StripeVerificationModal = ({
             setIsRefreshing(false);
         }
     }, [fetchUserData, userData, localUserData]);
-
-    // Vérifier le statut de vérification au chargement
-    const checkInitialStatus = useCallback(async () => {
-        if (isOpen && localUserData?.stripeAccountStatus === 'active' && !isStatusChecked.current) {
-            isStatusChecked.current = true;
-            await checkStatus(false);
-        }
-    }, [isOpen, localUserData]);
 
     // Rafraîchir les données à l'ouverture du modal si l'utilisateur a terminé la vérification
     useEffect(() => {
@@ -92,14 +86,6 @@ const StripeVerificationModal = ({
                 if (url.includes('stripe-return') || url.includes('action=complete')) {
                     console.log("Retour de Stripe détecté, rafraîchissement des données...");
                     console.log("URL complète du retour:", url);
-
-                    // Supprimez ces lignes qui utilisent des variables non définies
-                    // console.log("User ID actuel:", req.user.id);
-                    // console.log("Stripe Account ID stocké:", user.stripeAccountId);
-                    // const account = await stripe.accounts.retrieve(user.stripeAccountId);
-                    // console.log("Vérification du compte Stripe:", account.id);
-
-                    // Log qui a du sens dans le frontend
                     console.log("ID du compte Stripe dans les données locales:", localUserData?.stripeAccountId);
 
                     setTimeout(async () => {

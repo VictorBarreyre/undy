@@ -21,7 +21,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STRIPE_PUBLISHABLE_KEY } from '@env';
 import { StripeProvider } from '@stripe/stripe-react-native';
-
+import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 
 
 export default function Profile({ navigation }) {
@@ -44,9 +44,39 @@ export default function Profile({ navigation }) {
     const [keyboardHeight, setKeyboardHeight] = useState(0);
     const { height: windowHeight } = useWindowDimensions();
     const [actionSheetPosition] = useState(new Animated.Value(0));
+    const [accurateEarnings, setAccurateEarnings] = useState(null);
 
+    const fetchAccurateEarnings = async () => {
+        try {
+          const instance = getAxiosInstance();
+          if (!instance) {
+            console.error("Axios instance not initialized");
+            return;
+          }
+          
+          const response = await instance.get('/api/users/transactions');
+          
+          if (response.data) {
+            // Calculer le total des revenus à partir des transactions
+            const totalEarnings = response.data.transactions
+              .filter(transaction => transaction.type === 'payment')
+              .reduce((total, transaction) => total + (transaction.netAmount || 0), 0);
+            
+            console.log(`Revenus précis chargés: ${totalEarnings}€`);
+            setAccurateEarnings(totalEarnings);
+          }
+        } catch (error) {
+          console.error('Erreur lors du chargement des revenus précis:', error);
+        }
+      };
+      
 
-
+      useEffect(() => {
+        if (userData?.stripeAccountId && userData?.stripeAccountStatus === 'active') {
+          fetchAccurateEarnings();
+        }
+      }, [userData]); // Recharger si userData change
+      
 
     useEffect(() => {
         const keyboardWillShowListener = Keyboard.addListener(
@@ -187,10 +217,6 @@ export default function Profile({ navigation }) {
         };
     }, []);
 
-
-    const AnimatedActionsheetContent = Animated.createAnimatedComponent(Actionsheet.Content);
-
-    const [isLoading, setIsLoading] = useState(false);
 
     if (userData) {
         const { profilePicture, ...userDataWithoutPicture } = userData;
@@ -506,15 +532,15 @@ export default function Profile({ navigation }) {
             icon: faDollarSign,
             truncateLength: 15,
             getValue: (userData) => {
-                if (!userData?.totalEarnings && userData?.totalEarnings !== 0) {
-                    return '0,00 €';
-                }
-                return new Intl.NumberFormat('fr-FR', {
-                    style: 'currency',
-                    currency: 'EUR'
-                }).format(userData.totalEarnings || 0);
+              // Utiliser accurateEarnings s'il est disponible, sinon userData.totalEarnings
+              const earningsValue = accurateEarnings !== null ? accurateEarnings : (userData?.totalEarnings || 0);
+              
+              return new Intl.NumberFormat('fr-FR', {
+                style: 'currency',
+                currency: 'EUR'
+              }).format(earningsValue);
             }
-        },
+          },
         bank: {
             label: t('settings.fields.bank'),
             icon: faBuildingColumns,

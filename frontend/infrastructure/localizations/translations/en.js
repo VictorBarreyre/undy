@@ -221,10 +221,10 @@ export default {
     },
     "alerts": {
       "noStripeAccount": {
-        "title": "No Stripe Account",
-        "message": "You don't have a Stripe account set up to receive payments yet.",
+        "title": "No bank Account",
+        "message": "You don't have a bank account set up to receive payments yet.",
         "create": "Create an account",
-        "stripePersistent": "Stripe configuration is still required"
+        "stripePersistent": "bank configuration is still required"
       },
       "pendingData": {
         "title": "Pending Data",
@@ -410,10 +410,10 @@ export default {
     "deleteAccountConfirmation": "Are you sure you want to delete your account? This action is irreversible.",
     "delete": "Delete",
     "accountDeletedSuccess": "Your account has been deleted",
-    "resetStripeAccount": "Reset Stripe Account",
-    "resetStripeConfirmation": "Are you sure you want to reset your Stripe account? You will need to redo the onboarding process.",
+    "resetStripeAccount": "Reset bank Account",
+    "resetStripeConfirmation": "Are you sure you want to reset your bank account? You will need to redo the onboarding process.",
     "reset": "Reset",
-    "stripeResetSuccess": "Your Stripe account has been reset. You will be redirected to onboarding.",
+    "stripeResetSuccess": "Your bank account has been reset. You will be redirected to onboarding.",
     "mySubscriptions": "My Subscriptions",
     "noSubscriptionsYet": "You don't have any subscriptions yet. Discover our offers to enhance your experience.",
     "viewSubscriptions": "View Subscriptions",
@@ -448,8 +448,8 @@ export default {
       "genericError": "An error occurred",
       "genericLog": "Error:",
       "dataDownloadError": "An error occurred while downloading data",
-      "stripeResetErrorLog": "Error resetting Stripe account:",
-      "stripeResetError": "Error resetting Stripe account",
+      "stripeResetErrorLog": "Error resetting bank account:",
+      "stripeResetError": "Error resetting bank account",
       "logoutErrorLog": "Logout error:",
       "logoutError": "An error occurred during logout",
       "toggleLocationError": "Error toggling location settings:",
@@ -504,8 +504,8 @@ export default {
     "alerts": {
       "success": {
         "title": "Success",
-        "message": "Your Stripe account has been successfully configured!",
-        "accountCreated": "Your Stripe account has been successfully created!",
+        "message": "Your bank account has been successfully configured!",
+        "accountCreated": "Your bank account has been successfully created!",
       },
       "configInProgress": {
         "title": "Configuration in progress"
@@ -515,7 +515,7 @@ export default {
         "title": "Error",
         "deepLinkError": "Deep link error:",
         "unableToProcessLink": "Unable to process the link",
-        "stillNeedsConfig": "Stripe configuration is still needed.",
+        "stillNeedsConfig": "bank configuration is still needed.",
         "postingFailed": "Failed to automatically post the hushy.",
       },
       "returnToPost": "Return to posting",
@@ -622,7 +622,7 @@ export default {
   },
 
   "verificationInProgress":{  "title": "Verification in Progress",
-    "processingDescription": "Your identity verification is being processed by Stripe. This process may take a few minutes to several hours.",
+    "processingDescription": "Your identity verification is being processed by bank. This process may take a few minutes to several hours.",
     "requiresInputDescription": "Your verification requires additional information. Please continue the process by clicking the button below.",
     "statusProcessing": "Processing",
     "statusRequiresInput": "Action required",
@@ -654,7 +654,7 @@ export default {
     "checkStatus": "Unable to check current status"
   },
   "noAccount": {
-    "title": "Stripe Account Not Set Up",
+    "title": "bank Account Not Set Up",
     "description": "You don't have an account yet. An account will be automatically created when you publish your first Hushy. You can then set up your payment information.",
     "understand": "I understand"
   },
@@ -718,7 +718,7 @@ export default {
   "delete": "Delete",
   "verification": {
     "title": "Identity Verification",
-    "message": "You will be redirected to Stripe to verify your identity. Would you like to continue?",
+    "message": "You will be redirected to bank to verify your identity. Would you like to continue?",
     "cancel": "Cancel",
     "continue": "Continue",
     "ok": "OK",
@@ -773,14 +773,14 @@ export default {
       "axiosNotInitialized": "Axios instance not initialized",
       "secretCreation": "hushy creation error:",
       "secretCreationGeneric": "Error creating hushy",
-      "stripeRefresh": "Stripe refresh error:",
-      "stripeRefreshGeneric": "Error refreshing Stripe configuration",
-      "stripeReturn": "Stripe return error:",
-      "stripeReset": "Stripe account reset error:",
-      "stripeResetGeneric": "Error resetting Stripe account",
-      "stripeDelete": "Stripe account deletion error:",
+      "stripeRefresh": "bank refresh error:",
+      "stripeRefreshGeneric": "Error refreshing bank configuration",
+      "stripeReturn": "bank return error:",
+      "stripeReset": "bank account reset error:",
+      "stripeResetGeneric": "Error resetting bank account",
+      "stripeDelete": "bank account deletion error:",
       "stripeDeleteFundsAvailable": "Unable to delete account. Funds are still available.",
-      "stripeDeleteGeneric": "Error deleting Stripe account",
+      "stripeDeleteGeneric": "Error deleting bank account",
       "invalidDataFromApi": "Invalid data received from API",
       "fetchingSecrets": "Error fetching hushys:",
       "fetchingUserSecrets": "Error fetching user hushys and count:",
@@ -801,7 +801,7 @@ export default {
     },
     "logs": {
       "secretCreationResponse": "hushy creation response:",
-      "stripeRefreshResponse": "Stripe refresh response:",
+      "stripeRefreshResponse": "bank refresh response:",
       "attemptingPurchase": "Attempting to purchase hushy:",
       "messagesReceived": "Messages received:",
       "userDataNull": "getUserConversations: userData is null, returning empty array",
@@ -812,13 +812,13 @@ export default {
       "soughtSecret": "Sought hushy:"
     },
     "stripe": {
-      "configComplete": "Stripe account fully configured",
-      "configInProgress": "Stripe account configuration in progress",
-      "noAccount": "No Stripe account associated",
+      "configComplete": "bank account fully configured",
+      "configInProgress": "bank account configuration in progress",
+      "noAccount": "No bank account associated",
       "unknownStatus": "Unknown status",
-      "configSuccessful": "Stripe account successfully configured",
-      "resetSuccess": "Stripe account successfully reset",
-      "deleteSuccess": "Stripe account successfully deleted"
+      "configSuccessful": "bank account successfully configured",
+      "resetSuccess": "bank account successfully reset",
+      "deleteSuccess": "bank account successfully deleted"
     },
     "share": {
       "messageIOS": "🔐 Discover my hushy on hushy!\n\n{{link}}",

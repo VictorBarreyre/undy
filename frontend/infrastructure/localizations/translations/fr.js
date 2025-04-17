@@ -185,7 +185,7 @@ export default {
         "title": "Configuration nécessaire",
         "message": "Votre hushy a été créé. Pour pouvoir le vendre, vous devez configurer votre compte de paiement.",
         "configureNow": "Configurer maintenant",
-        "stripePersistent": "La configuration Stripe est toujours requise"
+        "stripePersistent": "La configuration bancaire est toujours requise"
       },
       "success": {
         "title": "Félicitations ! 🎉",
@@ -193,8 +193,8 @@ export default {
         "shareNow": "Partager maintenant 🔐"
       },
       "noStripeAccount": {
-        "title": "Pas de compte Stripe",
-        "message": "Vous n'avez pas encore de compte Stripe configuré pour recevoir des paiements.",
+        "title": "Pas de compte bancaire",
+        "message": "Vous n'avez pas encore de compte bancaire configuré pour recevoir des paiements.",
         "create": "Créer un compte"
       },
       "pendingData": {
@@ -372,10 +372,10 @@ export default {
     "deleteAccountConfirmation": "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.",
     "delete": "Supprimer",
     "accountDeletedSuccess": "Votre compte a été supprimé",
-    "resetStripeAccount": "Réinitialiser le compte Stripe",
-    "resetStripeConfirmation": "Êtes-vous sûr de vouloir réinitialiser votre compte Stripe ? Vous devrez refaire le processus d'onboarding.",
+    "resetStripeAccount": "Réinitialiser le compte bancaire",
+    "resetStripeConfirmation": "Êtes-vous sûr de vouloir réinitialiser votre compte bancaire ? Vous devrez refaire le processus d'onboarding.",
     "reset": "Réinitialiser",
-    "stripeResetSuccess": "Votre compte Stripe a été réinitialisé. Vous allez être redirigé vers l'onboarding.",
+    "stripeResetSuccess": "Votre compte bancaire a été réinitialisé. Vous allez être redirigé vers l'onboarding.",
     "mySubscriptions": "Mes abonnements",
     "noSubscriptionsYet": "Vous n'avez pas encore d'abonnements. Découvrez nos offres pour enrichir votre expérience.",
     "viewSubscriptions": "Voir les abonnements",
@@ -410,8 +410,8 @@ export default {
       "genericError": "Un problème est survenu",
       "genericLog": "Erreur:",
       "dataDownloadError": "Une erreur est survenue lors du téléchargement des données",
-      "stripeResetErrorLog": "Erreur de réinitialisation du compte Stripe:",
-      "stripeResetError": "Erreur lors de la réinitialisation du compte Stripe",
+      "stripeResetErrorLog": "Erreur de réinitialisation du compte bancaire:",
+      "stripeResetError": "Erreur lors de la réinitialisation du compte bancaire",
       "logoutErrorLog": "Erreur de déconnexion:",
       "logoutError": "Une erreur est survenue lors de la déconnexion",
       "toggleLocationError": "Erreur lors de l'activation/désactivation de la localisation:",
@@ -468,13 +468,13 @@ export default {
     "alerts": {
       "success": {
         "title": "Succès",
-        "message": "Votre compte Stripe a été configuré avec succès !",
-        "accountCreated": "Votre compte Stripe a été créé avec succès!",
+        "message": "Votre compte bancaire a été configuré avec succès !",
+        "accountCreated": "Votre compte bancaire a été créé avec succès!",
 
       },
       "error": {
         "title": "Erreur",
-        "stillNeedsConfig": "La configuration Stripe est toujours nécessaire.",
+        "stillNeedsConfig": "La configuration bancaire est toujours nécessaire.",
         "postingFailed": "Échec de la publication automatique du hushy.",
       },
       "configInProgress": {
@@ -627,7 +627,7 @@ export default {
     },
     "verificationInProgress": {
       "title": "Vérification en cours",
-      "processingDescription": "Votre vérification d'identité est en cours de traitement par Stripe. Ce processus peut prendre quelques minutes à plusieurs heures.",
+      "processingDescription": "Votre vérification d'identité est en cours de traitement par bancaire. Ce processus peut prendre quelques minutes à plusieurs heures.",
       "requiresInputDescription": "Votre vérification requiert des informations supplémentaires. Veuillez continuer le processus en cliquant sur le bouton ci-dessous.",
       "statusProcessing": "En cours de traitement",
       "statusRequiresInput": "Action requise",
@@ -723,7 +723,7 @@ export default {
     "delete": "Supprimer",
     "verification": {
       "title": "Vérification d'identité",
-      "message": "Vous allez être redirigé vers Stripe pour vérifier votre identité. Souhaitez-vous continuer ?",
+      "message": "Vous allez être redirigé vers bancaire pour vérifier votre identité. Souhaitez-vous continuer ?",
       "cancel": "Annuler",
       "continue": "Continuer",
       "ok": "OK",
@@ -779,14 +779,14 @@ export default {
       "axiosNotInitialized": "Instance Axios non initialisée",
       "secretCreation": "Erreur création hushy:",
       "secretCreationGeneric": "Erreur lors de la création du hushy",
-      "stripeRefresh": "Erreur rafraîchissement Stripe:",
-      "stripeRefreshGeneric": "Erreur lors du rafraîchissement de la configuration Stripe",
-      "stripeReturn": "Erreur de retour Stripe:",
-      "stripeReset": "Erreur réinitialisation compte Stripe:",
-      "stripeResetGeneric": "Erreur lors de la réinitialisation du compte Stripe",
-      "stripeDelete": "Erreur suppression compte Stripe:",
+      "stripeRefresh": "Erreur rafraîchissement bancaire:",
+      "stripeRefreshGeneric": "Erreur lors du rafraîchissement de la configuration bancaire",
+      "stripeReturn": "Erreur de retour bancaire:",
+      "stripeReset": "Erreur réinitialisation compte bancaire:",
+      "stripeResetGeneric": "Erreur lors de la réinitialisation du compte bancaire",
+      "stripeDelete": "Erreur suppression compte bancaire:",
       "stripeDeleteFundsAvailable": "Impossible de supprimer le compte. Des fonds sont encore disponibles.",
-      "stripeDeleteGeneric": "Erreur lors de la suppression du compte Stripe",
+      "stripeDeleteGeneric": "Erreur lors de la suppression du compte bancaire",
       "invalidDataFromApi": "Données invalides reçues depuis l'API",
       "fetchingSecrets": "Erreur lors de la récupération des hushys :",
       "fetchingUserSecrets": "Erreur récupération hushys et comptage:",
@@ -817,13 +817,13 @@ export default {
       "soughtSecret": "hushy recherché:"
     },
     "stripe": {
-      "configComplete": "Compte Stripe complètement configuré",
-      "configInProgress": "Configuration du compte Stripe en cours",
-      "noAccount": "Aucun compte Stripe associé",
+      "configComplete": "Compte bancaire complètement configuré",
+      "configInProgress": "Configuration du compte bancaire en cours",
+      "noAccount": "Aucun compte bancaire associé",
       "unknownStatus": "Statut inconnu",
-      "configSuccessful": "Compte Stripe configuré avec succès",
-      "resetSuccess": "Compte Stripe réinitialisé avec succès",
-      "deleteSuccess": "Compte Stripe supprimé avec succès"
+      "configSuccessful": "Compte bancaire configuré avec succès",
+      "resetSuccess": "Compte bancaire réinitialisé avec succès",
+      "deleteSuccess": "Compte bancaire supprimé avec succès"
     },
     "share": {
       "messageIOS": "🔐 Découvre mon hushy sur hushy !\n\n{{link}}",

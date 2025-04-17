@@ -1061,12 +1061,7 @@ export const CardDataProvider = ({ children }) => {
         total += count;
       });
 
-      console.log(i18n.t('cardData.logs.updatingCounters'), {
-        countsMap,
-        total,
-        markedAsRead: Object.keys(markedAsReadConversations)
-      });
-
+  
       setUnreadCountsMap(countsMap);
       setTotalUnreadCount(total);
 
