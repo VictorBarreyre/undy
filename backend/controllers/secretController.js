@@ -397,7 +397,7 @@ exports.verifyIdentity = async (req, res) => {
         options: {
           document: {
             allowed_types: ['driving_license', 'id_card', 'passport'],
-            require_id_number: true,
+            require_id_number: false,
             require_live_capture: true,
             require_matching_selfie: true
           }
@@ -446,7 +446,7 @@ exports.verifyIdentity = async (req, res) => {
         },
         options: {
           document: {
-            require_id_number: true,
+            require_id_number: false,
             require_matching_selfie: !!selfieImage
           }
         }
@@ -524,7 +524,7 @@ exports.verifyIdentity = async (req, res) => {
           },
           options: {
             document: {
-              require_id_number: true,
+              require_id_number: false,
               require_matching_selfie: true
             }
           },
