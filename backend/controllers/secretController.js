@@ -434,16 +434,13 @@ exports.verifyIdentity = async (req, res) => {
             require_matching_selfie: true
           }
         },
-
-        verification_flow: {
-          metadata: {
-            country: userCountry
-          }
-        },
-
         return_url: returnUrl,
         refresh_url: refreshUrl
       };
+
+      if (userCountry) {
+        verificationOptions.options.document.issuing_country = userCountry;
+      }
 
       // Créer la session de vérification
       const verificationSession = await stripe.identity.verificationSessions.create(verificationOptions);
@@ -480,18 +477,16 @@ exports.verifyIdentity = async (req, res) => {
           userId: userId.toString(),
           country: userCountry 
         },
-        options: {
-          document: {
-            require_id_number: true,
-            require_matching_selfie: !!selfieImage
-          }
-        },
         verification_flow: {
           metadata: {
             country: userCountry
           }
         },
       });
+
+      if (userCountry) {
+        verificationOptions.options.document.issuing_country = userCountry;
+      }
 
       try {
         // Préparation et upload des documents
@@ -565,14 +560,14 @@ exports.verifyIdentity = async (req, res) => {
               require_matching_selfie: true
             }
           },
-          verification_flow: {
-            metadata: {
-              country: userCountry
-            }
-          },
+    
           return_url: returnUrl,
           refresh_url: refreshUrl
         });
+
+        if (userCountry) {
+          verificationOptions.options.document.issuing_country = userCountry;
+        }
 
         // Mettre à jour les informations utilisateur
         user.stripeVerificationSessionId = newSession.id;
