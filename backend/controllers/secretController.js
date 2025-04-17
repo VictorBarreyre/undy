@@ -33,7 +33,7 @@ exports.createSecret = async (req, res) => {
     }
 
     // Trouver l'utilisateur avec les champs Stripe
-    const user = await User.findById(req.user.id).select('email phoneNumber country stripeAccountId stripeAccountStatus stripeOnboardingComplete');
+    const user = await User.findById(req.user.id).select('email stripeAccountId stripeAccountStatus stripeOnboardingComplete');
     if (!user) {
       return res.status(404).json({ message: "Utilisateur introuvable." });
     }
@@ -52,38 +52,9 @@ exports.createSecret = async (req, res) => {
 
       // Créer un compte Stripe si l'utilisateur n'en a pas
       if (!user.stripeAccountId) {
-        // Déterminer le pays en fonction du numéro de téléphone ou de la langue de l'utilisateur
-        let country = 'FR'; // Valeur par défaut: France
-
-        if (user.country) {
-          // Si l'utilisateur a déjà un pays défini (ex: après vérification KYC), l'utiliser
-          country = user.country;
-          console.log(`Utilisation du pays de l'utilisateur: ${country}`);
-        } else if (user.phoneNumber) {
-          // Format international: +1 pour USA, +33 pour France
-          if (user.phoneNumber.startsWith('+1')) {
-            country = 'US';
-            console.log("Numéro américain détecté, configuration pour les USA");
-          } else if (user.phoneNumber.startsWith('+33')) {
-            country = 'FR';
-            console.log("Numéro français détecté, configuration pour la France");
-          } else {
-            console.log(`Format de numéro non reconnu: ${user.phoneNumber}, utilisation du pays par défaut: ${country}`);
-          }
-        } else {
-          // Détection basée sur la langue de l'interface
-          const preferredLocale = req.headers["accept-language"] || "fr";
-          if (preferredLocale.startsWith("en")) {
-            country = 'US'; // États-Unis pour anglophones
-            console.log("Langue anglaise détectée, configuration suggérée pour les USA");
-          } else {
-            console.log(`Langue détectée: ${preferredLocale}, configuration suggérée pour la France`);
-          }
-        }
-
         const account = await stripe.accounts.create({
           type: 'express',
-          country: country,
+          country: 'FR',
           email: user.email,
           capabilities: {
             card_payments: { requested: true },
@@ -106,11 +77,6 @@ exports.createSecret = async (req, res) => {
           }
         });
 
-        // Si le pays n'était pas déjà défini, le stocker
-        if (!user.country) {
-          user.country = country;
-        }
-
         accountLink = await stripe.accountLinks.create({
           account: account.id,
           refresh_url: refreshUrl,
@@ -129,7 +95,6 @@ exports.createSecret = async (req, res) => {
         console.log('Utilisateur mis à jour avec compte Stripe:', {
           userId: user._id,
           stripeAccountId: user.stripeAccountId,
-          country: user.country,
           status: user.stripeAccountStatus
         });
       } else {
@@ -217,6 +182,7 @@ exports.createSecret = async (req, res) => {
       },
       requiresStripeSetup: false
     });
+
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
