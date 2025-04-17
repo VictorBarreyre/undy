@@ -214,11 +214,11 @@ const StripeVerificationModal = ({
 
                         if (statusResult.status === 'requires_input') {
                             Alert.alert(
-                                t('stripeVerification.verification.requiresInput.title'),
-                                t('stripeVerification.verification.requiresInput.message'),
+                                t('stripeVerification.statusMessages.title'),
+                                t('stripeVerification.statusMessages.requiresInput'),
                                 [
                                     {
-                                        text: t('stripeVerification.verification.ok'),
+                                        text: 'OK',
                                         onPress: () => {
                                             // Option pour rediriger l'utilisateur si nécessaire
                                         }
@@ -520,9 +520,9 @@ const StripeVerificationModal = ({
                         await refreshUserDataAndUpdate();
 
                         Alert.alert(
-                            t('stripeVerification.verification.success.title'),
-                            t('stripeVerification.verification.success.message'),
-                            [{ text: t('stripeVerification.verification.great') }]
+                            t('stripeVerification.success.title'),
+                            t('stripeVerification.success.identityVerified'),
+                            [{ text: 'OK' }]
                         );
                     }
                 }
