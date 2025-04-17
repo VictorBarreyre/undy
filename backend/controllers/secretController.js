@@ -435,12 +435,11 @@ exports.verifyIdentity = async (req, res) => {
           }
         },
 
-        verification_intent_data: {
+        verification_flow: {
           metadata: {
             country: userCountry
           }
         },
-
 
         return_url: returnUrl,
         refresh_url: refreshUrl
@@ -487,8 +486,7 @@ exports.verifyIdentity = async (req, res) => {
             require_matching_selfie: !!selfieImage
           }
         },
-
-        verification_intent_data: {
+        verification_flow: {
           metadata: {
             country: userCountry
           }
@@ -567,7 +565,7 @@ exports.verifyIdentity = async (req, res) => {
               require_matching_selfie: true
             }
           },
-          verification_intent_data: {
+          verification_flow: {
             metadata: {
               country: userCountry
             }
