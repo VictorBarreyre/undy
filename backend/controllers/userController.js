@@ -773,6 +773,7 @@ exports.syncMissingDataFromStripe = async (req, res) => {
     try {
         const user = req.user;
         const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const util = require('util');
         
         // Vérifier les paramètres de requête
         const includePhoneNumber = req.query.includePhoneNumber === 'true';
@@ -791,6 +792,31 @@ exports.syncMissingDataFromStripe = async (req, res) => {
                 // Récupérer le compte Stripe
                 const account = await stripe.accounts.retrieve(user.stripeAccountId);
                 console.log(`Compte Stripe récupéré avec succès (ID: ${user.stripeAccountId})`);
+                
+                // Afficher l'objet complet avec util.inspect pour une meilleure lisibilité
+                console.log("========== OBJET STRIPE COMPLET ==========");
+                console.log(util.inspect(account, { depth: null, colors: true }));
+                console.log("==========================================");
+                
+                // Recherche spécifique de numéros de téléphone dans différentes parties de l'objet
+                console.log("========== RECHERCHE DE TÉLÉPHONE ==========");
+                console.log(`account.phone: ${account.phone || 'Non défini'}`);
+                console.log(`account.individual?.phone: ${account.individual?.phone || 'Non défini'}`);
+                console.log(`account.support_phone: ${account.support_phone || 'Non défini'}`);
+                console.log(`account.business_profile?.support_phone: ${account.business_profile?.support_phone || 'Non défini'}`);
+                console.log(`account.business_profile?.support_url: ${account.business_profile?.support_url || 'Non défini'}`);
+
+                // Parcourir d'autres propriétés possibles
+                if (account.metadata) {
+                    console.log("Métadonnées :", account.metadata);
+                }
+
+                if (account.settings) {
+                    console.log("Settings - téléphones possibles :");
+                    console.log(`settings.dashboard.display_name: ${account.settings?.dashboard?.display_name || 'Non défini'}`);
+                    console.log(`settings.payments.statement_descriptor: ${account.settings?.payments?.statement_descriptor || 'Non défini'}`);
+                }
+                console.log("==========================================");
                 
                 // Afficher les informations détaillées du compte Stripe pour le débogage
                 console.log("========== DÉTAILS DU COMPTE STRIPE ==========");
@@ -835,10 +861,16 @@ exports.syncMissingDataFromStripe = async (req, res) => {
                 }
                 console.log("=============================================");
                 
+                // Essayer de récupérer le numéro de téléphone de plusieurs sources possibles
+                const stripePhone = account.individual?.phone || 
+                                   account.phone || 
+                                   account.business_profile?.support_phone ||
+                                   account.support_phone;
+                
                 // Comparer avec les données de l'utilisateur
                 console.log("========== COMPARAISON AVEC LA DB ==========");
                 console.log(`Téléphone DB: ${user.phone || 'Non défini'}`);
-                console.log(`Téléphone Stripe: ${account.individual?.phone || 'Non défini'}`);
+                console.log(`Téléphone Stripe (composite): ${stripePhone || 'Non défini'}`);
                 console.log(`Nom DB: ${user.name || 'Non défini'}`);
                 const stripeName = `${account.individual?.first_name || ''} ${account.individual?.last_name || ''}`.trim();
                 console.log(`Nom Stripe: ${stripeName || 'Non défini'}`);
@@ -848,60 +880,55 @@ exports.syncMissingDataFromStripe = async (req, res) => {
                     : null;
                 console.log(`Date de naissance Stripe: ${stripeDOB ? stripeDOB.toISOString().split('T')[0] : 'Non définie'}`);
                 console.log(`Pays DB: ${user.country || 'Non défini'}`);
-                console.log(`Pays Stripe: ${account.individual?.address?.country || 'Non défini'}`);
+                console.log(`Pays Stripe: ${account.individual?.address?.country || account.country || 'Non défini'}`);
                 console.log("=============================================");
                 
                 // Préparer un objet pour les mises à jour potentielles
                 let updateData = {};
                 
                 // Synchroniser les données de l'utilisateur avec Stripe
-                if (account.individual) {
-                    // Téléphone
-                    if (account.individual.phone) {
-                        const stripePhone = account.individual.phone;
-                        // Mettre à jour si forceSync est activé OU si le téléphone est différent
-                        if (forceSync || !user.phone || user.phone !== stripePhone) {
-                            console.log(`Mise à jour du téléphone: ${user.phone || 'non défini'} -> ${stripePhone}`);
-                            updateData.phone = stripePhone;
-                        }
+                // Téléphone (à partir de plusieurs sources possibles)
+                if (stripePhone) {
+                    // Mettre à jour si forceSync est activé OU si le téléphone est différent
+                    if (forceSync || !user.phone || user.phone !== stripePhone) {
+                        console.log(`Mise à jour du téléphone: ${user.phone || 'non défini'} -> ${stripePhone}`);
+                        updateData.phone = stripePhone;
                     }
+                }
+                
+                // Nom complet
+                if (stripeName && stripeName.length > 0) {
+                    // Mettre à jour si forceSync est activé OU si le nom est différent
+                    if (forceSync || !user.name || user.name !== stripeName) {
+                        console.log(`Mise à jour du nom: ${user.name || 'non défini'} -> ${stripeName}`);
+                        updateData.name = stripeName;
+                    }
+                }
+                
+                // Date de naissance
+                if (account.individual?.dob && account.individual.dob.day && account.individual.dob.month && account.individual.dob.year) {
+                    const { day, month, year } = account.individual.dob;
+                    const stripeBirthdate = new Date(year, month - 1, day); // Les mois en JS commencent à 0
                     
-                    // Nom complet
-                    if (stripeName && stripeName.length > 0) {
-                        // Mettre à jour si forceSync est activé OU si le nom est différent
-                        if (forceSync || !user.name || user.name !== stripeName) {
-                            console.log(`Mise à jour du nom: ${user.name || 'non défini'} -> ${stripeName}`);
-                            updateData.name = stripeName;
-                        }
-                    }
+                    // Convertir les deux dates au format YYYY-MM-DD pour une comparaison fiable
+                    const stripeDateStr = stripeBirthdate.toISOString().split('T')[0];
+                    const userDateStr = user.birthdate ? user.birthdate.toISOString().split('T')[0] : '';
                     
-                    // Date de naissance
-                    if (account.individual.dob && account.individual.dob.day && account.individual.dob.month && account.individual.dob.year) {
-                        const { day, month, year } = account.individual.dob;
-                        const stripeBirthdate = new Date(year, month - 1, day); // Les mois en JS commencent à 0
-                        
-                        // Convertir les deux dates au format YYYY-MM-DD pour une comparaison fiable
-                        const stripeDateStr = stripeBirthdate.toISOString().split('T')[0];
-                        const userDateStr = user.birthdate ? user.birthdate.toISOString().split('T')[0] : '';
-                        
-                        // Mettre à jour si forceSync est activé OU si la date est différente
-                        if (forceSync || !user.birthdate || userDateStr !== stripeDateStr) {
-                            console.log(`Mise à jour de la date de naissance: ${userDateStr || 'non définie'} -> ${stripeDateStr}`);
-                            updateData.birthdate = stripeBirthdate;
-                        }
+                    // Mettre à jour si forceSync est activé OU si la date est différente
+                    if (forceSync || !user.birthdate || userDateStr !== stripeDateStr) {
+                        console.log(`Mise à jour de la date de naissance: ${userDateStr || 'non définie'} -> ${stripeDateStr}`);
+                        updateData.birthdate = stripeBirthdate;
                     }
-                    
-                    // Pays
-                    if (account.individual.address && account.individual.address.country) {
-                        const stripeCountry = account.individual.address.country;
-                        // Mettre à jour si forceSync est activé OU si le pays est différent
-                        if (forceSync || !user.country || user.country !== stripeCountry) {
-                            console.log(`Mise à jour du pays: ${user.country || 'non défini'} -> ${stripeCountry}`);
-                            updateData.country = stripeCountry;
-                        }
+                }
+                
+                // Pays (à partir de plusieurs sources possibles)
+                const stripeCountry = account.individual?.address?.country || account.country || null;
+                if (stripeCountry) {
+                    // Mettre à jour si forceSync est activé OU si le pays est différent
+                    if (forceSync || !user.country || user.country !== stripeCountry) {
+                        console.log(`Mise à jour du pays: ${user.country || 'non défini'} -> ${stripeCountry}`);
+                        updateData.country = stripeCountry;
                     }
-                } else {
-                    console.log(`Le compte Stripe n'a pas de données 'individual' disponibles`);
                 }
                 
                 // Effectuer la mise à jour si nécessaire
