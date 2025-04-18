@@ -769,7 +769,6 @@ exports.syncMissingDataFromStripe = async (req, res) => {
     }
   };
   
-  
   exports.getUserProfile = async (req, res) => {
     try {
         const user = req.user;
@@ -792,7 +791,65 @@ exports.syncMissingDataFromStripe = async (req, res) => {
                 // Récupérer le compte Stripe
                 const account = await stripe.accounts.retrieve(user.stripeAccountId);
                 console.log(`Compte Stripe récupéré avec succès (ID: ${user.stripeAccountId})`);
-                console.log(`Le compte a une section individual: ${account.individual ? 'Oui' : 'Non'}`);
+                
+                // Afficher les informations détaillées du compte Stripe pour le débogage
+                console.log("========== DÉTAILS DU COMPTE STRIPE ==========");
+                if (account.individual) {
+                    console.log(`Prénom: ${account.individual.first_name || 'Non défini'}`);
+                    console.log(`Nom: ${account.individual.last_name || 'Non défini'}`);
+                    console.log(`Téléphone: ${account.individual.phone || 'Non défini'}`);
+                    console.log(`Email: ${account.individual.email || 'Non défini'}`);
+                    
+                    if (account.individual.dob) {
+                        console.log(`Date de naissance: ${account.individual.dob.day}/${account.individual.dob.month}/${account.individual.dob.year}`);
+                    } else {
+                        console.log('Date de naissance: Non définie');
+                    }
+                    
+                    if (account.individual.address) {
+                        console.log(`Adresse: ${account.individual.address.line1 || ''}, ${account.individual.address.postal_code || ''} ${account.individual.address.city || ''}`);
+                        console.log(`Pays: ${account.individual.address.country || 'Non défini'}`);
+                    } else {
+                        console.log('Adresse: Non définie');
+                    }
+                } else {
+                    console.log('Pas de données individuelles disponibles');
+                }
+                
+                console.log(`Type de compte: ${account.type || 'Non défini'}`);
+                console.log(`Date de création: ${new Date(account.created * 1000).toISOString()}`);
+                console.log(`Capacités - Paiements: ${account.capabilities ? (account.capabilities.transfers === 'active' ? 'Actif' : 'Inactif') : 'Non défini'}`);
+                console.log(`Capacités - Transferts: ${account.capabilities ? (account.capabilities.transfers === 'active' ? 'Actif' : 'Inactif') : 'Non défini'}`);
+                console.log(`Paiements activés: ${account.charges_enabled ? 'Oui' : 'Non'}`);
+                console.log(`Transferts activés: ${account.payouts_enabled ? 'Oui' : 'Non'}`);
+                console.log(`Détails soumis: ${account.details_submitted ? 'Oui' : 'Non'}`);
+                
+                // Afficher les informations du compte bancaire s'il existe
+                if (account.external_accounts && account.external_accounts.data.length > 0) {
+                    const bankAccount = account.external_accounts.data[0];
+                    console.log(`Compte bancaire: ${bankAccount.bank_name || 'Non défini'} (****${bankAccount.last4 || ''})`);
+                    console.log(`Devise du compte: ${bankAccount.currency || 'Non définie'}`);
+                    console.log(`Pays du compte: ${bankAccount.country || 'Non défini'}`);
+                } else {
+                    console.log('Aucun compte bancaire associé');
+                }
+                console.log("=============================================");
+                
+                // Comparer avec les données de l'utilisateur
+                console.log("========== COMPARAISON AVEC LA DB ==========");
+                console.log(`Téléphone DB: ${user.phone || 'Non défini'}`);
+                console.log(`Téléphone Stripe: ${account.individual?.phone || 'Non défini'}`);
+                console.log(`Nom DB: ${user.name || 'Non défini'}`);
+                const stripeName = `${account.individual?.first_name || ''} ${account.individual?.last_name || ''}`.trim();
+                console.log(`Nom Stripe: ${stripeName || 'Non défini'}`);
+                console.log(`Date de naissance DB: ${user.birthdate ? user.birthdate.toISOString().split('T')[0] : 'Non définie'}`);
+                const stripeDOB = account.individual?.dob 
+                    ? new Date(account.individual.dob.year, account.individual.dob.month - 1, account.individual.dob.day)
+                    : null;
+                console.log(`Date de naissance Stripe: ${stripeDOB ? stripeDOB.toISOString().split('T')[0] : 'Non définie'}`);
+                console.log(`Pays DB: ${user.country || 'Non défini'}`);
+                console.log(`Pays Stripe: ${account.individual?.address?.country || 'Non défini'}`);
+                console.log("=============================================");
                 
                 // Préparer un objet pour les mises à jour potentielles
                 let updateData = {};
@@ -810,7 +867,6 @@ exports.syncMissingDataFromStripe = async (req, res) => {
                     }
                     
                     // Nom complet
-                    const stripeName = `${account.individual.first_name || ''} ${account.individual.last_name || ''}`.trim();
                     if (stripeName && stripeName.length > 0) {
                         // Mettre à jour si forceSync est activé OU si le nom est différent
                         if (forceSync || !user.name || user.name !== stripeName) {
