@@ -71,10 +71,13 @@ export default function Profile({ navigation }) {
       };
       
 
+      console.log(userData?.phone)
+
       useEffect(() => {
         if (userData?.stripeAccountId && userData?.stripeAccountStatus === 'active') {
           fetchAccurateEarnings();
         }
+      
       }, [userData]); // Recharger si userData change
       
 

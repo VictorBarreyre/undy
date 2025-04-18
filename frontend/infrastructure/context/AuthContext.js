@@ -177,8 +177,12 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const response = await instance.get('/api/users/profile');
+      const response = await instance.get('/api/users/profile?forceSync=true&includePhoneNumber=true');
+
       const cleanedData = cleanUserData(response.data);
+
+      console.log('[AuthProvider] Téléphone récupéré:', cleanedData.phone);
+
       setUserData(cleanedData);
 
       setContactsAccessEnabled(cleanedData.contacts || false);
