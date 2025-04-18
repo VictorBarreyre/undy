@@ -775,30 +775,36 @@ exports.syncMissingDataFromStripe = async (req, res) => {
         const user = req.user;
         const baseUrl = `${req.protocol}://${req.get('host')}`;
         
-        // Vérifier si le paramètre includePhoneNumber est présent et défini sur true
+        // Vérifier les paramètres de requête
         const includePhoneNumber = req.query.includePhoneNumber === 'true';
+        const forceSync = req.query.forceSync === 'true';
+        
+        console.log(`Tentative de récupération du profil pour l'utilisateur ${user._id}, forceSync=${forceSync}`);
         
         // Si l'utilisateur a un compte Stripe, tenter de synchroniser les données
         let userUpdated = false;
         let stripeData = {};
         
         if (user.stripeAccountId) {
+            console.log(`L'utilisateur ${user._id} a un stripeAccountId: ${user.stripeAccountId}`);
+            
             try {
                 // Récupérer le compte Stripe
                 const account = await stripe.accounts.retrieve(user.stripeAccountId);
+                console.log(`Compte Stripe récupéré avec succès (ID: ${user.stripeAccountId})`);
+                console.log(`Le compte a une section individual: ${account.individual ? 'Oui' : 'Non'}`);
                 
                 // Préparer un objet pour les mises à jour potentielles
                 let updateData = {};
                 
                 // Synchroniser les données de l'utilisateur avec Stripe
-                // On va vérifier si les données existent dans Stripe et si elles sont différentes
                 if (account.individual) {
                     // Téléphone
                     if (account.individual.phone) {
                         const stripePhone = account.individual.phone;
-                        // Mettre à jour si le téléphone n'existe pas ou est différent
-                        if (!user.phone || user.phone !== stripePhone) {
-                            console.log(`Mise à jour du téléphone: ${user.phone} -> ${stripePhone}`);
+                        // Mettre à jour si forceSync est activé OU si le téléphone est différent
+                        if (forceSync || !user.phone || user.phone !== stripePhone) {
+                            console.log(`Mise à jour du téléphone: ${user.phone || 'non défini'} -> ${stripePhone}`);
                             updateData.phone = stripePhone;
                         }
                     }
@@ -806,9 +812,9 @@ exports.syncMissingDataFromStripe = async (req, res) => {
                     // Nom complet
                     const stripeName = `${account.individual.first_name || ''} ${account.individual.last_name || ''}`.trim();
                     if (stripeName && stripeName.length > 0) {
-                        // Mettre à jour si le nom n'existe pas ou est différent
-                        if (!user.name || user.name !== stripeName) {
-                            console.log(`Mise à jour du nom: ${user.name} -> ${stripeName}`);
+                        // Mettre à jour si forceSync est activé OU si le nom est différent
+                        if (forceSync || !user.name || user.name !== stripeName) {
+                            console.log(`Mise à jour du nom: ${user.name || 'non défini'} -> ${stripeName}`);
                             updateData.name = stripeName;
                         }
                     }
@@ -822,9 +828,9 @@ exports.syncMissingDataFromStripe = async (req, res) => {
                         const stripeDateStr = stripeBirthdate.toISOString().split('T')[0];
                         const userDateStr = user.birthdate ? user.birthdate.toISOString().split('T')[0] : '';
                         
-                        // Mettre à jour si la date n'existe pas ou est différente
-                        if (!user.birthdate || userDateStr !== stripeDateStr) {
-                            console.log(`Mise à jour de la date de naissance: ${userDateStr} -> ${stripeDateStr}`);
+                        // Mettre à jour si forceSync est activé OU si la date est différente
+                        if (forceSync || !user.birthdate || userDateStr !== stripeDateStr) {
+                            console.log(`Mise à jour de la date de naissance: ${userDateStr || 'non définie'} -> ${stripeDateStr}`);
                             updateData.birthdate = stripeBirthdate;
                         }
                     }
@@ -832,15 +838,19 @@ exports.syncMissingDataFromStripe = async (req, res) => {
                     // Pays
                     if (account.individual.address && account.individual.address.country) {
                         const stripeCountry = account.individual.address.country;
-                        // Mettre à jour si le pays n'existe pas ou est différent
-                        if (!user.country || user.country !== stripeCountry) {
-                            console.log(`Mise à jour du pays: ${user.country} -> ${stripeCountry}`);
+                        // Mettre à jour si forceSync est activé OU si le pays est différent
+                        if (forceSync || !user.country || user.country !== stripeCountry) {
+                            console.log(`Mise à jour du pays: ${user.country || 'non défini'} -> ${stripeCountry}`);
                             updateData.country = stripeCountry;
                         }
                     }
+                } else {
+                    console.log(`Le compte Stripe n'a pas de données 'individual' disponibles`);
                 }
                 
                 // Effectuer la mise à jour si nécessaire
+                console.log(`Changements à effectuer: ${Object.keys(updateData).length > 0 ? JSON.stringify(Object.keys(updateData)) : 'Aucun'}`);
+                
                 if (Object.keys(updateData).length > 0) {
                     await User.findByIdAndUpdate(user._id, updateData);
                     userUpdated = true;
@@ -848,10 +858,14 @@ exports.syncMissingDataFromStripe = async (req, res) => {
                     // Mettre à jour l'objet user pour la réponse
                     Object.assign(user, updateData);
                     console.log('Données utilisateur mises à jour avec succès depuis Stripe');
+                } else {
+                    console.log('Aucune mise à jour nécessaire pour les données utilisateur');
                 }
                 
                 // Récupérer les données financières si le compte est actif
                 if (user.stripeAccountStatus === 'active') {
+                    console.log('Récupération des données financières du compte Stripe actif');
+                    
                     // Récupérer le solde
                     const balance = await stripe.balance.retrieve({
                         stripeAccount: user.stripeAccountId
@@ -879,6 +893,8 @@ exports.syncMissingDataFromStripe = async (req, res) => {
                         totalEarnings,
                         stripeExternalAccount: externalAccount
                     });
+                    
+                    console.log(`Données financières mises à jour: totalEarnings=${totalEarnings}, externalAccount=${externalAccount ? 'présent' : 'absent'}`);
                 }
                 
                 // Ajouter le numéro de téléphone à stripeData si demandé
@@ -889,6 +905,8 @@ exports.syncMissingDataFromStripe = async (req, res) => {
             } catch (stripeError) {
                 console.error('Erreur lors de la récupération des données Stripe:', stripeError);
             }
+        } else {
+            console.log(`L'utilisateur ${user._id} n'a pas de stripeAccountId`);
         }
         
         // Si l'utilisateur a été mis à jour, récupérer les données fraîches
