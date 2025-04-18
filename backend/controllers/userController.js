@@ -621,83 +621,275 @@ exports.googleLogin = async (req, res) => {
     }
 };
 
-exports.getUserProfile = async (req, res) => {
+// Fonction pour synchroniser en masse les données manquantes depuis Stripe
+exports.syncMissingDataFromStripe = async (req, res) => {
     try {
-        const user = req.user;
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
-
-        // Vérifier si le paramètre includePhoneNumber est présent et défini sur true
-        const includePhoneNumber = req.query.includePhoneNumber === 'true';
-
-        // Si l'utilisateur a un compte Stripe actif, récupérer les infos supplémentaires
-        let stripeData = {};
-        if (user.stripeAccountId && user.stripeAccountStatus === 'active') {
-            try {
-                // Récupérer le compte Stripe
-                const account = await stripe.accounts.retrieve(user.stripeAccountId);
-
-                // Récupérer le solde
-                const balance = await stripe.balance.retrieve({
-                    stripeAccount: user.stripeAccountId
-                });
-
-                // Calculer le total des revenus (disponible + en attente)
-                const available = balance.available.reduce((sum, bal) => sum + bal.amount, 0);
-                const pending = balance.pending.reduce((sum, bal) => sum + bal.amount, 0);
-                const totalEarnings = (available + pending) / 100; // Conversion en euros
-
-                // Récupérer l'IBAN (si disponible)
-                let externalAccount = null;
-                if (account.external_accounts && account.external_accounts.data.length > 0) {
-                    const bankAccount = account.external_accounts.data[0];
-                    externalAccount = `****${bankAccount.last4}`;
-                }
-
-                // Récupérer le numéro de téléphone si nécessaire
-                if (includePhoneNumber && account.phone) {
-                    stripeData.phoneNumber = account.phone;
-                }
-
-                stripeData = {
-                    totalEarnings,
-                    stripeExternalAccount: externalAccount,
-                    ...(includePhoneNumber && { phoneNumber: account.phone })
-                };
-
-                // Mettre à jour l'utilisateur avec les nouvelles données
-                await User.findByIdAndUpdate(user._id, {
-                    totalEarnings,
-                    stripeExternalAccount: externalAccount
-                });
-            } catch (stripeError) {
-                console.error('Erreur lors de la récupération des données Stripe:', stripeError);
+      // Chercher les utilisateurs avec un compte Stripe et dont l'identité est vérifiée
+      const users = await User.find({
+        stripeAccountId: { $exists: true, $ne: null },
+        stripeIdentityVerified: true,
+        $or: [
+          { phone: { $exists: false } },
+          { birthdate: { $exists: false } }
+          // On pourrait ajouter d'autres critères si nécessaire
+        ]
+      });
+      
+      let updatedCount = 0;
+      let updatedFields = {
+        phone: 0,
+        name: 0,
+        birthdate: 0
+      };
+      
+      for (const user of users) {
+        try {
+          const stripeAccount = await stripe.accounts.retrieve(user.stripeAccountId);
+          let updated = false;
+          
+          // Vérifier si on a des données individual (nécessaires pour la plupart des informations)
+          if (stripeAccount.individual) {
+            // Mise à jour du téléphone si disponible
+            if (!user.phone && stripeAccount.individual.phone) {
+              user.phone = stripeAccount.individual.phone;
+              updatedFields.phone++;
+              updated = true;
             }
+            
+            // Mise à jour du nom complet si disponible et semble plus complet
+            const stripeName = `${stripeAccount.individual.first_name || ''} ${stripeAccount.individual.last_name || ''}`.trim();
+            if (stripeName && (!user.name || user.name.length < stripeName.length)) {
+              user.name = stripeName;
+              updatedFields.name++;
+              updated = true;
+            }
+            
+            // Mise à jour de la date de naissance si disponible
+            if (!user.birthdate && stripeAccount.individual.dob) {
+              const { day, month, year } = stripeAccount.individual.dob;
+              if (day && month && year) {
+                user.birthdate = new Date(year, month - 1, day); // Les mois en JS commencent à 0
+                updatedFields.birthdate++;
+                updated = true;
+              }
+            }
+          }
+          
+          // Sauvegarde si des modifications ont été apportées
+          if (updated) {
+            await user.save();
+            updatedCount++;
+          }
+        } catch (stripeError) {
+          console.error(`Erreur lors de la récupération des données Stripe pour l'utilisateur ${user._id}: ${stripeError.message}`);
+          // Continuer avec l'utilisateur suivant
         }
-
-        res.json({
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            profilePicture: user.profilePicture || null,
-            birthdate: user.birthdate,
-            totalEarnings: user.totalEarnings, // Ajoutez cette ligne
-            phone: includePhoneNumber ? stripeData.phoneNumber || user.phone : undefined,
-            notifs: user.notifs,
-            contacts: user.contacts,
-            subscriptions: user.subscriptions,
-            hasSubscriptions: user.hasSubscriptions,
-            stripeAccountId: user.stripeAccountId,
-            stripeAccountStatus: user.stripeAccountStatus,
-            stripeOnboardingComplete: user.stripeOnboardingComplete,
-            stripeIdentityVerified: user.stripeIdentityVerified,
-            stripeIdentityVerificationStatus: user.stripeIdentityVerificationStatus,
-            ...stripeData // Ajoute totalEarnings et stripeExternalAccount si disponibles
-        });
+      }
+      
+      return res.status(200).json({
+        success: true,
+        message: `${updatedCount} utilisateurs mis à jour avec les données de Stripe`,
+        details: updatedFields
+      });
     } catch (error) {
-        console.error('Erreur lors de la récupération du profil utilisateur:', error);
-        res.status(500).json({ message: 'Erreur lors de la récupération du profil utilisateur' });
+      console.error(`Erreur lors de la synchronisation des données: ${error.message}`);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur serveur lors de la synchronisation des données'
+      });
     }
-};
+  };
+  
+  // Fonction utilitaire pour synchroniser un utilisateur spécifique
+  exports.syncUserDataFromStripe = async (userId) => {
+    try {
+      const user = await User.findById(userId);
+      
+      if (!user || !user.stripeAccountId) {
+        return { success: false, message: 'Utilisateur sans compte Stripe' };
+      }
+      
+      const stripeAccount = await stripe.accounts.retrieve(user.stripeAccountId);
+      let updated = false;
+      let updatedFields = [];
+      
+      // On ne synchronise les données sensibles que si l'identité est vérifiée
+      // On peut aussi synchroniser d'autres données moins sensibles même sans vérification
+      const shouldSyncSensitiveData = user.stripeIdentityVerified || 
+                                     (stripeAccount.payouts_enabled && 
+                                      stripeAccount.charges_enabled);
+      
+      // Mise à jour du téléphone si manquant
+      if (!user.phone && stripeAccount.individual && stripeAccount.individual.phone) {
+        user.phone = stripeAccount.individual.phone;
+        updatedFields.push('téléphone');
+        updated = true;
+      }
+      
+      // Si l'identité est vérifiée, synchroniser davantage de données
+      if (shouldSyncSensitiveData && stripeAccount.individual) {
+        // Mise à jour du nom complet si disponible et semble plus complet
+        const stripeName = `${stripeAccount.individual.first_name || ''} ${stripeAccount.individual.last_name || ''}`.trim();
+        if (stripeName && (!user.name || user.name.length < stripeName.length)) {
+          user.name = stripeName;
+          updatedFields.push('nom');
+          updated = true;
+        }
+        
+        // Mise à jour de la date de naissance si disponible
+        if (!user.birthdate && stripeAccount.individual.dob) {
+          const { day, month, year } = stripeAccount.individual.dob;
+          if (day && month && year) {
+            user.birthdate = new Date(year, month - 1, day);
+            updatedFields.push('date de naissance');
+            updated = true;
+          }
+        }
+        
+        // Mise à jour du pays si disponible
+        if ((!user.country || user.country === 'FR') && stripeAccount.individual.address && stripeAccount.individual.address.country) {
+          user.country = stripeAccount.individual.address.country;
+          updatedFields.push('pays');
+          updated = true;
+        }
+      }
+      
+      if (updated) {
+        await user.save();
+        return { 
+          success: true, 
+          message: `Données utilisateur mises à jour depuis Stripe: ${updatedFields.join(', ')}` 
+        };
+      } else {
+        return { success: true, message: 'Aucune donnée mise à jour' };
+      }
+    } catch (error) {
+      console.error(`Erreur lors de la synchronisation: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  };
+  
+  
+  // Mettons également à jour getUserProfile pour synchroniser ces données
+  exports.getUserProfile = async (req, res) => {
+      try {
+          const user = req.user;
+          const baseUrl = `${req.protocol}://${req.get('host')}`;
+          
+          // Vérifier si le paramètre includePhoneNumber est présent et défini sur true
+          const includePhoneNumber = req.query.includePhoneNumber === 'true';
+          
+          // Si l'utilisateur a un compte Stripe, tenter de synchroniser les données manquantes
+          let userUpdated = false;
+          let stripeData = {};
+          
+          if (user.stripeAccountId) {
+              try {
+                  // Récupérer le compte Stripe
+                  const account = await stripe.accounts.retrieve(user.stripeAccountId);
+                  
+                  // Synchroniser les données si l'identité est vérifiée
+                  if (user.stripeIdentityVerified && account.individual) {
+                      // Mettre à jour les données manquantes
+                      let updateData = {};
+                      
+                      // Vérifier et mettre à jour le téléphone
+                      if (!user.phone && account.individual.phone) {
+                          updateData.phone = account.individual.phone;
+                      }
+                      
+                      // Vérifier et mettre à jour le nom complet
+                      const stripeName = `${account.individual.first_name || ''} ${account.individual.last_name || ''}`.trim();
+                      if (stripeName && (!user.name || user.name.length < stripeName.length)) {
+                          updateData.name = stripeName;
+                      }
+                      
+                      // Vérifier et mettre à jour la date de naissance
+                      if (!user.birthdate && account.individual.dob) {
+                          const { day, month, year } = account.individual.dob;
+                          if (day && month && year) {
+                              updateData.birthdate = new Date(year, month - 1, day);
+                          }
+                      }
+                      
+                      // Effectuer la mise à jour si nécessaire
+                      if (Object.keys(updateData).length > 0) {
+                          await User.findByIdAndUpdate(user._id, updateData);
+                          userUpdated = true;
+                          
+                          // Mettre à jour l'objet user pour la réponse
+                          Object.assign(user, updateData);
+                      }
+                  }
+                  
+                  // Récupérer les données financières si le compte est actif
+                  if (user.stripeAccountStatus === 'active') {
+                      // Récupérer le solde
+                      const balance = await stripe.balance.retrieve({
+                          stripeAccount: user.stripeAccountId
+                      });
+                      
+                      // Calculer le total des revenus (disponible + en attente)
+                      const available = balance.available.reduce((sum, bal) => sum + bal.amount, 0);
+                      const pending = balance.pending.reduce((sum, bal) => sum + bal.amount, 0);
+                      const totalEarnings = (available + pending) / 100; // Conversion en euros
+                      
+                      // Récupérer l'IBAN (si disponible)
+                      let externalAccount = null;
+                      if (account.external_accounts && account.external_accounts.data.length > 0) {
+                          const bankAccount = account.external_accounts.data[0];
+                          externalAccount = `****${bankAccount.last4}`;
+                      }
+                      
+                      stripeData = {
+                          totalEarnings,
+                          stripeExternalAccount: externalAccount
+                      };
+                      
+                      // Mettre à jour l'utilisateur avec les nouvelles données financières
+                      await User.findByIdAndUpdate(user._id, {
+                          totalEarnings,
+                          stripeExternalAccount: externalAccount
+                      });
+                  }
+                  
+                  // Ajouter le numéro de téléphone à stripeData si demandé
+                  if (includePhoneNumber && user.phone) {
+                      stripeData.phoneNumber = user.phone;
+                  }
+                  
+              } catch (stripeError) {
+                  console.error('Erreur lors de la récupération des données Stripe:', stripeError);
+              }
+          }
+          
+          // Si l'utilisateur a été mis à jour, récupérer les données fraîches
+          const userData = userUpdated ? await User.findById(user._id) : user;
+          
+          res.json({
+              _id: userData._id,
+              name: userData.name,
+              email: userData.email,
+              profilePicture: userData.profilePicture || null,
+              birthdate: userData.birthdate,
+              totalEarnings: userData.totalEarnings,
+              phone: includePhoneNumber ? userData.phone : undefined,
+              notifs: userData.notifs,
+              contacts: userData.contacts,
+              subscriptions: userData.subscriptions,
+              hasSubscriptions: userData.hasSubscriptions,
+              stripeAccountId: userData.stripeAccountId,
+              stripeAccountStatus: userData.stripeAccountStatus,
+              stripeOnboardingComplete: userData.stripeOnboardingComplete,
+              stripeIdentityVerified: userData.stripeIdentityVerified,
+              stripeIdentityVerificationStatus: userData.stripeIdentityVerificationStatus,
+              ...stripeData // Ajoute totalEarnings et stripeExternalAccount si disponibles
+          });
+      } catch (error) {
+          console.error('Erreur lors de la récupération du profil utilisateur:', error);
+          res.status(500).json({ message: 'Erreur lors de la récupération du profil utilisateur' });
+      }
+  };
 
 exports.getBankAccountDetails = async (req, res) => {
     try {
