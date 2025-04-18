@@ -847,6 +847,11 @@ export default {
     "allow": "Allow",
     "ok": "OK",
     "errorTitle": "Permission Error"
-  }
+  },
+"stripe": {
+  "errorTitle": "Banking Error",
+  "unexpectedResponse": "Unexpected server response",
+  "redirectError": "Error redirecting to the banking form"
+}
 
 }

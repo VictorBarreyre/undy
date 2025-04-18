@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import {
     VStack, Text, Button, Actionsheet,
-    Box, Progress, HStack, Select, CheckIcon
+    Box, Progress, HStack, 
 } from 'native-base';
 import { Platform, Alert, Linking } from 'react-native';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
@@ -41,19 +41,6 @@ const StripeVerificationModal = ({
         status: userData?.stripeVerificationStatus || 'unverified'
     });
     const [hasCompletedVerification, setHasCompletedVerification] = useState(false);
-    const isStatusChecked = useRef(false);
-    const [selectedCountry, setSelectedCountry] = useState('FR'); // France par défaut
-
-    const supportedCountries = [
-        { code: 'FR', name: 'France' },
-        { code: 'US', name: 'États-Unis' },
-        { code: 'GB', name: 'Royaume-Uni' },
-        { code: 'DE', name: 'Allemagne' },
-        { code: 'ES', name: 'Espagne' },
-        { code: 'IT', name: 'Italie' },
-        // Ajoutez d'autres pays selon vos besoins
-    ];
-
 
     // Met à jour les données locales quand userData change
     useEffect(() => {
@@ -686,32 +673,7 @@ const StripeVerificationModal = ({
                         {t('stripeVerification.identityVerification.description')}
                     </Text>
 
-                    <Box mb={4} mt={2}>
-                        <Text style={styles.subtitle} mb={2}>
-                            {t('stripeVerification.identityVerification.selectCountry')}
-                        </Text>
-                        <Select
-                            selectedValue={selectedCountry}
-                            minWidth="full"
-                            accessibilityLabel={t('stripeVerification.identityVerification.selectCountryPlaceholder')}
-                            placeholder={t('stripeVerification.identityVerification.selectCountryPlaceholder')}
-                            _selectedItem={{
-                                bg: "gray.200",
-                                endIcon: <CheckIcon size="5" />
-                            }}
-                            borderRadius="md"
-                            onValueChange={(itemValue) => setSelectedCountry(itemValue)}
-                        >
-                            {supportedCountries.map((country) => (
-                                <Select.Item
-                                    key={country.code}
-                                    label={country.name}
-                                    value={country.code}
-                                />
-                            ))}
-                        </Select>
-                    </Box>
-
+            
                     <VStack space={2}>
                         <Button
                             onPress={() => {
@@ -775,13 +737,10 @@ const StripeVerificationModal = ({
                         onPress={handleUpdateBankAccount}
                         backgroundColor="black"
                         borderRadius="full"
-                        _text={{ color: "gray.700" }}
                     >
                         {t('stripeVerification.accountConfigured.updateBankAccount')}
                     </Button>
-                    <Text color="white" style={styles.cta}>
-                        {t('stripeVerification.accountConfigured.manageAccount')}
-                    </Text>
+        
                 </VStack>
             </>
         );

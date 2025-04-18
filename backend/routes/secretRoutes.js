@@ -41,7 +41,7 @@ router.post('/:id/purchase', protect, purchaseSecret);
 router.post('/stripe/refresh-onboarding', protect, refreshStripeOnboarding);
 router.post('/verify-identity', protect, verifyIdentity);
 router.get('/check-identity-verification-status', protect, checkIdentityVerificationStatus); 
-router.post('/api/secrets/stripe/update-bank-account', protect, updateBankAccount);
+router.post('/stripe/update-bank-account', protect, updateBankAccount);
 router.get('/stripe-return', protect, handleStripeReturn);
 
 

@@ -852,6 +852,13 @@ export default {
     "errorTitle": "Erreur de permission",
     "contactsLoadError": "Erreur lors du chargement des contacts.",
     "locationError": "Erreur de localisation."
+  },
+
+  "stripe": {
+    "errorTitle": "Erreur bancaire",
+    "unexpectedResponse": "Réponse inattendue du serveur",
+    "redirectError": "Erreur lors de la redirection vers le formulaire bancaire"
   }
+  
 
 }
