@@ -851,7 +851,11 @@ export default {
 "stripe": {
   "errorTitle": "Banking Error",
   "unexpectedResponse": "Unexpected server response",
-  "redirectError": "Error redirecting to the banking form"
+  "redirectError": "Error redirecting to the banking form",
+  "bankUpdateSuccess": {
+    "title": "Bank Account Updated",
+    "message": "Your bank account has been successfully updated!"
+  }
 }
 
 }

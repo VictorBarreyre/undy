@@ -857,7 +857,11 @@ export default {
   "stripe": {
     "errorTitle": "Erreur bancaire",
     "unexpectedResponse": "Réponse inattendue du serveur",
-    "redirectError": "Erreur lors de la redirection vers le formulaire bancaire"
+    "redirectError": "Erreur lors de la redirection vers le formulaire bancaire",
+    "bankUpdateSuccess": {
+      "title": "Compte bancaire mis à jour",
+      "message": "Votre compte bancaire a été mis à jour avec succès!"
+    }
   }
   
 

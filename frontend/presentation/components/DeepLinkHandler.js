@@ -35,6 +35,20 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
                 // Normaliser l'URL
                 const normalizedUrl = normalizeDeepLinkParams(fullUrl);
                 const parsedUrl = new URL(normalizedUrl);
+
+                if (normalizedUrl.includes('action=bank_update_complete')) {
+                    // Traitement du retour de mise à jour de compte bancaire
+                    console.log("Retour de mise à jour de compte bancaire détecté");
+                    await handleStripeReturn(normalizedUrl);
+                    
+                    // Afficher l'alerte spécifique à la mise à jour du compte bancaire
+                    Alert.alert(
+                        t('stripe.bankUpdateSuccess.title'),
+                        t('stripe.bankUpdateSuccess.message'),
+                        [{ text: 'OK' }]
+                    );
+                    return;
+                }
                 
                 // Vérifier le host et le schéma
                 if (parsedUrl.protocol === 'hushy:' && 

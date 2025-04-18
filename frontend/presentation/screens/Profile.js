@@ -176,7 +176,7 @@ export default function Profile({ navigation }) {
                 maxWidth: 1000,
                 maxHeight: 1000,
                 // Activer le recadrage natif
-                cropping: true, 
+                cropping: true,
                 cropperCircleOverlay: false, // true pour un recadrage circulaire
                 freeStyleCropEnabled: true,
                 cropperToolbarTitle: t('profile.cropImage.title', 'Ajuster votre photo'),
@@ -199,7 +199,7 @@ export default function Profile({ navigation }) {
 
             // L'image est déjà recadrée ici
             const imageAsset = result.assets[0];
-            
+
             // Uploader directement l'image recadrée
             const updatedUser = await handleProfileImageUpdate(imageAsset);
 
@@ -207,20 +207,20 @@ export default function Profile({ navigation }) {
                 // Animer pour indiquer le succès
                 animateProfilePhoto();
             }
-            
+
         } catch (error) {
             console.error(t('profile.errors.fullError'), error);
-            
+
             // Gestion d'erreur améliorée
             let errorMessage = t('profile.errors.unableToChangeProfilePicture');
-            
+
             // Détection d'erreur réseau
             if (error?.message?.includes('Network request failed')) {
                 errorMessage = t('profile.errors.networkError', 'Impossible de se connecter au serveur. Vérifiez votre connexion internet ou votre compte Apple.');
             } else if (error?.message?.includes('Cannot read property') || error?.message?.includes('null') || error?.message?.includes('undefined')) {
                 // Gestion spécifique pour l'erreur que vous avez rencontrée
                 errorMessage = t('profile.errors.deviceError', 'Une erreur s\'est produite avec la fonction de recadrage. Nous allons essayer sans recadrage.');
-                
+
                 // Réessayer sans recadrage
                 try {
                     const fallbackResult = await launchImageLibrary({
@@ -232,7 +232,7 @@ export default function Profile({ navigation }) {
                         // Désactiver le recadrage cette fois
                         cropping: false,
                     });
-                    
+
                     if (!fallbackResult.didCancel && fallbackResult.assets && fallbackResult.assets[0]) {
                         const fallbackImageAsset = fallbackResult.assets[0];
                         await handleProfileImageUpdate(fallbackImageAsset);
@@ -243,7 +243,7 @@ export default function Profile({ navigation }) {
                     console.error('Erreur lors de la tentative de fallback:', fallbackError);
                 }
             }
-            
+
             Alert.alert(
                 t('profile.errors.title'),
                 errorMessage
@@ -310,8 +310,8 @@ export default function Profile({ navigation }) {
                                 justifyContent="space-between"
                                 alignItems="center"
                             >
-                               <Pressable 
-                                    onPress={handleImageSelection} 
+                                <Pressable
+                                    onPress={handleImageSelection}
                                     hitSlop={10}
                                     style={{
                                         borderRadius: 20,
@@ -354,7 +354,7 @@ export default function Profile({ navigation }) {
                                     {userData?.name || 'John do'}
                                 </Text>
                                 <Text color="white" fontSize="md" shadow={2}>
-                                    {secretCount || 0} Hushys
+                                    {secretCount || 0} {secretCount === 1 ? 'hushy' : 'hushys'}
                                 </Text>
                             </HStack>
                         </Box>
