@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const Conversation = require('../models/Conversation')
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Payment = require('../models/Payment');
+const { checkUserStripeAccountAccess } = require('../utils/stripeUtils');
 
 exports.createSecret = async (req, res) => {
   const session = await mongoose.startSession();
