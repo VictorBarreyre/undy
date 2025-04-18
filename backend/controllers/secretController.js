@@ -565,7 +565,6 @@ exports.updateBankAccount = async (req, res) => {
     const { stripeAccountId } = req.body;
 
     // Vérifier que l'utilisateur a les droits d'accès à ce compte Stripe
-    // Remarque: implémentez cette fonction selon votre logique d'authentification
     const userHasAccess = await checkUserStripeAccountAccess(req.user.id, stripeAccountId);
 
     if (!userHasAccess) {
@@ -581,14 +580,13 @@ exports.updateBankAccount = async (req, res) => {
     const returnUrl = `${baseReturnUrl}?action=bank_update_complete`;
     const refreshUrl = `${baseReturnUrl}?action=bank_update_refresh`;
 
-    // Créer un account link spécifique pour la section bancaire
+    // Créer un account link sans le paramètre destination_section
     const accountLink = await stripe.accountLinks.create({
       account: stripeAccountId,
       refresh_url: refreshUrl,
       return_url: returnUrl,
       type: 'account_onboarding',
-      collect: 'eventually_due',
-      destination_section: 'payment_schedule' // Dirige vers la section bancaire
+      collect: 'eventually_due'
     });
 
     // Retourner l'URL pour redirection
