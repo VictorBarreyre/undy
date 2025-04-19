@@ -26,15 +26,14 @@ const {
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
-
-
+const { moderationMiddleware } = require('../controllers/moderationController');
 
 
 // Routes publiques
 router.get('/', getAllSecrets);
 
 // Routes Stripe et paiements
-router.post('/createsecrets', protect, createSecret);
+router.post('/createsecrets', protect, moderationMiddleware, createSecret); // Ajout du middleware de modération
 router.post('/:id/create-payment-intent', protect, createPaymentIntent);
 router.post('/:id/confirm-payment', protect, confirmPayment);
 router.post('/:id/purchase', protect, purchaseSecret);
@@ -66,7 +65,7 @@ router.delete('/:id', protect, deleteSecret);
 // Routes des conversations
 router.get('/conversations', protect, getUserConversations);
 router.get('/conversations/secret/:secretId', protect, getSecretConversation);
-router.post('/conversations/:conversationId/messages', protect, addMessageToConversation);
+router.post('/conversations/:conversationId/messages', protect, moderationMiddleware, addMessageToConversation); // Ajout du middleware de modération
 router.delete('/conversations/:conversationId', protect, deleteConversation);
 router.patch('/conversations/:conversationId/read', protect, markConversationAsRead);
 

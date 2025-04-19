@@ -6,6 +6,7 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const userRoutes = require('./routes/userRoutes');
 const secretRoutes = require('./routes/secretRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const moderationRoutes = require('./routes/moderationRoutes'); // Nouvelles routes de modération
 const path = require('path');
 const helmet = require('helmet');
 const User = require('./models/User'); // Assurez-vous d'ajouter cette importation
@@ -103,6 +104,8 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api/users', userRoutes);
 app.use('/api/secrets', secretRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/moderation', moderationRoutes); // Ajout des routes de modération
+
 
 
 

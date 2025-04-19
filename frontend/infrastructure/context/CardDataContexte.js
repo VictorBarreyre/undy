@@ -7,6 +7,7 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Ajoutez cette ligne
 import ConfettiCannon from 'react-native-confetti-cannon';
 import mixpanel from "../../services/mixpanel"
+import {moderateContent} from "../../services/ModerationService"
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -26,6 +27,8 @@ const CardDataContext = createContext();
 export const useCardData = () => {
   return useContext(CardDataContext);
 };
+
+
 
 export const calculatePrices = (originalPrice) => {
   // Le vendeur reçoit 75% (100% - 25% de frais de plateforme)
@@ -62,6 +65,13 @@ export const CardDataProvider = ({ children }) => {
     angleRange: [0, 180],
     colors: CONFETTI_COLORS,
   });
+
+  const [moderationStats, setModerationStats] = useState({
+    totalChecked: 0,
+    totalFlagged: 0,
+    lastFlagged: null
+  });
+  
 
   const triggerConfetti = (customConfig = {}) => {
     setConfettiConfig({ ...confettiConfig, ...customConfig });
@@ -259,6 +269,16 @@ export const CardDataProvider = ({ children }) => {
         throw new Error(i18n.t('cardData.errors.invalidPrice'));
       }
 
+         // MODÉRATION: Vérifier le contenu du secret avant de le poster
+         const secretContent = `${secretData.selectedLabel} ${secretData.secretText}`;
+         const moderationResult = await moderateMessageBeforeSend(secretContent);
+         
+         if (moderationResult.isFlagged) {
+           throw new Error(i18n.t('cardData.errors.secretContentFlagged', { 
+             reason: moderationResult.reason 
+           }));
+         }
+
       // Préparer les données de base de la requête
       const payload = {
         label: secretData.selectedLabel,
@@ -344,6 +364,15 @@ export const CardDataProvider = ({ children }) => {
 
       throw new Error(errorMessage);
     }
+  };
+
+  const getModerationStats = () => {
+    return {
+      ...moderationStats,
+      flagRate: moderationStats.totalChecked > 0 
+        ? ((moderationStats.totalFlagged / moderationStats.totalChecked) * 100).toFixed(2) 
+        : 0
+    };
   };
 
 
@@ -840,6 +869,53 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
+
+  const moderateMessageBeforeSend = async (content) => {
+    try {
+      // Incrémenter le compteur de vérifications
+      setModerationStats(prev => ({
+        ...prev,
+        totalChecked: prev.totalChecked + 1
+      }));
+
+      // Vérifier le contenu avec notre service de modération
+      const result = await moderateContent(content);
+      
+      // Si le contenu est signalé comme inapproprié
+      if (result.isFlagged) {
+        // Mettre à jour les statistiques de modération
+        setModerationStats(prev => ({
+          ...prev,
+          totalFlagged: prev.totalFlagged + 1,
+          lastFlagged: {
+            content: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
+            reason: result.reason,
+            timestamp: new Date()
+          }
+        }));
+
+        // Enregistrer la tentative dans Mixpanel si disponible
+        try {
+          mixpanel.track("Content Moderation Flagged", {
+            reason: result.reason,
+            content_type: "message",
+            user_id: userData?._id
+          });
+        } catch (mpError) {
+          console.error("Erreur lors du tracking Mixpanel:", mpError);
+        }
+
+        return result;
+      }
+      
+      return { isFlagged: false };
+    } catch (error) {
+      console.error("Erreur lors de la modération du contenu:", error);
+      return { isFlagged: false }; // En cas d'erreur, permettre l'envoi (failsafe)
+    }
+  };
+
+
   const handleAddMessage = async (conversationId, content) => {
     const instance = getAxiosInstance();
     if (!instance) {
@@ -854,6 +930,17 @@ export const CardDataProvider = ({ children }) => {
     // Si c'est un message audio, assurez-vous que les données nécessaires sont incluses
     if (messageData.messageType === 'audio' && !messageData.audio) {
       throw new Error(i18n.t('cardData.errors.missingAudioData'));
+    }
+    
+    // MODÉRATION: Vérifier le contenu textuel des messages
+    if ((messageData.messageType === 'text' || messageData.messageType === 'mixed') && messageData.content) {
+      const moderationResult = await moderateMessageBeforeSend(messageData.content);
+      
+      if (moderationResult.isFlagged) {
+        throw new Error(i18n.t('cardData.errors.contentFlagged', { 
+          reason: moderationResult.reason 
+        }));
+      }
     }
   
     try {
@@ -1243,7 +1330,7 @@ export const CardDataProvider = ({ children }) => {
 
 
 
-
+ 
   return (
     <>
     <CardDataContext.Provider value={{
@@ -1281,7 +1368,9 @@ export const CardDataProvider = ({ children }) => {
       deleteSecret,
       handleIdentityVerification,
       triggerConfetti,
-      updateStripeBankAccount
+      updateStripeBankAccount,
+      moderateMessageBeforeSend,
+      getModerationStats,
     }}>
       {children}
     </CardDataContext.Provider>
