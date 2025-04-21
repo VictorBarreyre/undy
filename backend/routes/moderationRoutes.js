@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { moderateContent, moderationMiddleware } = require('../controllers/moderationController');
+const { moderateContent, moderationMiddleware } = require('../controllers/sighteningController');
 const protect = require('../middleware/authMiddleware');
 
 // Route pour modérer du contenu (pour les appels depuis le client)

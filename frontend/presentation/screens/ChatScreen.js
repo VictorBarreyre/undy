@@ -24,6 +24,8 @@ import ReplyBanner from '../components/ReplyBanner';
 import RNFS from 'react-native-fs';
 import { AudioRecorder, AudioUtils } from 'react-native-audio';
 import Sound from 'react-native-sound';
+import useContentModeration from '../../infrastructure/hook/useContentModeration';
+
 
 
 const ChatScreen = ({ route }) => {
@@ -62,6 +64,24 @@ const ChatScreen = ({ route }) => {
   const [isRecordingPermitted, setIsRecordingPermitted] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const soundRef = useRef(null);
+
+  const { 
+    checkText, 
+    checkImage, 
+    submitVideo, 
+    checkMessage,
+    isChecking, 
+    pendingModeration 
+  } = useContentModeration({
+    showAlerts: true,
+    onViolation: (result) => {
+      console.log('Contenu inapproprié détecté:', result);
+      // Vous pourriez ajouter une journalisation spécifique ici
+    }
+  });
+
+
+  const [messagesAwaitingModeration, setMessagesAwaitingModeration] = useState({});
 
   useEffect(() => {
 
@@ -878,216 +898,265 @@ const stopRecording = async () => {
   };
 
   // Envoi de message
-  const sendMessage = async () => {
-    try {
-      if (!conversationId) {
-        throw new Error(t('chat.errors.missingConversationId'));
-      }
+  // Envoi de message
+const sendMessage = async () => {
+  try {
+    if (!conversationId) {
+      throw new Error(t('chat.errors.missingConversationId'));
+    }
 
-      // Vérifier s'il y a du contenu à envoyer
-      if (!message.trim() && !selectedImage && !audioPath) return;
+    // Vérifier s'il y a du contenu à envoyer
+    if (!message.trim() && !selectedImage && !audioPath) return;
 
-      if (!userData?.name) {
-        throw new Error(t('chat.errors.missingUserInfo'));
-      }
+    if (!userData?.name) {
+      throw new Error(t('chat.errors.missingUserInfo'));
+    }
 
-      // Déterminer le type de message
-      let messageType = 'text';
-      if (audioPath) {
-        messageType = 'audio';
-      } else if (selectedImage && message.trim()) {
-        messageType = 'mixed';
-      } else if (selectedImage) {
-        messageType = 'image';
-      }
+    // Déterminer le type de message
+    let messageType = 'text';
+    if (audioPath) {
+      messageType = 'audio';
+    } else if (selectedImage && message.trim()) {
+      messageType = 'mixed';
+    } else if (selectedImage) {
+      messageType = 'image';
+    }
 
-      // Créer un ID temporaire pour afficher immédiatement le message
-      const tempId = `temp-${Date.now()}`;
-      const messageText = message.trim() || "";
+    // Créer un ID temporaire pour afficher immédiatement le message
+    const tempId = `temp-${Date.now()}`;
+    const messageText = message.trim() || "";
 
-      // Ajouter immédiatement le message à l'interface avec état "en cours d'envoi"
-      setMessages(prev => [...prev, {
-        id: tempId,
-        text: messageText,
-        messageType: messageType,
-        image: selectedImage ? selectedImage.uri : "",
-        audio: audioPath || "",
-        audioDuration: audioLength || "00:00",
-        sender: 'user',
-        timestamp: new Date().toISOString(),
-        isSending: true,
-        replyToMessage: replyToMessage,
-        senderInfo: {
-          id: userData?._id || "",
-          name: userData?.name || t('chat.defaultUser')
+    // Préparer l'objet message pour la modération
+    const messageToCheck = {
+      id: tempId,
+      content: messageText,
+      image: selectedImage ? selectedImage.uri : null,
+      audio: audioPath || null,
+      messageType: messageType,
+      onModerationComplete: (result) => {
+        // Callback à appeler quand une modération en attente (vidéo) est terminée
+        console.log('Modération terminée pour message:', result);
+        
+        // Si le contenu est inapproprié, supprimer le message
+        if (result.status === 'flagged') {
+          setMessages(prev => prev.filter(msg => msg.id !== result.messageId));
+          
+          // Afficher une notification
+          Alert.alert(
+            "Message supprimé",
+            "Votre message a été supprimé car il a été identifié comme contenu inapproprié suite à une analyse complète."
+          );
         }
-      }]);
+      }
+    };
 
-      // Réinitialiser l'interface immédiatement pour une meilleure réactivité
-      setMessage('');
-      const imageToUpload = selectedImage;
-      const audioToUpload = audioPath;
-      setSelectedImage(null);
-      setAudioPath('');
-      setAudioLength('');
-      setReplyToMessage(null);
-      updateInputAreaHeight(false);
+    // Vérifier le contenu pour modération
+    const moderationResult = await checkMessage(messageToCheck);
+    
+    if (!moderationResult.isValid) {
+      // Le contenu a été bloqué immédiatement
+      console.log('Message bloqué par la modération:', moderationResult.reason);
+      return;
+    }
 
-      // Défiler vers le bas
-      requestAnimationFrame(() => {
-        if (flatListRef.current) {
-          flatListRef.current.scrollToEnd({ animated: true });
-        }
-      });
+    // Ajouter immédiatement le message à l'interface avec état "en cours d'envoi"
+    setMessages(prev => [...prev, {
+      id: tempId,
+      text: messageText,
+      messageType: messageType,
+      image: selectedImage ? selectedImage.uri : "",
+      audio: audioPath || "",
+      audioDuration: audioLength || "00:00",
+      sender: 'user',
+      timestamp: new Date().toISOString(),
+      isSending: true,
+      isPendingModeration: moderationResult.status === 'pending',
+      replyToMessage: replyToMessage,
+      senderInfo: {
+        id: userData?._id || "",
+        name: userData?.name || t('chat.defaultUser')
+      }
+    }]);
 
-      // Créer l'objet du message pour l'API
-      let messageContent = {
-        content: messageText || " ",
-        senderName: userData.name,
-        messageType: messageType
+    // Réinitialiser l'interface immédiatement pour une meilleure réactivité
+    setMessage('');
+    const imageToUpload = selectedImage;
+    const audioToUpload = audioPath;
+    setSelectedImage(null);
+    setAudioPath('');
+    setAudioLength('');
+    setReplyToMessage(null);
+    updateInputAreaHeight(false);
+
+    // Défiler vers le bas
+    requestAnimationFrame(() => {
+      if (flatListRef.current) {
+        flatListRef.current.scrollToEnd({ animated: true });
+      }
+    });
+
+    // Créer l'objet du message pour l'API
+    let messageContent = {
+      content: messageText || " ",
+      senderName: userData.name,
+      messageType: messageType
+    };
+
+    // Ajouter les informations de réponse si nécessaire
+    if (replyToMessage) {
+      messageContent.replyTo = replyToMessage.id;
+      messageContent.replyToSender = replyToMessage.senderInfo?.id;
+
+      // Si vous avez besoin de stocker plus d'informations sur le message répondu
+      messageContent.replyData = {
+        text: replyToMessage.text,
+        sender: replyToMessage.senderInfo?.name || t('chat.defaultUser'),
+        hasImage: !!replyToMessage.image,
+        hasAudio: !!replyToMessage.audio
       };
+    }
 
-      // Ajouter les informations de réponse si nécessaire
-      if (replyToMessage) {
-        messageContent.replyTo = replyToMessage.id;
-        messageContent.replyToSender = replyToMessage.senderInfo?.id;
+    // Si une image est sélectionnée, l'uploader
+    if (imageToUpload) {
+      setIsUploading(true);
+      setUploadProgress(0);
 
-        // Si vous avez besoin de stocker plus d'informations sur le message répondu
-        messageContent.replyData = {
-          text: replyToMessage.text,
-          sender: replyToMessage.senderInfo?.name || t('chat.defaultUser'),
-          hasImage: !!replyToMessage.image,
-          hasAudio: !!replyToMessage.audio
-        };
-      }
-
-      // Si une image est sélectionnée, l'uploader
-      if (imageToUpload) {
-        setIsUploading(true);
-        setUploadProgress(0);
-
-        try {
-          // Utiliser directement la donnée base64
-          let imageData;
-          if (imageToUpload.base64) {
-            // Utiliser directement base64 au lieu de redimensionner
-            imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
-
-            // Uploader l'image
-            const uploadResult = await uploadImage(
-              imageData,
-              (progress) => setUploadProgress(progress)
-            );
-
-            messageContent.image = uploadResult.url;
-          } else {
-            throw new Error(t('chat.errors.unsupportedImageFormat'));
-          }
-        } catch (uploadError) {
-          console.error(t('chat.errors.imageUpload'), uploadError);
-
-          // Marquer le message comme échoué
-          setMessages(prev => prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, sendFailed: true, isSending: false }
-              : msg
-          ));
-
-          throw new Error(t('chat.errors.imageUploadFailed'));
-        } finally {
-          setIsUploading(false);
-          setUploadProgress(0);
-        }
-      }
-
-      // Si un audio est sélectionné, l'uploader
-      if (audioPath) {
-        setIsUploading(true);
-        
-        // Vérifiez que audioPath est correctement défini
-        console.log('Audio path avant envoi:', audioPath);
-        
-        if (!audioPath) {
-          throw new Error('Chemin audio non défini');
-        }
-        
-        // Format correct pour l'URI
-        const audioUri = Platform.OS === 'ios' 
-          ? audioPath.replace('file://', '') 
-          : audioPath;
-        
-        console.log('Audio URI formaté:', audioUri);
-        
-        // Upload de l'audio d'abord
-        const audioResult = await uploadAudio(audioUri, setUploadProgress);
-        
-        console.log('Résultat upload audio:', audioResult);
-        
-        // Puis ajout du message avec l'URL audio retournée
-        await handleAddMessage(
-          conversationId, 
-          {
-            messageType: 'audio',
-            audio: audioResult.url, // Assurez-vous que la structure correspond à ce qu'attend votre API
-            audioDuration: audioResult.duration, // Inclure la durée ici
-            content: '', // Si vous avez besoin d'un contenu texte
-          }
-        );
-        
-        // Réinitialiser les états
-        setAudioPath('');
-        setAudioLength('');
-        setIsUploading(false);
-        setUploadProgress(0);
-        
-        // Si un message est aussi entré, l'envoyer séparément
-        if (message.trim()) {
-          await handleAddMessage(conversationId, message);
-          setMessage('');
-        }
-        
-        if (replyToMessage) setReplyToMessage(null);
-        return;
-      }
-
-
-      // Envoyer le message
       try {
-        const newMessage = await handleAddMessage(conversationId, messageContent);
+        // Utiliser directement la donnée base64
+        let imageData;
+        if (imageToUpload.base64) {
+          // Utiliser directement base64 au lieu de redimensionner
+          imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
 
-        // Remplacer le message temporaire par le message réel
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === tempId
-              ? {
-                ...msg,
-                id: newMessage._id,
-                image: messageContent.image || "",
-                audio: messageContent.audio || "",
-                isSending: false
-              }
-              : msg
-          )
-        );
-      } catch (error) {
-        console.error(t('chat.errors.sendMessage'), error);
+          // Uploader l'image
+          const uploadResult = await uploadImage(
+            imageData,
+            (progress) => setUploadProgress(progress)
+          );
+
+          messageContent.image = uploadResult.url;
+        } else {
+          throw new Error(t('chat.errors.unsupportedImageFormat'));
+        }
+      } catch (uploadError) {
+        console.error(t('chat.errors.imageUpload'), uploadError);
 
         // Marquer le message comme échoué
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, sendFailed: true, isSending: false }
-              : msg
-          )
-        );
+        setMessages(prev => prev.map(msg =>
+          msg.id === tempId
+            ? { ...msg, sendFailed: true, isSending: false }
+            : msg
+        ));
 
-        throw error;
+        throw new Error(t('chat.errors.imageUploadFailed'));
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
+    }
+
+    // Si un audio est sélectionné, l'uploader
+    if (audioPath) {
+      setIsUploading(true);
+      
+      // Vérifiez que audioPath est correctement défini
+      console.log('Audio path avant envoi:', audioPath);
+      
+      if (!audioPath) {
+        throw new Error('Chemin audio non défini');
+      }
+      
+      // Format correct pour l'URI
+      const audioUri = Platform.OS === 'ios' 
+        ? audioPath.replace('file://', '') 
+        : audioPath;
+      
+      console.log('Audio URI formaté:', audioUri);
+      
+      // Upload de l'audio d'abord
+      const audioResult = await uploadAudio(audioUri, setUploadProgress);
+      
+      console.log('Résultat upload audio:', audioResult);
+      
+      // Puis ajout du message avec l'URL audio retournée
+      await handleAddMessage(
+        conversationId, 
+        {
+          messageType: 'audio',
+          audio: audioResult.url,
+          audioDuration: audioResult.duration,
+          content: '',
+        }
+      );
+      
+      // Réinitialiser les états
+      setAudioPath('');
+      setAudioLength('');
+      setIsUploading(false);
+      setUploadProgress(0);
+      
+      // Si un message est aussi entré, l'envoyer séparément
+      if (message.trim()) {
+        await handleAddMessage(conversationId, message);
+        setMessage('');
+      }
+      
+      if (replyToMessage) setReplyToMessage(null);
+      return;
+    }
+
+    // Envoyer le message
+    try {
+      const newMessage = await handleAddMessage(conversationId, messageContent);
+
+      // Si la modération vidéo est en attente, enregistrer l'ID du message réel
+      if (moderationResult.status === 'pending' && moderationResult.workflowId) {
+        setMessagesAwaitingModeration(prev => ({
+          ...prev,
+          [tempId]: {
+            realId: newMessage._id,
+            workflowId: moderationResult.workflowId
+          }
+        }));
       }
 
+      // Remplacer le message temporaire par le message réel
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === tempId
+            ? {
+              ...msg,
+              id: newMessage._id,
+              image: messageContent.image || "",
+              audio: messageContent.audio || "",
+              isSending: false,
+              isPendingModeration: moderationResult.status === 'pending'
+            }
+            : msg
+        )
+      );
     } catch (error) {
       console.error(t('chat.errors.sendMessage'), error);
+
+      // Marquer le message comme échoué
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === tempId
+            ? { ...msg, sendFailed: true, isSending: false }
+            : msg
+        )
+      );
+
+      throw error;
     }
-  };
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi du message:', error);
+    Alert.alert(
+      "Erreur",
+      "Une erreur s'est produite lors de l'envoi du message. Veuillez réessayer."
+    );
+  }
+};
 
 
   const handleImagePick = async () => {

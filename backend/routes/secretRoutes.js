@@ -26,7 +26,7 @@ const {
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
-const { moderationMiddleware } = require('../controllers/moderationController');
+const { moderationMiddleware } = require('../controllers/sighteningController');
 
 
 // Routes publiques

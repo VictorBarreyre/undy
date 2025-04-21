@@ -2,6 +2,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAxiosInstance } from '../data/api/axiosInstance';
+import sightengineService from './SightengineService';
 
 // Configuration du cache
 const CACHE_EXPIRY = 60 * 60 * 1000; // 1 heure en millisecondes
@@ -33,6 +34,8 @@ const MODERATION_CONFIG = {
     'sexual': 0.8,            // Moins strict pour contenu adulte général
     'violence': 0.8,          // Moins strict pour la violence
   },
+  // Suivi des vidéos en cours de modération
+  pendingVideoModerations: {},
 };
 
 /**
@@ -74,29 +77,33 @@ export const checkContentLocally = (content) => {
 /**
  * Générer une clé de cache pour un contenu
  * @param {string} content - Contenu à identifier
+ * @param {string} type - Type de contenu ('text', 'image', 'video')
  * @returns {string} - Clé de cache
  */
-const getCacheKey = (content) => {
+const getCacheKey = (content, type = 'text') => {
   // Hashage simple pour la clé de cache
   let hash = 0;
-  for (let i = 0; i < content.length; i++) {
-    const char = content.charCodeAt(i);
+  const contentStr = type === 'text' ? content : `${type}_${content}`;
+  
+  for (let i = 0; i < contentStr.length; i++) {
+    const char = contentStr.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash; // Conversion en entier 32 bits
   }
-  return `${CACHE_PREFIX}${hash}`;
+  return `${CACHE_PREFIX}${type}_${hash}`;
 };
 
 /**
  * Vérifier si un résultat existe en cache et est valide
  * @param {string} content - Contenu à vérifier
+ * @param {string} type - Type de contenu ('text', 'image', 'video')
  * @returns {Promise<Object|null>} - Résultat de modération en cache ou null
  */
-const checkCache = async (content) => {
+const checkCache = async (content, type = 'text') => {
   if (!MODERATION_CONFIG.useCache) return null;
   
   try {
-    const cacheKey = getCacheKey(content);
+    const cacheKey = getCacheKey(content, type);
     const cachedData = await AsyncStorage.getItem(cacheKey);
     
     if (cachedData) {
@@ -121,12 +128,13 @@ const checkCache = async (content) => {
  * Stocker un résultat de modération dans le cache
  * @param {string} content - Contenu vérifié
  * @param {Object} result - Résultat de la modération
+ * @param {string} type - Type de contenu ('text', 'image', 'video')
  */
-const storeInCache = async (content, result) => {
+const storeInCache = async (content, result, type = 'text') => {
   if (!MODERATION_CONFIG.useCache) return;
   
   try {
-    const cacheKey = getCacheKey(content);
+    const cacheKey = getCacheKey(content, type);
     const cacheData = {
       result,
       timestamp: Date.now()
@@ -150,7 +158,7 @@ const isAboveThreshold = (category, score) => {
 };
 
 /**
- * Vérifier le contenu avec l'API OpenAI
+ * Vérifier le contenu texte avec l'API OpenAI ou autre API de modération
  * @param {string} content - Contenu à vérifier
  * @returns {Promise<Object>} - Résultat de modération
  */
@@ -161,7 +169,7 @@ export const checkContentViaAPI = async (content) => {
 
   try {
     // Vérifier le cache d'abord pour éviter des appels API inutiles
-    const cachedResult = await checkCache(content);
+    const cachedResult = await checkCache(content, 'text');
     if (cachedResult) {
       return cachedResult;
     }
@@ -181,7 +189,7 @@ export const checkContentViaAPI = async (content) => {
     const moderationResult = response.data;
     
     // Stocker dans le cache pour les futures vérifications
-    await storeInCache(content, moderationResult);
+    await storeInCache(content, moderationResult, 'text');
     
     if (MODERATION_CONFIG.logViolations && moderationResult.isFlagged) {
       console.log('API: Violation de modération détectée:', moderationResult);
@@ -196,8 +204,124 @@ export const checkContentViaAPI = async (content) => {
 };
 
 /**
- * Point d'entrée principal pour la modération de contenu
- * @param {string} content - Contenu à modérer
+ * Vérifier une image avec Sightengine
+ * @param {string} imageUri - URI de l'image à modérer
+ * @returns {Promise<Object>} - Résultat de la modération
+ */
+export const moderateImage = async (imageUri) => {
+  if (!imageUri) {
+    return { isFlagged: false, reason: null };
+  }
+
+  try {
+    // Vérifier le cache d'abord
+    const cachedResult = await checkCache(imageUri, 'image');
+    if (cachedResult) {
+      return cachedResult;
+    }
+    
+    // Utiliser le service Sightengine pour vérifier l'image
+    const moderationResult = await sightengineService.moderateImage(imageUri);
+    
+    // Stocker dans le cache
+    await storeInCache(imageUri, moderationResult, 'image');
+    
+    if (MODERATION_CONFIG.logViolations && moderationResult.isFlagged) {
+      console.log('Sightengine: Violation dans l\'image détectée:', moderationResult);
+    }
+    
+    return moderationResult;
+  } catch (error) {
+    console.error('Erreur lors de la modération de l\'image:', error);
+    // En cas d'erreur, permettre l'image
+    return { isFlagged: false, reason: null };
+  }
+};
+
+/**
+ * Soumettre une vidéo pour modération et stocker son ID de workflow
+ * @param {string} videoUri - URI de la vidéo à modérer
+ * @returns {Promise<Object>} - Résultat de soumission
+ */
+export const submitVideoForModeration = async (videoUri) => {
+  if (!videoUri) {
+    return { isFlagged: false, reason: null, status: 'skipped' };
+  }
+
+  try {
+    // Vérifier d'abord si nous avons déjà un résultat en cache
+    const cachedResult = await checkCache(videoUri, 'video');
+    if (cachedResult && cachedResult.status === 'completed') {
+      return cachedResult;
+    }
+    
+    // Soumettre la vidéo à Sightengine
+    const submissionResult = await sightengineService.submitVideoForModeration(videoUri);
+    
+    // Stocker l'ID de workflow pour suivi ultérieur
+    if (submissionResult.workflowId) {
+      MODERATION_CONFIG.pendingVideoModerations[videoUri] = submissionResult.workflowId;
+      
+      // Stocker un résultat préliminaire en cache
+      const preliminaryResult = {
+        isFlagged: false, // Par défaut, on autorise jusqu'à la fin de l'analyse
+        reason: null,
+        status: 'pending',
+        workflowId: submissionResult.workflowId
+      };
+      
+      await storeInCache(videoUri, preliminaryResult, 'video');
+      
+      return preliminaryResult;
+    }
+    
+    return { isFlagged: false, reason: null, status: 'error' };
+  } catch (error) {
+    console.error('Erreur lors de la soumission de la vidéo pour modération:', error);
+    return { isFlagged: false, reason: null, status: 'error' };
+  }
+};
+
+/**
+ * Vérifier le statut d'une modération vidéo
+ * @param {string} videoUri - URI de la vidéo
+ * @param {string} workflowId - ID du workflow (optionnel si déjà enregistré)
+ * @returns {Promise<Object>} - Résultat actuel de la modération
+ */
+export const checkVideoModerationStatus = async (videoUri, workflowId = null) => {
+  try {
+    // Obtenir l'ID du workflow soit depuis les paramètres, soit depuis la configuration
+    const workflow = workflowId || MODERATION_CONFIG.pendingVideoModerations[videoUri];
+    
+    if (!workflow) {
+      return { isFlagged: false, reason: null, status: 'unknown' };
+    }
+    
+    // Vérifier le statut via Sightengine
+    const statusResult = await sightengineService.checkVideoModerationStatus(workflow);
+    
+    // Si la modération est terminée, mettre à jour le cache
+    if (statusResult.status === 'completed') {
+      await storeInCache(videoUri, statusResult, 'video');
+      
+      // Nettoyer le suivi des modérations en cours
+      delete MODERATION_CONFIG.pendingVideoModerations[videoUri];
+      
+      if (MODERATION_CONFIG.logViolations && statusResult.isFlagged) {
+        console.log('Sightengine: Violation dans la vidéo détectée:', statusResult);
+      }
+    }
+    
+    return statusResult;
+  } catch (error) {
+    console.error('Erreur lors de la vérification du statut de modération vidéo:', error);
+    return { isFlagged: false, reason: null, status: 'error' };
+  }
+};
+
+/**
+ * Point d'entrée principal pour la modération de contenu texte
+ * @param {string} content - Contenu texte à modérer
  * @returns {Promise<Object>} - Résultat de modération
  */
 export const moderateContent = async (content) => {
@@ -211,6 +335,68 @@ export const moderateContent = async (content) => {
   
   // Si la vérification locale passe, utilise l'API
   return await checkContentViaAPI(content);
+};
+
+/**
+ * Modérer un message complet avec texte, images et vidéos
+ * @param {Object} message - Message à modérer
+ * @returns {Promise<Object>} - Résultat global de modération
+ */
+export const moderateMessage = async (message) => {
+  try {
+    const results = {
+      isFlagged: false,
+      reason: null,
+      details: {},
+      status: 'completed'
+    };
+    
+    // 1. Modération du texte (le plus rapide)
+    if (message.content) {
+      const textResult = await moderateContent(message.content);
+      if (textResult.isFlagged) {
+        return {
+          ...textResult,
+          contentType: 'text'
+        };
+      }
+      results.details.text = textResult;
+    }
+    
+    // 2. Modération de l'image (si présente)
+    if (message.image) {
+      const imageResult = await moderateImage(message.image);
+      if (imageResult.isFlagged) {
+        return {
+          ...imageResult,
+          contentType: 'image'
+        };
+      }
+      results.details.image = imageResult;
+    }
+    
+    // 3. Modération de la vidéo (commence l'analyse, retourne pending)
+    if (message.video) {
+      const videoResult = await submitVideoForModeration(message.video);
+      results.details.video = videoResult;
+      
+      // Si le statut est en attente, indiquer que le message est en cours d'analyse
+      if (videoResult.status === 'pending') {
+        results.status = 'pending';
+        results.workflowId = videoResult.workflowId;
+      } else if (videoResult.isFlagged) {
+        return {
+          ...videoResult,
+          contentType: 'video'
+        };
+      }
+    }
+    
+    return results;
+  } catch (error) {
+    console.error('Erreur lors de la modération du message:', error);
+    return { isFlagged: false, reason: null, status: 'error' };
+  }
 };
 
 /**
@@ -244,6 +430,11 @@ export const getViolationMessage = (reason) => {
     'self-harm': "Ce message contient des références à l'automutilation.",
     'violence': "Ce message contient des références violentes inappropriées.",
     'offensive_language': "Ce message contient un langage offensant.",
+    'drugs': "Ce message contient des références à des substances interdites.",
+    'alcohol': "Ce message contient des références inappropriées à l'alcool.",
+    'gambling': "Ce message contient des références inappropriées aux jeux d'argent.",
+    'minor_protection': "Ce message contient du contenu pouvant mettre en danger des mineurs.",
+    'suspicious_link': "Ce message contient un lien ou QR code suspect.",
     'default': "Ce message a été bloqué car il enfreint nos directives communautaires."
   };
   
