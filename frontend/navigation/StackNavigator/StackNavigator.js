@@ -1,7 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
-import Inscription from '../../presentation/screens/Inscription';
 import Connexion from '../../presentation/screens/Connexion';
 import DrawerNavigator from '../DrawerNavigator';
 import TypewriterLoader from '../../presentation/components/TypewriterLoader';
@@ -76,7 +75,6 @@ const StackNavigator = () => {
             ) : (
                 <>
                     <Stack.Screen name="Connexion" component={Connexion} options={{ headerShown: false }} />
-                    <Stack.Screen name="Inscription" component={Inscription} options={{ headerShown: false }} />
                 </>
             )}
         </Stack.Navigator>

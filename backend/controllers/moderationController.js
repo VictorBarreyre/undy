@@ -2,22 +2,23 @@
 
 const fetch = require('node-fetch');
 
-// Configuration de l'API OpenAI
-const OPENAI_API_CONFIG = {
-  apiKey: process.env.OPENAI_API_KEY || 'votre-clé-api',
-  endpoint: 'https://api.openai.com/v1/moderations',
+// Configuration de l'API Google Perspective
+const PERSPECTIVE_API_CONFIG = {
+  apiKey: process.env.PERSPECTIVE_API_KEY || 'votre-clé-api',
+  endpoint: 'https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze',
 };
 
 // Configuration des seuils de modération
 const MODERATION_CONFIG = {
   threshold: 0.7,                // Seuil par défaut
   categoryThresholds: {
-    'sexual/minors': 0.5,        // Très strict pour ce type de contenu
-    'self-harm': 0.6,            // Strict pour automutilation
-    'hate': 0.7,                 // Standard pour discours haineux
-    'harassment': 0.7,           // Standard pour harcèlement
-    'sexual': 0.8,               // Moins strict pour contenu adulte général
-    'violence': 0.8,             // Moins strict pour la violence
+    'TOXICITY': 0.7,             // Contenu toxique général
+    'SEVERE_TOXICITY': 0.5,      // Contenu très toxique
+    'IDENTITY_ATTACK': 0.6,      // Attaques basées sur l'identité
+    'INSULT': 0.7,               // Insultes
+    'PROFANITY': 0.8,            // Grossièretés
+    'THREAT': 0.6,               // Menaces
+    'SEXUALLY_EXPLICIT': 0.7,    // Contenu sexuellement explicite
   },
   logViolations: true,           // Journaliser les violations
 };
@@ -34,42 +35,58 @@ const isAboveThreshold = (category, score) => {
 };
 
 /**
- * Vérifier le contenu avec l'API OpenAI
+ * Vérifier le contenu avec l'API Google Perspective
  * @param {string} content - Contenu à vérifier
  * @returns {Promise<Object>} - Résultat de modération
  */
-const checkContentWithOpenAI = async (content) => {
+const checkContentWithPerspective = async (content) => {
   try {
-    // Appel à l'API OpenAI
-    const response = await fetch(OPENAI_API_CONFIG.endpoint, {
+    // Construction du corps de la requête
+    const requestBody = {
+      comment: { text: content },
+      languages: ['fr', 'en'],  // Support du français et de l'anglais
+      requestedAttributes: {
+        TOXICITY: {},
+        SEVERE_TOXICITY: {},
+        IDENTITY_ATTACK: {},
+        INSULT: {},
+        PROFANITY: {},
+        THREAT: {},
+        SEXUALLY_EXPLICIT: {}
+      }
+    };
+    
+    // Construction de l'URL avec la clé API
+    const url = `${PERSPECTIVE_API_CONFIG.endpoint}?key=${PERSPECTIVE_API_CONFIG.apiKey}`;
+    
+    // Appel à l'API Perspective
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_CONFIG.apiKey}`,
       },
-      body: JSON.stringify({ input: content }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`OpenAI API request failed: ${response.status} - ${errorText}`);
+      throw new Error(`Perspective API request failed: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
     
-    // Vérifier si le contenu a été signalé
-    if (data.results && data.results[0].flagged) {
-      const categories = data.results[0].categories;
-      const categoryScores = data.results[0].category_scores;
-      
-      // Trouver les catégories dépassant leur seuil spécifique
+    // Vérifier les scores pour chaque attribut
+    if (data.attributeScores) {
+      // Trouver les catégories dépassant leur seuil
       const flaggedCategories = [];
       
-      for (const category in categoryScores) {
-        if (isAboveThreshold(category, categoryScores[category])) {
+      for (const category in data.attributeScores) {
+        const score = data.attributeScores[category].summaryScore.value;
+        
+        if (isAboveThreshold(category, score)) {
           flaggedCategories.push({
             name: category,
-            score: categoryScores[category]
+            score: score
           });
         }
       }
@@ -91,13 +108,16 @@ const checkContentWithOpenAI = async (content) => {
           }
         }
         
+        // Mapper la catégorie Perspective à un nom plus lisible
+        const mappedReason = mapPerspectiveCategory(highestCategory);
+        
         const result = {
           isFlagged: true,
-          reason: highestCategory,
+          reason: mappedReason,
+          originalCategory: highestCategory,
           details: {
             flaggedCategories,
-            allCategories: categories,
-            allCategoryScores: categoryScores,
+            allScores: data.attributeScores
           }
         };
         
@@ -113,15 +133,33 @@ const checkContentWithOpenAI = async (content) => {
     return {
       isFlagged: false,
       reason: null,
-      details: data.results && data.results[0] ? {
-        allCategories: data.results[0].categories,
-        allCategoryScores: data.results[0].category_scores
-      } : null
+      details: {
+        allScores: data.attributeScores
+      }
     };
   } catch (error) {
-    console.error('[MODERATION] Erreur lors de la vérification OpenAI:', error);
+    console.error('[MODERATION] Erreur lors de la vérification Perspective:', error);
     throw error;
   }
+};
+
+/**
+ * Mapper les catégories Perspective vers des raisons plus lisibles
+ * @param {string} category - Catégorie Perspective
+ * @returns {string} - Raison lisible
+ */
+const mapPerspectiveCategory = (category) => {
+  const mapping = {
+    'TOXICITY': 'harassment',
+    'SEVERE_TOXICITY': 'harassment',
+    'IDENTITY_ATTACK': 'hate',
+    'INSULT': 'harassment',
+    'PROFANITY': 'offensive_language',
+    'THREAT': 'violence',
+    'SEXUALLY_EXPLICIT': 'sexual'
+  };
+  
+  return mapping[category] || 'inappropriate_content';
 };
 
 /**
@@ -195,15 +233,21 @@ exports.moderateContent = async (req, res) => {
       return res.status(200).json(localResult);
     }
     
-    // Si la vérification locale passe, utiliser l'API OpenAI
-    const apiResult = await checkContentWithOpenAI(content);
-    
-    // Journaliser les statistiques de modération pour analyse
-    if (MODERATION_CONFIG.logViolations) {
-      console.log(`[MODERATION STATS] Content: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}" | Flagged: ${apiResult.isFlagged} | Reason: ${apiResult.reason || 'None'}`);
+    // Si la vérification locale passe, utiliser l'API Perspective
+    try {
+      const apiResult = await checkContentWithPerspective(content);
+      
+      // Journaliser les statistiques de modération pour analyse
+      if (MODERATION_CONFIG.logViolations) {
+        console.log(`[MODERATION STATS] Content: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}" | Flagged: ${apiResult.isFlagged} | Reason: ${apiResult.reason || 'None'}`);
+      }
+      
+      res.status(200).json(apiResult);
+    } catch (error) {
+      // En cas d'erreur avec l'API, revenir au résultat local
+      console.error('[MODERATION] Erreur API, utilisation du résultat local:', error.message);
+      res.status(200).json(localResult);
     }
-    
-    res.status(200).json(apiResult);
   } catch (error) {
     console.error('[MODERATION] Erreur de modération:', error);
     res.status(500).json({
@@ -248,23 +292,38 @@ exports.moderationMiddleware = async (req, res, next) => {
       });
     }
     
-    // Vérification via API OpenAI
-    const apiResult = await checkContentWithOpenAI(content);
-    
-    if (apiResult.isFlagged) {
-      return res.status(403).json({
-        success: false,
-        message: 'Contenu inapproprié détecté',
-        details: apiResult
-      });
+    // Vérification via API Perspective
+    try {
+      const apiResult = await checkContentWithPerspective(content);
+      
+      if (apiResult.isFlagged) {
+        return res.status(403).json({
+          success: false,
+          message: 'Contenu inapproprié détecté',
+          details: apiResult
+        });
+      }
+      
+      // Le contenu est approprié, continuer
+      next();
+    } catch (error) {
+      // En cas d'erreur avec l'API, on se fie au filtrage local
+      console.error('[MODERATION MIDDLEWARE] Erreur API:', error.message);
+      if (localResult.isFlagged) {
+        return res.status(403).json({
+          success: false,
+          message: 'Contenu inapproprié détecté',
+          details: localResult
+        });
+      } else {
+        // Si le filtrage local passe, on laisse passer pour éviter de bloquer les communications
+        next();
+      }
     }
-    
-    // Le contenu est approprié, continuer
-    next();
   } catch (error) {
     console.error('[MODERATION MIDDLEWARE] Erreur:', error);
     
-    // En cas d'erreur, on peut soit bloquer, soit laisser passer
+    // En cas d'erreur dans le middleware, on peut soit bloquer, soit laisser passer
     // Ici on laisse passer pour éviter de bloquer les communications en cas de problème technique
     next();
   }

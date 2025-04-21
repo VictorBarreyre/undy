@@ -462,75 +462,11 @@ const Connexion = ({ navigation }) => {
         <Box alignItems="center" mb={4}>
           <Text
             style={styles.h4}
-            mt={10}
+            mb={4}
             textAlign="center"
           >
             {t('auth.login.title')}
           </Text>
-
-          <VStack mt={4} space={2} w="100%">
-            {/* Email */}
-            <Input
-              placeholder={t('auth.login.email')}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-
-            {/* Password */}
-            <Input
-              placeholder={t('auth.login.password')}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              InputRightElement={
-                <Pressable onPress={() => setShowPassword(!showPassword)}>
-                  <Icon
-                    as={<FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />}
-                    size="5"
-                    mr="3"
-                    color="gray.500"
-                  />
-                </Pressable>
-              }
-            />
-          </VStack>
-
-          {/* CTA - Login Button */}
-          <Button
-            mt={5}
-            w="100%"
-            bg="black"
-            _text={{ color: 'white', fontFamily: 'SF-Pro-Display-Bold' }}
-            onPress={handleLogin}
-          >
-            {t('auth.login.loginButton')}
-          </Button>
-
-          {/* Link to Register */}
-          <Link
-            px={10}
-            mt={4}
-            mb={4}
-            _text={{
-              color: 'black',
-              fontFamily: 'SF-Pro-Display-Regular',
-              fontSize: '14px',
-              textAlign: 'center',
-              lineHeight: '16px',
-              textDecoration: 'none',
-            }}
-            onPress={() => navigation.navigate('Inscription')}
-          >
-            {t('auth.login.noAccount')}
-          </Link>
-
-          <HStack w="95%" mt={2} mb={2} alignItems="center" opacity={0.8}>
-            <Box flex={1} h="1px" bg="#94A3B8" />
-            <Text style={styles.caption} mx={2} color="#94A3B8">{t('auth.login.or')}</Text>
-            <Box flex={1} h="1px" bg="#94A3B8" />
-          </HStack>
 
           {Platform.OS === 'ios' && isAppleSignInSupported && (
             <Button
@@ -573,6 +509,7 @@ const Connexion = ({ navigation }) => {
           <Link
             px={10}
             mt={4}
+            mb={4}
             style={styles.littleCaption}
             onPress={() => navigation.navigate('Login')}
             _text={{
