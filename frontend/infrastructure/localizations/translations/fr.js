@@ -255,6 +255,29 @@ export default {
       "copy": "Copier", // Nouvelle entrée
       "cancel": "Annuler"
     },
+    "audio": {
+      "permissionRequired": "Permission requise",
+      "microphoneAccess": "L'application a besoin d'accéder au microphone pour enregistrer des messages vocaux.",
+      "cancel": "Annuler",
+      "settings": "Paramètres",
+      "recordingError": "Erreur lors du démarrage de l'enregistrement",
+      "cannotStartRecording": "Impossible de démarrer l'enregistrement audio.",
+      "playbackError": "Erreur lors de la lecture",
+      "cannotPlayRecording": "Impossible de lire l'enregistrement audio.",
+      "uploadError": "Erreur lors de l'upload audio",
+      "messageDeleted": "Message supprimé",
+      "contentModeration": "Votre message a été supprimé car il a été identifié comme contenu inapproprié suite à une analyse complète."
+    },
+    "moderation": {
+      "title": "Contenu inapproprié",
+      "message": "Votre message ne peut pas être envoyé car il contient du contenu inapproprié.",
+      "retry": "Réessayer",
+      "cancel": "Annuler"
+    },
+    "alerts": {
+      "error": "Erreur",
+      "sendError": "Une erreur s'est produite lors de l'envoi du message. Veuillez réessayer."
+    },
     "locationSharing": {
       "title": "Partager ma localisation"
     },
@@ -279,7 +302,14 @@ export default {
       "sendMessage": "Erreur lors de l'envoi du message:",
       "imageSelection": "Erreur lors de la sélection d'image:",
       "shareError": "Erreur lors du partage",
-      "missingSecretData": "Données du hushy manquantes"
+      "missingSecretData": "Données du hushy manquantes",
+      "missingSecretData": "Données du hushy manquantes",
+      "unsupportedImageFormat": "Format d'image non pris en charge",
+      "imageUpload": "Erreur lors de l'upload de l'image",
+      "imageUploadFailed": "L'upload de l'image a échoué",
+      "sendMessage": "Erreur lors de l'envoi du message",
+      "imageSelection": "Erreur lors de la sélection de l'image",
+      "shareError": "Erreur lors du partage"
     },
     "messageFailed": "Échec",
     "retry": "Renvoyer",

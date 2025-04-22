@@ -290,6 +290,26 @@ export default {
     "locationSharing": {
       "title": "Share location"
     },
+    
+    "audio": {
+      "permissionRequired": "Permission Required",
+      "microphoneAccess": "The app needs access to your microphone to record voice messages.",
+      "cancel": "Cancel",
+      "settings": "Settings",
+      "recordingError": "Error starting recording",
+      "cannotStartRecording": "Cannot start audio recording.",
+      "playbackError": "Playback error",
+      "cannotPlayRecording": "Cannot play audio recording.",
+      "uploadError": "Audio upload error",
+      "messageDeleted": "Message deleted",
+      "contentModeration": "Your message has been deleted because it was identified as inappropriate content after a complete analysis."
+    },
+    "moderation": {
+      "title": "Inappropriate Content",
+      "message": "Your message cannot be sent because it contains inappropriate content.",
+      "retry": "Retry",
+      "cancel": "Cancel"
+    },
     "reply": "Reply",
     "cancel": "Cancel",
     "image": "Image",
@@ -304,6 +324,10 @@ export default {
       "takePhoto": "Take a photo",
       "chooseFromGallery": "Choose from gallery",
       "cancel": "Cancel"
+    },
+    "alerts": {
+      "error": "Error",
+      "sendError": "An error occurred while sending the message. Please try again."
     },
     "errors": {
       "resizing": "Error resizing image:",
