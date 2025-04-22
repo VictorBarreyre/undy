@@ -1,4 +1,4 @@
-// controllers/sighteningController.js
+// controllers/moderationController.js
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
@@ -476,7 +476,7 @@ const analyzeVideoResult = (data) => {
 };
 
 /**
- * Contrôleur pour la modération de contenu
+ * Contrôleur pour la modération de contenu texte
  * @param {Object} req - Requête Express
  * @param {Object} res - Réponse Express
  */
@@ -505,6 +505,157 @@ const moderateContent = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur lors de la modération du contenu',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Contrôleur pour la modération d'images
+ * @param {Object} req - Requête Express
+ * @param {Object} res - Réponse Express
+ */
+const moderateImage = async (req, res) => {
+  try {
+    let imageData;
+    
+    // Déterminer la source de l'image
+    if (req.file) {
+      // Image téléchargée via multer
+      imageData = await analyzeImageFromFile(req.file);
+    } else if (req.body.url) {
+      // URL d'image fournie
+      imageData = await analyzeImage(req.body.url);
+    } else if (req.body.image && typeof req.body.image === 'string' && req.body.image.startsWith('data:image/')) {
+      // Image en base64
+      imageData = await analyzeImageFromBase64(req.body.image);
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucune image valide fournie. Veuillez fournir un fichier, une URL ou une image en base64.'
+      });
+    }
+    
+    // Analyser le résultat
+    const result = analyzeImageResult(imageData);
+    
+    // Journaliser si nécessaire
+    if (MODERATION_CONFIG.logViolations && result.isFlagged) {
+      console.log('[MODERATION] Image signalée:', result);
+    }
+    
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('[MODERATION] Erreur lors de la modération de l\'image:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la modération de l\'image',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Contrôleur pour soumettre une vidéo à la modération
+ * @param {Object} req - Requête Express
+ * @param {Object} res - Réponse Express
+ */
+const submitVideoForModeration = async (req, res) => {
+  try {
+    let videoUrl;
+    
+    // Déterminer la source de la vidéo
+    if (req.file) {
+      // Vidéo téléchargée via multer
+      // Ici, vous devriez probablement téléverser le fichier vers un service de stockage
+      // et obtenir une URL accessible, car Sightengine nécessite une URL publique
+      // Pour cet exemple, supposons que vous avez une fonction uploadToStorage
+      // videoUrl = await uploadToStorage(req.file);
+      
+      // Pour cet exemple, nous allons simplement retourner une erreur
+      return res.status(400).json({
+        success: false,
+        message: 'Le téléchargement direct de vidéos n\'est pas pris en charge. Veuillez fournir une URL vidéo.'
+      });
+    } else if (req.body.url) {
+      // URL vidéo fournie
+      videoUrl = req.body.url;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucune vidéo valide fournie. Veuillez fournir une URL vidéo.'
+      });
+    }
+    
+    // Soumettre la vidéo pour analyse
+    const submissionResult = await submitVideoForAnalysis(videoUrl);
+    
+    // Journaliser la soumission
+    console.log(`[MODERATION] Vidéo soumise pour analyse: ${videoUrl} - Workflow ID: ${submissionResult.id}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Vidéo soumise pour analyse',
+      workflowId: submissionResult.id,
+      status: 'pending'
+    });
+  } catch (error) {
+    console.error('[MODERATION] Erreur lors de la soumission de la vidéo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la soumission de la vidéo',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Contrôleur pour vérifier le statut d'une modération vidéo
+ * @param {Object} req - Requête Express
+ * @param {Object} res - Réponse Express
+ */
+const checkVideoModerationStatus = async (req, res) => {
+  try {
+    const { workflowId } = req.params;
+    
+    if (!workflowId) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de workflow requis'
+      });
+    }
+    
+    // Vérifier le statut
+    const statusResult = await checkVideoAnalysisStatus(workflowId);
+    
+    // Si l'analyse est terminée, analyser les résultats
+    if (statusResult.status === 'completed') {
+      const analysisResult = analyzeVideoResult(statusResult);
+      
+      // Journaliser si nécessaire
+      if (MODERATION_CONFIG.logViolations && analysisResult.isFlagged) {
+        console.log('[MODERATION] Vidéo signalée:', analysisResult);
+      }
+      
+      return res.status(200).json({
+        ...analysisResult,
+        workflowId,
+        status: 'completed'
+      });
+    }
+    
+    // Sinon, retourner le statut actuel
+    return res.status(200).json({
+      success: true,
+      workflowId,
+      status: statusResult.status,
+      progress: statusResult.progress || 0
+    });
+  } catch (error) {
+    console.error('[MODERATION] Erreur lors de la vérification du statut de modération vidéo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la vérification du statut de modération vidéo',
       error: error.message
     });
   }
@@ -605,6 +756,9 @@ const moderationMiddleware = async (req, res, next) => {
 // Exporter les fonctions utiles
 module.exports = {
   moderateContent,
+  moderateImage,
+  submitVideoForModeration,
+  checkVideoModerationStatus,
   moderationMiddleware,
   checkContentLocally,
   analyzeImage,
