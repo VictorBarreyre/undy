@@ -293,8 +293,21 @@ export default function Profile({ navigation }) {
         }
     };
 
-    const handleNotificationsSettings = async () => {
-        await NotificationService.checkPermissions(true); // true = forcer l'alerte
+    const handleNotificationsSettings = () => {
+        Alert.alert(
+            t('permissions.notificationsNeededTitle'),
+            t('permissions.notificationsSettingsMessage'),
+            [
+                {
+                    text: t('permissions.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: t('permissions.openSettings'),
+                    onPress: () => Linking.openSettings()
+                }
+            ]
+        );
     };
 
 
@@ -629,34 +642,30 @@ export default function Profile({ navigation }) {
 
                                             return (
                                                 <Pressable key={key} onPress={() => openEditModal(key, userData?.[key])}>
-                                                    <HStack
-                                                        justifyContent="space-between"
-                                                        paddingTop={4}
-                                                        paddingBottom={isLast ? 1 : 4}
-                                                        px={1}
-                                                        borderBottomWidth={isLast ? 0 : 1} // Retire la bordure pour le dernier élément
-                                                        borderColor={isLast ? "transparent" : "#94A3B820"} // Rend la bordure invisible pour le dernier élément
-                                                        alignItems="center"
-                                                        width="100%"
-                                                    >
-                                                        <HStack space={3} alignItems="center">
-                                                            <FontAwesomeIcon icon={field.icon} style={{ fontSize: 18, color: 'black' }} />
-                                                        </HStack>
-                                                        <HStack flex={1} justifyContent="space-between" px={4}>
-                                                            <Text style={[styles.h5]} isTruncated>{field.label}</Text>
-                                                            <Text style={[styles.caption]} color="#94A3B8">
-                                                                {key === 'notifs'
-                                                                    ? getStatusText('notifs', notificationsEnabled)
-                                                                    : key === 'contacts'
-                                                                        ? getStatusText('contacts', contactsPermissionStatus)
-                                                                        : key === 'location'
-                                                                            ? getStatusText('location', locationPermissionStatus)
-                                                                            : truncateText(value, field.truncateLength || 15)}
-                                                            </Text>
-                                                        </HStack>
-                                                        <FontAwesome name="chevron-right" size={14} color="#94A3B8" />
+                                                <HStack
+                                                    justifyContent="space-between"
+                                                    paddingTop={4}
+                                                    paddingBottom={isLast ? 1 : 4}
+                                                    px={1}
+                                                    borderBottomWidth={isLast ? 0 : 1}
+                                                    borderColor={isLast ? "transparent" : "#94A3B820"}
+                                                    alignItems="center"
+                                                    width="100%"
+                                                >
+                                                    <HStack space={3} alignItems="center">
+                                                        <FontAwesomeIcon icon={field.icon} style={{ fontSize: 18, color: 'black' }} />
                                                     </HStack>
-                                                </Pressable>
+                                                    <HStack flex={1} justifyContent="space-between" px={4}>
+                                                        <Text style={[styles.h5]} isTruncated>{field.label}</Text>
+                                                        <Text style={[styles.caption]} color="#94A3B8">
+                                                            {getStatusText(key, key === 'notifs' ? notificationsEnabled : 
+                                                                          key === 'contacts' ? contactsPermissionStatus : 
+                                                                          key === 'location' ? locationPermissionStatus : null)}
+                                                        </Text>
+                                                    </HStack>
+                                                    <FontAwesome name="chevron-right" size={14} color="#94A3B8" />
+                                                </HStack>
+                                            </Pressable>
                                             );
                                         })}
                                     </VStack>
