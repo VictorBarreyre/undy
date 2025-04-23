@@ -2,21 +2,20 @@ import React, { useState, useEffect, useRef } from "react";
 import { NativeBaseProvider } from "native-base";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import { AuthProvider, AuthContext } from "./infrastructure/context/AuthContext";
+import { AuthProvider } from "./infrastructure/context/AuthContext";
 import * as Font from "expo-font";
 import { lightTheme } from "./infrastructure/theme/theme";
 import { CardDataProvider } from "./infrastructure/context/CardDataContexte";
 import TypewriterLoader from "./presentation/components/TypewriterLoader";
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import StackNavigator from './navigation/StackNavigator/StackNavigator';
 import { StripeProvider } from "@stripe/stripe-react-native";
 import { STRIPE_PUBLISHABLE_KEY } from '@env';
 import DeepLinkHandler from "./presentation/components/DeepLinkHandler";
 import { Linking } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import NotificationManager from "./presentation/Notifications/NotificationManager";
 
-
+// Configuration du gestionnaire de notifications
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -54,9 +53,7 @@ const App = () => {
         },
       },
     },
-    // Ajout d'un gestionnaire d'erreur pour le debug
     async getInitialURL() {
-      // Vérifier s'il y a un URL initial
       const url = await Linking.getInitialURL();
       if (url != null) {
         return url;
@@ -65,10 +62,7 @@ const App = () => {
     },
     subscribe(listener) {
       const onReceiveURL = ({ url }) => listener(url);
-
-      // Écouter les événements quand l'app est ouverte
       const subscription = Linking.addEventListener('url', onReceiveURL);
-
       return () => {
         subscription.remove();
       };
@@ -119,22 +113,15 @@ const App = () => {
     });
   };
 
-  
-
-  React.useEffect(() => {
-    loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
-  }, []); ``
-
+  // Suppression de la duplication du useEffect
   useEffect(() => {
     loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
   }, []);
 
   // Effet pour configurer les écouteurs de notifications
   useEffect(() => {
-    // Configurer les écouteurs pour les notifications
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       console.log('Notification reçue:', notification);
-      // Vous pouvez mettre à jour l'interface utilisateur ici si nécessaire
     });
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
@@ -143,24 +130,20 @@ const App = () => {
       handleNotificationNavigation(data);
     });
 
-    // Nettoyage lors du démontage
     return () => {
       Notifications.removeNotificationSubscription(notificationListener.current);
       Notifications.removeNotificationSubscription(responseListener.current);
     };
   }, []);
 
-
-
   if (!fontsLoaded) {
-    return
-    <TypewriterLoader />;
+    return <TypewriterLoader />;  // Correction de la syntaxe du return
   }
 
   return (
     <StripeProvider
       publishableKey={STRIPE_PUBLISHABLE_KEY}
-      merchantIdentifier="merchant.com.anonymous.frontend" // Ajout de cette ligne
+      merchantIdentifier="merchant.com.anonymous.frontend"
       urlScheme="frontend"
     >
       <AuthProvider>
@@ -168,6 +151,7 @@ const App = () => {
           <NativeBaseProvider theme={lightTheme}>
             <SafeAreaProvider>
               <NavigationContainer
+                ref={navigationRef}  // Ajout de la référence de navigation
                 linking={linking}
                 theme={{
                   colors: {
@@ -187,6 +171,5 @@ const App = () => {
     </StripeProvider>
   );
 };
-
 
 export default App;
