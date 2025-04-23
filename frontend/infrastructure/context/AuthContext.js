@@ -175,32 +175,41 @@ export const AuthProvider = ({ children }) => {
     if (!instance) {
       throw new Error(i18n.t('auth.errors.axiosNotInitialized'));
     }
-
+  
     try {
       const response = await instance.get('/api/users/profile?forceSync=true&includePhoneNumber=true');
-
+  
       const cleanedData = cleanUserData(response.data);
-
-      console.log('[AuthProvider] Téléphone récupéré:', cleanedData.phone);
-
+      
+      // Mise à jour des données
       setUserData(cleanedData);
-
       setContactsAccessEnabled(cleanedData.contacts || false);
-
       await AsyncStorage.setItem('userData', JSON.stringify(cleanedData));
-
-      setUserData({
-        ...cleanedData,
-        totalEarnings: response.data.totalEarnings
-      });
-
+      
+      // Si les données ont changé et que l'utilisateur est connecté, mettre à jour le token de notification
+      if (isLoggedIn && cleanedData._id) {
+        try {
+          const NotificationManager = require('../../presentation/Notifications/NotificationManager').default;
+          if (NotificationManager) {
+            // Mettre à jour le token seulement, sans réinitialiser complètement
+            const token = await NotificationManager.notificationService.getToken();
+            if (token) {
+              await NotificationManager.registerTokenWithServer(cleanedData._id, token);
+            }
+          }
+        } catch (notifError) {
+          console.error('[AuthProvider] Erreur de mise à jour du token de notification:', notifError);
+        }
+      }
+  
       console.log('[AuthProvider] Données utilisateur mises à jour avec succès');
+      return cleanedData;
     } catch (error) {
       console.error('[AuthProvider] Erreur fetchUserData:', error);
-      // Si l'erreur n'est pas liée à l'authentification, on la propage
       if (!error.response?.data?.shouldRefresh) {
         throw error;
       }
+      return null;
     }
   };
 
@@ -480,8 +489,20 @@ export const AuthProvider = ({ children }) => {
       // Étape 4: Récupérez les données utilisateur
       try {
         await fetchUserData();
+        
+        // Après la récupération des données utilisateur, initialiser les notifications
+        try {
+          // Importation dynamique pour éviter les dépendances circulaires
+          const NotificationManager = require('../../presentation/Notifications/NotificationManager').default;
+          if (NotificationManager) {
+            await NotificationManager.initialize(userData);
+          }
+        } catch (notifError) {
+          console.error('[AuthProvider] Erreur d\'initialisation des notifications:', notifError);
+        }
+        
       } catch (error) {
-        console.error('[AuthProvider] Erreur fetchUserData, 2e tentative:', error);
+        console.error('[AuthProvider] Erreur fetchUserData:', error);
         
         // Réessayez après un court délai (le serveur peut avoir besoin d'un moment pour valider le token)
         setTimeout(async () => {
@@ -503,37 +524,42 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
-    try {
-      console.log('[AuthProvider] Début de la déconnexion');
-      const instance = getAxiosInstance();
-      if (instance) {
-        delete instance.defaults.headers.common['Authorization'];
-      }
-
-      // D'abord, on supprime les données
-      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
-      await AsyncStorage.removeItem(`pendingSecretData_${userData?._id}`);
-
-      // Ensuite, on met à jour les états dans un ordre spécifique
-      setUserData(null);
-      setIsLoadingUserData(false);
-      setUserToken(null);
-      // On met setIsLoggedIn en dernier car c'est lui qui déclenche la navigation
-      setIsLoggedIn(false);
-
-      if (typeof onLogout === 'function') {
-        onLogout();
-      }
-
-      console.log('[AuthProvider] Déconnexion réussie');
-      return true;
-    } catch (error) {
-      console.error('[AuthProvider] Erreur lors de la déconnexion:', error);
-      setIsLoadingUserData(false);
-      throw error;
+const logout = async () => {
+  try {
+    console.log('[AuthProvider] Début de la déconnexion');
+    const instance = getAxiosInstance();
+    if (instance) {
+      delete instance.defaults.headers.common['Authorization'];
     }
-  };
+
+    // Tentative de nettoyage des notifications
+    try {
+      const NotificationManager = require('../../presentation/Notifications/NotificationManager').default;
+      if (NotificationManager && NotificationManager.notificationService) {
+        await NotificationManager.notificationService.cancelAllNotifications();
+      }
+    } catch (notifError) {
+      console.error('[AuthProvider] Erreur lors du nettoyage des notifications:', notifError);
+    }
+
+    // Suppression des données
+    await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
+    await AsyncStorage.removeItem(`pendingSecretData_${userData?._id}`);
+
+    // Mise à jour des états
+    setUserData(null);
+    setIsLoadingUserData(false);
+    setUserToken(null);
+    setIsLoggedIn(false);
+
+    console.log('[AuthProvider] Déconnexion réussie');
+    return true;
+  } catch (error) {
+    console.error('[AuthProvider] Erreur lors de la déconnexion:', error);
+    setIsLoadingUserData(false);
+    throw error;
+  }
+};
 
   const persistUserData = useCallback(async (data) => {
     try {

@@ -127,38 +127,8 @@ class NotificationManager {
     }
   }
 
-  // 3. Notification pour les versements Stripe
-  async schedulePayoutNotification(amount, currency) {
-    try {
-      const formattedAmount = `${amount} ${currency}`;
-      
-      await this.notificationService.sendLocalNotification(
-        i18n.t('notifications.payout.title'),
-        i18n.t('notifications.payout.body', { amount: formattedAmount }),
-        {
-          type: 'payout',
-          amount,
-          timestamp: new Date().toISOString()
-        }
-      );
-      
-      try {
-        mixpanel.track("Notification Sent", {
-          notification_type: "payout",
-          amount: amount
-        });
-      } catch (mpError) {
-        console.error("Erreur Mixpanel:", mpError);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error(i18n.t('notifications.errors.payoutNotification'), error);
-      return false;
-    }
-  }
 
-  // 4. Notification pour les secrets à proximité
+  // 3. Notification pour les secrets à proximité
   async scheduleNearbySecretsNotification(count, distance) {
     try {
       await this.notificationService.sendLocalNotification(
@@ -189,7 +159,7 @@ class NotificationManager {
     }
   }
 
-  // 5. Notification de rappel pour finaliser la configuration Stripe
+  // 4. Notification de rappel pour finaliser la configuration Stripe
   async scheduleStripeSetupReminderNotification() {
     try {
       await this.notificationService.sendLocalNotification(
@@ -216,7 +186,7 @@ class NotificationManager {
     }
   }
 
-  // 6. Notification quand un utilisateur revient après une longue période
+  // 5. Notification quand un utilisateur revient après une longue période
   async scheduleWelcomeBackNotification(daysAbsent) {
     try {
       await this.notificationService.sendLocalNotification(
@@ -245,7 +215,7 @@ class NotificationManager {
     }
   }
 
-  // 7. Notification pour les tendances et statistiques
+  // 6. Notification pour les tendances et statistiques
   async scheduleStatsNotification(secretsCount, purchasesCount) {
     try {
       await this.notificationService.sendLocalNotification(
@@ -279,7 +249,7 @@ class NotificationManager {
     }
   }
 
-  // 8. Notification pour les événements limités dans le temps
+  // 7. Notification pour les événements limités dans le temps
   async scheduleTimeLimitedEventNotification(eventName, daysLeft) {
     try {
       await this.notificationService.sendLocalNotification(
@@ -313,45 +283,7 @@ class NotificationManager {
     }
   }
 
-  // 9. Notification pour les variations de prix importantes
-  async schedulePriceAlertNotification(secretTitle, oldPrice, newPrice, currency) {
-    try {
-      const priceDiff = ((newPrice - oldPrice) / oldPrice) * 100;
-      const formattedDiff = priceDiff.toFixed(1);
-      const direction = priceDiff > 0 ? 'up' : 'down';
-      
-      await this.notificationService.sendLocalNotification(
-        i18n.t('notifications.priceAlert.title'),
-        i18n.t(`notifications.priceAlert.body.${direction}`, { 
-          title: secretTitle,
-          diff: Math.abs(formattedDiff),
-          newPrice: `${newPrice} ${currency}`
-        }),
-        {
-          type: 'price_alert',
-          secretTitle,
-          oldPrice,
-          newPrice,
-          priceDiff,
-          timestamp: new Date().toISOString()
-        }
-      );
-      
-      try {
-        mixpanel.track("Notification Sent", {
-          notification_type: "price_alert",
-          price_diff_percent: priceDiff
-        });
-      } catch (mpError) {
-        console.error("Erreur Mixpanel:", mpError);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error(i18n.t('notifications.errors.priceAlertNotification'), error);
-      return false;
-    }
-  }
+
 }
 
 export default new NotificationManager();

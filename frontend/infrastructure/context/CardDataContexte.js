@@ -250,6 +250,77 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
+  const checkAndNotifyNearbySecrets = async (distance = 5) => {
+    if (!userData || !userData._id) return false;
+    
+    try {
+      // Vérifier si on peut envoyer une notification (pas plus d'une par jour)
+      const lastNotifTime = await AsyncStorage.getItem('lastNearbyNotificationTime');
+      if (lastNotifTime && (Date.now() - parseInt(lastNotifTime) < 24 * 60 * 60 * 1000)) {
+        return false; // Notification déjà envoyée dans les dernières 24h
+      }
+      
+      // Récupérer les secrets à proximité
+      const nearbySecrets = await fetchSecretsByLocation(distance);
+      
+      if (nearbySecrets && nearbySecrets.length > 0) {
+        const instance = getAxiosInstance();
+        if (!instance) return false;
+        
+        // Envoyer la notification via le backend
+        await instance.post('/api/notifications/nearby', {
+          userId: userData._id,
+          count: nearbySecrets.length,
+          distance
+        });
+        
+        // Enregistrer le timestamp
+        await AsyncStorage.setItem('lastNearbyNotificationTime', Date.now().toString());
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Erreur lors de la vérification des secrets à proximité:', error);
+      return false;
+    }
+  };
+
+  const checkAndSendStripeReminder = async () => {
+    if (!userData || !userData._id) return false;
+    
+    try {
+      // Vérifier le statut Stripe
+      const stripeStatus = await handleStripeOnboardingRefresh();
+      
+      // Si le statut est "pending", c'est un bon candidat pour un rappel
+      if (stripeStatus.stripeStatus === 'pending') {
+        // Vérifier si on a déjà envoyé un rappel récemment
+        const lastReminderTime = await AsyncStorage.getItem('lastStripeReminderTime');
+        if (lastReminderTime && (Date.now() - parseInt(lastReminderTime) < 3 * 24 * 60 * 60 * 1000)) {
+          return false; // Rappel déjà envoyé dans les 3 derniers jours
+        }
+        
+        const instance = getAxiosInstance();
+        if (!instance) return false;
+        
+        // Envoyer la notification via le backend
+        await instance.post('/api/notifications/stripe-reminder', {
+          userId: userData._id
+        });
+        
+        // Enregistrer le timestamp
+        await AsyncStorage.setItem('lastStripeReminderTime', Date.now().toString());
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Erreur lors de la vérification du statut Stripe:', error);
+      return false;
+    }
+  };
+
   const handlePostSecret = async (secretData) => {
     const instance = getAxiosInstance();
     if (!instance) {
@@ -1406,6 +1477,8 @@ export const CardDataProvider = ({ children }) => {
       updateStripeBankAccount,
       moderateMessageBeforeSend,
       getModerationStats,
+      checkAndNotifyNearbySecrets, // Nouvelle fonction
+  checkAndSendStripeReminder,  
     }}>
       {children}
     </CardDataContext.Provider>
