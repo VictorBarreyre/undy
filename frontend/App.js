@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { NativeBaseProvider } from "native-base";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -13,13 +13,102 @@ import { StripeProvider } from "@stripe/stripe-react-native";
 import { STRIPE_PUBLISHABLE_KEY } from '@env';
 import DeepLinkHandler from "./presentation/components/DeepLinkHandler";
 import { Linking } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import NotificationManager from "./presentation/Notifications/NotificationManager";
 
-
+// Configurer le gestionnaire de notifications pour l'application
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 const Stack = createStackNavigator();
 
-const App = () => {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
+const AppContent = () => {
+  const { userData } = React.useContext(AuthContext);
+  const notificationListener = useRef();
+  const responseListener = useRef();
+  const navigationRef = useRef();
+
+  // Fonction pour gérer la navigation suite à une interaction avec une notification
+  const handleNotificationNavigation = (data) => {
+    if (!data || !navigationRef.current) return;
+
+    try {
+      switch (data.type) {
+        case 'new_message':
+          if (data.conversationId) {
+            navigationRef.current.navigate('MainApp', {
+              screen: 'ChatTab',
+              params: {
+                screen: 'Chat',
+                params: { conversationId: data.conversationId }
+              }
+            });
+          }
+          break;
+        case 'purchase':
+          if (data.secretId) {
+            navigationRef.current.navigate('SecretDetail', { 
+              secretId: data.secretId 
+            });
+          }
+          break;
+        case 'nearby_secrets':
+          navigationRef.current.navigate('MainApp', {
+            screen: 'SearchTab'
+          });
+          break;
+        case 'stripe_setup_reminder':
+          navigationRef.current.navigate('StripeSetup');
+          break;
+        case 'payout':
+          navigationRef.current.navigate('MainApp', {
+            screen: 'ProfileTab',
+            params: { screen: 'Earnings' }
+          });
+          break;
+        // Ajoutez d'autres cas selon vos besoins
+      }
+    } catch (error) {
+      console.error('Erreur de navigation depuis notification:', error);
+    }
+  };
+
+  // Initialiser le gestionnaire de notifications
+  useEffect(() => {
+    if (userData) {
+      NotificationManager.initialize(userData)
+        .then(success => {
+          console.log('Notifications initialisées:', success);
+        })
+        .catch(error => {
+          console.error('Erreur initialisation notifications:', error);
+        });
+    }
+
+    // Configurer les écouteurs de notifications
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log('Notification reçue:', notification);
+      // Vous pouvez ajouter ici une logique pour mettre à jour l'état de l'application
+      // par exemple, rafraîchir les compteurs de messages non lus
+    });
+
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('Interaction avec notification:', response);
+      const data = response.notification.request.content.data;
+      handleNotificationNavigation(data);
+    });
+
+    // Nettoyage lors du démontage
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener.current);
+      Notifications.removeNotificationSubscription(responseListener.current);
+    };
+  }, [userData]);
 
   const linking = {
     prefixes: ['hushy://', 'https://hushy.app'],
@@ -42,26 +131,37 @@ const App = () => {
         },
       },
     },
-    // Ajout d'un gestionnaire d'erreur pour le debug
     async getInitialURL() {
-      // Vérifier s'il y a un URL initial
       const url = await Linking.getInitialURL();
-      if (url != null) {
-        return url;
-      }
-      return null;
+      return url || null;
     },
     subscribe(listener) {
       const onReceiveURL = ({ url }) => listener(url);
-
-      // Écouter les événements quand l'app est ouverte
       const subscription = Linking.addEventListener('url', onReceiveURL);
-
-      return () => {
-        subscription.remove();
-      };
+      return () => subscription.remove();
     },
   };
+
+  return (
+    <NavigationContainer
+      ref={navigationRef}
+      linking={linking}
+      theme={{
+        colors: {
+          background: 'transparent',
+          card: 'transparent',
+          border: 'transparent',
+        },
+      }}
+    >
+      <StackNavigator />
+      <DeepLinkHandler />
+    </NavigationContainer>
+  );
+};
+
+const App = () => {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
 
   const loadFonts = async () => {
     await Font.loadAsync({
@@ -72,40 +172,25 @@ const App = () => {
     });
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
-  }, []); ``
-
-
+  }, []);
 
   if (!fontsLoaded) {
-    return
-    <TypewriterLoader />;
+    return <TypewriterLoader />;
   }
 
   return (
     <StripeProvider
       publishableKey={STRIPE_PUBLISHABLE_KEY}
-      merchantIdentifier="merchant.com.anonymous.frontend" // Ajout de cette ligne
+      merchantIdentifier="merchant.com.anonymous.frontend"
       urlScheme="frontend"
     >
       <AuthProvider>
         <CardDataProvider>
           <NativeBaseProvider theme={lightTheme}>
             <SafeAreaProvider>
-              <NavigationContainer
-                linking={linking}
-                theme={{
-                  colors: {
-                    background: 'transparent',
-                    card: 'transparent',
-                    border: 'transparent',
-                  },
-                }}
-              >
-                <StackNavigator />
-                <DeepLinkHandler />
-              </NavigationContainer>
+              <AppContent />
             </SafeAreaProvider>
           </NativeBaseProvider>
         </CardDataProvider>
@@ -113,6 +198,5 @@ const App = () => {
     </StripeProvider>
   );
 };
-
 
 export default App;

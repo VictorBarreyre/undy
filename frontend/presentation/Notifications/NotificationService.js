@@ -104,7 +104,7 @@ class NotificationService {
     async getToken() {
         try {
             const token = await Notifications.getExpoPushTokenAsync({
-                projectId: "VOTRE_PROJECT_ID" // À remplacer par votre ID de projet
+                projectId: Constants.expoConfig.extra?.eas?.projectId || undefined
             });
             return token.data;
         } catch (error) {
