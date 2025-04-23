@@ -16,7 +16,7 @@ import { Linking } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import NotificationManager from "./presentation/Notifications/NotificationManager";
 
-// Configurer le gestionnaire de notifications pour l'application
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -27,13 +27,54 @@ Notifications.setNotificationHandler({
 
 const Stack = createStackNavigator();
 
-const AppContent = () => {
-  const { userData } = React.useContext(AuthContext);
+const App = () => {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+  const navigationRef = useRef();
   const notificationListener = useRef();
   const responseListener = useRef();
-  const navigationRef = useRef();
 
-  // Fonction pour gérer la navigation suite à une interaction avec une notification
+  const linking = {
+    prefixes: ['hushy://', 'https://hushy.app'],
+    config: {
+      screens: {
+        SharedSecret: {
+          path: 'secret/:secretId',
+          parse: {
+            secretId: (secretId) => secretId,
+          },
+        },
+        MainApp: {
+          screens: {
+            ChatTab: {
+              screens: {
+                Chat: 'chat/:conversationId',
+              },
+            },
+          },
+        },
+      },
+    },
+    // Ajout d'un gestionnaire d'erreur pour le debug
+    async getInitialURL() {
+      // Vérifier s'il y a un URL initial
+      const url = await Linking.getInitialURL();
+      if (url != null) {
+        return url;
+      }
+      return null;
+    },
+    subscribe(listener) {
+      const onReceiveURL = ({ url }) => listener(url);
+
+      // Écouter les événements quand l'app est ouverte
+      const subscription = Linking.addEventListener('url', onReceiveURL);
+
+      return () => {
+        subscription.remove();
+      };
+    },
+  };
+
   const handleNotificationNavigation = (data) => {
     if (!data || !navigationRef.current) return;
 
@@ -62,39 +103,38 @@ const AppContent = () => {
             screen: 'SearchTab'
           });
           break;
-        case 'stripe_setup_reminder':
-          navigationRef.current.navigate('StripeSetup');
-          break;
-        case 'payout':
-          navigationRef.current.navigate('MainApp', {
-            screen: 'ProfileTab',
-            params: { screen: 'Earnings' }
-          });
-          break;
-        // Ajoutez d'autres cas selon vos besoins
+        // Autres cas selon vos besoins
       }
     } catch (error) {
       console.error('Erreur de navigation depuis notification:', error);
     }
   };
 
-  // Initialiser le gestionnaire de notifications
-  useEffect(() => {
-    if (userData) {
-      NotificationManager.initialize(userData)
-        .then(success => {
-          console.log('Notifications initialisées:', success);
-        })
-        .catch(error => {
-          console.error('Erreur initialisation notifications:', error);
-        });
-    }
+  const loadFonts = async () => {
+    await Font.loadAsync({
+      "SF-Pro-Display-Regular": require("./assets/fonts/SF-Pro-Display-Regular.otf"),
+      "SF-Pro-Display-Medium": require("./assets/fonts/SF-Pro-Display-Medium.otf"),
+      "SF-Pro-Display-Semibold": require("./assets/fonts/SF-Pro-Display-Semibold.otf"),
+      "SF-Pro-Display-Bold": require("./assets/fonts/SF-Pro-Display-Bold.otf"),
+    });
+  };
 
-    // Configurer les écouteurs de notifications
+  
+
+  React.useEffect(() => {
+    loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
+  }, []); ``
+
+  useEffect(() => {
+    loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
+  }, []);
+
+  // Effet pour configurer les écouteurs de notifications
+  useEffect(() => {
+    // Configurer les écouteurs pour les notifications
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       console.log('Notification reçue:', notification);
-      // Vous pouvez ajouter ici une logique pour mettre à jour l'état de l'application
-      // par exemple, rafraîchir les compteurs de messages non lus
+      // Vous pouvez mettre à jour l'interface utilisateur ici si nécessaire
     });
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
@@ -108,89 +148,38 @@ const AppContent = () => {
       Notifications.removeNotificationSubscription(notificationListener.current);
       Notifications.removeNotificationSubscription(responseListener.current);
     };
-  }, [userData]);
-
-  const linking = {
-    prefixes: ['hushy://', 'https://hushy.app'],
-    config: {
-      screens: {
-        SharedSecret: {
-          path: 'secret/:secretId',
-          parse: {
-            secretId: (secretId) => secretId,
-          },
-        },
-        MainApp: {
-          screens: {
-            ChatTab: {
-              screens: {
-                Chat: 'chat/:conversationId',
-              },
-            },
-          },
-        },
-      },
-    },
-    async getInitialURL() {
-      const url = await Linking.getInitialURL();
-      return url || null;
-    },
-    subscribe(listener) {
-      const onReceiveURL = ({ url }) => listener(url);
-      const subscription = Linking.addEventListener('url', onReceiveURL);
-      return () => subscription.remove();
-    },
-  };
-
-  return (
-    <NavigationContainer
-      ref={navigationRef}
-      linking={linking}
-      theme={{
-        colors: {
-          background: 'transparent',
-          card: 'transparent',
-          border: 'transparent',
-        },
-      }}
-    >
-      <StackNavigator />
-      <DeepLinkHandler />
-    </NavigationContainer>
-  );
-};
-
-const App = () => {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
-
-  const loadFonts = async () => {
-    await Font.loadAsync({
-      "SF-Pro-Display-Regular": require("./assets/fonts/SF-Pro-Display-Regular.otf"),
-      "SF-Pro-Display-Medium": require("./assets/fonts/SF-Pro-Display-Medium.otf"),
-      "SF-Pro-Display-Semibold": require("./assets/fonts/SF-Pro-Display-Semibold.otf"),
-      "SF-Pro-Display-Bold": require("./assets/fonts/SF-Pro-Display-Bold.otf"),
-    });
-  };
-
-  useEffect(() => {
-    loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
   }, []);
 
+
+
   if (!fontsLoaded) {
-    return <TypewriterLoader />;
+    return
+    <TypewriterLoader />;
   }
 
   return (
     <StripeProvider
       publishableKey={STRIPE_PUBLISHABLE_KEY}
-      merchantIdentifier="merchant.com.anonymous.frontend"
+      merchantIdentifier="merchant.com.anonymous.frontend" // Ajout de cette ligne
       urlScheme="frontend"
     >
       <AuthProvider>
         <CardDataProvider>
           <NativeBaseProvider theme={lightTheme}>
             <SafeAreaProvider>
-              <AppContent />
+              <NavigationContainer
+                linking={linking}
+                theme={{
+                  colors: {
+                    background: 'transparent',
+                    card: 'transparent',
+                    border: 'transparent',
+                  },
+                }}
+              >
+                <StackNavigator />
+                <DeepLinkHandler />
+              </NavigationContainer>
             </SafeAreaProvider>
           </NativeBaseProvider>
         </CardDataProvider>
@@ -198,5 +187,6 @@ const App = () => {
     </StripeProvider>
   );
 };
+
 
 export default App;

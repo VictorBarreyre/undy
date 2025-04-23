@@ -730,7 +730,7 @@ export const CardDataProvider = ({ children }) => {
           price,
           currency: "EUR",
           quantity: 1,
-          user_id: getUserId(),
+          user_id: userData?._id,
           payment_id: paymentId
         });
         console.log("MIXPANEL: Tracking Purchase Attempt - Terminé");
@@ -754,7 +754,7 @@ export const CardDataProvider = ({ children }) => {
             product_id: secretId,
             error_type: "missing_conversation_id",
             payment_id: paymentId,
-            user_id: getUserId()
+            user_id: userData?._id
           });
         } catch (mpError) {
           console.error("MIXPANEL ERREUR (non bloquante):", mpError);
@@ -784,6 +784,22 @@ export const CardDataProvider = ({ children }) => {
         status: conversationResponse.status,
         dataSize: JSON.stringify(conversationResponse.data).length
       });
+      
+      // Envoi d'une notification au vendeur (via le backend)
+      try {
+        console.log("NOTIFICATION: Envoi de la notification d'achat au vendeur");
+        await instance.post('/api/notifications/purchase', {
+          secretId,
+          buyerId: userData?._id,
+          buyerName: userData?.name || 'Un utilisateur',
+          price,
+          currency: userCurrency || '€'
+        });
+        console.log("NOTIFICATION: Demande envoyée avec succès");
+      } catch (notifError) {
+        console.error("NOTIFICATION ERREUR (non bloquante):", notifError);
+        // Ne pas bloquer la transaction en cas d'échec de notification
+      }
   
       // Tracking de l'achat réussi
       try {
@@ -793,7 +809,7 @@ export const CardDataProvider = ({ children }) => {
           price,
           currency: "EUR",
           quantity: 1,
-          user_id: getUserId(),
+          user_id: userData?._id,
           payment_id: paymentId,
           conversation_id: purchaseResponse.data.conversationId
         });
@@ -835,7 +851,7 @@ export const CardDataProvider = ({ children }) => {
           currency: "EUR",
           error_message: error.message,
           error_type: error.response?.data?.error || 'unknown',
-          user_id: getUserId()
+          user_id: userData?._id
         });
         console.log("MIXPANEL: Tracking Purchase Failed - Terminé");
       } catch (mpError) {
@@ -949,9 +965,28 @@ export const CardDataProvider = ({ children }) => {
         messageData
       );
   
-      if (response.data) {
+      if (response.data && response.data.message) {
+        // Envoyer la notification aux autres participants
+        try {
+          console.log("NOTIFICATION: Envoi de notification de nouveau message");
+          await instance.post('/api/notifications/message', {
+            conversationId,
+            messageId: response.data.message._id,
+            senderId: userData?._id,
+            senderName: userData?.name || 'Utilisateur',
+            messagePreview: typeof content === 'string' 
+              ? content.substring(0, 100) + (content.length > 100 ? '...' : '')
+              : content.content?.substring(0, 100) + (content.content?.length > 100 ? '...' : '') || 'Nouveau message'
+          });
+          console.log("NOTIFICATION: Notification de message envoyée");
+        } catch (notifError) {
+          console.error("NOTIFICATION ERREUR (non bloquante):", notifError);
+        }
+        
         return response.data;
       }
+      
+      return response.data;
     } catch (error) {
       console.error(i18n.t('cardData.errors.sendingMessage'), error.response?.data || error.message);
       throw error;
