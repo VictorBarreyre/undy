@@ -7,7 +7,7 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Ajoutez cette ligne
 import ConfettiCannon from 'react-native-confetti-cannon';
 import mixpanel from "../../services/mixpanel"
-import {moderateContent} from "../../services/ModerationService"
+import { moderateContent } from "../../services/ModerationService"
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -71,12 +71,12 @@ export const CardDataProvider = ({ children }) => {
     totalFlagged: 0,
     lastFlagged: null
   });
-  
+
 
   const triggerConfetti = (customConfig = {}) => {
     setConfettiConfig({ ...confettiConfig, ...customConfig });
     setShowConfetti(true);
-    
+
     // Arrêter les confettis après un délai
     setTimeout(() => {
       setShowConfetti(false);
@@ -252,33 +252,33 @@ export const CardDataProvider = ({ children }) => {
 
   const checkAndNotifyNearbySecrets = async (distance = 5) => {
     if (!userData || !userData._id) return false;
-    
+
     try {
       // Vérifier si on peut envoyer une notification (pas plus d'une par jour)
       const lastNotifTime = await AsyncStorage.getItem('lastNearbyNotificationTime');
       if (lastNotifTime && (Date.now() - parseInt(lastNotifTime) < 24 * 60 * 60 * 1000)) {
         return false; // Notification déjà envoyée dans les dernières 24h
       }
-      
+
       // Récupérer les secrets à proximité
       const nearbySecrets = await fetchSecretsByLocation(distance);
-      
+
       if (nearbySecrets && nearbySecrets.length > 0) {
         const instance = getAxiosInstance();
         if (!instance) return false;
-        
+
         // Envoyer la notification via le backend
         await instance.post('/api/notifications/nearby', {
           userId: userData._id,
           count: nearbySecrets.length,
           distance
         });
-        
+
         // Enregistrer le timestamp
         await AsyncStorage.setItem('lastNearbyNotificationTime', Date.now().toString());
         return true;
       }
-      
+
       return false;
     } catch (error) {
       console.error('Erreur lors de la vérification des secrets à proximité:', error);
@@ -288,11 +288,11 @@ export const CardDataProvider = ({ children }) => {
 
   const checkAndSendStripeReminder = async () => {
     if (!userData || !userData._id) return false;
-    
+
     try {
       // Vérifier le statut Stripe
       const stripeStatus = await handleStripeOnboardingRefresh();
-      
+
       // Si le statut est "pending", c'est un bon candidat pour un rappel
       if (stripeStatus.stripeStatus === 'pending') {
         // Vérifier si on a déjà envoyé un rappel récemment
@@ -300,20 +300,20 @@ export const CardDataProvider = ({ children }) => {
         if (lastReminderTime && (Date.now() - parseInt(lastReminderTime) < 3 * 24 * 60 * 60 * 1000)) {
           return false; // Rappel déjà envoyé dans les 3 derniers jours
         }
-        
+
         const instance = getAxiosInstance();
         if (!instance) return false;
-        
+
         // Envoyer la notification via le backend
         await instance.post('/api/notifications/stripe-reminder', {
           userId: userData._id
         });
-        
+
         // Enregistrer le timestamp
         await AsyncStorage.setItem('lastStripeReminderTime', Date.now().toString());
         return true;
       }
-      
+
       return false;
     } catch (error) {
       console.error('Erreur lors de la vérification du statut Stripe:', error);
@@ -340,15 +340,15 @@ export const CardDataProvider = ({ children }) => {
         throw new Error(i18n.t('cardData.errors.invalidPrice'));
       }
 
-         // MODÉRATION: Vérifier le contenu du secret avant de le poster
-         const secretContent = `${secretData.selectedLabel} ${secretData.secretText}`;
-         const moderationResult = await moderateMessageBeforeSend(secretContent);
-         
-         if (moderationResult.isFlagged) {
-           throw new Error(i18n.t('cardData.errors.secretContentFlagged', { 
-             reason: moderationResult.reason 
-           }));
-         }
+      // MODÉRATION: Vérifier le contenu du secret avant de le poster
+      const secretContent = `${secretData.selectedLabel} ${secretData.secretText}`;
+      const moderationResult = await moderateMessageBeforeSend(secretContent);
+
+      if (moderationResult.isFlagged) {
+        throw new Error(i18n.t('cardData.errors.secretContentFlagged', {
+          reason: moderationResult.reason
+        }));
+      }
 
       // Préparer les données de base de la requête
       const payload = {
@@ -440,8 +440,8 @@ export const CardDataProvider = ({ children }) => {
   const getModerationStats = () => {
     return {
       ...moderationStats,
-      flagRate: moderationStats.totalChecked > 0 
-        ? ((moderationStats.totalFlagged / moderationStats.totalChecked) * 100).toFixed(2) 
+      flagRate: moderationStats.totalChecked > 0
+        ? ((moderationStats.totalFlagged / moderationStats.totalChecked) * 100).toFixed(2)
         : 0
     };
   };
@@ -498,11 +498,11 @@ export const CardDataProvider = ({ children }) => {
 
   const updateStripeBankAccount = async (stripeAccountId) => {
     const instance = getAxiosInstance();
-    
+
     if (!instance) {
       throw new Error(i18n.t('errors.axiosNotInitialized'));
     }
-    
+
     try {
       // Pas besoin de passer les URLs de retour et de rafraîchissement
       // Laissez votre backend les gérer comme il le fait déjà
@@ -511,9 +511,9 @@ export const CardDataProvider = ({ children }) => {
         // Vous pouvez éventuellement ajouter un paramètre pour indiquer qu'il s'agit d'une modification bancaire
         action: 'update_bank_account'
       });
-      
+
       console.log('Réponse de la requête de modification du compte bancaire:', response.data);
-      
+
       if (response.data && response.data.url) {
         return {
           success: true,
@@ -533,11 +533,11 @@ export const CardDataProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Erreur lors de la requête de modification du compte bancaire:', error);
-      
-      const errorMessage = error?.response?.data?.message || 
-                           error?.message || 
-                           i18n.t('stripe.genericError');
-      
+
+      const errorMessage = error?.response?.data?.message ||
+        error?.message ||
+        i18n.t('stripe.genericError');
+
       return {
         success: false,
         message: errorMessage
@@ -688,15 +688,15 @@ export const CardDataProvider = ({ children }) => {
     if (!forceFetch && lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)) {
       return data;
     }
-  
+
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
-  
+
     // Construire les paramètres de la requête
     const params = {};
-    
+
     // Traitement des langues
     if (languages) {
       if (Array.isArray(languages)) {
@@ -710,11 +710,11 @@ export const CardDataProvider = ({ children }) => {
       // Par défaut, utiliser la langue actuelle de l'application
       params.language = i18n.language || navigator.language.split('-')[0];
     }
-  
+
     setIsLoadingData(true);
     try {
       const response = await instance.get('/api/secrets/unpurchased', { params });
-  
+
       if (response.data && response.data.secrets) {
         setData(response.data.secrets);
         setLastFetchTime(Date.now());
@@ -778,7 +778,7 @@ export const CardDataProvider = ({ children }) => {
 
   const purchaseAndAccessConversation = async (secretId, price, paymentId) => {
     console.log("DÉBUT: purchaseAndAccessConversation", { secretId, price, paymentId });
-    
+
     const instance = getAxiosInstance();
     if (!instance) {
       console.error("ERREUR: Axios non initialisé");
@@ -788,11 +788,11 @@ export const CardDataProvider = ({ children }) => {
       console.error("ERREUR: Paramètres manquants", { secretId, paymentId });
       throw new Error(i18n.t('cardData.errors.missingSecretOrPaymentId'));
     }
-  
+
     try {
       // Tentative d'achat
       console.log("INFO: Tentative d'achat initiée", { secretId, paymentId });
-      
+
       // Tracking de la tentative
       try {
         console.log("MIXPANEL: Tracking Purchase Attempt");
@@ -808,7 +808,7 @@ export const CardDataProvider = ({ children }) => {
       } catch (mpError) {
         console.error("MIXPANEL ERREUR (non bloquante):", mpError);
       }
-  
+
       // Appel API pour l'achat
       console.log("API: Envoi de la requête d'achat");
       const purchaseResponse = await instance.post(
@@ -816,7 +816,7 @@ export const CardDataProvider = ({ children }) => {
         { paymentIntentId: paymentId }
       );
       console.log("API: Réponse d'achat reçue", purchaseResponse.data);
-  
+
       // Vérification de l'ID de conversation
       if (!purchaseResponse.data.conversationId) {
         console.error("ERREUR: Pas d'ID de conversation reçu");
@@ -832,30 +832,30 @@ export const CardDataProvider = ({ children }) => {
         }
         throw new Error(i18n.t('cardData.errors.noConversationIdReceived'));
       }
-  
+
       // Mise à jour des données locales
       console.log("STATE: Mise à jour des données locales");
       setData(currentData => {
         const newData = currentData.filter(secret => secret._id !== secretId);
-        console.log("STATE: Données filtrées", { 
-          avantLength: currentData.length, 
-          aprèsLength: newData.length 
+        console.log("STATE: Données filtrées", {
+          avantLength: currentData.length,
+          aprèsLength: newData.length
         });
         return newData;
       });
       setLastFetchTime(null);
       console.log("STATE: Mise à jour terminée");
-  
+
       // Récupération des données de conversation
       console.log("API: Récupération des données de conversation");
       const conversationResponse = await instance.get(
         `/api/secrets/conversations/secret/${secretId}`
       );
-      console.log("API: Réponse de conversation reçue", { 
+      console.log("API: Réponse de conversation reçue", {
         status: conversationResponse.status,
         dataSize: JSON.stringify(conversationResponse.data).length
       });
-      
+
       // Envoi d'une notification au vendeur (via le backend)
       try {
         console.log("NOTIFICATION: Envoi de la notification d'achat au vendeur");
@@ -871,7 +871,7 @@ export const CardDataProvider = ({ children }) => {
         console.error("NOTIFICATION ERREUR (non bloquante):", notifError);
         // Ne pas bloquer la transaction en cas d'échec de notification
       }
-  
+
       // Tracking de l'achat réussi
       try {
         console.log("MIXPANEL: Tracking Purchase Succès");
@@ -888,23 +888,23 @@ export const CardDataProvider = ({ children }) => {
       } catch (mpError) {
         console.error("MIXPANEL ERREUR (non bloquante):", mpError);
       }
-  
+
       // Préparation du résultat
       const result = {
         conversationId: purchaseResponse.data.conversationId,
         conversation: conversationResponse.data
       };
-  
-      console.log("RETOUR: Préparation des données de retour", { 
+
+      console.log("RETOUR: Préparation des données de retour", {
         conversationId: result.conversationId,
         hasConversation: !!result.conversation,
         conversationLength: result.conversation ? Object.keys(result.conversation).length : 0
       });
-  
+
       // Retour des données pour la redirection
       console.log("FIN: purchaseAndAccessConversation - Succès");
       return result;
-  
+
     } catch (error) {
       // Gestion des erreurs
       console.error("ERREUR PRINCIPALE:", {
@@ -912,7 +912,7 @@ export const CardDataProvider = ({ children }) => {
         stack: error.stack,
         response: error.response?.data
       });
-  
+
       // Tracking de l'erreur
       try {
         console.log("MIXPANEL: Tracking Purchase Failed");
@@ -928,13 +928,13 @@ export const CardDataProvider = ({ children }) => {
       } catch (mpError) {
         console.error("MIXPANEL ERREUR (non bloquante):", mpError);
       }
-  
+
       console.error("FIN: purchaseAndAccessConversation - Échec");
       throw error;
     }
   };
 
-  
+
   const fetchPurchasedSecrets = async () => {
     const instance = getAxiosInstance();
     if (!instance) {
@@ -967,7 +967,7 @@ export const CardDataProvider = ({ children }) => {
 
       // Vérifier le contenu avec notre service de modération
       const result = await moderateContent(content);
-      
+
       // Si le contenu est signalé comme inapproprié
       if (result.isFlagged) {
         // Mettre à jour les statistiques de modération
@@ -994,7 +994,7 @@ export const CardDataProvider = ({ children }) => {
 
         return result;
       }
-      
+
       return { isFlagged: false };
     } catch (error) {
       console.error("Erreur lors de la modération du contenu:", error);
@@ -1008,34 +1008,34 @@ export const CardDataProvider = ({ children }) => {
     if (!instance) {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
-  
+
     // Gérer les différents types de contenu
     const messageData = typeof content === 'string'
       ? { content, messageType: 'text' }
       : content;
-  
+
     // Si c'est un message audio, assurez-vous que les données nécessaires sont incluses
     if (messageData.messageType === 'audio' && !messageData.audio) {
       throw new Error(i18n.t('cardData.errors.missingAudioData'));
     }
-    
+
     // MODÉRATION: Vérifier le contenu textuel des messages
     if ((messageData.messageType === 'text' || messageData.messageType === 'mixed') && messageData.content) {
       const moderationResult = await moderateMessageBeforeSend(messageData.content);
-      
+
       if (moderationResult.isFlagged) {
-        throw new Error(i18n.t('cardData.errors.contentFlagged', { 
-          reason: moderationResult.reason 
+        throw new Error(i18n.t('cardData.errors.contentFlagged', {
+          reason: moderationResult.reason
         }));
       }
     }
-  
+
     try {
       const response = await instance.post(
         `/api/secrets/conversations/${conversationId}/messages`,
         messageData
       );
-  
+
       if (response.data && response.data.message) {
         // Envoyer la notification aux autres participants
         try {
@@ -1045,7 +1045,7 @@ export const CardDataProvider = ({ children }) => {
             messageId: response.data.message._id,
             senderId: userData?._id,
             senderName: userData?.name || 'Utilisateur',
-            messagePreview: typeof content === 'string' 
+            messagePreview: typeof content === 'string'
               ? content.substring(0, 100) + (content.length > 100 ? '...' : '')
               : content.content?.substring(0, 100) + (content.content?.length > 100 ? '...' : '') || 'Nouveau message'
           });
@@ -1053,10 +1053,10 @@ export const CardDataProvider = ({ children }) => {
         } catch (notifError) {
           console.error("NOTIFICATION ERREUR (non bloquante):", notifError);
         }
-        
+
         return response.data;
       }
-      
+
       return response.data;
     } catch (error) {
       console.error(i18n.t('cardData.errors.sendingMessage'), error.response?.data || error.message);
@@ -1254,7 +1254,7 @@ export const CardDataProvider = ({ children }) => {
         total += count;
       });
 
-  
+
       setUnreadCountsMap(countsMap);
       setTotalUnreadCount(total);
 
@@ -1371,17 +1371,17 @@ export const CardDataProvider = ({ children }) => {
     if (!instance) {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
-    
+
     try {
       // Appel à l'API pour supprimer le secret
       const response = await instance.delete(`/api/secrets/${secretId}`);
-      
+
       console.log(i18n.t('cardData.logs.secretDeleted'), secretId);
-      
+
       // Mettre à jour le cache local si nécessaire
       setData(currentData => currentData.filter(secret => secret._id !== secretId));
       setLastFetchTime(null); // Forcer un rafraîchissement lors de la prochaine requête
-      
+
       return response.data;
     } catch (error) {
       console.error(i18n.t('cardData.errors.deletingSecret'), error);
@@ -1392,97 +1392,97 @@ export const CardDataProvider = ({ children }) => {
   const handleIdentityVerification = async (userData, options = {}) => {
     const instance = getAxiosInstance();
     if (!instance) {
-        throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
-    
+
     try {
-        const payload = {
-            stripeAccountId: userData.stripeAccountId,
-            documentType: options.documentType || 'identity_document',
-            documentSide: options.documentSide || 'front',
-            skipImageUpload: options.skipImageUpload || false
-        };
+      const payload = {
+        stripeAccountId: userData.stripeAccountId,
+        documentType: options.documentType || 'identity_document',
+        documentSide: options.documentSide || 'front',
+        skipImageUpload: options.skipImageUpload || false
+      };
 
-        console.log("Payload envoyé à l'API:", JSON.stringify(payload, null, 2));
+      console.log("Payload envoyé à l'API:", JSON.stringify(payload, null, 2));
 
-        // Ajouter les images seulement si on ne skip pas l'upload
-        if (!options.skipImageUpload) {
-            if (options.documentImage) {
-                payload.documentImage = options.documentImage;
-            }
-            if (options.selfieImage) {
-                payload.selfieImage = options.selfieImage;
-            }
+      // Ajouter les images seulement si on ne skip pas l'upload
+      if (!options.skipImageUpload) {
+        if (options.documentImage) {
+          payload.documentImage = options.documentImage;
         }
+        if (options.selfieImage) {
+          payload.selfieImage = options.selfieImage;
+        }
+      }
 
-        // Appeler l'API de vérification d'identité
-        const response = await instance.post('/api/secrets/verify-identity', payload);
+      // Appeler l'API de vérification d'identité
+      const response = await instance.post('/api/secrets/verify-identity', payload);
 
-        return {
-            success: true,
-            sessionId: response.data.sessionId,
-            clientSecret: response.data.clientSecret,
-            verificationUrl: response.data.verificationUrl, // Utilisez l'URL fournie par le backend
-            message: response.data.message
-        };
+      return {
+        success: true,
+        sessionId: response.data.sessionId,
+        clientSecret: response.data.clientSecret,
+        verificationUrl: response.data.verificationUrl, // Utilisez l'URL fournie par le backend
+        message: response.data.message
+      };
     } catch (error) {
-        console.error('Erreur de vérification d\'identité:', error);
-        return {
-            success: false,
-            message: error.response?.data?.message || 'Échec de la vérification d\'identité'
-        };
+      console.error('Erreur de vérification d\'identité:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Échec de la vérification d\'identité'
+      };
     }
-};
+  };
 
 
 
- 
+
   return (
     <>
-    <CardDataContext.Provider value={{
-      data,
-      setData,
-      handlePostSecret,
-      handleStripeOnboardingRefresh,
-      fetchAllSecrets,
-      fetchUnpurchasedSecrets,
-      fetchUserSecretsWithCount,
-      purchaseAndAccessConversation,
-      fetchPurchasedSecrets,
-      handleAddMessage,
-      getConversationMessages,
-      isLoadingData,
-      handleStripeReturn,
-      deleteStripeAccount,
-      resetStripeAccount,
-      handleShareSecret,
-      getSharedSecret,
-      markConversationAsRead,
-      uploadImage,
-      getUserConversations,
-      refreshUnreadCounts,
-      unreadCountsMap,
-      totalUnreadCount,
-      resetReadStatus,
-      setUnreadCountsMap,
-      setTotalUnreadCount,
-      fetchSecretsByLocation,
-      getCurrentLocation,
-      userCurrency,
-      setUserPreferredCurrency,
-      detectUserCurrency,
-      deleteSecret,
-      handleIdentityVerification,
-      triggerConfetti,
-      updateStripeBankAccount,
-      moderateMessageBeforeSend,
-      getModerationStats,
-      checkAndNotifyNearbySecrets, // Nouvelle fonction
-  checkAndSendStripeReminder,  
-    }}>
-      {children}
-    </CardDataContext.Provider>
-    {showConfetti && (
+      <CardDataContext.Provider value={{
+        data,
+        setData,
+        handlePostSecret,
+        handleStripeOnboardingRefresh,
+        fetchAllSecrets,
+        fetchUnpurchasedSecrets,
+        fetchUserSecretsWithCount,
+        purchaseAndAccessConversation,
+        fetchPurchasedSecrets,
+        handleAddMessage,
+        getConversationMessages,
+        isLoadingData,
+        handleStripeReturn,
+        deleteStripeAccount,
+        resetStripeAccount,
+        handleShareSecret,
+        getSharedSecret,
+        markConversationAsRead,
+        uploadImage,
+        getUserConversations,
+        refreshUnreadCounts,
+        unreadCountsMap,
+        totalUnreadCount,
+        resetReadStatus,
+        setUnreadCountsMap,
+        setTotalUnreadCount,
+        fetchSecretsByLocation,
+        getCurrentLocation,
+        userCurrency,
+        setUserPreferredCurrency,
+        detectUserCurrency,
+        deleteSecret,
+        handleIdentityVerification,
+        triggerConfetti,
+        updateStripeBankAccount,
+        moderateMessageBeforeSend,
+        getModerationStats,
+        checkAndNotifyNearbySecrets, // Nouvelle fonction
+        checkAndSendStripeReminder,
+      }}>
+        {children}
+      </CardDataContext.Provider>
+      {showConfetti && (
         <ConfettiCannon
           style={{
             position: 'absolute',

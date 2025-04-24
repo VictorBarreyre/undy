@@ -14,29 +14,47 @@ class NotificationManager {
   }
 
   async initialize(userData) {
-    if (this.initialized) return;
+    console.log("[NOTIF_MANAGER] Initialisation du gestionnaire de notifications");
+    console.log("[NOTIF_MANAGER] Utilisateur connecté:", !!userData?._id);
+    
+    if (this.initialized) {
+        console.log("[NOTIF_MANAGER] Déjà initialisé, sortie");
+        return;
+    }
     
     // S'assurer que le service de notification est initialisé
+    console.log("[NOTIF_MANAGER] Initialisation du service de notifications");
     await this.notificationService.initialize();
     
     // Vérifier les permissions
+    console.log("[NOTIF_MANAGER] Vérification des permissions");
     const hasPermission = await this.notificationService.checkPermissions();
+    console.log("[NOTIF_MANAGER] Résultat de la vérification des permissions:", hasPermission);
     if (!hasPermission) {
-      console.log(i18n.t('notifications.logs.permissionDenied'));
-      return false;
+        console.log("[NOTIF_MANAGER] Permissions refusées");
+        console.log(i18n.t('notifications.logs.permissionDenied'));
+        return false;
     }
     
     // Obtenir le token et l'envoyer au serveur si on a un utilisateur connecté
     if (userData && userData._id) {
-      const token = await this.notificationService.getToken();
-      if (token) {
-        await this.registerTokenWithServer(userData._id, token);
-      }
+        console.log("[NOTIF_MANAGER] Récupération et enregistrement du token");
+        const token = await this.notificationService.getToken();
+        if (token) {
+            console.log("[NOTIF_MANAGER] Token obtenu, enregistrement avec le serveur");
+            await this.registerTokenWithServer(userData._id, token);
+        } else {
+            console.log("[NOTIF_MANAGER] Aucun token obtenu");
+        }
+    } else {
+        console.log("[NOTIF_MANAGER] Aucun utilisateur connecté, token non enregistré");
     }
     
     this.initialized = true;
+    console.log("[NOTIF_MANAGER] Initialisation terminée avec succès");
     return true;
-  }
+}
+
 
   async registerTokenWithServer(userId, token) {
     const instance = getAxiosInstance();
@@ -58,39 +76,43 @@ class NotificationManager {
       return false;
     }
   }
-
-  // 1. Notification lorsqu'un message est reçu dans une conversation
+  
   async scheduleMessageNotification(messageSender, conversationId, messagePreview) {
-    // Ne pas envoyer de notification si l'utilisateur est déjà dans cette conversation
-    // Cette logique devrait être gérée par le backend, mais on peut aussi la mettre ici
+    console.log("[NOTIF_MANAGER] Préparation d'une notification de message:", { 
+        sender: messageSender, 
+        conversationId,
+        preview: messagePreview.substring(0, 50) + (messagePreview.length > 50 ? '...' : '')
+    });
     
     try {
-      await this.notificationService.sendLocalNotification(
-        i18n.t('notifications.message.title', { sender: messageSender }),
-        messagePreview.substring(0, 100) + (messagePreview.length > 100 ? '...' : ''),
-        {
-          type: 'new_message',
-          conversationId,
-          timestamp: new Date().toISOString()
+        const result = await this.notificationService.sendLocalNotification(
+            i18n.t('notifications.message.title', { sender: messageSender }),
+            messagePreview.substring(0, 100) + (messagePreview.length > 100 ? '...' : ''),
+            {
+                type: 'new_message',
+                conversationId,
+                timestamp: new Date().toISOString()
+            }
+        );
+        
+        console.log("[NOTIF_MANAGER] Résultat de l'envoi de notification:", result);
+        
+        try {
+            mixpanel.track("Notification Sent", {
+                notification_type: "new_message",
+                conversation_id: conversationId
+            });
+        } catch (mpError) {
+            console.error("[NOTIF_MANAGER] Erreur Mixpanel:", mpError);
         }
-      );
-      
-      try {
-        mixpanel.track("Notification Sent", {
-          notification_type: "new_message",
-          conversation_id: conversationId
-        });
-      } catch (mpError) {
-        console.error("Erreur Mixpanel:", mpError);
-      }
-      
-      return true;
+        
+        return result;
     } catch (error) {
-      console.error(i18n.t('notifications.errors.messageNotification'), error);
-      return false;
+        console.error("[NOTIF_MANAGER] ERREUR lors de l'envoi de la notification:", error);
+        console.error(i18n.t('notifications.errors.messageNotification'), error);
+        return false;
     }
-  }
-
+}
   // 2. Notification lorsqu'un secret est acheté
   async schedulePurchaseNotification(secretId, buyerName, price, currency) {
     try {

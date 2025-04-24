@@ -9,6 +9,16 @@ import ContactsPermissionModal from '../../presentation/components/ContactsPermi
 import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location'; // Ajoutez cette ligne
 import mixpanel from "../../services/mixpanel"
+import * as Notifications from 'expo-notifications';
+import NotificationManager from "../../presentation/Notifications/NotificationManager";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 
 export const AuthContext = createContext();
@@ -23,7 +33,55 @@ export const AuthProvider = ({ children }) => {
   const [contactPermissionResolve, setContactPermissionResolve] = useState(null);
   const [locationPermission, setLocationPermission] = useState(null);
   const [locationEnabled, setLocationEnabled] = useState(userData?.location || false);
-  const { t } = useTranslation(); // Déclarez le hook ici
+  const { t } = useTranslation(); 
+
+  const [notificationsInitialized, setNotificationsInitialized] = useState(false);
+
+  const initializeNotifications = async (user) => {
+    console.warn("[AUTH] Initialisation des notifications pour l'utilisateur");
+    try {
+      // Vérifications préliminaires
+      if (!user || !user._id) {
+        console.warn("[AUTH] Pas d'utilisateur valide pour initialiser les notifications");
+        return false;
+      }
+  
+      // Importation dynamique pour éviter les dépendances circulaires
+      const NotificationManager = require('../../presentation/Notifications/NotificationManager').default;
+      
+      if (!NotificationManager) {
+        console.warn("[AUTH] NotificationManager non disponible");
+        return false;
+      }
+      
+      // Vérifier si le service est déjà initialisé
+      if (NotificationManager.initialized) {
+        console.warn("[AUTH] NotificationManager déjà initialisé");
+        // Mise à jour du token si nécessaire
+        const token = await NotificationManager.notificationService.getToken();
+        console.warn("[AUTH] Token actuel:", token);
+        if (token) {
+          await NotificationManager.registerTokenWithServer(user._id, token);
+        }
+        setNotificationsInitialized(true);
+        return true;
+      }
+      
+      // Initialisation complète
+      console.warn("[AUTH] Lancement de l'initialisation complète");
+      const success = await NotificationManager.initialize(user);
+      console.warn("[AUTH] Résultat de l'initialisation:", success);
+      
+      // Stockage du résultat
+      await AsyncStorage.setItem('notificationsInitialized', success ? 'true' : 'false');
+      setNotificationsInitialized(success);
+      
+      return success;
+    } catch (error) {
+      console.warn("[AUTH] Erreur d'initialisation des notifications:", error);
+      return false;
+    }
+  };
 
   useEffect(() => {
     const initAxios = async () => {
@@ -466,7 +524,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Dans AuthContext.js, modifiez la fonction login:
   const login = async (accessToken, refreshToken) => {
     try {
       console.log('[AuthProvider] Début de la connexion');
@@ -486,28 +543,52 @@ export const AuthProvider = ({ children }) => {
       // Étape 3: Mettez à jour l'état local
       setUserToken(accessToken);
       
-      // Étape 4: Récupérez les données utilisateur
+      // Étape 4: Récupérez les données utilisateur et attendez le résultat
+      let user = null;
       try {
-        await fetchUserData();
+        user = await fetchUserData();
+        console.log('[AuthProvider] Données utilisateur récupérées avec succès');
         
         // Après la récupération des données utilisateur, initialiser les notifications
-        try {
-          // Importation dynamique pour éviter les dépendances circulaires
-          const NotificationManager = require('../../presentation/Notifications/NotificationManager').default;
-          if (NotificationManager) {
-            await NotificationManager.initialize(userData);
+        if (user && user._id) {
+          try {
+            // Importation dynamique pour éviter les dépendances circulaires
+            const NotificationManager = require('../../presentation/Notifications/NotificationManager').default;
+            
+            if (NotificationManager) {
+              console.warn('[NOTIF_AUTH] Initialisation des notifications pour l\'utilisateur:', user._id);
+              const success = await NotificationManager.initialize(user);
+              console.warn('[NOTIF_AUTH] Résultat de l\'initialisation:', success);
+              
+              // Stockez l'état d'initialisation des notifications
+              await AsyncStorage.setItem('notificationsInitialized', success ? 'true' : 'false');
+            }
+          } catch (notifError) {
+            console.error('[AuthProvider] Erreur d\'initialisation des notifications:', notifError);
           }
-        } catch (notifError) {
-          console.error('[AuthProvider] Erreur d\'initialisation des notifications:', notifError);
+        } else {
+          console.warn('[NOTIF_AUTH] Impossible d\'initialiser les notifications: userData incomplet');
         }
-        
       } catch (error) {
         console.error('[AuthProvider] Erreur fetchUserData:', error);
         
         // Réessayez après un court délai (le serveur peut avoir besoin d'un moment pour valider le token)
         setTimeout(async () => {
           try {
-            await fetchUserData();
+            const secondUser = await fetchUserData();
+            
+            // Réessayer l'initialisation des notifications après la récupération des données
+            if (secondUser && secondUser._id) {
+              try {
+                const NotificationManager = require('../../presentation/Notifications/NotificationManager').default;
+                if (NotificationManager) {
+                  console.warn('[NOTIF_AUTH] Seconde tentative d\'initialisation des notifications');
+                  await NotificationManager.initialize(secondUser);
+                }
+              } catch (notifError) {
+                console.error('[AuthProvider] Erreur lors de la seconde tentative d\'initialisation des notifications:', notifError);
+              }
+            }
           } catch (secondError) {
             console.error('[AuthProvider] Échec de la 2e tentative:', secondError);
           }
@@ -524,42 +605,47 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-const logout = async () => {
-  try {
-    console.log('[AuthProvider] Début de la déconnexion');
-    const instance = getAxiosInstance();
-    if (instance) {
-      delete instance.defaults.headers.common['Authorization'];
-    }
-
-    // Tentative de nettoyage des notifications
+  const logout = async () => {
     try {
-      const NotificationManager = require('../../presentation/Notifications/NotificationManager').default;
-      if (NotificationManager && NotificationManager.notificationService) {
-        await NotificationManager.notificationService.cancelAllNotifications();
+      console.log('[AuthProvider] Début de la déconnexion');
+      const instance = getAxiosInstance();
+      if (instance) {
+        delete instance.defaults.headers.common['Authorization'];
       }
-    } catch (notifError) {
-      console.error('[AuthProvider] Erreur lors du nettoyage des notifications:', notifError);
+  
+      // Tentative de nettoyage des notifications
+      try {
+        console.log('[NOTIF_AUTH] Nettoyage des notifications');
+        const NotificationManager = require('../../presentation/Notifications/NotificationManager').default;
+        if (NotificationManager && NotificationManager.notificationService) {
+          await NotificationManager.notificationService.cancelAllNotifications();
+          console.log('[NOTIF_AUTH] Notifications annulées avec succès');
+          
+          // Supprimer l'indicateur d'initialisation
+          await AsyncStorage.removeItem('notificationsInitialized');
+        }
+      } catch (notifError) {
+        console.error('[AuthProvider] Erreur lors du nettoyage des notifications:', notifError);
+      }
+  
+      // Suppression des données
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
+      await AsyncStorage.removeItem(`pendingSecretData_${userData?._id}`);
+  
+      // Mise à jour des états
+      setUserData(null);
+      setIsLoadingUserData(false);
+      setUserToken(null);
+      setIsLoggedIn(false);
+  
+      console.log('[AuthProvider] Déconnexion réussie');
+      return true;
+    } catch (error) {
+      console.error('[AuthProvider] Erreur lors de la déconnexion:', error);
+      setIsLoadingUserData(false);
+      throw error;
     }
-
-    // Suppression des données
-    await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
-    await AsyncStorage.removeItem(`pendingSecretData_${userData?._id}`);
-
-    // Mise à jour des états
-    setUserData(null);
-    setIsLoadingUserData(false);
-    setUserToken(null);
-    setIsLoggedIn(false);
-
-    console.log('[AuthProvider] Déconnexion réussie');
-    return true;
-  } catch (error) {
-    console.error('[AuthProvider] Erreur lors de la déconnexion:', error);
-    setIsLoadingUserData(false);
-    throw error;
-  }
-};
+  };
 
   const persistUserData = useCallback(async (data) => {
     try {
@@ -582,6 +668,44 @@ const logout = async () => {
       console.error(i18n.t('auth.errors.loadingPersistedData'), error);
     }
   }, []);
+
+  // Dans useEffect au démarrage après loadStoredData
+useEffect(() => {
+  // Existant: loadPersistedUserData(); 
+  
+  // Ajoutez ceci après le chargement des données:
+  const testNotificationSetup = async () => {
+    console.warn("[AUTH_TEST] Vérification du système de notifications");
+    
+    try {
+      // Vérifie si nous avons un utilisateur et s'il est connecté
+      if (userData && isLoggedIn) {
+        console.warn("[AUTH_TEST] Utilisateur connecté, test des notifications");
+        
+        // Importation dynamique
+        const NotificationService = require('../../presentation/Notifications/NotificationService').default;
+        
+        if (NotificationService) {
+          // Vérifie les permissions
+          const hasPermission = await NotificationService.checkPermissions();
+          console.warn("[AUTH_TEST] Statut des permissions:", hasPermission);
+          
+          if (hasPermission) {
+            // Envoie une notification de test
+            console.warn("[AUTH_TEST] Envoi d'une notification de test");
+            const result = await NotificationService.sendTestNotification();
+            console.warn("[AUTH_TEST] Résultat de l'envoi:", result);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn("[AUTH_TEST] Erreur lors du test:", error);
+    }
+  };
+  
+  // Exécuter le test après un court délai
+  setTimeout(testNotificationSetup, 2000);
+}, [userData, isLoggedIn]);
 
   useEffect(() => {
     loadPersistedUserData();

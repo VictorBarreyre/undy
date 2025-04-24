@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import { Platform, Alert, Linking } from 'react-native';
 import i18n from 'i18next'; // Importez i18n directement pour accéder aux traductions
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 const ALERT_SHOWN_SIMULATOR = 'notification_alert_shown_simulator';
 const ALERT_SHOWN_PERMISSION = 'notification_alert_shown_permission';
@@ -13,6 +14,8 @@ class NotificationService {
     }
 
     async initialize() {
+        console.log("[NOTIF] Initialisation du service de notifications...");
+        
         // Configuration des notifications
         Notifications.setNotificationHandler({
             handleNotification: async () => ({
@@ -21,7 +24,10 @@ class NotificationService {
                 shouldSetBadge: true,
             }),
         });
-
+        
+        // Vérifier si le handler est défini (méthode correcte)
+        console.log("[NOTIF] Configuration terminée");
+        
         // Configuration du canal pour Android
         if (Platform.OS === 'android') {
             await Notifications.setNotificationChannelAsync('default', {
@@ -31,18 +37,25 @@ class NotificationService {
                 lightColor: '#FF231F7C',
             });
         }
+        
+        return true;
     }
 
     async checkPermissions(forceAlert = false) {
+
+        console.log("[NOTIF] Vérification des permissions sur:", Device.isDevice ? "appareil physique" : "simulateur");
+
         if (!Device.isDevice) {
             if (__DEV__) {
                 console.log(i18n.t('notifications.logs.devModePermission'));
                 return true;
             }
-            
+
             // Vérifier si l'alerte a déjà été affichée pour simulateur
             const alertShown = !forceAlert && await AsyncStorage.getItem(ALERT_SHOWN_SIMULATOR) === 'true';
             if (!alertShown) {
+                console.log("[NOTIF] Affichage de l'alerte pour simulateur");
+
                 Alert.alert(i18n.t('notifications.alerts.simulatorWarning'), null, [
                     {
                         text: "OK",
@@ -54,18 +67,24 @@ class NotificationService {
             }
             return false;
         }
-    
+
         try {
             const { status: existingStatus } = await Notifications.getPermissionsAsync();
+            console.log("[NOTIF] Statut des permissions:", existingStatus);
+
             console.log(i18n.t('notifications.logs.existingStatus'), existingStatus);
-    
+
             if (existingStatus === 'granted') {
                 return true;
             }
-    
+
+            console.log("[NOTIF] Demande de permissions...");
+
             const { status } = await Notifications.requestPermissionsAsync();
+            console.log("[NOTIF] Nouveau statut des permissions:", status);
+
             console.log(i18n.t('notifications.logs.newStatus'), status);
-    
+
             if (status !== 'granted') {
                 // Vérifier si l'alerte a déjà été affichée pour permissions
                 const alertShown = !forceAlert && await AsyncStorage.getItem(ALERT_SHOWN_PERMISSION) === 'true';
@@ -93,16 +112,23 @@ class NotificationService {
                 }
                 return false;
             }
-    
+
             return true;
         } catch (error) {
+            console.error("[NOTIF] ERREUR lors de la vérification des permissions:", error);
+
             console.error(i18n.t('notifications.errors.permissionCheck'), error);
             return false;
         }
     }
 
     async getToken() {
+        console.log("[NOTIF] Tentative de récupération du token...");
+
         try {
+
+            console.log("[NOTIF] Configuration du token, projectId:", Constants.expoConfig?.extra?.eas?.projectId || "non défini");
+
             const token = await Notifications.getExpoPushTokenAsync({
                 projectId: Constants.expoConfig.extra?.eas?.projectId || undefined
             });
@@ -114,6 +140,8 @@ class NotificationService {
     }
 
     async sendLocalNotification(title, body, data = {}) {
+        console.log("[NOTIF] Envoi d'une notification locale:", { title, body, data });
+
         try {
             await Notifications.scheduleNotificationAsync({
                 content: {
@@ -124,8 +152,12 @@ class NotificationService {
                 },
                 trigger: null // Notification immédiate
             });
+            console.log("[NOTIF] Notification locale envoyée avec succès");
+
             return true;
         } catch (error) {
+            console.error("[NOTIF] ERREUR lors de l'envoi de la notification:", error);
+
             console.error(i18n.t('notifications.errors.sending'), error);
             return false;
         }
@@ -146,13 +178,21 @@ class NotificationService {
         }
     }
 
-    // Pour tester les notifications
+    // Dans NotificationService.js, modifiez la fonction sendTestNotification
     async sendTestNotification() {
-        return this.sendLocalNotification(
-            i18n.t('notifications.test.title'),
-            i18n.t('notifications.test.body'),
-            { type: 'test' }
-        );
+        console.warn("[NOTIF_SERVICE] Envoi d'une notification de test");
+        try {
+            const result = await this.sendLocalNotification(
+                i18n.t('notifications.test.title'),
+                i18n.t('notifications.test.body'),
+                { type: 'test' }
+            );
+            console.warn("[NOTIF_SERVICE] Notification de test envoyée:", result);
+            return result;
+        } catch (error) {
+            console.warn("[NOTIF_SERVICE] Erreur lors de l'envoi de la notification de test:", error);
+            return false;
+        }
     }
 
     // Pour arrêter toutes les notifications programmées

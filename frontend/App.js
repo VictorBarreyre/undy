@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { NativeBaseProvider } from "native-base";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -13,25 +13,11 @@ import { StripeProvider } from "@stripe/stripe-react-native";
 import { STRIPE_PUBLISHABLE_KEY } from '@env';
 import DeepLinkHandler from "./presentation/components/DeepLinkHandler";
 import { Linking } from 'react-native';
-import * as Notifications from 'expo-notifications';
-import NotificationManager from "./presentation/Notifications/NotificationManager";
-
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
 
 const Stack = createStackNavigator();
 
 const App = () => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const navigationRef = useRef();
-  const notificationListener = useRef();
-  const responseListener = useRef();
 
   const linking = {
     prefixes: ['hushy://', 'https://hushy.app'],
@@ -75,41 +61,6 @@ const App = () => {
     },
   };
 
-  const handleNotificationNavigation = (data) => {
-    if (!data || !navigationRef.current) return;
-
-    try {
-      switch (data.type) {
-        case 'new_message':
-          if (data.conversationId) {
-            navigationRef.current.navigate('MainApp', {
-              screen: 'ChatTab',
-              params: {
-                screen: 'Chat',
-                params: { conversationId: data.conversationId }
-              }
-            });
-          }
-          break;
-        case 'purchase':
-          if (data.secretId) {
-            navigationRef.current.navigate('SecretDetail', { 
-              secretId: data.secretId 
-            });
-          }
-          break;
-        case 'nearby_secrets':
-          navigationRef.current.navigate('MainApp', {
-            screen: 'SearchTab'
-          });
-          break;
-        // Autres cas selon vos besoins
-      }
-    } catch (error) {
-      console.error('Erreur de navigation depuis notification:', error);
-    }
-  };
-
   const loadFonts = async () => {
     await Font.loadAsync({
       "SF-Pro-Display-Regular": require("./assets/fonts/SF-Pro-Display-Regular.otf"),
@@ -119,32 +70,9 @@ const App = () => {
     });
   };
 
-  
-
-  useEffect(() => {
+  React.useEffect(() => {
     loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
-  }, []);
-
-  // Effet pour configurer les écouteurs de notifications
-  useEffect(() => {
-    // Configurer les écouteurs pour les notifications
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log('Notification reçue:', notification);
-      // Vous pouvez mettre à jour l'interface utilisateur ici si nécessaire
-    });
-
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Interaction avec notification:', response);
-      const data = response.notification.request.content.data;
-      handleNotificationNavigation(data);
-    });
-
-    // Nettoyage lors du démontage
-    return () => {
-      Notifications.removeNotificationSubscription(notificationListener.current);
-      Notifications.removeNotificationSubscription(responseListener.current);
-    };
-  }, []);
+  }, []); ``
 
 
 
