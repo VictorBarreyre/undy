@@ -124,17 +124,61 @@ class NotificationService {
 
     async getToken() {
         console.log("[NOTIF] Tentative de récupération du token...");
-
+        
+        // Vérifier si nous sommes sur un simulateur
+        if (!Device.isDevice) {
+            console.log("[NOTIF] Exécution sur simulateur, token simulé utilisé");
+            return "SIMULATOR_MOCK_TOKEN";
+        }
+        
         try {
-
-            console.log("[NOTIF] Configuration du token, projectId:", Constants.expoConfig?.extra?.eas?.projectId || "non défini");
-
+            // Récupérer le projectId de différentes sources possibles
+            let projectId;
+            
+            // 1. Essayer d'abord depuis les constantes (fonctionnera en mode managed workflow)
+            projectId = Constants.expoConfig?.extra?.eas?.projectId;
+            
+            // 2. Si pas disponible, essayer depuis AsyncStorage (au cas où nous l'avons stocké précédemment)
+            if (!projectId) {
+                projectId = await AsyncStorage.getItem('expo_push_projectId');
+            }
+            
+            // 3. Fallback sur une valeur hardcodée (à utiliser en dernier recours)
+            if (!projectId) {
+                // Vous pouvez définir différentes valeurs selon l'environnement
+                if (__DEV__) {
+                    projectId = "votre-project-id-dev";
+                } else {
+                    projectId = "votre-project-id-prod";
+                }
+                
+                // Stocker pour les prochaines utilisations
+                await AsyncStorage.setItem('expo_push_projectId', projectId);
+            }
+            
+            console.log("[NOTIF] Configuration du token, projectId:", projectId);
+            
+            // Obtenir le token avec le projectId
             const token = await Notifications.getExpoPushTokenAsync({
-                projectId: Constants.expoConfig.extra?.eas?.projectId || undefined
+                projectId: projectId
             });
+            
+            // Stocker le projectId si la récupération a réussi
+            if (token.data && projectId) {
+                await AsyncStorage.setItem('expo_push_projectId', projectId);
+            }
+            
+            console.log("[NOTIF] Token récupéré:", token.data);
             return token.data;
         } catch (error) {
-            console.error(i18n.t('notifications.errors.tokenRetrieval'), error);
+            console.error("[NOTIF] ERREUR lors de la récupération du token:", error);
+            
+            // En cas d'erreur en production, ne pas bloquer l'expérience utilisateur
+            if (!__DEV__) {
+                // Essayer de se remettre de l'erreur avec un délai avant la prochaine tentative
+                await AsyncStorage.setItem('last_token_error_time', Date.now().toString());
+            }
+            
             return null;
         }
     }

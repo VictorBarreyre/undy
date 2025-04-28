@@ -462,7 +462,7 @@ const Connexion = ({ navigation }) => {
         <Box alignItems="center" mb={4}>
           <Text
             style={styles.h4}
-            mb={4}
+            mb={2}
             textAlign="center"
           >
             {t('auth.login.title')}
@@ -508,7 +508,7 @@ const Connexion = ({ navigation }) => {
 
           <Link
             px={10}
-            mt={4}
+            mt={2}
             mb={4}
             style={styles.littleCaption}
             onPress={() => navigation.navigate('Login')}

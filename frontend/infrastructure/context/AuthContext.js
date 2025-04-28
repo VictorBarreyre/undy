@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 import { DeviceEventEmitter, Alert, PermissionsAndroid, Platform, Linking } from 'react-native';
@@ -34,6 +34,7 @@ export const AuthProvider = ({ children }) => {
   const [locationPermission, setLocationPermission] = useState(null);
   const [locationEnabled, setLocationEnabled] = useState(userData?.location || false);
   const { t } = useTranslation(); 
+  const notificationTestComplete = useRef(false);
 
   const [notificationsInitialized, setNotificationsInitialized] = useState(false);
 
@@ -669,43 +670,41 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Dans useEffect au démarrage après loadStoredData
-useEffect(() => {
-  // Existant: loadPersistedUserData(); 
-  
-  // Ajoutez ceci après le chargement des données:
-  const testNotificationSetup = async () => {
-    console.warn("[AUTH_TEST] Vérification du système de notifications");
-    
-    try {
-      // Vérifie si nous avons un utilisateur et s'il est connecté
-      if (userData && isLoggedIn) {
-        console.warn("[AUTH_TEST] Utilisateur connecté, test des notifications");
+  useEffect(() => {
+    if (userData && isLoggedIn && !notificationTestComplete.current) {
+      const testNotificationSetup = async () => {
+        console.warn("[AUTH_TEST] Vérification du système de notifications (exécution unique)");
         
-        // Importation dynamique
-        const NotificationService = require('../../presentation/Notifications/NotificationService').default;
-        
-        if (NotificationService) {
-          // Vérifie les permissions
-          const hasPermission = await NotificationService.checkPermissions();
-          console.warn("[AUTH_TEST] Statut des permissions:", hasPermission);
+        try {
+          console.warn("[AUTH_TEST] Utilisateur connecté, test des notifications");
           
-          if (hasPermission) {
-            // Envoie une notification de test
-            console.warn("[AUTH_TEST] Envoi d'une notification de test");
-            const result = await NotificationService.sendTestNotification();
-            console.warn("[AUTH_TEST] Résultat de l'envoi:", result);
+          // Importation dynamique
+          const NotificationService = require('../../presentation/Notifications/NotificationService').default;
+          
+          if (NotificationService) {
+            // Vérifie les permissions
+            const hasPermission = await NotificationService.checkPermissions();
+            console.warn("[AUTH_TEST] Statut des permissions:", hasPermission);
+            
+            if (hasPermission) {
+              // Envoie une notification de test
+              console.warn("[AUTH_TEST] Envoi d'une notification de test");
+              const result = await NotificationService.sendTestNotification();
+              console.warn("[AUTH_TEST] Résultat de l'envoi:", result);
+            }
           }
+        } catch (error) {
+          console.warn("[AUTH_TEST] Erreur lors du test:", error);
+        } finally {
+          // Toujours marquer comme terminé, même en cas d'erreur
+          notificationTestComplete.current = true;
         }
-      }
-    } catch (error) {
-      console.warn("[AUTH_TEST] Erreur lors du test:", error);
+      };
+      
+      // Délai pour s'assurer que tout est bien initialisé
+      setTimeout(testNotificationSetup, 2000);
     }
-  };
-  
-  // Exécuter le test après un court délai
-  setTimeout(testNotificationSetup, 2000);
-}, [userData, isLoggedIn]);
+  }, [userData, isLoggedIn]);
 
   useEffect(() => {
     loadPersistedUserData();

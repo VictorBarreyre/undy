@@ -56,26 +56,39 @@ class NotificationManager {
 }
 
 
-  async registerTokenWithServer(userId, token) {
-    const instance = getAxiosInstance();
-    if (!instance) {
+async registerTokenWithServer(userId, token) {
+  // Ne pas envoyer de token simulé au serveur
+  if (token === "SIMULATOR_MOCK_TOKEN" || !token) {
+      console.log("[NOTIF_MANAGER] Token simulé ou invalide, pas d'envoi au serveur");
+      return true; // Simuler un succès en développement
+  }
+  
+  const instance = getAxiosInstance();
+  if (!instance) {
       throw new Error(i18n.t('notifications.errors.axiosNotInitialized'));
-    }
-    
-    try {
-      // Envoyer le token au serveur
-      const response = await instance.post('/api/users/push-token', {
-        userId,
-        expoPushToken: token
+  }
+  
+  try {
+      // N'envoyez PAS le userId dans la requête
+      // Le middleware protect l'extrait déjà du token JWT
+      const response = await instance.post('/api/notifications/token', {
+          expoPushToken: token
       });
       
       console.log(i18n.t('notifications.logs.tokenRegistered'), response.data);
       return true;
-    } catch (error) {
+  } catch (error) {
       console.error(i18n.t('notifications.errors.tokenRegistration'), error);
+      
+      // Ignorer l'erreur en développement pour ne pas bloquer le flux
+      if (__DEV__) {
+          console.log("[NOTIF_MANAGER] Erreur ignorée en développement");
+          return true;
+      }
+      
       return false;
-    }
   }
+}
   
   async scheduleMessageNotification(messageSender, conversationId, messagePreview) {
     console.log("[NOTIF_MANAGER] Préparation d'une notification de message:", { 
