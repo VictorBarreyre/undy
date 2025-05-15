@@ -1,9 +1,12 @@
 // TestNotificationButton.js
 import React, { useState, useContext } from 'react';
 import { Button, Text, Box, VStack, HStack, Badge } from 'native-base';
+import {  Alert } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { getAxiosInstance } from '../../data/api/axiosInstance';
 import NotificationService from '../Notifications/NotificationService';
+import * as Notifications from 'expo-notifications';
+
 
 const TestNotificationButton = () => {
   const { userData } = useContext(AuthContext);
@@ -13,12 +16,12 @@ const TestNotificationButton = () => {
   const testServerNotification = async () => {
     setLoading(true);
     setResult(null);
-    
+
     try {
       // 1. Obtenir le token
       const token = await NotificationService.getToken();
       console.log("[NOTIF_TEST] Token obtenu:", token);
-      
+
       if (!token) {
         setResult({
           success: false,
@@ -27,13 +30,13 @@ const TestNotificationButton = () => {
         setLoading(false);
         return;
       }
-      
+
       // 2. Envoyer une requête au serveur pour tester la notification
       const instance = getAxiosInstance();
       const response = await instance.post('/api/notifications/test', { token });
-      
+
       console.log("[NOTIF_TEST] Réponse du serveur:", response.data);
-      
+
       setResult({
         success: true,
         message: "Notification envoyée avec succès depuis le serveur",
@@ -54,18 +57,18 @@ const TestNotificationButton = () => {
   const testLocalNotification = async () => {
     setLoading(true);
     setResult(null);
-    
+
     try {
       const result = await NotificationService.sendLocalNotification(
         "⚠️ Test LOCAL",
         "Cette notification a été envoyée localement depuis l'application",
         { type: 'local_test', timestamp: new Date().toISOString() }
       );
-      
+
       setResult({
         success: result,
-        message: result 
-          ? "Notification locale envoyée avec succès" 
+        message: result
+          ? "Notification locale envoyée avec succès"
           : "Échec de l'envoi de la notification locale"
       });
     } catch (error) {
@@ -82,17 +85,39 @@ const TestNotificationButton = () => {
   return (
     <VStack space={4} width="100%" mt={4}>
       <VStack space={2} justifyContent="center">
-        <Button 
-          colorScheme="blue" 
+        <Button
+          onPress={async () => {
+            try {
+              console.warn("Test direct de notification Expo");
+              const id = await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: "TEST DIRECT EXPO",
+                  body: "Cette notification utilise directement l'API Expo",
+                  data: { direct: true },
+                  sound: true,
+                },
+                trigger: { seconds: 2 },
+              });
+              console.warn(`Notification programmée: ${id}`);
+              Alert.alert("Notification programmée", `ID: ${id}`);
+            } catch (e) {
+              console.error(e);
+              Alert.alert("Erreur", e.message);
+            }
+          }}
+          title="Test direct Expo"
+        />
+        <Button
+          colorScheme="blue"
           onPress={testLocalNotification}
           isLoading={loading && !result}
           isLoadingText="Envoi..."
         >
           Test notification locale
         </Button>
-        
-        <Button 
-          colorScheme="purple" 
+
+        <Button
+          colorScheme="purple"
           onPress={testServerNotification}
           isLoading={loading && !result}
           isLoadingText="Envoi..."
@@ -100,11 +125,11 @@ const TestNotificationButton = () => {
           Test notification serveur
         </Button>
       </VStack>
-      
+
       {result && (
-        <Box 
-          p={3} 
-          borderRadius="md" 
+        <Box
+          p={3}
+          borderRadius="md"
           bg={result.success ? "green.100" : "red.100"}
         >
           <HStack space={2} mb={2}>

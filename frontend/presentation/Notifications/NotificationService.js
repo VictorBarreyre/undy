@@ -184,28 +184,33 @@ class NotificationService {
     }
 
     async sendLocalNotification(title, body, data = {}) {
-        console.log("[NOTIF] Envoi d'une notification locale:", { title, body, data });
-
+        console.warn("[NOTIF] Tentative d'envoi de notification locale");
         try {
-            await Notifications.scheduleNotificationAsync({
-                content: {
-                    title,
-                    body,
-                    data,
-                    sound: true,
-                },
-                trigger: null // Notification immédiate
-            });
-            console.log("[NOTIF] Notification locale envoyée avec succès");
-
-            return true;
+          // Testez avec un autre type de trigger
+          const identifier = await Notifications.scheduleNotificationAsync({
+            content: {
+              title: `🔔 ${title}`, // Ajoutez une icône pour plus de visibilité
+              body,
+              data,
+              sound: true,
+            },
+            trigger: { 
+              seconds: 2, // Délai de 2 secondes au lieu de 1
+              repeats: false 
+            }
+          });
+          
+          // Vérifiez les notifications programmées
+          const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+          console.warn("[NOTIF] Notifications programmées:", scheduled.length);
+          
+          console.warn("[NOTIF] Notification programmée avec succès, identifiant:", identifier);
+          return true;
         } catch (error) {
-            console.error("[NOTIF] ERREUR lors de l'envoi de la notification:", error);
-
-            console.error(i18n.t('notifications.errors.sending'), error);
-            return false;
+          console.error("[NOTIF] ERREUR lors de l'envoi:", error);
+          return false;
         }
-    }
+      }
 
     async activateNotifications() {
         try {

@@ -340,7 +340,17 @@ const notificationsController = {
       if (token) {
         console.log('Utilisation du token spécifié:', token);
         
-        // Vérifier que le token est valide
+        // AJOUT CRITIQUE: Vérification spéciale pour le token simulé
+        if (token === "SIMULATOR_MOCK_TOKEN") {
+          console.log('Token simulateur détecté, envoi d\'une réponse simulée');
+          return res.status(200).json({
+            success: true,
+            message: 'Simulation d\'envoi réussie pour le token de simulateur',
+            simulated: true
+          });
+        }
+        
+        // Pour les autres tokens (appareils réels)
         if (!Expo.isExpoPushToken(token)) {
           return res.status(400).json({
             success: false,
