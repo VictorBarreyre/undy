@@ -27,4 +27,8 @@ router.post('/stats', protect, notificationsController.sendStatsNotification);
 // Route pour les notifications de bienvenue
 router.post('/welcome-back', protect, notificationsController.sendWelcomeBackNotification);
 
+
+router.post('/test', protect, notificationsController.sendTestNotification);
+
+
 module.exports = router;

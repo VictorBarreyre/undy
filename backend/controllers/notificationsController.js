@@ -27,6 +27,7 @@ if (certBase64 && certPassword) {
 }
 
 
+
 // Service pour l'envoi des notifications
 const sendPushNotifications = async (userIds, title, body, data = {}) => {
   try {
@@ -321,6 +322,75 @@ const notificationsController = {
       });
     } catch (error) {
       console.error('Erreur lors de l\'envoi de la notification de rappel Stripe:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur serveur'
+      });
+    }
+  },
+
+  sendTestNotification: async (req, res) => {
+    try {
+      const userId = req.user._id;
+      const { token } = req.body; // Optionnel: pour tester avec un token spécifique
+      
+      console.log('Envoi d\'une notification de test à l\'utilisateur:', userId);
+      
+      // Si un token spécifique est fourni, l'utiliser directement
+      if (token) {
+        console.log('Utilisation du token spécifié:', token);
+        
+        // Vérifier que le token est valide
+        if (!Expo.isExpoPushToken(token)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Token push invalide'
+          });
+        }
+        
+        // Créer un message test
+        const message = {
+          to: token,
+          sound: 'default',
+          title: '⚠️ Test de notification',
+          body: 'Cette notification de test a été envoyée depuis le serveur!',
+          data: { 
+            type: 'test',
+            timestamp: new Date().toISOString()
+          },
+          badge: 1,
+          priority: 'high',
+          channelId: 'default',
+        };
+        
+        // Envoyer la notification directement
+        const tickets = await expo.sendPushNotificationsAsync([message]);
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Notification de test envoyée directement',
+          tickets
+        });
+      }
+      
+      // Sinon, utiliser le service normal
+      const notificationResult = await sendPushNotifications(
+        [userId],
+        '⚠️ Test de notification',
+        'Cette notification de test a été envoyée depuis le serveur!',
+        {
+          type: 'test',
+          timestamp: new Date().toISOString()
+        }
+      );
+      
+      res.status(200).json({
+        success: true,
+        message: 'Notification de test envoyée',
+        details: notificationResult
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de la notification de test:', error);
       res.status(500).json({
         success: false,
         message: 'Erreur serveur'
