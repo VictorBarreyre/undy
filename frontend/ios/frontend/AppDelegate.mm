@@ -2,6 +2,10 @@
 
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTLinkingManager.h>
+#import <UserNotifications/UserNotifications.h>
+
+@interface AppDelegate () <UNUserNotificationCenterDelegate>
+@end
 
 @implementation AppDelegate
 
@@ -12,6 +16,27 @@
   // You can add your custom initial props in the dictionary below.
   // They will be passed down to the ViewController used by React Native.
   self.initialProps = @{};
+  
+  // Configuration des notifications push
+  UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+  center.delegate = self;
+  
+  [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert | 
+                                          UNAuthorizationOptionSound | 
+                                          UNAuthorizationOptionBadge)
+                    completionHandler:^(BOOL granted, NSError * _Nullable error) {
+                      if (error) {
+                        NSLog(@"Error requesting notification authorization: %@", error);
+                      } else {
+                        NSLog(@"Notification authorization: %@", granted ? @"granted" : @"denied");
+                        
+                        if (granted) {
+                          dispatch_async(dispatch_get_main_queue(), ^{
+                            [application registerForRemoteNotifications];
+                          });
+                        }
+                      }
+                    }];
 
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }
@@ -50,6 +75,7 @@
 // Explicitly define remote notification delegates to ensure compatibility with some third-party libraries
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error
 {
+  NSLog(@"Failed to register for remote notifications: %@", error);
   return [super application:application didFailToRegisterForRemoteNotificationsWithError:error];
 }
 
@@ -57,6 +83,35 @@
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
 {
   return [super application:application didReceiveRemoteNotification:userInfo fetchCompletionHandler:completionHandler];
+}
+
+#pragma mark - UNUserNotificationCenterDelegate
+
+// Called when a notification is delivered to a foreground app
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center
+       willPresentNotification:(UNNotification *)notification
+         withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler {
+  NSDictionary *userInfo = notification.request.content.userInfo;
+  
+  // Log notification for debugging
+  NSLog(@"Received notification in foreground: %@", userInfo);
+  
+  // Allow displaying notification when app is in foreground
+  completionHandler(UNNotificationPresentationOptionBadge | 
+                   UNNotificationPresentationOptionSound | 
+                   UNNotificationPresentationOptionAlert);
+}
+
+// Called when user taps on a notification
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center
+didReceiveNotificationResponse:(UNNotificationResponse *)response
+         withCompletionHandler:(void(^)(void))completionHandler {
+  NSDictionary *userInfo = response.notification.request.content.userInfo;
+  
+  // Log user interaction with notification
+  NSLog(@"User interacted with notification: %@", userInfo);
+  
+  completionHandler();
 }
 
 @end

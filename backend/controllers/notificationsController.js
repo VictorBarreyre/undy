@@ -1,7 +1,31 @@
 const User = require('../models/User');
 const Secret = require('../models/Secret');
 const { Expo } = require('expo-server-sdk');
-const expo = new Expo();
+const fs = require('fs');
+
+// Récupérer les variables d'environnement pour le certificat
+const certBase64 = process.env.PUSH_CERTIFICATE;
+const certPassword = process.env.PUSH_CERTIFICATE_PASS;
+
+// Configurer l'instance Expo avec le certificat APN si disponible
+let expo;
+if (certBase64 && certPassword) {
+  console.log('Configuration d\'Expo avec le certificat APN');
+  const certBuffer = Buffer.from(certBase64, 'base64');
+  
+  expo = new Expo({
+    usePushNotificationServices: true,
+    apns: {
+      production: process.env.NODE_ENV === 'production',
+      cert: certBuffer,
+      passphrase: certPassword
+    }
+  });
+} else {
+  console.log('Configuration d\'Expo sans certificat APN (notifications limitées)');
+  expo = new Expo();
+}
+
 
 // Service pour l'envoi des notifications
 const sendPushNotifications = async (userIds, title, body, data = {}) => {
