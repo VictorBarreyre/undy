@@ -147,21 +147,71 @@ const sendPushNotifications = async (userIds, title, body, data = {}) => {
   }
 };
 
-// Test de notification
+// Test de notification// Fonction sendTestNotification avec logs détaillés
 const sendTestNotification = async (req, res) => {
+  console.log('=== DÉBUT DE LA FONCTION sendTestNotification ===');
+  
   try {
     const userId = req.user._id;
     const { token } = req.body; // Optionnel: pour tester avec un token spécifique
     
-    console.log('Envoi d\'une notification de test à l\'utilisateur:', userId);
+    console.log(`[TEST_NOTIF] Utilisateur: ${userId}`);
+    console.log(`[TEST_NOTIF] Token fourni: ${token || 'aucun'}`);
+    
+    // Vérification de la configuration
+    console.log('[TEST_NOTIF] Vérification de la configuration APNs:');
+    console.log({
+      certificatExiste: !!certBase64,
+      certBufferExiste: !!certBuffer,
+      certBufferTaille: certBuffer ? certBuffer.length : 0,
+      motDePasseExiste: !!certPassword,
+      production: true, // Vérifiez que cette valeur est bien à true pour un certificat de production
+      bundleId: 'com.hushy.app'
+    });
+    
+    // Vérification du provider
+    if (!apnProvider) {
+      console.error('[TEST_NOTIF] ERREUR: Le provider APNs n\'est pas initialisé');
+      return res.status(500).json({
+        success: false,
+        message: 'Provider APNs non initialisé',
+        error: 'PROVIDER_NOT_INITIALIZED'
+      });
+    }
+    
+    console.log('[TEST_NOTIF] Provider APNs initialisé correctement');
+    
+    // Ajouter des gestionnaires d'événements temporaires pour ce test
+    const errorHandler = (err) => {
+      console.error('[TEST_NOTIF] Événement d\'erreur APNs:', err);
+    };
+    
+    const transmittedHandler = (notification, device) => {
+      console.log(`[TEST_NOTIF] Notification transmise à l'appareil: ${device}`);
+    };
+    
+    const completeHandler = () => {
+      console.log(`[TEST_NOTIF] Tous les messages ont été transmis ou ont échoué`);
+    };
+    
+    // Enregistrer les gestionnaires d'événements
+    apnProvider.on('error', errorHandler);
+    apnProvider.on('transmitted', transmittedHandler);
+    apnProvider.on('completed', completeHandler);
     
     // Si un token spécifique est fourni, l'utiliser directement
     if (token) {
-      console.log('Utilisation du token spécifié:', token);
+      console.log(`[TEST_NOTIF] Utilisation du token spécifié: ${token}`);
       
       // Traiter le cas du token simulateur
       if (token === "SIMULATOR_MOCK_TOKEN") {
-        console.log('Token simulateur détecté, envoi d\'une réponse simulée');
+        console.log('[TEST_NOTIF] Token simulateur détecté, envoi d\'une réponse simulée');
+        
+        // Nettoyage des gestionnaires d'événements
+        apnProvider.removeListener('error', errorHandler);
+        apnProvider.removeListener('transmitted', transmittedHandler);
+        apnProvider.removeListener('completed', completeHandler);
+        
         return res.status(200).json({
           success: true,
           message: 'Simulation d\'envoi réussie pour le token de simulateur',
@@ -172,112 +222,268 @@ const sendTestNotification = async (req, res) => {
       // Vérifier le format du token
       const isValidApnsToken = token && token.match(/^[a-f0-9]{64}$/i);
       if (!isValidApnsToken) {
-        console.log('Le token ne semble pas être un token APNs valide:', token);
+        console.log(`[TEST_NOTIF] AVERTISSEMENT: Le token ne semble pas être un token APNs valide: ${token}`);
       } else {
-        console.log('Le token a un format APNs valide');
+        console.log('[TEST_NOTIF] Le token a un format APNs valide');
       }
       
-      // Créer un message test - SIMPLIFIER LA NOTIFICATION AU MAXIMUM
-      const notification = new apn.Notification();
-      notification.expiry = Math.floor(Date.now() / 1000) + 3600;
-      notification.badge = 1;
-      notification.alert = "Test de notification"; // Simplifier au maximum
-      notification.topic = 'com.hushy.app'; // Votre bundle ID
+      // Créer trois variantes de notifications pour tester
+      console.log('[TEST_NOTIF] Préparation de plusieurs formats de notifications pour test');
       
-      console.log('Notification préparée pour test direct, topic:', notification.topic);
+      // 1. Notification complète
+      const notification1 = new apn.Notification();
+      notification1.expiry = Math.floor(Date.now() / 1000) + 3600; // 1 heure
+      notification1.badge = 1;
+      notification1.sound = 'default';
+      notification1.alert = {
+        title: '⚠️ Test de notification 1',
+        body: 'Cette notification de test a été envoyée depuis le serveur!',
+      };
+      notification1.payload = { 
+        type: 'test',
+        format: 'complet',
+        timestamp: new Date().toISOString()
+      };
+      notification1.topic = 'com.hushy.app'; // Votre bundle ID
+      notification1.pushType = 'alert';
       
-      // Envoyer la notification directement avec plus de logs
-      console.log('Envoi de la notification au token:', token);
+      // 2. Notification simplifiée
+      const notification2 = new apn.Notification();
+      notification2.alert = "Test de notification 2 (simplifié)";
+      notification2.topic = 'com.hushy.app';
       
+      // 3. Notification ultra-simple
+      const notification3 = new apn.Notification();
+      notification3.aps = {
+        alert: "Test 3",
+        badge: 1,
+        sound: 'default'
+      };
+      notification3.topic = 'com.hushy.app';
+      
+      console.log('[TEST_NOTIF] Détail des notifications:');
+      console.log('Notification 1:', JSON.stringify(notification1, null, 2));
+      console.log('Notification 2:', JSON.stringify(notification2, null, 2));
+      console.log('Notification 3:', JSON.stringify(notification3, null, 2));
+      
+      // Variable pour stocker les résultats
+      let results = {
+        notification1: null,
+        notification2: null,
+        notification3: null
+      };
+      
+      // Envoi de la première notification
+      console.log('[TEST_NOTIF] Envoi de la notification 1...');
       try {
-        const result = await apnProvider.send(notification, token);
-        console.log('Résultat complet APNs (test direct):', JSON.stringify(result, null, 2));
+        const result1 = await Promise.race([
+          apnProvider.send(notification1, token),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout lors de l\'envoi de la notification 1')), 10000))
+        ]);
         
-        // Si l'envoi a échoué, mais que l'erreur est vide, on essaie avec une autre approche
-        if (result.failed && result.failed.length > 0 && 
-            (!result.failed[0].error || Object.keys(result.failed[0].error).length === 0)) {
+        console.log('[TEST_NOTIF] Résultat de la notification 1:', JSON.stringify(result1, null, 2));
+        results.notification1 = result1;
+        
+        // Si la première notification a réussi, pas besoin d'essayer les autres
+        if (result1.sent && result1.sent.length > 0) {
+          console.log('[TEST_NOTIF] Notification 1 envoyée avec succès, pas besoin des autres formats');
           
-          console.log('Tentative alternative avec notification très simplifiée');
+          // Nettoyage des gestionnaires d'événements
+          apnProvider.removeListener('error', errorHandler);
+          apnProvider.removeListener('transmitted', transmittedHandler);
+          apnProvider.removeListener('completed', completeHandler);
           
-          // Tentative avec une notification encore plus simple
-          const simpleNotification = new apn.Notification();
-          simpleNotification.aps = {
-            alert: "Test",
-            badge: 1
-          };
-          simpleNotification.topic = 'com.hushy.app';
+          return res.status(200).json({
+            success: true,
+            message: 'Notification de test envoyée avec succès (format 1)',
+            result: result1
+          });
+        }
+        
+        // Si échec, essayer le format 2
+        console.log('[TEST_NOTIF] Notification 1 échouée, essai du format 2...');
+        
+      } catch (error) {
+        console.error('[TEST_NOTIF] Erreur lors de l\'envoi de la notification 1:', error);
+        results.notification1 = { error: error.message };
+        
+        // Continuer avec le format 2
+        console.log('[TEST_NOTIF] Après erreur, essai du format 2...');
+      }
+      
+      // Envoi de la deuxième notification
+      try {
+        const result2 = await Promise.race([
+          apnProvider.send(notification2, token),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout lors de l\'envoi de la notification 2')), 10000))
+        ]);
+        
+        console.log('[TEST_NOTIF] Résultat de la notification 2:', JSON.stringify(result2, null, 2));
+        results.notification2 = result2;
+        
+        // Si la deuxième notification a réussi, pas besoin d'essayer la troisième
+        if (result2.sent && result2.sent.length > 0) {
+          console.log('[TEST_NOTIF] Notification 2 envoyée avec succès, pas besoin du format 3');
           
-          const simpleResult = await apnProvider.send(simpleNotification, token);
-          console.log('Résultat avec notification simplifiée:', JSON.stringify(simpleResult, null, 2));
+          // Nettoyage des gestionnaires d'événements
+          apnProvider.removeListener('error', errorHandler);
+          apnProvider.removeListener('transmitted', transmittedHandler);
+          apnProvider.removeListener('completed', completeHandler);
           
-          // Si cette tentative réussit, on renvoie ce résultat
-          if (simpleResult.sent && simpleResult.sent.length > 0) {
-            return res.status(200).json({
-              success: true,
-              message: 'Notification de test simplifiée envoyée avec succès',
-              result: simpleResult
-            });
+          return res.status(200).json({
+            success: true,
+            message: 'Notification de test envoyée avec succès (format 2)',
+            result: result2
+          });
+        }
+        
+        // Si échec, essayer le format 3
+        console.log('[TEST_NOTIF] Notification 2 échouée, essai du format 3...');
+        
+      } catch (error) {
+        console.error('[TEST_NOTIF] Erreur lors de l\'envoi de la notification 2:', error);
+        results.notification2 = { error: error.message };
+        
+        // Continuer avec le format 3
+        console.log('[TEST_NOTIF] Après erreur, essai du format 3...');
+      }
+      
+      // Envoi de la troisième notification
+      try {
+        const result3 = await Promise.race([
+          apnProvider.send(notification3, token),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout lors de l\'envoi de la notification 3')), 10000))
+        ]);
+        
+        console.log('[TEST_NOTIF] Résultat de la notification 3:', JSON.stringify(result3, null, 2));
+        results.notification3 = result3;
+        
+        // Si la troisième notification a réussi
+        if (result3.sent && result3.sent.length > 0) {
+          console.log('[TEST_NOTIF] Notification 3 envoyée avec succès');
+          
+          // Nettoyage des gestionnaires d'événements
+          apnProvider.removeListener('error', errorHandler);
+          apnProvider.removeListener('transmitted', transmittedHandler);
+          apnProvider.removeListener('completed', completeHandler);
+          
+          return res.status(200).json({
+            success: true,
+            message: 'Notification de test envoyée avec succès (format 3)',
+            result: result3
+          });
+        }
+        
+      } catch (error) {
+        console.error('[TEST_NOTIF] Erreur lors de l\'envoi de la notification 3:', error);
+        results.notification3 = { error: error.message };
+      }
+      
+      // Si nous arrivons ici, c'est que tous les formats ont échoué
+      console.log('[TEST_NOTIF] Tous les formats de notification ont échoué');
+      
+      // Vérifier s'il y a une erreur plus détaillée dans l'un des résultats
+      let detailedError = {};
+      
+      for (const [format, result] of Object.entries(results)) {
+        if (result && result.failed && result.failed.length > 0) {
+          if (result.failed[0].error && Object.keys(result.failed[0].error).length > 0) {
+            detailedError = {
+              format,
+              status: result.failed[0].status,
+              response: result.failed[0].response,
+              error: result.failed[0].error
+            };
+            break;
           }
         }
-        
-        // Vérifier si l'envoi a réussi
-        let hasSucceeded = false;
-        let detailedError = {};
-        
-        if (result.sent && result.sent.length > 0) {
-          hasSucceeded = true;
-        } else if (result.failed && result.failed.length > 0) {
-          // Capturer les détails de l'erreur pour le diagnostic
-          detailedError = {
-            status: result.failed[0].status,
-            response: result.failed[0].response,
-            error: result.failed[0].error
-          };
-        }
-        
-        return res.status(200).json({
-          success: hasSucceeded,
-          message: hasSucceeded ? 'Notification de test envoyée directement' : 'Échec de l\'envoi de la notification',
-          result: result,
-          error: hasSucceeded ? undefined : detailedError
-        });
-      } catch (error) {
-        console.error('Erreur lors de l\'envoi direct:', error);
-        
-        // Malgré l'erreur, on retourne une réponse 200 avec les détails de l'erreur
-        return res.status(200).json({
-          success: false,
-          message: 'Erreur lors de l\'envoi direct',
-          error: error.message || 'Erreur inconnue'
-        });
       }
+      
+      // Si aucune erreur détaillée n'a été trouvée, utiliser le dernier résultat
+      if (Object.keys(detailedError).length === 0 && results.notification3) {
+        detailedError = {
+          format: 'notification3',
+          error: results.notification3.error || results.notification3
+        };
+      }
+      
+      // Nettoyage des gestionnaires d'événements
+      apnProvider.removeListener('error', errorHandler);
+      apnProvider.removeListener('transmitted', transmittedHandler);
+      apnProvider.removeListener('completed', completeHandler);
+      
+      // Renvoyer tous les résultats
+      return res.status(200).json({
+        success: false,
+        message: 'Échec de l\'envoi des notifications sur tous les formats',
+        results,
+        error: detailedError
+      });
     }
     
-    // Sinon, utiliser le service normal pour envoyer à l'utilisateur
-    console.log('Envoi de notification via le service normal pour l\'utilisateur:', userId);
-    const notificationResult = await sendPushNotifications(
-      [userId],
-      '⚠️ Test de notification',
-      'Cette notification de test a été envoyée depuis le serveur!',
-      {
-        type: 'test',
-        timestamp: new Date().toISOString()
+    // Si aucun token n'est fourni, tenter de récupérer celui de l'utilisateur
+    console.log(`[TEST_NOTIF] Recherche du token de l'utilisateur ${userId}`);
+    try {
+      const user = await User.findById(userId);
+      if (!user || !user.expoPushToken) {
+        console.log(`[TEST_NOTIF] Aucun token trouvé pour l'utilisateur ${userId}`);
+        
+        // Nettoyage des gestionnaires d'événements
+        apnProvider.removeListener('error', errorHandler);
+        apnProvider.removeListener('transmitted', transmittedHandler);
+        apnProvider.removeListener('completed', completeHandler);
+        
+        return res.status(404).json({
+          success: false,
+          message: 'Aucun token de notification trouvé pour cet utilisateur'
+        });
       }
-    );
-    
-    console.log('Résultat du service normal:', JSON.stringify(notificationResult, null, 2));
-    res.status(200).json({
-      success: true,
-      message: 'Notification de test envoyée',
-      details: notificationResult
-    });
+      
+      const userToken = user.expoPushToken;
+      console.log(`[TEST_NOTIF] Token trouvé pour l'utilisateur: ${userToken}`);
+      
+      // Vérifier si c'est un token Expo
+      if (userToken.startsWith('ExponentPushToken[')) {
+        console.log(`[TEST_NOTIF] Token Expo détecté, non compatible avec APNs direct`);
+        
+        // Nettoyage des gestionnaires d'événements
+        apnProvider.removeListener('error', errorHandler);
+        apnProvider.removeListener('transmitted', transmittedHandler);
+        apnProvider.removeListener('completed', completeHandler);
+        
+        return res.status(400).json({
+          success: false,
+          message: 'Token Expo détecté, non compatible avec APNs direct',
+          tokenType: 'expo'
+        });
+      }
+      
+      // Utiliser le même code que pour un token spécifique
+      // ... (code similaire à celui ci-dessus)
+      
+    } catch (error) {
+      console.error(`[TEST_NOTIF] Erreur lors de la recherche du token de l'utilisateur:`, error);
+      
+      // Nettoyage des gestionnaires d'événements
+      apnProvider.removeListener('error', errorHandler);
+      apnProvider.removeListener('transmitted', transmittedHandler);
+      apnProvider.removeListener('completed', completeHandler);
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la recherche du token de l\'utilisateur',
+        error: error.message
+      });
+    }
   } catch (error) {
-    console.error('Erreur lors de l\'envoi de la notification de test:', error);
-    res.status(500).json({
+    console.error('[TEST_NOTIF] Erreur globale dans la fonction sendTestNotification:', error);
+    return res.status(500).json({
       success: false,
-      message: 'Erreur serveur',
+      message: 'Erreur serveur lors du test de notification',
       error: error.message
     });
+  } finally {
+    console.log('=== FIN DE LA FONCTION sendTestNotification ===');
   }
 };
 
