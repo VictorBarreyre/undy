@@ -19,11 +19,17 @@ if (certBase64 && certPassword) {
     apnProvider = new apn.Provider({
       pfx: certBuffer,
       passphrase: certPassword,
-      production: false, // IMPORTANT: forcer le mode développement pour tester
+      production: false,
       port: 443,
       rejectUnauthorized: true,
-      connectionRetryLimit: 3,
-      logLevel: "debug" // activer les logs détaillés
+      connectionRetryLimit: 5,
+      logLevel: "debug",
+      // Options supplémentaires pour le débogage
+      enhanced: true, // Utilisez le mode amélioré
+      proxy: null, // Pas de proxy
+      timeout: 5000, // Timeout de 5 secondes
+      address: 'api.sandbox.push.apple.com',
+      connectTimeout: 10000 // Timeout de connexion plus long
     });
     
     console.log('Provider APNs configuré avec succès');
