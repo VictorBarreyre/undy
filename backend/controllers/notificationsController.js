@@ -4,38 +4,33 @@ const Conversation = require('../models/Conversation');
 const apn = require('node-apn');
 const fs = require('fs');
 
-// Récupérer les variables d'environnement pour le certificat
-const certBase64 = process.env.PUSH_CERTIFICATE;
-const certPassword = process.env.PUSH_CERTIFICATE_PASS;
+// Variables d'environnement pour les clés JWT
+const apnsKeyId = process.env.APNS_KEY_ID;           // Nouvelle variable à créer
+const apnsTeamId = process.env.APPLE_TEAM_ID;        // Variable existante que vous avez déjà
+const apnsKey = process.env.APNS_KEY;                // Nouvelle variable à créer
 
-// Configurer le provider APNs avec le certificat
+// Configuration du provider APNs avec JWT
 let apnProvider;
-if (certBase64 && certPassword) {
-  console.log('Configuration des notifications avec certificat APNs');
+if (apnsKey && apnsKeyId && apnsTeamId) {
+  console.log('Configuration des notifications avec clé d\'authentification APNs');
   try {
-    const certBuffer = Buffer.from(certBase64, 'base64');
+    const keyBuffer = Buffer.from(apnsKey, 'base64').toString('utf8');
     
-    // Options de configuration améliorées pour le débogage
     apnProvider = new apn.Provider({
-      pfx: certBuffer,
-      passphrase: certPassword,
-      production: true, // IMPORTANT: forcer le mode développement pour tester
-      port: 443,
-      // URL explicite du serveur sandbox
-      address: 'api.sandbox.push.apple.com',
-      // Options additionnelles de débogage
-      connectionRetryLimit: 5,
-      connectTimeout: 10000,
-      rejectUnauthorized: true,
-      logLevel: "debug" // activer les logs détaillés
+      token: {
+        key: keyBuffer,
+        keyId: apnsKeyId,
+        teamId: apnsTeamId
+      },
+      production: true // Pour un environnement de production
     });
     
-    console.log('Provider APNs configuré avec succès');
+    console.log('Provider APNs configuré avec succès (méthode JWT)');
   } catch (error) {
     console.error('Erreur lors de la configuration du provider APNs:', error);
   }
 } else {
-  console.log('Certificat APNs manquant, les notifications push ne fonctionneront pas');
+  console.log('Clé d\'authentification APNs manquante, les notifications push ne fonctionneront pas');
 }
 
 // Fonction d'envoi de notification modifiée avec plus de logs
