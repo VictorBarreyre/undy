@@ -3,6 +3,9 @@ const router = express.Router();
 const notificationsController = require('../controllers/notificationsController');
 const protect  = require('../middleware/authMiddleware');
 
+// Vérification de débogage pour voir si les fonctions sont correctement importées
+console.log("Fonctions disponibles dans le contrôleur:", Object.keys(notificationsController));
+
 // Route pour enregistrer le token de l'appareil
 router.post('/token', protect, notificationsController.registerToken);
 
@@ -27,8 +30,7 @@ router.post('/stats', protect, notificationsController.sendStatsNotification);
 // Route pour les notifications de bienvenue
 router.post('/welcome-back', protect, notificationsController.sendWelcomeBackNotification);
 
-
+// Route pour les tests de notification
 router.post('/test', protect, notificationsController.sendTestNotification);
-
 
 module.exports = router;
