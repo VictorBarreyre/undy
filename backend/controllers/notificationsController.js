@@ -207,7 +207,7 @@ const notificationsController = {
     }
   },
 
-  const sendTestNotification = async (req, res) => {
+ sendTestNotification : async (req, res) => {
     try {
       const userId = req.user._id;
       const { token } = req.body; // Optionnel: pour tester avec un token spécifique
