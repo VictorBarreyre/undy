@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform, Alert, Linking } from 'react-native';
-import i18n from 'i18next'; // Importez i18n directement pour accéder aux traductions
+import i18n from 'i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
@@ -42,7 +42,6 @@ class NotificationService {
     }
 
     async checkPermissions(forceAlert = false) {
-
         console.log("[NOTIF] Vérification des permissions sur:", Device.isDevice ? "appareil physique" : "simulateur");
 
         if (!Device.isDevice) {
@@ -127,71 +126,76 @@ class NotificationService {
         
         // Vérifier si nous sommes sur un simulateur
         if (!Device.isDevice) {
-          console.log("[NOTIF] Exécution sur simulateur, token simulé utilisé");
-          return "SIMULATOR_MOCK_TOKEN";
+            console.log("[NOTIF] Exécution sur simulateur, token simulé utilisé");
+            return "SIMULATOR_MOCK_TOKEN";
         }
         
         try {
-          // Pour obtenir un token APNs natif au lieu d'un token Expo
-          const tokenData = await Notifications.getDevicePushTokenAsync();
-          
-          console.log("[NOTIF] Token APNs natif récupéré:", tokenData.data);
-          
-          if (tokenData && tokenData.data) {
-            // Stocker le token pour référence future
-            await AsyncStorage.setItem('device_push_token', tokenData.data);
-            return tokenData.data;
-          }
-          
-          console.log("[NOTIF] Aucun token obtenu");
-          return null;
-        } catch (error) {
-          console.error("[NOTIF] ERREUR lors de la récupération du token:", error);
-          
-          // En cas d'erreur, essayer de récupérer le dernier token connu
-          try {
+            // Utiliser uniquement getDevicePushTokenAsync pour obtenir un token APNs natif
+            const tokenData = await Notifications.getDevicePushTokenAsync();
+            console.log("[NOTIF] Token APNs natif récupéré:", tokenData.data);
+            
+            if (tokenData && tokenData.data) {
+                // Stocker le token pour référence future
+                await AsyncStorage.setItem('device_push_token', tokenData.data);
+                return tokenData.data;
+            }
+            
+            // Si on arrive ici et qu'aucun token n'est obtenu, essayer de récupérer le dernier token connu
             const lastToken = await AsyncStorage.getItem('device_push_token');
             if (lastToken) {
-              console.log("[NOTIF] Utilisation du dernier token connu:", lastToken);
-              return lastToken;
+                console.log("[NOTIF] Utilisation du dernier token connu:", lastToken);
+                return lastToken;
             }
-          } catch (storageError) {
-            console.error("[NOTIF] Erreur lors de la récupération du dernier token:", storageError);
-          }
-          
-          return null;
+            
+            console.log("[NOTIF] Aucun token obtenu");
+            return null;
+        } catch (error) {
+            console.error("[NOTIF] ERREUR lors de la récupération du token:", error);
+            
+            // En cas d'erreur, essayer de récupérer le dernier token connu
+            try {
+                const lastToken = await AsyncStorage.getItem('device_push_token');
+                if (lastToken) {
+                    console.log("[NOTIF] Utilisation du dernier token connu après erreur:", lastToken);
+                    return lastToken;
+                }
+            } catch (storageError) {
+                console.error("[NOTIF] Erreur lors de la récupération du dernier token:", storageError);
+            }
+            
+            return null;
         }
-      }
+    }
 
-      
     async sendLocalNotification(title, body, data = {}) {
         console.warn("[NOTIF] Tentative d'envoi de notification locale");
         try {
-          // Testez avec un autre type de trigger
-          const identifier = await Notifications.scheduleNotificationAsync({
-            content: {
-              title: `🔔 ${title}`, // Ajoutez une icône pour plus de visibilité
-              body,
-              data,
-              sound: true,
-            },
-            trigger: { 
-              seconds: 2, // Délai de 2 secondes au lieu de 1
-              repeats: false 
-            }
-          });
-          
-          // Vérifiez les notifications programmées
-          const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-          console.warn("[NOTIF] Notifications programmées:", scheduled.length);
-          
-          console.warn("[NOTIF] Notification programmée avec succès, identifiant:", identifier);
-          return true;
+            // Testez avec un autre type de trigger
+            const identifier = await Notifications.scheduleNotificationAsync({
+                content: {
+                    title: `🔔 ${title}`, // Ajoutez une icône pour plus de visibilité
+                    body,
+                    data,
+                    sound: true,
+                },
+                trigger: { 
+                    seconds: 2, // Délai de 2 secondes au lieu de 1
+                    repeats: false 
+                }
+            });
+            
+            // Vérifiez les notifications programmées
+            const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+            console.warn("[NOTIF] Notifications programmées:", scheduled.length);
+            
+            console.warn("[NOTIF] Notification programmée avec succès, identifiant:", identifier);
+            return true;
         } catch (error) {
-          console.error("[NOTIF] ERREUR lors de l'envoi:", error);
-          return false;
+            console.error("[NOTIF] ERREUR lors de l'envoi:", error);
+            return false;
         }
-      }
+    }
 
     async activateNotifications() {
         try {

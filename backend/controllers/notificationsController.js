@@ -19,17 +19,15 @@ if (certBase64 && certPassword) {
     apnProvider = new apn.Provider({
       pfx: certBuffer,
       passphrase: certPassword,
-      production: false,
+      production: false, // IMPORTANT: forcer le mode développement pour tester
       port: 443,
-      rejectUnauthorized: true,
-      connectionRetryLimit: 5,
-      logLevel: "debug",
-      // Options supplémentaires pour le débogage
-      enhanced: true, // Utilisez le mode amélioré
-      proxy: null, // Pas de proxy
-      timeout: 5000, // Timeout de 5 secondes
+      // URL explicite du serveur sandbox
       address: 'api.sandbox.push.apple.com',
-      connectTimeout: 10000 // Timeout de connexion plus long
+      // Options additionnelles de débogage
+      connectionRetryLimit: 5,
+      connectTimeout: 10000,
+      rejectUnauthorized: true,
+      logLevel: "debug" // activer les logs détaillés
     });
     
     console.log('Provider APNs configuré avec succès');
@@ -149,45 +147,6 @@ const sendPushNotifications = async (userIds, title, body, data = {}) => {
   }
 };
 
-// Contrôleur pour les notifications
-const registerToken = async (req, res) => {
-  try {
-    const { expoPushToken } = req.body;
-    const userId = req.user._id;
-    
-    console.log(`Tentative d'enregistrement du token ${expoPushToken} pour l'utilisateur ${userId}`);
-    
-    // Valider le token (modification pour accepter les tokens APNs)
-    const isValidToken = expoPushToken && 
-      (expoPushToken.startsWith('ExponentPushToken[') || // Token Expo
-        expoPushToken.match(/^[a-f0-9]{64}$/i) || // Token APNs (hexadécimal 64 caractères)
-        expoPushToken === "SIMULATOR_MOCK_TOKEN"); // Token de simulateur
-    
-    if (!isValidToken) {
-      console.log('Token invalide:', expoPushToken);
-      return res.status(400).json({
-        success: false,
-        message: 'Token push invalide'
-      });
-    }
-    
-    // Mettre à jour le token dans la base de données
-    await User.findByIdAndUpdate(userId, { expoPushToken });
-    console.log(`Token enregistré avec succès pour l'utilisateur ${userId}`);
-    
-    res.status(200).json({
-      success: true,
-      message: 'Token enregistré avec succès'
-    });
-  } catch (error) {
-    console.error('Erreur lors de l\'enregistrement du token:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
-};
-
 // Test de notification
 const sendTestNotification = async (req, res) => {
   try {
@@ -210,49 +169,88 @@ const sendTestNotification = async (req, res) => {
         });
       }
       
-      // Créer un message test
+      // Vérifier le format du token
+      const isValidApnsToken = token && token.match(/^[a-f0-9]{64}$/i);
+      if (!isValidApnsToken) {
+        console.log('Le token ne semble pas être un token APNs valide:', token);
+      } else {
+        console.log('Le token a un format APNs valide');
+      }
+      
+      // Créer un message test - SIMPLIFIER LA NOTIFICATION AU MAXIMUM
       const notification = new apn.Notification();
       notification.expiry = Math.floor(Date.now() / 1000) + 3600;
       notification.badge = 1;
-      notification.sound = 'default';
-      notification.alert = {
-        title: '⚠️ Test de notification',
-        body: 'Cette notification de test a été envoyée depuis le serveur!',
-      };
-      notification.payload = { 
-        type: 'test',
-        timestamp: new Date().toISOString()
-      };
+      notification.alert = "Test de notification"; // Simplifier au maximum
       notification.topic = 'com.hushy.app'; // Votre bundle ID
       
       console.log('Notification préparée pour test direct, topic:', notification.topic);
       
       // Envoyer la notification directement avec plus de logs
       console.log('Envoi de la notification au token:', token);
-      const result = await apnProvider.send(notification, token);
-      console.log('Résultat complet APNs (test direct):', JSON.stringify(result, null, 2));
       
-      // Vérifier si l'envoi a réussi
-      let hasSucceeded = false;
-      let detailedError = {};
-      
-      if (result.sent && result.sent.length > 0) {
-        hasSucceeded = true;
-      } else if (result.failed && result.failed.length > 0) {
-        // Capturer les détails de l'erreur pour le diagnostic
-        detailedError = {
-          status: result.failed[0].status,
-          response: result.failed[0].response,
-          error: result.failed[0].error
-        };
+      try {
+        const result = await apnProvider.send(notification, token);
+        console.log('Résultat complet APNs (test direct):', JSON.stringify(result, null, 2));
+        
+        // Si l'envoi a échoué, mais que l'erreur est vide, on essaie avec une autre approche
+        if (result.failed && result.failed.length > 0 && 
+            (!result.failed[0].error || Object.keys(result.failed[0].error).length === 0)) {
+          
+          console.log('Tentative alternative avec notification très simplifiée');
+          
+          // Tentative avec une notification encore plus simple
+          const simpleNotification = new apn.Notification();
+          simpleNotification.aps = {
+            alert: "Test",
+            badge: 1
+          };
+          simpleNotification.topic = 'com.hushy.app';
+          
+          const simpleResult = await apnProvider.send(simpleNotification, token);
+          console.log('Résultat avec notification simplifiée:', JSON.stringify(simpleResult, null, 2));
+          
+          // Si cette tentative réussit, on renvoie ce résultat
+          if (simpleResult.sent && simpleResult.sent.length > 0) {
+            return res.status(200).json({
+              success: true,
+              message: 'Notification de test simplifiée envoyée avec succès',
+              result: simpleResult
+            });
+          }
+        }
+        
+        // Vérifier si l'envoi a réussi
+        let hasSucceeded = false;
+        let detailedError = {};
+        
+        if (result.sent && result.sent.length > 0) {
+          hasSucceeded = true;
+        } else if (result.failed && result.failed.length > 0) {
+          // Capturer les détails de l'erreur pour le diagnostic
+          detailedError = {
+            status: result.failed[0].status,
+            response: result.failed[0].response,
+            error: result.failed[0].error
+          };
+        }
+        
+        return res.status(200).json({
+          success: hasSucceeded,
+          message: hasSucceeded ? 'Notification de test envoyée directement' : 'Échec de l\'envoi de la notification',
+          result: result,
+          error: hasSucceeded ? undefined : detailedError
+        });
+      } catch (error) {
+        console.error('Erreur lors de l\'envoi direct:', error);
+        
+        // Malgré l'erreur, on retourne une réponse 200 avec les détails de l'erreur
+        return res.status(200).json({
+          success: false,
+          message: 'Erreur lors de l\'envoi direct',
+          error: error.message || 'Erreur inconnue'
+        });
       }
-      
-      return res.status(200).json({
-        success: hasSucceeded,
-        message: hasSucceeded ? 'Notification de test envoyée directement' : 'Échec de l\'envoi de la notification',
-        result: result,
-        error: hasSucceeded ? undefined : detailedError
-      });
     }
     
     // Sinon, utiliser le service normal pour envoyer à l'utilisateur
@@ -279,6 +277,107 @@ const sendTestNotification = async (req, res) => {
       success: false,
       message: 'Erreur serveur',
       error: error.message
+    });
+  }
+};
+
+// Fonctions de base pour les autres types de notifications
+const registerToken = async (req, res) => {
+  try {
+    const { expoPushToken } = req.body;
+    const userId = req.user._id;
+    
+    console.log(`Tentative d'enregistrement du token ${expoPushToken} pour l'utilisateur ${userId}`);
+    
+    // Valider le token (modification pour accepter les tokens APNs)
+    const isValidToken = expoPushToken && 
+      (expoPushToken.startsWith('ExponentPushToken[') || // Token Expo
+       expoPushToken.match(/^[a-f0-9]{64}$/i) || // Token APNs (hexadécimal 64 caractères)
+       expoPushToken === "SIMULATOR_MOCK_TOKEN"); // Token de simulateur
+    
+    if (!isValidToken) {
+      console.log('Token invalide:', expoPushToken);
+      return res.status(400).json({
+        success: false,
+        message: 'Token push invalide'
+      });
+    }
+    
+    // Mettre à jour le token dans la base de données
+    await User.findByIdAndUpdate(userId, { expoPushToken });
+    console.log(`Token enregistré avec succès pour l'utilisateur ${userId}`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Token enregistré avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'enregistrement du token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+// Notification d'achat de secret
+const sendPurchaseNotification = async (req, res) => {
+  try {
+    const { secretId, buyerId, buyerName, price, currency } = req.body;
+    
+    // Vérifier les paramètres requis
+    if (!secretId || !buyerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Paramètres manquants'
+      });
+    }
+    
+    // Récupérer les informations du secret
+    const secret = await Secret.findById(secretId).populate('seller', '_id name');
+    
+    if (!secret) {
+      return res.status(404).json({
+        success: false,
+        message: 'Secret non trouvé'
+      });
+    }
+    
+    // Ne pas notifier si l'acheteur est aussi le vendeur
+    if (buyerId === secret.seller._id.toString()) {
+      return res.status(200).json({
+        success: true,
+        message: 'Pas de notification, acheteur = vendeur'
+      });
+    }
+    
+    // Formater le prix
+    const formattedPrice = `${price} ${currency}`;
+    
+    // Envoyer la notification au vendeur seulement
+    const notificationResult = await sendPushNotifications(
+      [secret.seller._id.toString()],
+      'Secret vendu!',
+      `${buyerName} a acheté votre secret pour ${formattedPrice}`,
+      {
+        type: 'purchase',
+        secretId,
+        buyerId,
+        price,
+        timestamp: new Date().toISOString()
+      }
+    );
+    
+    res.status(200).json({
+      success: true,
+      message: 'Notification d\'achat envoyée',
+      details: notificationResult
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi de la notification d\'achat:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
     });
   }
 };
@@ -344,68 +443,6 @@ const sendMessageNotification = async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur lors de l\'envoi de la notification de message:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
-};
-
-// Notification d'achat de secret
-const sendPurchaseNotification = async (req, res) => {
-  try {
-    const { secretId, buyerId, buyerName, price, currency } = req.body;
-    
-    // Vérifier les paramètres requis
-    if (!secretId || !buyerId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Paramètres manquants'
-      });
-    }
-    
-    // Récupérer les informations du secret
-    const secret = await Secret.findById(secretId).populate('seller', '_id name');
-    
-    if (!secret) {
-      return res.status(404).json({
-        success: false,
-        message: 'Secret non trouvé'
-      });
-    }
-    
-    // Ne pas notifier si l'acheteur est aussi le vendeur
-    if (buyerId === secret.seller._id.toString()) {
-      return res.status(200).json({
-        success: true,
-        message: 'Pas de notification, acheteur = vendeur'
-      });
-    }
-    
-    // Formater le prix
-    const formattedPrice = `${price} ${currency}`;
-    
-    // Envoyer la notification au vendeur seulement
-    const notificationResult = await sendPushNotifications(
-      [secret.seller._id.toString()],
-      'Secret vendu!',
-      `${buyerName} a acheté votre secret pour ${formattedPrice}`,
-      {
-        type: 'purchase',
-        secretId,
-        buyerId,
-        price,
-        timestamp: new Date().toISOString()
-      }
-    );
-    
-    res.status(200).json({
-      success: true,
-      message: 'Notification d\'achat envoyée',
-      details: notificationResult
-    });
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi de la notification d\'achat:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur'
@@ -491,7 +528,7 @@ const sendStripeReminderNotification = async (req, res) => {
   }
 };
 
-// Notification d'événement (implémentation complète)
+// Notification d'événement
 const sendEventNotification = async (req, res) => {
   try {
     const { userId, eventName, daysLeft } = req.body;
@@ -531,7 +568,7 @@ const sendEventNotification = async (req, res) => {
   }
 };
 
-// Notification de statistiques (implémentation complète)
+// Notification de statistiques
 const sendStatsNotification = async (req, res) => {
   try {
     const { userId, secretsCount, purchasesCount } = req.body;
@@ -571,7 +608,7 @@ const sendStatsNotification = async (req, res) => {
   }
 };
 
-// Notification de bienvenue (implémentation complète)
+// Notification de bienvenue
 const sendWelcomeBackNotification = async (req, res) => {
   try {
     const { userId, daysAbsent } = req.body;
