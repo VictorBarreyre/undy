@@ -86,28 +86,6 @@ const TestNotificationButton = () => {
     <VStack space={4} width="100%" mt={4}>
       <VStack space={2} justifyContent="center">
         <Button
-          onPress={async () => {
-            try {
-              console.warn("Test direct de notification Expo");
-              const id = await Notifications.scheduleNotificationAsync({
-                content: {
-                  title: "TEST DIRECT EXPO",
-                  body: "Cette notification utilise directement l'API Expo",
-                  data: { direct: true },
-                  sound: true,
-                },
-                trigger: { seconds: 2 },
-              });
-              console.warn(`Notification programmée: ${id}`);
-              Alert.alert("Notification programmée", `ID: ${id}`);
-            } catch (e) {
-              console.error(e);
-              Alert.alert("Erreur", e.message);
-            }
-          }}
-          title="Test direct Expo"
-        />
-        <Button
           colorScheme="blue"
           onPress={testLocalNotification}
           isLoading={loading && !result}

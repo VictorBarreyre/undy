@@ -127,62 +127,43 @@ class NotificationService {
         
         // Vérifier si nous sommes sur un simulateur
         if (!Device.isDevice) {
-            console.log("[NOTIF] Exécution sur simulateur, token simulé utilisé");
-            return "SIMULATOR_MOCK_TOKEN";
+          console.log("[NOTIF] Exécution sur simulateur, token simulé utilisé");
+          return "SIMULATOR_MOCK_TOKEN";
         }
         
         try {
-            // Récupérer le projectId de différentes sources possibles
-            let projectId;
-            
-            // 1. Essayer d'abord depuis les constantes (fonctionnera en mode managed workflow)
-            projectId = Constants.expoConfig?.extra?.eas?.projectId;
-            
-            // 2. Si pas disponible, essayer depuis AsyncStorage (au cas où nous l'avons stocké précédemment)
-            if (!projectId) {
-                projectId = await AsyncStorage.getItem('expo_push_projectId');
-            }
-            
-            // 3. Fallback sur une valeur hardcodée (à utiliser en dernier recours)
-            if (!projectId) {
-                // Vous pouvez définir différentes valeurs selon l'environnement
-                if (__DEV__) {
-                    projectId = "votre-project-id-dev";
-                } else {
-                    projectId = "votre-project-id-prod";
-                }
-                
-                // Stocker pour les prochaines utilisations
-                await AsyncStorage.setItem('expo_push_projectId', projectId);
-            }
-            
-            console.log("[NOTIF] Configuration du token, projectId:", projectId);
-            
-            // Obtenir le token avec le projectId
-            const token = await Notifications.getExpoPushTokenAsync({
-                projectId: projectId
-            });
-            
-            // Stocker le projectId si la récupération a réussi
-            if (token.data && projectId) {
-                await AsyncStorage.setItem('expo_push_projectId', projectId);
-            }
-            
-            console.log("[NOTIF] Token récupéré:", token.data);
-            return token.data;
+          // Pour obtenir un token APNs natif au lieu d'un token Expo
+          const tokenData = await Notifications.getDevicePushTokenAsync();
+          
+          console.log("[NOTIF] Token APNs natif récupéré:", tokenData.data);
+          
+          if (tokenData && tokenData.data) {
+            // Stocker le token pour référence future
+            await AsyncStorage.setItem('device_push_token', tokenData.data);
+            return tokenData.data;
+          }
+          
+          console.log("[NOTIF] Aucun token obtenu");
+          return null;
         } catch (error) {
-            console.error("[NOTIF] ERREUR lors de la récupération du token:", error);
-            
-            // En cas d'erreur en production, ne pas bloquer l'expérience utilisateur
-            if (!__DEV__) {
-                // Essayer de se remettre de l'erreur avec un délai avant la prochaine tentative
-                await AsyncStorage.setItem('last_token_error_time', Date.now().toString());
+          console.error("[NOTIF] ERREUR lors de la récupération du token:", error);
+          
+          // En cas d'erreur, essayer de récupérer le dernier token connu
+          try {
+            const lastToken = await AsyncStorage.getItem('device_push_token');
+            if (lastToken) {
+              console.log("[NOTIF] Utilisation du dernier token connu:", lastToken);
+              return lastToken;
             }
-            
-            return null;
+          } catch (storageError) {
+            console.error("[NOTIF] Erreur lors de la récupération du dernier token:", storageError);
+          }
+          
+          return null;
         }
-    }
+      }
 
+      
     async sendLocalNotification(title, body, data = {}) {
         console.warn("[NOTIF] Tentative d'envoi de notification locale");
         try {

@@ -1,93 +1,188 @@
 const User = require('../models/User');
 const Secret = require('../models/Secret');
-const { Expo } = require('expo-server-sdk');
+const Conversation = require('../models/Conversation'); // Assurez-vous d'ajouter cette importation
+const apn = require('node-apn'); // Ajoutez cette dépendance (npm install node-apn)
 const fs = require('fs');
 
-// Récupérer les variables d'environnement pour le certificat
+// Récupérer les variables d'environnement pour le certificat (code existant)
 const certBase64 = process.env.PUSH_CERTIFICATE;
 const certPassword = process.env.PUSH_CERTIFICATE_PASS;
 
-// Configurer l'instance Expo avec le certificat APN si disponible
-let expo;
+// Configurer le provider APNs avec le certificat
+let apnProvider;
 if (certBase64 && certPassword) {
-  console.log('Configuration d\'Expo avec le certificat APN');
-  const certBuffer = Buffer.from(certBase64, 'base64');
-  
-  expo = new Expo({
-    usePushNotificationServices: true,
-    apns: {
-      production: process.env.NODE_ENV === 'production',
-      cert: certBuffer,
-      passphrase: certPassword
-    }
-  });
+  console.log('Configuration des notifications avec certificat APNs');
+  try {
+    const certBuffer = Buffer.from(certBase64, 'base64');
+    
+    apnProvider = new apn.Provider({
+      pfx: certBuffer,
+      passphrase: certPassword,
+      production: process.env.NODE_ENV === 'production', // Environnement de développement ou production
+    });
+    
+    console.log('Provider APNs configuré avec succès');
+  } catch (error) {
+    console.error('Erreur lors de la configuration du provider APNs:', error);
+  }
 } else {
-  console.log('Configuration d\'Expo sans certificat APN (notifications limitées)');
-  expo = new Expo();
+  console.log('Certificat APNs manquant, les notifications push ne fonctionneront pas');
 }
 
-
-
-// Service pour l'envoi des notifications
+// Fonction d'envoi de notification modifiée pour utiliser APNs directement
 const sendPushNotifications = async (userIds, title, body, data = {}) => {
   try {
+    // Si APNs n'est pas configuré, sortir
+    if (!apnProvider) {
+      return { success: false, message: 'Provider APNs non configuré' };
+    }
+    
     // Récupérer les tokens des utilisateurs
     const users = await User.find({ _id: { $in: userIds } });
     
-    // Préparer les messages pour chaque utilisateur
-    const messages = [];
+    // Préparation des résultats
+    const results = { sent: [], failed: [] };
     
+    // Pour chaque utilisateur
     for (const user of users) {
       if (!user.expoPushToken) continue;
       
-      // Vérifier que le token est valide
-      if (!Expo.isExpoPushToken(user.expoPushToken)) {
-        console.log(`Token invalide pour l'utilisateur ${user._id}`);
+      // Déterminer le type de token
+      let isExpoToken = user.expoPushToken.startsWith('ExponentPushToken[');
+      
+      // Si c'est un token Expo, on peut le logger mais on ne peut pas l'utiliser directement
+      if (isExpoToken) {
+        console.log(`Token Expo détecté pour l'utilisateur ${user._id}, non supporté sans EAS`);
+        results.failed.push({
+          userId: user._id,
+          reason: 'Token Expo détecté, EAS requis'
+        });
         continue;
       }
       
-      // Ajouter le message à la liste
-      messages.push({
-        to: user.expoPushToken,
-        sound: 'default',
-        title,
-        body,
-        data: {
-          ...data,
-          timestamp: new Date().toISOString()
-        },
-        badge: 1,
-        channelId: 'default', // Pour Android
-      });
-    }
-    
-    // Si aucun message valide, sortir
-    if (messages.length === 0) {
-      console.log('Aucun message valide à envoyer');
-      return { success: false, message: 'Aucun destinataire valide' };
-    }
-    
-    // Diviser les notifications en chunks (max 100 par chunk)
-    const chunks = expo.chunkPushNotifications(messages);
-    const tickets = [];
-    
-    // Envoyer chaque chunk
-    for (const chunk of chunks) {
+      // Créer la notification APNs
+      const notification = new apn.Notification();
+      notification.expiry = Math.floor(Date.now() / 1000) + 3600; // Expire dans 1h
+      notification.badge = 1;
+      notification.sound = 'default';
+      notification.alert = {
+        title: title,
+        body: body,
+      };
+      notification.payload = {
+        ...data,
+        timestamp: new Date().toISOString()
+      };
+      notification.topic = 'com.hushy.app'; // Votre bundle ID
+      
       try {
-        const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-        tickets.push(...ticketChunk);
-        console.log('Notifications envoyées:', ticketChunk);
+        // Envoyer la notification
+        const response = await apnProvider.send(notification, user.expoPushToken);
+        
+        // Vérifier le résultat
+        if (response.failed.length > 0) {
+          results.failed.push({
+            userId: user._id,
+            token: user.expoPushToken,
+            reason: response.failed[0].response
+          });
+        } else {
+          results.sent.push({
+            userId: user._id,
+            token: user.expoPushToken
+          });
+        }
       } catch (error) {
-        console.error('Erreur lors de l\'envoi des notifications:', error);
+        results.failed.push({
+          userId: user._id,
+          token: user.expoPushToken,
+          reason: error.message
+        });
       }
     }
     
-    return { success: true, tickets };
+    return { 
+      success: results.sent.length > 0, 
+      results 
+    };
   } catch (error) {
     console.error('Erreur globale lors de l\'envoi des notifications:', error);
     return { success: false, error: error.message };
   }
 };
+
+// La route sendTestNotification peut rester quasiment identique
+const sendTestNotification = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { token } = req.body; // Optionnel: pour tester avec un token spécifique
+    
+    console.log('Envoi d\'une notification de test à l\'utilisateur:', userId);
+    
+    // Si un token spécifique est fourni, l'utiliser directement
+    if (token) {
+      console.log('Utilisation du token spécifié:', token);
+      
+      // Traiter le cas du token simulateur
+      if (token === "SIMULATOR_MOCK_TOKEN") {
+        console.log('Token simulateur détecté, envoi d\'une réponse simulée');
+        return res.status(200).json({
+          success: true,
+          message: 'Simulation d\'envoi réussie pour le token de simulateur',
+          simulated: true
+        });
+      }
+      
+      // Créer un message test
+      const notification = new apn.Notification();
+      notification.expiry = Math.floor(Date.now() / 1000) + 3600;
+      notification.badge = 1;
+      notification.sound = 'default';
+      notification.alert = {
+        title: '⚠️ Test de notification',
+        body: 'Cette notification de test a été envoyée depuis le serveur!',
+      };
+      notification.payload = { 
+        type: 'test',
+        timestamp: new Date().toISOString()
+      };
+      notification.topic = 'com.hushy.app'; // Votre bundle ID
+      
+      // Envoyer la notification directement
+      const result = await apnProvider.send(notification, token);
+      
+      return res.status(200).json({
+        success: result.sent.length > 0,
+        message: 'Notification de test envoyée directement',
+        result
+      });
+    }
+    
+    // Sinon, utiliser le service normal pour envoyer à l'utilisateur
+    const notificationResult = await sendPushNotifications(
+      [userId],
+      '⚠️ Test de notification',
+      'Cette notification de test a été envoyée depuis le serveur!',
+      {
+        type: 'test',
+        timestamp: new Date().toISOString()
+      }
+    );
+    
+    res.status(200).json({
+      success: true,
+      message: 'Notification de test envoyée',
+      details: notificationResult
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi de la notification de test:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
 
 // Contrôleur pour les notifications
 const notificationsController = {
@@ -329,84 +424,7 @@ const notificationsController = {
     }
   },
 
-  sendTestNotification: async (req, res) => {
-    try {
-      const userId = req.user._id;
-      const { token } = req.body; // Optionnel: pour tester avec un token spécifique
-      
-      console.log('Envoi d\'une notification de test à l\'utilisateur:', userId);
-      
-      // Si un token spécifique est fourni, l'utiliser directement
-      if (token) {
-        console.log('Utilisation du token spécifié:', token);
-        
-        // AJOUT CRITIQUE: Vérification spéciale pour le token simulé
-        if (token === "SIMULATOR_MOCK_TOKEN") {
-          console.log('Token simulateur détecté, envoi d\'une réponse simulée');
-          return res.status(200).json({
-            success: true,
-            message: 'Simulation d\'envoi réussie pour le token de simulateur',
-            simulated: true
-          });
-        }
-        
-        // Pour les autres tokens (appareils réels)
-        if (!Expo.isExpoPushToken(token)) {
-          return res.status(400).json({
-            success: false,
-            message: 'Token push invalide'
-          });
-        }
-        
-        // Créer un message test
-        const message = {
-          to: token,
-          sound: 'default',
-          title: '⚠️ Test de notification',
-          body: 'Cette notification de test a été envoyée depuis le serveur!',
-          data: { 
-            type: 'test',
-            timestamp: new Date().toISOString()
-          },
-          badge: 1,
-          priority: 'high',
-          channelId: 'default',
-        };
-        
-        // Envoyer la notification directement
-        const tickets = await expo.sendPushNotificationsAsync([message]);
-        
-        return res.status(200).json({
-          success: true,
-          message: 'Notification de test envoyée directement',
-          tickets
-        });
-      }
-      
-      // Sinon, utiliser le service normal
-      const notificationResult = await sendPushNotifications(
-        [userId],
-        '⚠️ Test de notification',
-        'Cette notification de test a été envoyée depuis le serveur!',
-        {
-          type: 'test',
-          timestamp: new Date().toISOString()
-        }
-      );
-      
-      res.status(200).json({
-        success: true,
-        message: 'Notification de test envoyée',
-        details: notificationResult
-      });
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi de la notification de test:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur serveur'
-      });
-    }
-  },
+  
   
   // Autres méthodes du contrôleur pour les différents types de notifications...
   sendEventNotification: async (req, res) => {
