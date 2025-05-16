@@ -111,77 +111,6 @@ const sendPushNotifications = async (userIds, title, body, data = {}) => {
   }
 };
 
-// La route sendTestNotification peut rester quasiment identique
-const sendTestNotification = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const { token } = req.body; // Optionnel: pour tester avec un token spécifique
-    
-    console.log('Envoi d\'une notification de test à l\'utilisateur:', userId);
-    
-    // Si un token spécifique est fourni, l'utiliser directement
-    if (token) {
-      console.log('Utilisation du token spécifié:', token);
-      
-      // Traiter le cas du token simulateur
-      if (token === "SIMULATOR_MOCK_TOKEN") {
-        console.log('Token simulateur détecté, envoi d\'une réponse simulée');
-        return res.status(200).json({
-          success: true,
-          message: 'Simulation d\'envoi réussie pour le token de simulateur',
-          simulated: true
-        });
-      }
-      
-      // Créer un message test
-      const notification = new apn.Notification();
-      notification.expiry = Math.floor(Date.now() / 1000) + 3600;
-      notification.badge = 1;
-      notification.sound = 'default';
-      notification.alert = {
-        title: '⚠️ Test de notification',
-        body: 'Cette notification de test a été envoyée depuis le serveur!',
-      };
-      notification.payload = { 
-        type: 'test',
-        timestamp: new Date().toISOString()
-      };
-      notification.topic = 'com.hushy.app'; // Votre bundle ID
-      
-      // Envoyer la notification directement
-      const result = await apnProvider.send(notification, token);
-      
-      return res.status(200).json({
-        success: result.sent.length > 0,
-        message: 'Notification de test envoyée directement',
-        result
-      });
-    }
-    
-    // Sinon, utiliser le service normal pour envoyer à l'utilisateur
-    const notificationResult = await sendPushNotifications(
-      [userId],
-      '⚠️ Test de notification',
-      'Cette notification de test a été envoyée depuis le serveur!',
-      {
-        type: 'test',
-        timestamp: new Date().toISOString()
-      }
-    );
-    
-    res.status(200).json({
-      success: true,
-      message: 'Notification de test envoyée',
-      details: notificationResult
-    });
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi de la notification de test:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
-};
 
 
 // Contrôleur pour les notifications
@@ -277,7 +206,77 @@ const notificationsController = {
       });
     }
   },
-  
+
+  const sendTestNotification = async (req, res) => {
+    try {
+      const userId = req.user._id;
+      const { token } = req.body; // Optionnel: pour tester avec un token spécifique
+      
+      console.log('Envoi d\'une notification de test à l\'utilisateur:', userId);
+      
+      // Si un token spécifique est fourni, l'utiliser directement
+      if (token) {
+        console.log('Utilisation du token spécifié:', token);
+        
+        // Traiter le cas du token simulateur
+        if (token === "SIMULATOR_MOCK_TOKEN") {
+          console.log('Token simulateur détecté, envoi d\'une réponse simulée');
+          return res.status(200).json({
+            success: true,
+            message: 'Simulation d\'envoi réussie pour le token de simulateur',
+            simulated: true
+          });
+        }
+        
+        // Créer un message test
+        const notification = new apn.Notification();
+        notification.expiry = Math.floor(Date.now() / 1000) + 3600;
+        notification.badge = 1;
+        notification.sound = 'default';
+        notification.alert = {
+          title: '⚠️ Test de notification',
+          body: 'Cette notification de test a été envoyée depuis le serveur!',
+        };
+        notification.payload = { 
+          type: 'test',
+          timestamp: new Date().toISOString()
+        };
+        notification.topic = 'com.hushy.app'; // Votre bundle ID
+        
+        // Envoyer la notification directement
+        const result = await apnProvider.send(notification, token);
+        
+        return res.status(200).json({
+          success: result.sent.length > 0,
+          message: 'Notification de test envoyée directement',
+          result
+        });
+      }
+      
+      // Sinon, utiliser le service normal pour envoyer à l'utilisateur
+      const notificationResult = await sendPushNotifications(
+        [userId],
+        '⚠️ Test de notification',
+        'Cette notification de test a été envoyée depuis le serveur!',
+        {
+          type: 'test',
+          timestamp: new Date().toISOString()
+        }
+      );
+      
+      res.status(200).json({
+        success: true,
+        message: 'Notification de test envoyée',
+        details: notificationResult
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de la notification de test:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur serveur'
+      });
+    }
+  },  
   // Notification de nouveau message
   sendMessageNotification: async (req, res) => {
     try {
