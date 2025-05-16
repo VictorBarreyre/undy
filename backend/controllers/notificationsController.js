@@ -19,7 +19,7 @@ if (certBase64 && certPassword) {
     apnProvider = new apn.Provider({
       pfx: certBuffer,
       passphrase: certPassword,
-      production: false, // IMPORTANT: forcer le mode développement pour tester
+      production: true, // IMPORTANT: forcer le mode développement pour tester
       port: 443,
       // URL explicite du serveur sandbox
       address: 'api.sandbox.push.apple.com',
