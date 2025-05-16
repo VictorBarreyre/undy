@@ -147,7 +147,7 @@ const sendPushNotifications = async (userIds, title, body, data = {}) => {
   }
 };
 
-// Test de notification// Fonction sendTestNotification avec logs détaillés
+// Fonction sendTestNotification avec logs détaillés et accès correct aux variables
 const sendTestNotification = async (req, res) => {
   console.log('=== DÉBUT DE LA FONCTION sendTestNotification ===');
   
@@ -158,15 +158,14 @@ const sendTestNotification = async (req, res) => {
     console.log(`[TEST_NOTIF] Utilisateur: ${userId}`);
     console.log(`[TEST_NOTIF] Token fourni: ${token || 'aucun'}`);
     
-    // Vérification de la configuration
+    // Vérification de la configuration - accès aux variables externes
     console.log('[TEST_NOTIF] Vérification de la configuration APNs:');
     console.log({
-      certificatExiste: !!certBase64,
-      certBufferExiste: !!certBuffer,
-      certBufferTaille: certBuffer ? certBuffer.length : 0,
-      motDePasseExiste: !!certPassword,
+      certificatExiste: typeof certBase64 !== 'undefined' && !!certBase64,
+      motDePasseExiste: typeof certPassword !== 'undefined' && !!certPassword,
       production: true, // Vérifiez que cette valeur est bien à true pour un certificat de production
-      bundleId: 'com.hushy.app'
+      bundleId: 'com.hushy.app',
+      providerInitialisé: !!apnProvider
     });
     
     // Vérification du provider
@@ -459,7 +458,7 @@ const sendTestNotification = async (req, res) => {
       }
       
       // Utiliser le même code que pour un token spécifique
-      // ... (code similaire à celui ci-dessus)
+      // ... (code similaire à celui ci-dessus pour l'envoi avec userToken)
       
     } catch (error) {
       console.error(`[TEST_NOTIF] Erreur lors de la recherche du token de l'utilisateur:`, error);
