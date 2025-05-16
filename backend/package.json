@@ -27,6 +27,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.6.5",
     "multer": "^1.4.5-lts.1",
+    "node-apn": "^3.0.0",
     "node-cache": "^5.1.2",
     "puppeteer": "^24.6.0",
     "puppeteer-core": "^24.6.1",

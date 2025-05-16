@@ -57,18 +57,25 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSContactsUsageDescription</key>
-	<string>Cette application a besoin d'accéder à vos contacts pour fonctionner correctement</string>
-	<key>UILaunchStoryboardName</key>
-	<string>SplashScreen</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-    <string>Hushy a besoin de votre position pour afficher les secrets autour de vous</string>
-	<key>NSMicrophoneUsageDescription</key>
-    <string>Cette application a besoin d'accéder au microphone pour enregistrer des messages vocaux</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Hushy a besoin d'accéder à votre caméra pour prendre des photos de documents d'identité pour la vérification Stripe</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Cette application a besoin d'accéder à vos contacts pour fonctionner correctement</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Hushy a besoin de votre position pour afficher les secrets autour de vous</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Cette application a besoin d'accéder au microphone pour enregistrer des messages vocaux</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Hushy a besoin d'accéder à votre photothèque pour sélectionner des documents d'identité pour la vérification Stripe</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+		<string>processing</string>
+		<string>location</string>
+	</array>
+	<key>UILaunchStoryboardName</key>
+	<string>SplashScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>
