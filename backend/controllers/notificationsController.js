@@ -5,16 +5,41 @@ const apn = require('node-apn');
 const fs = require('fs');
 
 // Variables d'environnement pour les clés JWT
-const apnsKeyId = process.env.APNS_KEY_ID;           // Nouvelle variable à créer
-const apnsTeamId = process.env.APPLE_TEAM_ID;        // Variable existante que vous avez déjà
-const apnsKey = process.env.APNS_KEY;                // Nouvelle variable à créer
+const apnsKeyId = process.env.APNS_KEY_ID;
+const apnsTeamId = process.env.APPLE_TEAM_ID;
+const apnsKey = process.env.APNS_KEY;
+
+// AJOUTEZ CES LOGS DE DÉBOGAGE
+console.log("======== INFORMATIONS DE CONFIGURATION APNS ========");
+console.log("APNS_KEY_ID existe:", !!apnsKeyId);
+console.log("APPLE_TEAM_ID existe:", !!apnsTeamId);
+console.log("APNS_KEY existe:", !!apnsKey);
+
+if (apnsKeyId) console.log("APNS_KEY_ID:", apnsKeyId);
+if (apnsTeamId) console.log("APPLE_TEAM_ID:", apnsTeamId);
+if (apnsKey) console.log("APNS_KEY longueur:", apnsKey.length);
 
 // Configuration du provider APNs avec JWT
 let apnProvider;
 if (apnsKey && apnsKeyId && apnsTeamId) {
   console.log('Configuration des notifications avec clé d\'authentification APNs');
   try {
-    const keyBuffer = Buffer.from(apnsKey, 'base64').toString('utf8');
+    let keyBuffer;
+    try {
+      // Essayer de décoder la clé
+      keyBuffer = Buffer.from(apnsKey, 'base64').toString('utf8');
+      console.log("Clé décodée avec succès, commence par:", keyBuffer.substring(0, 30) + "...");
+      console.log("Clé décodée contient BEGIN PRIVATE KEY:", keyBuffer.includes("BEGIN PRIVATE KEY"));
+      console.log("Clé décodée contient END PRIVATE KEY:", keyBuffer.includes("END PRIVATE KEY"));
+    } catch (decodeError) {
+      console.error("Erreur lors du décodage de la clé:", decodeError);
+      // Si le décodage échoue, utiliser la clé brute
+      console.log("Tentative d'utilisation de la clé brute sans décodage");
+      keyBuffer = apnsKey;
+    }
+    
+    // Créer le provider avec les informations de débogage
+    console.log("Création du provider avec keyId:", apnsKeyId, "et teamId:", apnsTeamId);
     
     apnProvider = new apn.Provider({
       token: {
@@ -22,16 +47,24 @@ if (apnsKey && apnsKeyId && apnsTeamId) {
         keyId: apnsKeyId,
         teamId: apnsTeamId
       },
-      production: true // Pour un environnement de production
+      production: true
     });
     
     console.log('Provider APNs configuré avec succès (méthode JWT)');
   } catch (error) {
     console.error('Erreur lors de la configuration du provider APNs:', error);
+    console.error('Détails de l\'erreur:', error.message);
+    if (error.stack) console.error('Stack trace:', error.stack);
   }
 } else {
   console.log('Clé d\'authentification APNs manquante, les notifications push ne fonctionneront pas');
+  console.log('Variables manquantes:', {
+    'APNS_KEY_ID': !apnsKeyId,
+    'APPLE_TEAM_ID': !apnsTeamId,
+    'APNS_KEY': !apnsKey
+  });
 }
+console.log("======== FIN INFORMATIONS DE CONFIGURATION APNS ========");
 
 // Fonction d'envoi de notification modifiée avec plus de logs
 const sendPushNotifications = async (userIds, title, body, data = {}) => {
