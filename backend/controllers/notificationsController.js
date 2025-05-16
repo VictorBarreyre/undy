@@ -1,10 +1,10 @@
 const User = require('../models/User');
 const Secret = require('../models/Secret');
-const Conversation = require('../models/Conversation'); // Assurez-vous d'ajouter cette importation
-const apn = require('node-apn'); // Ajoutez cette dépendance (npm install node-apn)
+const Conversation = require('../models/Conversation');
+const apn = require('node-apn');
 const fs = require('fs');
 
-// Récupérer les variables d'environnement pour le certificat (code existant)
+// Récupérer les variables d'environnement pour le certificat
 const certBase64 = process.env.PUSH_CERTIFICATE;
 const certPassword = process.env.PUSH_CERTIFICATE_PASS;
 
@@ -15,10 +15,15 @@ if (certBase64 && certPassword) {
   try {
     const certBuffer = Buffer.from(certBase64, 'base64');
     
+    // Options de configuration améliorées pour le débogage
     apnProvider = new apn.Provider({
       pfx: certBuffer,
       passphrase: certPassword,
-      production: process.env.NODE_ENV === 'production', // Environnement de développement ou production
+      production: false, // IMPORTANT: forcer le mode développement pour tester
+      port: 443,
+      rejectUnauthorized: true,
+      connectionRetryLimit: 3,
+      logLevel: "debug" // activer les logs détaillés
     });
     
     console.log('Provider APNs configuré avec succès');
@@ -29,26 +34,36 @@ if (certBase64 && certPassword) {
   console.log('Certificat APNs manquant, les notifications push ne fonctionneront pas');
 }
 
-// Fonction d'envoi de notification modifiée pour utiliser APNs directement
+// Fonction d'envoi de notification modifiée avec plus de logs
 const sendPushNotifications = async (userIds, title, body, data = {}) => {
   try {
+    console.log('Début de sendPushNotifications avec userIds:', userIds);
+    
     // Si APNs n'est pas configuré, sortir
     if (!apnProvider) {
+      console.log('Provider APNs non configuré, impossible d\'envoyer des notifications');
       return { success: false, message: 'Provider APNs non configuré' };
     }
     
     // Récupérer les tokens des utilisateurs
     const users = await User.find({ _id: { $in: userIds } });
+    console.log(`Nombre d'utilisateurs trouvés: ${users.length}`);
     
     // Préparation des résultats
     const results = { sent: [], failed: [] };
     
     // Pour chaque utilisateur
     for (const user of users) {
-      if (!user.expoPushToken) continue;
+      console.log(`Traitement de l'utilisateur ${user._id}, token: ${user.expoPushToken || 'non défini'}`);
+      
+      if (!user.expoPushToken) {
+        console.log(`Pas de token pour l'utilisateur ${user._id}, on passe au suivant`);
+        continue;
+      }
       
       // Déterminer le type de token
       let isExpoToken = user.expoPushToken.startsWith('ExponentPushToken[');
+      console.log(`Token type: ${isExpoToken ? 'Expo' : 'APNs'}`);
       
       // Si c'est un token Expo, on peut le logger mais on ne peut pas l'utiliser directement
       if (isExpoToken) {
@@ -75,24 +90,40 @@ const sendPushNotifications = async (userIds, title, body, data = {}) => {
       };
       notification.topic = 'com.hushy.app'; // Votre bundle ID
       
+      console.log('Notification préparée:', JSON.stringify({
+        expiry: notification.expiry,
+        badge: notification.badge,
+        sound: notification.sound,
+        alert: notification.alert,
+        topic: notification.topic
+      }));
+      
       try {
+        console.log(`Envoi de la notification à ${user.expoPushToken}`);
+        
         // Envoyer la notification
         const response = await apnProvider.send(notification, user.expoPushToken);
+        console.log('Réponse complète APNs:', JSON.stringify(response, null, 2));
         
         // Vérifier le résultat
-        if (response.failed.length > 0) {
+        if (response.failed && response.failed.length > 0) {
+          console.log('Échec de l\'envoi:', JSON.stringify(response.failed[0], null, 2));
           results.failed.push({
             userId: user._id,
             token: user.expoPushToken,
-            reason: response.failed[0].response
+            reason: response.failed[0].response || response.failed[0].error || 'Raison inconnue'
           });
-        } else {
+        } else if (response.sent && response.sent.length > 0) {
+          console.log('Notification envoyée avec succès');
           results.sent.push({
             userId: user._id,
             token: user.expoPushToken
           });
+        } else {
+          console.log('Résultat indéterminé:', JSON.stringify(response, null, 2));
         }
       } catch (error) {
+        console.error('Erreur lors de l\'envoi de la notification:', error);
         results.failed.push({
           userId: user._id,
           token: user.expoPushToken,
@@ -101,6 +132,7 @@ const sendPushNotifications = async (userIds, title, body, data = {}) => {
       }
     }
     
+    console.log('Résultats finaux:', JSON.stringify(results, null, 2));
     return { 
       success: results.sent.length > 0, 
       results 
@@ -111,8 +143,6 @@ const sendPushNotifications = async (userIds, title, body, data = {}) => {
   }
 };
 
-
-
 // Contrôleur pour les notifications
 const notificationsController = {
   // Enregistrer le token de l'appareil
@@ -121,8 +151,16 @@ const notificationsController = {
       const { expoPushToken } = req.body;
       const userId = req.user._id;
       
-      // Valider le token
-      if (!Expo.isExpoPushToken(expoPushToken)) {
+      console.log(`Tentative d'enregistrement du token ${expoPushToken} pour l'utilisateur ${userId}`);
+      
+      // Valider le token (modification pour accepter les tokens APNs)
+      const isValidToken = expoPushToken && 
+        (expoPushToken.startsWith('ExponentPushToken[') || // Token Expo
+         expoPushToken.match(/^[a-f0-9]{64}$/i) || // Token APNs (hexadécimal 64 caractères)
+         expoPushToken === "SIMULATOR_MOCK_TOKEN"); // Token de simulateur
+      
+      if (!isValidToken) {
+        console.log('Token invalide:', expoPushToken);
         return res.status(400).json({
           success: false,
           message: 'Token push invalide'
@@ -131,6 +169,7 @@ const notificationsController = {
       
       // Mettre à jour le token dans la base de données
       await User.findByIdAndUpdate(userId, { expoPushToken });
+      console.log(`Token enregistré avec succès pour l'utilisateur ${userId}`);
       
       res.status(200).json({
         success: true,
@@ -145,69 +184,8 @@ const notificationsController = {
     }
   },
   
-  // Notification d'achat de secret
-  sendPurchaseNotification: async (req, res) => {
-    try {
-      const { secretId, buyerId, buyerName, price, currency } = req.body;
-      
-      // Vérifier les paramètres requis
-      if (!secretId || !buyerId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Paramètres manquants'
-        });
-      }
-      
-      // Récupérer les informations du secret
-      const secret = await Secret.findById(secretId).populate('seller', '_id name');
-      
-      if (!secret) {
-        return res.status(404).json({
-          success: false,
-          message: 'Secret non trouvé'
-        });
-      }
-      
-      // Ne pas notifier si l'acheteur est aussi le vendeur
-      if (buyerId === secret.seller._id.toString()) {
-        return res.status(200).json({
-          success: true,
-          message: 'Pas de notification, acheteur = vendeur'
-        });
-      }
-      
-      // Formater le prix
-      const formattedPrice = `${price} ${currency}`;
-      
-      // Envoyer la notification au vendeur seulement
-      const notificationResult = await sendPushNotifications(
-        [secret.seller._id.toString()],
-        'Secret vendu!',
-        `${buyerName} a acheté votre secret pour ${formattedPrice}`,
-        {
-          type: 'purchase',
-          secretId,
-          buyerId,
-          price,
-          timestamp: new Date().toISOString()
-        }
-      );
-      
-      res.status(200).json({
-        success: true,
-        message: 'Notification d\'achat envoyée',
-        details: notificationResult
-      });
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi de la notification d\'achat:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur serveur'
-      });
-    }
-  },
-
- sendTestNotification : async (req, res) => {
+  // Test de notification
+  sendTestNotification: async (req, res) => {
     try {
       const userId = req.user._id;
       const { token } = req.body; // Optionnel: pour tester avec un token spécifique
@@ -243,17 +221,38 @@ const notificationsController = {
         };
         notification.topic = 'com.hushy.app'; // Votre bundle ID
         
-        // Envoyer la notification directement
+        console.log('Notification préparée pour test direct, topic:', notification.topic);
+        
+        // Envoyer la notification directement avec plus de logs
+        console.log('Envoi de la notification au token:', token);
         const result = await apnProvider.send(notification, token);
+        console.log('Résultat complet APNs (test direct):', JSON.stringify(result, null, 2));
+        
+        // Vérifier si l'envoi a réussi
+        let hasSucceeded = false;
+        let detailedError = {};
+        
+        if (result.sent && result.sent.length > 0) {
+          hasSucceeded = true;
+        } else if (result.failed && result.failed.length > 0) {
+          // Capturer les détails de l'erreur pour le diagnostic
+          detailedError = {
+            status: result.failed[0].status,
+            response: result.failed[0].response,
+            error: result.failed[0].error
+          };
+        }
         
         return res.status(200).json({
-          success: result.sent.length > 0,
-          message: 'Notification de test envoyée directement',
-          result
+          success: hasSucceeded,
+          message: hasSucceeded ? 'Notification de test envoyée directement' : 'Échec de l\'envoi de la notification',
+          result: result,
+          error: hasSucceeded ? undefined : detailedError
         });
       }
       
       // Sinon, utiliser le service normal pour envoyer à l'utilisateur
+      console.log('Envoi de notification via le service normal pour l\'utilisateur:', userId);
       const notificationResult = await sendPushNotifications(
         [userId],
         '⚠️ Test de notification',
@@ -264,6 +263,7 @@ const notificationsController = {
         }
       );
       
+      console.log('Résultat du service normal:', JSON.stringify(notificationResult, null, 2));
       res.status(200).json({
         success: true,
         message: 'Notification de test envoyée',
@@ -273,10 +273,12 @@ const notificationsController = {
       console.error('Erreur lors de l\'envoi de la notification de test:', error);
       res.status(500).json({
         success: false,
-        message: 'Erreur serveur'
+        message: 'Erreur serveur',
+        error: error.message
       });
     }
-  },  
+  },
+  
   // Notification de nouveau message
   sendMessageNotification: async (req, res) => {
     try {
@@ -422,20 +424,124 @@ const notificationsController = {
       });
     }
   },
-
   
-  
-  // Autres méthodes du contrôleur pour les différents types de notifications...
+  // Notification d'événement (implémentation complète)
   sendEventNotification: async (req, res) => {
-    // Implémentation similaire pour les notifications d'événements
+    try {
+      const { userId, eventName, daysLeft } = req.body;
+      
+      // Vérifier les paramètres requis
+      if (!userId || !eventName) {
+        return res.status(400).json({
+          success: false,
+          message: 'Paramètres manquants'
+        });
+      }
+      
+      // Envoyer la notification
+      const notificationResult = await sendPushNotifications(
+        [userId],
+        'Événement à venir',
+        `${eventName} se termine dans ${daysLeft} jours`,
+        {
+          type: 'time_limited_event',
+          eventName,
+          daysLeft,
+          timestamp: new Date().toISOString()
+        }
+      );
+      
+      res.status(200).json({
+        success: true,
+        message: 'Notification d\'événement envoyée',
+        details: notificationResult
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de la notification d\'événement:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur serveur'
+      });
+    }
   },
   
+  // Notification de statistiques (implémentation complète)
   sendStatsNotification: async (req, res) => {
-    // Implémentation pour les notifications de statistiques
+    try {
+      const { userId, secretsCount, purchasesCount } = req.body;
+      
+      // Vérifier les paramètres requis
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID utilisateur manquant'
+        });
+      }
+      
+      // Envoyer la notification
+      const notificationResult = await sendPushNotifications(
+        [userId],
+        'Statistiques de la semaine',
+        `${secretsCount} nouveaux secrets et ${purchasesCount} ventes cette semaine`,
+        {
+          type: 'stats_update',
+          secretsCount,
+          purchasesCount,
+          timestamp: new Date().toISOString()
+        }
+      );
+      
+      res.status(200).json({
+        success: true,
+        message: 'Notification de statistiques envoyée',
+        details: notificationResult
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de la notification de statistiques:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur serveur'
+      });
+    }
   },
   
+  // Notification de bienvenue (implémentation complète)
   sendWelcomeBackNotification: async (req, res) => {
-    // Implémentation pour les notifications de bienvenue
+    try {
+      const { userId, daysAbsent } = req.body;
+      
+      // Vérifier les paramètres requis
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: 'ID utilisateur manquant'
+        });
+      }
+      
+      // Envoyer la notification
+      const notificationResult = await sendPushNotifications(
+        [userId],
+        'Bon retour parmi nous!',
+        `Vous nous avez manqué pendant ${daysAbsent} jours. Découvrez les nouveaux secrets!`,
+        {
+          type: 'welcome_back',
+          daysAbsent,
+          timestamp: new Date().toISOString()
+        }
+      );
+      
+      res.status(200).json({
+        success: true,
+        message: 'Notification de bienvenue envoyée',
+        details: notificationResult
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de la notification de bienvenue:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur serveur'
+      });
+    }
   }
 };
 
