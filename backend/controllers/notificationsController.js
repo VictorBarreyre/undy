@@ -43,7 +43,7 @@ if (apnsKey && apnsKeyId && apnsTeamId) {
     
     apnProvider = new apn.Provider({
       token: {
-        key: keyBuffer,
+        key: apnsKey, // Utiliser directement la clé encodée sans décodage
         keyId: apnsKeyId,
         teamId: apnsTeamId
       },
