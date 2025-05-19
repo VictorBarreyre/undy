@@ -130,54 +130,56 @@ export default function Profile({ navigation }) {
 
     useEffect(() => {
         let permissionCheckInterval;
-
+    
         const checkPermissions = async () => {
             // Vérifier l'état de la permission des contacts
             if (!alertsCheckedRef.current.contacts) {
                 try {
                     const { status } = await ExpoContacts.getPermissionsAsync();
                     const contactsStatus = status === 'granted';
-
+    
                     // Ne mettre à jour l'état que si la valeur a changé
                     if (contactsPermissionStatus !== contactsStatus) {
                         setContactsPermissionStatus(contactsStatus);
                     }
-
+    
                     // Marquer comme vérifié une fois qu'on a obtenu le statut initial
                     alertsCheckedRef.current.contacts = true;
                 } catch (error) {
                     console.error('Erreur lors de la vérification des permissions de contacts:', error);
                 }
             }
-
+    
             // Vérifier l'état de la permission de localisation
             if (!alertsCheckedRef.current.location) {
                 try {
                     const { status } = await Location.getForegroundPermissionsAsync();
                     const locationStatus = status === 'granted';
-
+    
                     // Ne mettre à jour l'état que si la valeur a changé
                     if (locationPermissionStatus !== locationStatus) {
                         setLocationPermissionStatus(locationStatus);
                     }
-
+    
                     // Marquer comme vérifié une fois qu'on a obtenu le statut initial
                     alertsCheckedRef.current.location = true;
                 } catch (error) {
                     console.error('Erreur lors de la vérification des permissions de localisation:', error);
                 }
             }
-
+    
             // Vérifier l'état des permissions de notification sans forcer l'alerte
             if (!alertsCheckedRef.current.notification) {
                 try {
-                    const hasPermission = await NotificationService.checkPermissions(false); // false = ne pas forcer l'alerte
-
+                    // Ne PAS demander de nouvelles permissions, juste vérifier l'état actuel
+                    const status = await Notifications.getPermissionsAsync();
+                    const hasPermission = status.status === 'granted';
+    
                     // Ne mettre à jour l'état que si la valeur a changé
                     if (notificationsEnabled !== hasPermission) {
                         setNotificationsEnabled(hasPermission);
                     }
-
+    
                     // Marquer comme vérifié une fois qu'on a obtenu le statut initial
                     alertsCheckedRef.current.notification = true;
                 } catch (error) {
@@ -185,41 +187,39 @@ export default function Profile({ navigation }) {
                 }
             }
         };
-
+    
         // Exécuter la vérification une seule fois au montage du composant
         checkPermissions();
-
-        // Configurer un intervalle moins fréquent pour vérifier uniquement les changements d'état
-        // sans afficher d'alertes (utile si l'utilisateur change les permissions dans les paramètres système)
+    
+        // Configurer un intervalle beaucoup moins fréquent (toutes les 30 secondes au lieu de 10)
         permissionCheckInterval = setInterval(async () => {
             try {
-                // Uniquement vérifier si les états ont changé sans modifier les refs ou afficher des alertes
+                // Vérification périodique simplifiée sans appels à checkPermissions()
                 const contactsStatus = (await ExpoContacts.getPermissionsAsync()).status === 'granted';
+                const locationStatus = (await Location.getForegroundPermissionsAsync()).status === 'granted';
+                const notificationStatus = (await Notifications.getPermissionsAsync()).status === 'granted';
+                
+                // Mettre à jour les états uniquement en cas de changement
                 if (contactsPermissionStatus !== contactsStatus) {
                     setContactsPermissionStatus(contactsStatus);
                 }
-
-                const locationStatus = (await Location.getForegroundPermissionsAsync()).status === 'granted';
                 if (locationPermissionStatus !== locationStatus) {
                     setLocationPermissionStatus(locationStatus);
                 }
-
-                const notificationStatus = await NotificationService.checkPermissions(false);
                 if (notificationsEnabled !== notificationStatus) {
                     setNotificationsEnabled(notificationStatus);
                 }
             } catch (error) {
                 console.error('Erreur lors de la vérification périodique des permissions:', error);
             }
-        }, 10000); // Vérifier toutes les 10 secondes
-
+        }, 30000); // Vérifier toutes les 30 secondes au lieu de 10
+    
         return () => {
             if (permissionCheckInterval) {
                 clearInterval(permissionCheckInterval);
             }
         };
     }, []);
-
 
     if (userData) {
         const { profilePicture, ...userDataWithoutPicture } = userData;

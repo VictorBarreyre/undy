@@ -1,94 +1,154 @@
-// NotificationManager.js
-// Ce fichier gère toutes les notifications push de l'application
 
 import * as Notifications from 'expo-notifications';
 import NotificationService from './NotificationService'; // Votre service existant
 import { getAxiosInstance } from '../../data/api/axiosInstance';
 import i18n from 'i18next';
 import mixpanel from "../../services/mixpanel";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const MANAGER_INITIALIZED_KEY = 'notification_manager_initialized';
+const TOKEN_REGISTRATION_TIME_KEY = 'token_registration_time';
 
 class NotificationManager {
   constructor() {
     this.notificationService = NotificationService;
     this.initialized = false;
+    this.initializationInProgress = false;
   }
 
   async initialize(userData) {
+    // Si déjà en cours d'initialisation, ne pas recommencer
+    if (this.initializationInProgress) {
+      console.log("[NOTIF_MANAGER] Initialisation déjà en cours, sortie");
+      return this.initialized;
+    }
+
+    this.initializationInProgress = true;
     console.log("[NOTIF_MANAGER] Initialisation du gestionnaire de notifications");
     console.log("[NOTIF_MANAGER] Utilisateur connecté:", !!userData?._id);
     
-    if (this.initialized) {
-        console.log("[NOTIF_MANAGER] Déjà initialisé, sortie");
-        return;
-    }
-    
-    // S'assurer que le service de notification est initialisé
-    console.log("[NOTIF_MANAGER] Initialisation du service de notifications");
-    await this.notificationService.initialize();
-    
-    // Vérifier les permissions
-    console.log("[NOTIF_MANAGER] Vérification des permissions");
-    const hasPermission = await this.notificationService.checkPermissions();
-    console.log("[NOTIF_MANAGER] Résultat de la vérification des permissions:", hasPermission);
-    if (!hasPermission) {
-        console.log("[NOTIF_MANAGER] Permissions refusées");
-        console.log(i18n.t('notifications.logs.permissionDenied'));
-        return false;
-    }
-    
-    // Obtenir le token et l'envoyer au serveur si on a un utilisateur connecté
-    if (userData && userData._id) {
-        console.log("[NOTIF_MANAGER] Récupération et enregistrement du token");
-        const token = await this.notificationService.getToken();
-        if (token) {
-            console.log("[NOTIF_MANAGER] Token obtenu, enregistrement avec le serveur");
-            await this.registerTokenWithServer(userData._id, token);
-        } else {
-            console.log("[NOTIF_MANAGER] Aucun token obtenu");
+    try {
+      // Vérifier si déjà initialisé récemment pour cet utilisateur
+      if (userData?._id) {
+        const lastInitData = await AsyncStorage.getItem(MANAGER_INITIALIZED_KEY);
+        if (lastInitData) {
+          try {
+            const { userId, timestamp } = JSON.parse(lastInitData);
+            const now = Date.now();
+            const timeSinceLastInit = now - timestamp;
+            
+            // Si initialisé pour cet utilisateur dans les 10 dernières minutes
+            if (userId === userData._id && timeSinceLastInit < 10 * 60 * 1000) {
+              console.log("[NOTIF_MANAGER] Initialisé récemment pour cet utilisateur, utilisation du statut existant");
+              this.initialized = true;
+              this.initializationInProgress = false;
+              return true;
+            }
+          } catch (e) {
+            console.error("[NOTIF_MANAGER] Erreur lors de la lecture des données d'initialisation:", e);
+          }
         }
-    } else {
-        console.log("[NOTIF_MANAGER] Aucun utilisateur connecté, token non enregistré");
-    }
-    
-    this.initialized = true;
-    console.log("[NOTIF_MANAGER] Initialisation terminée avec succès");
-    return true;
-}
-
-
-async registerTokenWithServer(userId, token) {
-  // Ne pas envoyer de token simulé au serveur
-  if (token === "SIMULATOR_MOCK_TOKEN" || !token) {
-      console.log("[NOTIF_MANAGER] Token simulé ou invalide, pas d'envoi au serveur");
-      return true; // Simuler un succès en développement
-  }
-  
-  const instance = getAxiosInstance();
-  if (!instance) {
-      throw new Error(i18n.t('notifications.errors.axiosNotInitialized'));
-  }
-  
-  try {
-      // N'envoyez PAS le userId dans la requête
-      // Le middleware protect l'extrait déjà du token JWT
-      const response = await instance.post('/api/notifications/token', {
-          expoPushToken: token
-      });
+      }
       
-      console.log(i18n.t('notifications.logs.tokenRegistered'), response.data);
-      return true;
-  } catch (error) {
-      console.error(i18n.t('notifications.errors.tokenRegistration'), error);
-      
-      // Ignorer l'erreur en développement pour ne pas bloquer le flux
-      if (__DEV__) {
-          console.log("[NOTIF_MANAGER] Erreur ignorée en développement");
+      if (this.initialized) {
+          console.log("[NOTIF_MANAGER] Déjà initialisé, sortie");
+          this.initializationInProgress = false;
           return true;
       }
       
+      // S'assurer que le service de notification est initialisé
+      console.log("[NOTIF_MANAGER] Initialisation du service de notifications");
+      await this.notificationService.initialize();
+      
+      // Vérifier les permissions sans forcer l'alerte
+      console.log("[NOTIF_MANAGER] Vérification des permissions");
+      const hasPermission = await this.notificationService.checkPermissions(false);
+      console.log("[NOTIF_MANAGER] Résultat de la vérification des permissions:", hasPermission);
+      
+      // Obtenir le token et l'envoyer au serveur si on a un utilisateur connecté
+      if (userData && userData._id) {
+          console.log("[NOTIF_MANAGER] Récupération et enregistrement du token");
+          const token = await this.notificationService.getToken();
+          if (token) {
+              console.log("[NOTIF_MANAGER] Token obtenu, enregistrement avec le serveur");
+              await this.registerTokenWithServer(userData._id, token);
+          } else {
+              console.log("[NOTIF_MANAGER] Aucun token obtenu");
+          }
+      } else {
+          console.log("[NOTIF_MANAGER] Aucun utilisateur connecté, token non enregistré");
+      }
+      
+      // Marquer comme initialisé et sauvegarder l'état
+      this.initialized = true;
+      if (userData?._id) {
+        await AsyncStorage.setItem(MANAGER_INITIALIZED_KEY, JSON.stringify({
+          userId: userData._id,
+          timestamp: Date.now()
+        }));
+      }
+      
+      console.log("[NOTIF_MANAGER] Initialisation terminée avec succès");
+      this.initializationInProgress = false;
+      return true;
+    } catch (error) {
+      console.error("[NOTIF_MANAGER] Erreur pendant l'initialisation:", error);
+      this.initializationInProgress = false;
       return false;
+    }
   }
-}
+
+  async registerTokenWithServer(userId, token) {
+    // Ne pas envoyer de token simulé au serveur
+    if (token === "SIMULATOR_MOCK_TOKEN" || !token) {
+        console.log("[NOTIF_MANAGER] Token simulé ou invalide, pas d'envoi au serveur");
+        return true; // Simuler un succès en développement
+    }
+    
+    // Vérifier si l'enregistrement a déjà été fait récemment
+    const lastRegistration = await AsyncStorage.getItem(TOKEN_REGISTRATION_TIME_KEY);
+    const now = Date.now();
+    
+    if (lastRegistration) {
+      const timeSinceLastRegistration = now - parseInt(lastRegistration);
+      
+      // Si moins de 1 heure, ne pas réenregistrer le même token
+      if (timeSinceLastRegistration < 60 * 60 * 1000) {
+        console.log("[NOTIF_MANAGER] Token enregistré récemment, pas de réenregistrement");
+        return true;
+      }
+    }
+    
+    const instance = getAxiosInstance();
+    if (!instance) {
+        throw new Error(i18n.t('notifications.errors.axiosNotInitialized'));
+    }
+    
+    try {
+        // Le token a été obtenu, tentative d'enregistrement sur le serveur
+        const response = await instance.post('/api/notifications/token', {
+            expoPushToken: token
+        });
+        
+        // Si l'enregistrement réussit, sauvegarder le timestamp
+        if (response.data && response.data.success) {
+          await AsyncStorage.setItem(TOKEN_REGISTRATION_TIME_KEY, now.toString());
+        }
+        
+        console.log(i18n.t('notifications.logs.tokenRegistered'), response.data);
+        return true;
+    } catch (error) {
+        console.error(i18n.t('notifications.errors.tokenRegistration'), error);
+        
+        // Ignorer l'erreur en développement pour ne pas bloquer le flux
+        if (__DEV__) {
+            console.log("[NOTIF_MANAGER] Erreur ignorée en développement");
+            return true;
+        }
+        
+        return false;
+    }
+  }
   
   async scheduleMessageNotification(messageSender, conversationId, messagePreview) {
     console.log("[NOTIF_MANAGER] Préparation d'une notification de message:", { 

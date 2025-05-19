@@ -5,12 +5,17 @@ import i18n from 'i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
-const ALERT_SHOWN_SIMULATOR = 'notification_alert_shown_simulator';
-const ALERT_SHOWN_PERMISSION = 'notification_alert_shown_permission';
+// Clés de stockage AsyncStorage
+const PERMISSION_CHECKED_KEY = 'notification_permission_checked';
+const PERMISSION_ASKED_KEY = 'notification_permission_asked';
+const LAST_CHECK_TIMESTAMP_KEY = 'notification_last_check_timestamp';
+const TOKEN_KEY = 'device_push_token';
+const SIMULATOR_ALERT_SHOWN_KEY = 'notification_alert_shown_simulator';
 
 class NotificationService {
     constructor() {
         this.initialize();
+        this.permissionRequesting = false; // Variable pour éviter les demandes concurrentes
     }
 
     async initialize() {
@@ -25,9 +30,6 @@ class NotificationService {
             }),
         });
         
-        // Vérifier si le handler est défini (méthode correcte)
-        console.log("[NOTIF] Configuration terminée");
-        
         // Configuration du canal pour Android
         if (Platform.OS === 'android') {
             await Notifications.setNotificationChannelAsync('default', {
@@ -38,85 +40,108 @@ class NotificationService {
             });
         }
         
+        console.log("[NOTIF] Configuration terminée");
         return true;
     }
 
+    /**
+     * Vérifie les permissions de notification
+     * @param {boolean} forceAlert - Si true, force l'affichage de l'alerte de demande de permission
+     * @returns {Promise<boolean>} - true si les permissions sont accordées
+     */
     async checkPermissions(forceAlert = false) {
-        console.log("[NOTIF] Vérification des permissions sur:", Device.isDevice ? "appareil physique" : "simulateur");
-
-        if (!Device.isDevice) {
-            if (__DEV__) {
-                console.log(i18n.t('notifications.logs.devModePermission'));
-                return true;
-            }
-
-            // Vérifier si l'alerte a déjà été affichée pour simulateur
-            const alertShown = !forceAlert && await AsyncStorage.getItem(ALERT_SHOWN_SIMULATOR) === 'true';
-            if (!alertShown) {
-                console.log("[NOTIF] Affichage de l'alerte pour simulateur");
-
-                Alert.alert(i18n.t('notifications.alerts.simulatorWarning'), null, [
-                    {
-                        text: "OK",
-                        onPress: async () => {
-                            await AsyncStorage.setItem(ALERT_SHOWN_SIMULATOR, 'true');
-                        }
-                    }
-                ]);
-            }
+        // Ne pas exécuter plusieurs vérifications en même temps
+        if (this.permissionRequesting) {
+            console.log("[NOTIF] Une vérification des permissions est déjà en cours");
             return false;
         }
 
+        this.permissionRequesting = true;
+        console.log("[NOTIF] Vérification des permissions sur:", Device.isDevice ? "appareil physique" : "simulateur");
+
         try {
-            const { status: existingStatus } = await Notifications.getPermissionsAsync();
-            console.log("[NOTIF] Statut des permissions:", existingStatus);
-
-            console.log(i18n.t('notifications.logs.existingStatus'), existingStatus);
-
-            if (existingStatus === 'granted') {
-                return true;
-            }
-
-            console.log("[NOTIF] Demande de permissions...");
-
-            const { status } = await Notifications.requestPermissionsAsync();
-            console.log("[NOTIF] Nouveau statut des permissions:", status);
-
-            console.log(i18n.t('notifications.logs.newStatus'), status);
-
-            if (status !== 'granted') {
-                // Vérifier si l'alerte a déjà été affichée pour permissions
-                const alertShown = !forceAlert && await AsyncStorage.getItem(ALERT_SHOWN_PERMISSION) === 'true';
-                if (!alertShown) {
-                    Alert.alert(
-                        i18n.t('notifications.alerts.disabled.title'),
-                        i18n.t('notifications.alerts.disabled.message'),
-                        [
-                            {
-                                text: i18n.t('notifications.alerts.disabled.no'),
-                                style: "cancel",
-                                onPress: async () => {
-                                    await AsyncStorage.setItem(ALERT_SHOWN_PERMISSION, 'true');
-                                }
-                            },
-                            {
-                                text: i18n.t('notifications.alerts.disabled.openSettings'),
-                                onPress: async () => {
-                                    await AsyncStorage.setItem(ALERT_SHOWN_PERMISSION, 'true');
-                                    Linking.openSettings();
-                                }
-                            }
-                        ]
-                    );
+            // Cas du simulateur - retourner immédiatement
+            if (!Device.isDevice) {
+                if (__DEV__) {
+                    console.log(i18n.t('notifications.logs.devModePermission'));
+                    this.permissionRequesting = false;
+                    return true;
                 }
+
+                // Vérifier si l'alerte a déjà été affichée pour simulateur
+                const alertShown = !forceAlert && await AsyncStorage.getItem(SIMULATOR_ALERT_SHOWN_KEY) === 'true';
+                if (!alertShown) {
+                    console.log("[NOTIF] Affichage de l'alerte pour simulateur");
+                    Alert.alert(i18n.t('notifications.alerts.simulatorWarning'), null, [
+                        {
+                            text: "OK",
+                            onPress: async () => {
+                                await AsyncStorage.setItem(SIMULATOR_ALERT_SHOWN_KEY, 'true');
+                            }
+                        }
+                    ]);
+                }
+                this.permissionRequesting = false;
                 return false;
             }
 
-            return true;
+            // Vérifier si on a déjà demandé les permissions récemment
+            const lastCheckStr = await AsyncStorage.getItem(LAST_CHECK_TIMESTAMP_KEY);
+            const permissionAskedBefore = await AsyncStorage.getItem(PERMISSION_ASKED_KEY) === 'true';
+            const now = Date.now();
+            
+            if (lastCheckStr && !forceAlert) {
+                const lastCheck = parseInt(lastCheckStr);
+                const timeSinceLastCheck = now - lastCheck;
+                
+                // Ne pas redemander avant 24h sauf si forceAlert est true
+                if (timeSinceLastCheck < 24 * 60 * 60 * 1000 && permissionAskedBefore) {
+                    console.log("[NOTIF] Dernière vérification récente, utilisation du statut existant");
+                    const { status } = await Notifications.getPermissionsAsync();
+                    this.permissionRequesting = false;
+                    return status === 'granted';
+                }
+            }
+
+            // Vérifier le statut existant
+            const { status: existingStatus } = await Notifications.getPermissionsAsync();
+            console.log("[NOTIF] Statut des permissions:", existingStatus);
+
+            // Si déjà accordées, pas besoin de demander à nouveau
+            if (existingStatus === 'granted') {
+                await AsyncStorage.setItem(LAST_CHECK_TIMESTAMP_KEY, now.toString());
+                await AsyncStorage.setItem(PERMISSION_CHECKED_KEY, 'true');
+                this.permissionRequesting = false;
+                return true;
+            }
+
+            // Si permissions déjà vérifiées mais pas accordées, ne pas redemander sauf si forceAlert
+            if (permissionAskedBefore && !forceAlert) {
+                console.log("[NOTIF] Permissions précédemment refusées et forceAlert=false");
+                this.permissionRequesting = false;
+                return false;
+            }
+
+            // Demander les permissions uniquement si forceAlert ou première demande
+            if (forceAlert || !permissionAskedBefore) {
+                console.log("[NOTIF] Demande de permissions...");
+                const { status } = await Notifications.requestPermissionsAsync();
+                console.log("[NOTIF] Nouveau statut des permissions:", status);
+                
+                // Marquer que nous avons déjà demandé les permissions
+                await AsyncStorage.setItem(PERMISSION_ASKED_KEY, 'true');
+                await AsyncStorage.setItem(LAST_CHECK_TIMESTAMP_KEY, now.toString());
+                
+                this.permissionRequesting = false;
+                return status === 'granted';
+            }
+
+            this.permissionRequesting = false;
+            return existingStatus === 'granted';
         } catch (error) {
             console.error("[NOTIF] ERREUR lors de la vérification des permissions:", error);
-
             console.error(i18n.t('notifications.errors.permissionCheck'), error);
+            this.permissionRequesting = false;
             return false;
         }
     }
@@ -131,18 +156,18 @@ class NotificationService {
         }
         
         try {
-            // Utiliser uniquement getDevicePushTokenAsync pour obtenir un token APNs natif
+            // Essayer de récupérer un token APNs natif
             const tokenData = await Notifications.getDevicePushTokenAsync();
             console.log("[NOTIF] Token APNs natif récupéré:", tokenData.data);
             
             if (tokenData && tokenData.data) {
                 // Stocker le token pour référence future
-                await AsyncStorage.setItem('device_push_token', tokenData.data);
+                await AsyncStorage.setItem(TOKEN_KEY, tokenData.data);
                 return tokenData.data;
             }
             
-            // Si on arrive ici et qu'aucun token n'est obtenu, essayer de récupérer le dernier token connu
-            const lastToken = await AsyncStorage.getItem('device_push_token');
+            // Récupérer le dernier token connu si aucun nouveau n'est obtenu
+            const lastToken = await AsyncStorage.getItem(TOKEN_KEY);
             if (lastToken) {
                 console.log("[NOTIF] Utilisation du dernier token connu:", lastToken);
                 return lastToken;
@@ -155,7 +180,7 @@ class NotificationService {
             
             // En cas d'erreur, essayer de récupérer le dernier token connu
             try {
-                const lastToken = await AsyncStorage.getItem('device_push_token');
+                const lastToken = await AsyncStorage.getItem(TOKEN_KEY);
                 if (lastToken) {
                     console.log("[NOTIF] Utilisation du dernier token connu après erreur:", lastToken);
                     return lastToken;
@@ -169,27 +194,48 @@ class NotificationService {
     }
 
     async sendLocalNotification(title, body, data = {}) {
-        console.warn("[NOTIF] Tentative d'envoi de notification locale");
+        console.log("[NOTIF] Tentative d'envoi de notification locale");
+        
+        // Vérifier si le titre et le corps sont des notifications de "Notifications activées"
+        // Pour éviter d'envoyer des notifications test dupliquées
+        const isActivationNotification = 
+            (title.includes("Notifications activées") || title.includes("Notifications enabled")) &&
+            (body.includes("désormais") || body.includes("now receive"));
+        
+        // Si c'est une notification d'activation et qu'elle a déjà été envoyée récemment, ne pas l'envoyer
+        if (isActivationNotification) {
+            const lastActivationTime = await AsyncStorage.getItem('last_activation_notification_time');
+            const now = Date.now();
+            
+            if (lastActivationTime) {
+                const timeSinceLastActivation = now - parseInt(lastActivationTime);
+                
+                // Ne pas envoyer si moins de 1 heure s'est écoulée
+                if (timeSinceLastActivation < 60 * 60 * 1000) {
+                    console.log("[NOTIF] Notification d'activation déjà envoyée récemment, ignorée");
+                    return true;
+                }
+            }
+            
+            // Enregistrer le moment de l'envoi de cette notification d'activation
+            await AsyncStorage.setItem('last_activation_notification_time', now.toString());
+        }
+        
         try {
-            // Testez avec un autre type de trigger
             const identifier = await Notifications.scheduleNotificationAsync({
                 content: {
-                    title: `🔔 ${title}`, // Ajoutez une icône pour plus de visibilité
+                    title: `${title}`, // Plus de 🔔 pour éviter la confusion
                     body,
                     data,
                     sound: true,
                 },
                 trigger: { 
-                    seconds: 2, // Délai de 2 secondes au lieu de 1
+                    seconds: 2,
                     repeats: false 
                 }
             });
             
-            // Vérifiez les notifications programmées
-            const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-            console.warn("[NOTIF] Notifications programmées:", scheduled.length);
-            
-            console.warn("[NOTIF] Notification programmée avec succès, identifiant:", identifier);
+            console.log("[NOTIF] Notification programmée avec succès, identifiant:", identifier);
             return true;
         } catch (error) {
             console.error("[NOTIF] ERREUR lors de l'envoi:", error);
@@ -199,10 +245,30 @@ class NotificationService {
 
     async activateNotifications() {
         try {
-            const hasPermission = await this.checkPermissions();
+            // Vérifier si une activation a déjà été faite récemment
+            const lastActivationTime = await AsyncStorage.getItem('last_activation_attempt_time');
+            const now = Date.now();
+            
+            if (lastActivationTime) {
+                const timeSinceLastActivation = now - parseInt(lastActivationTime);
+                
+                // Ne pas redemander si moins de 30 minutes se sont écoulées
+                if (timeSinceLastActivation < 30 * 60 * 1000) {
+                    console.log("[NOTIF] Tentative d'activation récente, utilisation du statut existant");
+                    const { status } = await Notifications.getPermissionsAsync();
+                    return status === 'granted';
+                }
+            }
+            
+            // Enregistrer le moment de cette tentative d'activation
+            await AsyncStorage.setItem('last_activation_attempt_time', now.toString());
+            
+            const hasPermission = await this.checkPermissions(true); // Forcer l'affichage de l'alerte
+            
             if (hasPermission) {
-                const success = await this.sendTestNotification();
-                console.log(i18n.t('notifications.logs.testSent'), success);
+                // Ne pas envoyer de notification test ici pour éviter la duplication
+                // La notification système iOS s'affichera déjà
+                console.log(i18n.t('notifications.logs.testSent'), true);
                 return true;
             }
             return false;
@@ -212,16 +278,33 @@ class NotificationService {
         }
     }
 
-    // Dans NotificationService.js, modifiez la fonction sendTestNotification
     async sendTestNotification() {
-        console.warn("[NOTIF_SERVICE] Envoi d'une notification de test");
+        console.log("[NOTIF_SERVICE] Vérification avant envoi d'une notification de test");
+        
+        // Vérifier si une notification test a été envoyée récemment
+        const lastTestTime = await AsyncStorage.getItem('last_test_notification_time');
+        const now = Date.now();
+        
+        if (lastTestTime) {
+            const timeSinceLastTest = now - parseInt(lastTestTime);
+            
+            // Ne pas envoyer si moins de 10 secondes se sont écoulées
+            if (timeSinceLastTest < 10 * 1000) {
+                console.log("[NOTIF_SERVICE] Notification test envoyée trop récemment, ignorée");
+                return true; // Simuler un succès pour ne pas bloquer le flux
+            }
+        }
+        
+        // Enregistrer le moment de l'envoi de cette notification test
+        await AsyncStorage.setItem('last_test_notification_time', now.toString());
+        
         try {
             const result = await this.sendLocalNotification(
                 i18n.t('notifications.test.title'),
                 i18n.t('notifications.test.body'),
                 { type: 'test' }
             );
-            console.warn("[NOTIF_SERVICE] Notification de test envoyée:", result);
+            console.log("[NOTIF_SERVICE] Notification de test envoyée:", result);
             return result;
         } catch (error) {
             console.warn("[NOTIF_SERVICE] Erreur lors de l'envoi de la notification de test:", error);
@@ -229,7 +312,6 @@ class NotificationService {
         }
     }
 
-    // Pour arrêter toutes les notifications programmées
     async cancelAllNotifications() {
         await Notifications.cancelAllScheduledNotificationsAsync();
     }
