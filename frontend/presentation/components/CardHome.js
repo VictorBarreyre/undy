@@ -37,22 +37,22 @@ export default function CardHome({ cardData }) {
     expiresAt: cardData.expiresAt,
     location: cardData.location || null  // Ajoutez cette ligne
   };
-  
 
-  
+
+
   useEffect(() => {
     const fetchLocationName = async () => {
       if (cardData.location?.coordinates) {
         try {
           const [longitude, latitude] = cardData.location.coordinates;
-          const reverseGeocode = await Location.reverseGeocodeAsync({ 
-            latitude, 
-            longitude 
+          const reverseGeocode = await Location.reverseGeocodeAsync({
+            latitude,
+            longitude
           });
 
           if (reverseGeocode && reverseGeocode.length > 0) {
             const { city, region, country } = reverseGeocode[0];
-            
+
             // Construire le nom de localisation
             const locationParts = [
               city || region || t('cardHome.unknownLocation'),
@@ -195,7 +195,7 @@ export default function CardHome({ cardData }) {
                 {t('cardHome.postedFrom')} {locationName}
               </Text>
             )}
-            
+
             <Text color='#FF78B2' left={2} mt={1} style={styles.littleCaption}>
               {t('cardHome.expiresIn')} {timeLeft}
             </Text>
@@ -213,22 +213,32 @@ export default function CardHome({ cardData }) {
           />
         </HStack>
 
-        {/* Wrapper for the text with blur effect */}
+
         <Box
-          marginLeft={4}
           flex={1}
-          height="auto"
+          width="100%"
           position="relative"
           overflow="hidden"
-          justifyContent="center"
-          alignItems="center"
+          mt={5}
+          mb={2}
+          marginLeft={4}
         >
           <BlurredTextComponent
-            content={cardData.content || t('cardHome.noDescriptionAvailable')}
-            style={{ width: '90%', paddingBottom: 5, marginTop: 5, marginLeft: 4 }}
-            textStyle={styles.h3}
-            breakAtLine={8}
-            visibleWords={3}
+            content={safeCardData.content || t('cardHome.noDescriptionAvailable')}
+            style={{
+              width: '90%',
+              minHeight: 100,
+              maxHeight: 220,
+            }}
+            textStyle={{
+              fontSize: 24,
+              lineHeight: 30,
+              fontFamily: 'SF-Pro-Display-Bold',
+              fontWeight: '400',
+              color: '#333',
+            }}
+            maxWords={30}
+            gradientHeight={0.75} // 25% de la hauteur totale
           />
         </Box>
 

@@ -22,6 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STRIPE_PUBLISHABLE_KEY } from '@env';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
+import * as Notifications from 'expo-notifications';
 
 
 export default function Profile({ navigation }) {
