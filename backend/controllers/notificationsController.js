@@ -563,7 +563,7 @@ const sendPurchaseNotification = async (req, res) => {
     }
     
     // Récupérer les informations du secret
-    const secret = await Secret.findById(secretId).populate('seller', '_id name');
+    const secret = await Secret.findById(secretId).populate('user', '_id name');
     
     if (!secret) {
       return res.status(404).json({
@@ -573,7 +573,7 @@ const sendPurchaseNotification = async (req, res) => {
     }
     
     // Ne pas notifier si l'acheteur est aussi le vendeur
-    if (buyerId === secret.seller._id.toString()) {
+    if (buyerId === secret.user._id.toString()) {
       return res.status(200).json({
         success: true,
         message: 'Pas de notification, acheteur = vendeur'
@@ -585,7 +585,7 @@ const sendPurchaseNotification = async (req, res) => {
     
     // Envoyer la notification au vendeur seulement
     const notificationResult = await sendPushNotifications(
-      [secret.seller._id.toString()],
+      [secret.user._id.toString()],
       'Secret vendu!',
       `${buyerName} a acheté votre secret pour ${formattedPrice}`,
       {
