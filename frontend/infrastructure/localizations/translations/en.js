@@ -290,7 +290,7 @@ export default {
     "locationSharing": {
       "title": "Share location"
     },
-    
+
     "audio": {
       "permissionRequired": "Permission Required",
       "microphoneAccess": "The app needs access to your microphone to record voice messages.",
@@ -870,16 +870,22 @@ export default {
     "openSettings": "Open Settings",
     "allow": "Allow",
     "ok": "OK",
-    "errorTitle": "Permission Error"
+    "errorTitle": "Permission Error",
+    "notificationsAccessTitle": "Notifications Access Required",
+    "notificationsAccessMessage": "This app needs to send you notifications. Please enable them in your device settings.",
+    "contactsAccessTitle": "Contacts Access Required",
+    "contactsAccessMessage": "This app needs to access your contacts to display content related to them.",
+    "locationAccessTitle": "Location Access Required",
+    "locationAccessMessage": "This app needs to access your location to display content near you."
   },
-"stripe": {
-  "errorTitle": "Banking Error",
-  "unexpectedResponse": "Unexpected server response",
-  "redirectError": "Error redirecting to the banking form",
-  "bankUpdateSuccess": {
-    "title": "Bank Account Updated",
-    "message": "Your bank account has been successfully updated!"
+  "stripe": {
+    "errorTitle": "Banking Error",
+    "unexpectedResponse": "Unexpected server response",
+    "redirectError": "Error redirecting to the banking form",
+    "bankUpdateSuccess": {
+      "title": "Bank Account Updated",
+      "message": "Your bank account has been successfully updated!"
+    }
   }
-}
 
 }

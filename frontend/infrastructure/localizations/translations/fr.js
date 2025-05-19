@@ -881,7 +881,13 @@ export default {
     "ok": "OK",
     "errorTitle": "Erreur de permission",
     "contactsLoadError": "Erreur lors du chargement des contacts.",
-    "locationError": "Erreur de localisation."
+    "locationError": "Erreur de localisation.",
+    "notificationsAccessTitle": "Accès aux notifications requis",
+    "notificationsAccessMessage": "Cette application a besoin d'envoyer des notifications. Veuillez les activer dans les paramètres de votre appareil.",
+    "contactsAccessTitle": "Accès aux contacts requis",
+    "contactsAccessMessage": "Cette application a besoin d'accéder à vos contacts pour afficher du contenu les concernant.",
+    "locationAccessTitle": "Accès à la position requis",
+    "locationAccessMessage": "Cette application a besoin d'accéder à votre position pour afficher du contenu près de vous."
   },
 
   "stripe": {
@@ -893,6 +899,6 @@ export default {
       "message": "Votre compte bancaire a été mis à jour avec succès!"
     }
   }
-  
+
 
 }
