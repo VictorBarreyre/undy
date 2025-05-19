@@ -59,7 +59,7 @@ if (apnsKeyId && apnsTeamId && apnsKey) {
           keyId: apnsKeyId,
           teamId: apnsTeamId
         },
-        production: true
+        production: false
       });
       
       console.log("Provider APNs configuré avec succès (JWT, méthode 2)");
