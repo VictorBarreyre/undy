@@ -1008,58 +1008,176 @@ export const CardDataProvider = ({ children }) => {
     if (!instance) {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
-
+  
+    // Log des données d'entrée
+    console.log("handleAddMessage - DONNÉES D'ENTRÉE:", {
+      conversationId,
+      contentType: typeof content,
+      contentPreview: typeof content === 'string' 
+        ? content.substring(0, 30) 
+        : JSON.stringify(content).substring(0, 30)
+    });
+  
     // Gérer les différents types de contenu
     const messageData = typeof content === 'string'
       ? { content, messageType: 'text' }
       : content;
-
+  
     // Si c'est un message audio, assurez-vous que les données nécessaires sont incluses
     if (messageData.messageType === 'audio' && !messageData.audio) {
       throw new Error(i18n.t('cardData.errors.missingAudioData'));
     }
-
+  
     // MODÉRATION: Vérifier le contenu textuel des messages
     if ((messageData.messageType === 'text' || messageData.messageType === 'mixed') && messageData.content) {
       const moderationResult = await moderateMessageBeforeSend(messageData.content);
-
+  
       if (moderationResult.isFlagged) {
         throw new Error(i18n.t('cardData.errors.contentFlagged', {
           reason: moderationResult.reason
         }));
       }
     }
-
+  
     try {
+      console.log("Envoi du message à l'API:", {
+        url: `/api/secrets/conversations/${conversationId}/messages`,
+        messageType: messageData.messageType,
+        hasContent: !!messageData.content,
+        hasImage: !!messageData.image,
+        hasAudio: !!messageData.audio
+      });
+  
       const response = await instance.post(
         `/api/secrets/conversations/${conversationId}/messages`,
         messageData
       );
-
-      if (response.data && response.data.message) {
+  
+      console.log("Réponse complète de l'API:", JSON.stringify(response.data));
+  
+      // La réponse contient soit directement le message, soit un objet contenant une propriété message
+      // Adaptons notre code pour gérer les deux cas
+      const messageObject = response.data.message || response.data;
+      const messageId = messageObject._id;
+  
+      console.log("Message ID extrait:", messageId);
+      console.log("Contenu du message extrait:", messageObject.content);
+      console.log("Type de message extrait:", messageObject.messageType);
+  
+      if (messageId) {
         // Envoyer la notification aux autres participants
         try {
-          console.log("NOTIFICATION: Envoi de notification de nouveau message");
-          await instance.post('/api/notifications/message', {
+          console.log("NOTIFICATION: Préparation de la notification");
+          
+          // Déterminer l'aperçu du message selon le type
+          let messagePreview = "";
+          if (typeof content === 'string') {
+            messagePreview = content.substring(0, 100) + (content.length > 100 ? '...' : '');
+          } else if (content.content) {
+            messagePreview = content.content.substring(0, 100) + (content.content.length > 100 ? '...' : '');
+          } else {
+            // Aperçu selon le type
+            switch (messageData.messageType) {
+              case 'audio':
+                messagePreview = "🎵 Message audio";
+                break;
+              case 'image':
+                messagePreview = "📷 Image";
+                break;
+              case 'mixed':
+                messagePreview = content.content 
+                  ? content.content.substring(0, 100) 
+                  : "🖼️ Image avec message";
+                break;
+              default:
+                messagePreview = "Nouveau message";
+            }
+          }
+          
+          const notificationData = {
             conversationId,
-            messageId: response.data.message._id,
+            messageId,
             senderId: userData?._id,
             senderName: userData?.name || 'Utilisateur',
-            messagePreview: typeof content === 'string'
-              ? content.substring(0, 100) + (content.length > 100 ? '...' : '')
-              : content.content?.substring(0, 100) + (content.content?.length > 100 ? '...' : '') || 'Nouveau message'
-          });
-          console.log("NOTIFICATION: Notification de message envoyée");
+            messagePreview
+          };
+          
+          console.log("NOTIFICATION DATA:", JSON.stringify(notificationData));
+          
+          console.log("NOTIFICATION: Envoi de la notification");
+          
+          try {
+            const notifResponse = await instance.post('/api/notifications/message', notificationData);
+            console.log("NOTIFICATION: Réponse reçue", {
+              status: notifResponse.status,
+              success: notifResponse.data?.success,
+              message: notifResponse.data?.message
+            });
+          } catch (apiError) {
+            console.error("NOTIFICATION API ERROR:", apiError.message);
+            console.error("STATUS:", apiError.response?.status);
+            console.error("RESPONSE DATA:", apiError.response?.data);
+            
+            // Si l'API renvoie une erreur 404, la route n'est peut-être pas correcte
+            if (apiError.response?.status === 404) {
+              console.error("ROUTE NOT FOUND: Vérifiez que la route '/api/notifications/message' existe sur votre API");
+            }
+            
+            // Si l'API renvoie une erreur 401, il y a peut-être un problème d'authentification
+            if (apiError.response?.status === 401) {
+              console.error("AUTHENTICATION ERROR: Le token d'authentification est peut-être invalide ou expiré");
+            }
+          }
         } catch (notifError) {
-          console.error("NOTIFICATION ERREUR (non bloquante):", notifError);
+          console.error("NOTIFICATION ERREUR GÉNÉRALE:", notifError.message);
+          console.error("STACK:", notifError.stack);
         }
-
-        return response.data;
+      } else {
+        console.warn("Aucun ID de message trouvé dans la réponse:", response.data);
       }
-
+  
+      // Envoyer la notification aux autres participants (alternative)
+      // Cette partie est un doublon mais pourrait être utile si le code ci-dessus ne fonctionne pas
+      console.log("NOTIFICATION ALTERNATIVE: Tentative d'envoi");
+      try {
+        // Même si nous n'avons pas d'ID de message, tentons d'envoyer une notification
+        const messagePreview = typeof content === 'string'
+          ? content.substring(0, 100) + (content.length > 100 ? '...' : '')
+          : (content.content 
+              ? content.content.substring(0, 100) + (content.content.length > 100 ? '...' : '')
+              : "Nouveau message");
+              
+        const fallbackNotifData = {
+          conversationId,
+          messageId: messageId || 'temp-' + Date.now(),  // Utiliser un ID temporaire si nécessaire
+          senderId: userData?._id,
+          senderName: userData?.name || 'Utilisateur',
+          messagePreview
+        };
+        
+        console.log("NOTIFICATION ALTERNATIVE DATA:", JSON.stringify(fallbackNotifData));
+        
+        const fallbackNotifResponse = await instance.post('/api/notifications/message', fallbackNotifData);
+        console.log("NOTIFICATION ALTERNATIVE: Réponse reçue", {
+          status: fallbackNotifResponse.status,
+          success: fallbackNotifResponse.data?.success,
+          message: fallbackNotifResponse.data?.message
+        });
+      } catch (fallbackError) {
+        console.error("NOTIFICATION ALTERNATIVE ERREUR:", fallbackError.message);
+        if (fallbackError.response) {
+          console.error("ALTERNATIVE STATUS:", fallbackError.response.status);
+          console.error("ALTERNATIVE DATA:", fallbackError.response.data);
+        }
+      }
+  
       return response.data;
     } catch (error) {
       console.error(i18n.t('cardData.errors.sendingMessage'), error.response?.data || error.message);
+      if (error.response) {
+        console.error("ERREUR API CODE:", error.response.status);
+        console.error("ERREUR API DATA:", error.response.data);
+      }
       throw error;
     }
   };
