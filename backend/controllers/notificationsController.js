@@ -4,124 +4,59 @@ const Conversation = require('../models/Conversation');
 const apn = require('node-apn');
 const fs = require('fs');
 
-// Variables d'environnement pour les clés JWT
 const apnsKeyId = process.env.APNS_KEY_ID;
 const apnsTeamId = process.env.APPLE_TEAM_ID;
 const apnsKey = process.env.APNS_KEY;
-
-// Variables existantes pour le certificat (pour retrocompatibilité)
-const certBase64 = process.env.PUSH_CERTIFICATE;
-const certPassword = process.env.PUSH_CERTIFICATE_PASS;
+// Détection de l'environnement via variable d'environnement (par défaut: sandbox/développement)
+const apnsProduction = process.env.APNS_PRODUCTION === 'true';
+// Bundle ID de l'application
+const bundleId = process.env.APP_BUNDLE_ID || 'com.hushy.app';
 
 // Logs de débogage pour les variables d'environnement
 console.log("======== INFORMATIONS DE CONFIGURATION APNS ========");
-console.log("APNS_KEY_ID existe:", !!apnsKeyId);
-console.log("APPLE_TEAM_ID existe:", !!apnsTeamId);
-console.log("APNS_KEY existe:", !!apnsKey);
-console.log("PUSH_CERTIFICATE existe:", !!certBase64);
-console.log("PUSH_CERTIFICATE_PASS existe:", !!certPassword);
+console.log("APNS_KEY_ID:", apnsKeyId ? "✅ Présent" : "❌ Manquant");
+console.log("APPLE_TEAM_ID:", apnsTeamId ? "✅ Présent" : "❌ Manquant");
+console.log("APNS_KEY:", apnsKey ? "✅ Présent" : "❌ Manquant");
+console.log("Environnement:", apnsProduction ? "🚀 PRODUCTION" : "🧪 SANDBOX (développement)");
+console.log("Bundle ID:", bundleId);
 
 // Configuration du provider APNs
 let apnProvider = null;
-let providerMethod = null;
 
-// Tentative d'initialisation avec JWT (prioritaire)
+// Initialisation avec JWT uniquement
 if (apnsKeyId && apnsTeamId && apnsKey) {
-  console.log("Tentative de configuration avec méthode JWT...");
-  providerMethod = "jwt";
+  console.log("Configuration JWT avec clé encodée en Base64...");
   
   try {
-    // Essayons d'abord avec la clé brute
-    console.log("Méthode 1: Utilisation de la clé brute");
+    // Décoder la clé Base64
+    const keyBuffer = Buffer.from(apnsKey, 'base64').toString('utf8');
     
+    // Configuration du provider avec l'environnement approprié
     apnProvider = new apn.Provider({
       token: {
-        key: apnsKey,
+        key: keyBuffer,
         keyId: apnsKeyId,
         teamId: apnsTeamId
       },
-      production: true
+      production: apnsProduction,
+      // Gateway explicite pour plus de clarté
+      gateway: apnsProduction ? 'api.push.apple.com' : 'api.sandbox.push.apple.com'
     });
     
-    console.log("Provider APNs configuré avec succès (JWT, méthode 1)");
-  } catch (error) {
-    console.error("Erreur lors de la configuration JWT (méthode 1):", error.message);
+    console.log(`Provider APNs configuré avec succès (JWT) pour l'environnement ${apnsProduction ? 'PRODUCTION' : 'SANDBOX'}`);
     
-    try {
-      // Si ça ne fonctionne pas, essayons de décoder la clé
-      console.log("Méthode 2: Décodage de la clé Base64");
-      
-      const keyBuffer = Buffer.from(apnsKey, 'base64').toString('utf8');
-      
-      apnProvider = new apn.Provider({
-        token: {
-          key: keyBuffer,
-          keyId: apnsKeyId,
-          teamId: apnsTeamId
-        },
-        production: false
-      });
-      
-      console.log("Provider APNs configuré avec succès (JWT, méthode 2)");
-    } catch (error2) {
-      console.error("Erreur lors de la configuration JWT (méthode 2):", error2.message);
-      
-      try {
-        // Dernière tentative avec des options supplémentaires
-        console.log("Méthode 3: Options avancées");
-        
-        apnProvider = new apn.Provider({
-          token: {
-            key: apnsKey,
-            keyId: apnsKeyId,
-            teamId: apnsTeamId
-          },
-          production: true,
-          gateway: 'api.push.apple.com',
-          port: 443,
-          rejectUnauthorized: true,
-          connectionRetryLimit: 5
-        });
-        
-        console.log("Provider APNs configuré avec succès (JWT, méthode 3)");
-      } catch (error3) {
-        console.error("Toutes les tentatives de configuration JWT ont échoué:", error3.message);
-        apnProvider = null;
-      }
-    }
-  }
-}
-
-// Si JWT a échoué et qu'un certificat est disponible, essayer avec le certificat
-if (!apnProvider && certBase64 && certPassword) {
-  console.log("Configuration avec certificat...");
-  providerMethod = "certificate";
-  
-  try {
-    const certBuffer = Buffer.from(certBase64, 'base64');
-    
-    apnProvider = new apn.Provider({
-      pfx: certBuffer,
-      passphrase: certPassword,
-      production: true
+    // Ajouter un écouteur d'erreurs globales
+    apnProvider.on('error', (err) => {
+      console.error("Erreur APNs globale:", err);
     });
-    
-    console.log("Provider APNs configuré avec succès (méthode certificat)");
   } catch (error) {
-    console.error("Erreur lors de la configuration avec certificat:", error.message);
+    console.error("Erreur lors de la configuration JWT:", error.message);
     apnProvider = null;
   }
-}
-
-if (apnProvider) {
-  console.log("Provider APNs initialisé avec succès (méthode:", providerMethod, ")");
-  
-  // Ajouter un écouteur d'erreurs globales
-  apnProvider.on('error', (err) => {
-    console.error("Erreur APNs globale:", err);
-  });
 } else {
-  console.error("ÉCHEC DE L'INITIALISATION DU PROVIDER APNS. Les notifications push ne fonctionneront pas.");
+  console.error("ÉCHEC DE L'INITIALISATION DU PROVIDER APNS: Variables JWT manquantes");
+  console.error("Les notifications push ne fonctionneront pas.");
+  console.error("Veuillez configurer APNS_KEY_ID, APPLE_TEAM_ID et APNS_KEY");
 }
 
 console.log("======== FIN INFORMATIONS DE CONFIGURATION APNS ========");
