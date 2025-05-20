@@ -466,71 +466,68 @@ const sendMessageNotification = async (req, res) => {
   try {
     const { conversationId, senderId, senderName, messagePreview, messageType = 'text' } = req.body;
     
-    console.log(`[NOTIFICATION DEBUG] Détails de la requête:`, {
-      conversationId,
-      senderId,
-      senderName,
-      messagePreview,
-      messageType
-    });
-
-    // Récupérer la conversation avec tous les participants
+    // Vérifier les paramètres requis
+    if (!conversationId || !senderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Paramètres manquants'
+      });
+    }
+    
+    // Récupérer la conversation avec TOUS les participants et leurs tokens
     const conversation = await Conversation.findById(conversationId)
       .populate({
         path: 'participants',
-        select: '_id name language expoPushToken', // Sélectionner les champs nécessaires
-        match: { _id: { $ne: senderId } } // Exclure l'expéditeur directement dans la requête
+        select: '_id name language expoPushToken'
       });
-
+    
     if (!conversation) {
-      console.error(`[NOTIFICATION ERROR] Conversation non trouvée: ${conversationId}`);
       return res.status(404).json({
         success: false,
         message: 'Conversation non trouvée'
       });
     }
 
-    console.log(`[NOTIFICATION DEBUG] Participants récupérés:`, 
+    // Log détaillé des participants
+    console.log('[NOTIFICATION] Tous les participants de la conversation:', 
       conversation.participants.map(p => ({
         id: p._id.toString(),
         name: p.name,
-        language: p.language,
-        hasPushToken: !!p.expoPushToken
+        hasToken: !!p.expoPushToken
       }))
     );
-
-    // Filtrer les participants avec un token de notification
-    const recipients = conversation.participants
-      .filter(p => p.expoPushToken);
-
-    console.log(`[NOTIFICATION DEBUG] Destinataires avec token:`, 
-      recipients.map(r => ({
-        id: r._id.toString(),
-        name: r.name,
-        token: r.expoPushToken
-      }))
-    );
-
-    // Récupérer les IDs des destinataires
-    const recipientIds = recipients.map(p => p._id.toString());
-
-    // Si aucun destinataire, retourner une réponse appropriée
+    
+    // Filtrer les participants pour exclure l'expéditeur et ne garder que ceux avec un token
+    const recipientIds = conversation.participants
+      .filter(p => 
+        p._id.toString() !== senderId && // Exclure l'expéditeur
+        p.expoPushToken // Garder uniquement les participants avec un token
+      )
+      .map(p => p._id.toString());
+    
+    console.log('[NOTIFICATION] IDs des destinataires:', recipientIds);
+    
     if (recipientIds.length === 0) {
-      console.log('[NOTIFICATION DEBUG] Aucun destinataire trouvé');
+      console.log('[NOTIFICATION] Aucun destinataire valide trouvé');
       return res.status(200).json({
         success: true,
         message: 'Aucun destinataire à notifier'
       });
     }
-
-    // Envoyer la notification
+    
+    // Tronquer le message s'il est trop long
+    const truncatedMessage = messagePreview.length > 100 
+      ? messagePreview.substring(0, 97) + '...' 
+      : messagePreview;
+    
+    // Envoyer la notification aux autres participants
     const notificationResult = await sendPushNotifications(
       recipientIds,
       'messageFrom',         // Clé pour le titre
       { senderName },        // Données pour le titre
-      messagePreview,        // Clé ou texte pour le corps
-      {},                    // Données pour le corps
-      {                      // Données supplémentaires
+      truncatedMessage,      // Message
+      {},                    // Données supplémentaires pour le corps
+      {
         type: 'new_message',
         conversationId,
         senderId,
@@ -538,6 +535,8 @@ const sendMessageNotification = async (req, res) => {
         timestamp: new Date().toISOString()
       }
     );
+    
+    console.log('[NOTIFICATION] Résultat de l\'envoi:', notificationResult);
     
     res.status(200).json({
       success: true,
