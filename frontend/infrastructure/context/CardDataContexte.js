@@ -1064,7 +1064,10 @@ export const CardDataProvider = ({ children }) => {
       console.log("Contenu du message extrait:", messageObject.content);
       console.log("Type de message extrait:", messageObject.messageType);
   
-      if (messageId) {
+      if (messageId && userData && userData._id) {
+        // S'assurer que l'ID utilisateur est une chaîne
+        const userIdStr = typeof userData._id === 'string' ? userData._id : userData._id.toString();
+        
         // Envoyer la notification aux autres participants
         try {
           console.log("NOTIFICATION: Préparation de la notification");
@@ -1097,7 +1100,7 @@ export const CardDataProvider = ({ children }) => {
           const notificationData = {
             conversationId,
             messageId,
-            senderId: userData?._id,
+            senderId: userIdStr, // Utiliser la chaîne de caractères
             senderName: userData?.name || 'Utilisateur',
             messagePreview
           };
@@ -1133,42 +1136,10 @@ export const CardDataProvider = ({ children }) => {
           console.error("STACK:", notifError.stack);
         }
       } else {
-        console.warn("Aucun ID de message trouvé dans la réponse:", response.data);
-      }
-  
-      // Envoyer la notification aux autres participants (alternative)
-      // Cette partie est un doublon mais pourrait être utile si le code ci-dessus ne fonctionne pas
-      console.log("NOTIFICATION ALTERNATIVE: Tentative d'envoi");
-      try {
-        // Même si nous n'avons pas d'ID de message, tentons d'envoyer une notification
-        const messagePreview = typeof content === 'string'
-          ? content.substring(0, 100) + (content.length > 100 ? '...' : '')
-          : (content.content 
-              ? content.content.substring(0, 100) + (content.content.length > 100 ? '...' : '')
-              : "Nouveau message");
-              
-        const fallbackNotifData = {
-          conversationId,
-          messageId: messageId || 'temp-' + Date.now(),  // Utiliser un ID temporaire si nécessaire
-          senderId: userData?._id,
-          senderName: userData?.name || 'Utilisateur',
-          messagePreview
-        };
-        
-        console.log("NOTIFICATION ALTERNATIVE DATA:", JSON.stringify(fallbackNotifData));
-        
-        const fallbackNotifResponse = await instance.post('/api/notifications/message', fallbackNotifData);
-        console.log("NOTIFICATION ALTERNATIVE: Réponse reçue", {
-          status: fallbackNotifResponse.status,
-          success: fallbackNotifResponse.data?.success,
-          message: fallbackNotifResponse.data?.message
+        console.warn("Aucun ID de message trouvé dans la réponse ou ID utilisateur manquant:", {
+          messageId,
+          userId: userData?._id
         });
-      } catch (fallbackError) {
-        console.error("NOTIFICATION ALTERNATIVE ERREUR:", fallbackError.message);
-        if (fallbackError.response) {
-          console.error("ALTERNATIVE STATUS:", fallbackError.response.status);
-          console.error("ALTERNATIVE DATA:", fallbackError.response.data);
-        }
       }
   
       return response.data;

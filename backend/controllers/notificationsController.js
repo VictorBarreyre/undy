@@ -466,13 +466,27 @@ const sendMessageNotification = async (req, res) => {
   try {
     const { conversationId, senderId, senderName, messagePreview, messageType = 'text' } = req.body;
     
+    // Log amélioré pour débogage
+    console.log('[NOTIFICATION] Données reçues:', { 
+      conversationId, 
+      senderId, 
+      senderName, 
+      messagePreview: messagePreview?.substring(0, 50),
+      messageType
+    });
+    
     // Vérifier les paramètres requis
     if (!conversationId || !senderId) {
+      console.log('[NOTIFICATION] Paramètres manquants:', { conversationId, senderId });
       return res.status(400).json({
         success: false,
         message: 'Paramètres manquants'
       });
     }
+    
+    // Assurer que senderId est bien une chaîne
+    const senderIdStr = typeof senderId === 'string' ? senderId : senderId.toString();
+    console.log('[NOTIFICATION] ID de l\'expéditeur (chaîne):', senderIdStr);
     
     // Récupérer la conversation avec TOUS les participants et leurs tokens
     const conversation = await Conversation.findById(conversationId)
@@ -482,6 +496,7 @@ const sendMessageNotification = async (req, res) => {
       });
     
     if (!conversation) {
+      console.log('[NOTIFICATION] Conversation non trouvée:', conversationId);
       return res.status(404).json({
         success: false,
         message: 'Conversation non trouvée'
@@ -491,21 +506,30 @@ const sendMessageNotification = async (req, res) => {
     // Log détaillé des participants avec leurs IDs
     console.log('[NOTIFICATION] Participants de la conversation:', 
       conversation.participants.map(p => ({
-        id: p._id.toString(),
+        id: typeof p._id === 'string' ? p._id : p._id.toString(),
         name: p.name,
         hasToken: !!p.expoPushToken
       }))
     );
     
-    // Filtrer les participants UNIQUEMENT par ID
+    // Filtrer les participants UNIQUEMENT par ID (en s'assurant que la comparaison est faite avec des chaînes)
     const recipientIds = conversation.participants
-      .filter(p => 
-        p._id.toString() !== senderId && // Exclure l'expéditeur par son ID strict
-        p.expoPushToken // Garder uniquement les participants avec un token
-      )
-      .map(p => p._id.toString());
+      .filter(p => {
+        const participantIdStr = typeof p._id === 'string' ? p._id : p._id.toString();
+        const isExpéditeur = participantIdStr === senderIdStr;
+        const hasToken = !!p.expoPushToken;
+        
+        console.log(`[NOTIFICATION] Évaluation du participant ${participantIdStr}:`, {
+          isExpéditeur,
+          hasToken,
+          include: !isExpéditeur && hasToken
+        });
+        
+        return !isExpéditeur && hasToken; // Exclure l'expéditeur et garder que ceux avec token
+      })
+      .map(p => typeof p._id === 'string' ? p._id : p._id.toString());
     
-    console.log('[NOTIFICATION] IDs des destinataires:', recipientIds);
+    console.log('[NOTIFICATION] IDs des destinataires après filtrage:', recipientIds);
     
     if (recipientIds.length === 0) {
       console.log('[NOTIFICATION] Aucun destinataire valide trouvé');
@@ -516,9 +540,9 @@ const sendMessageNotification = async (req, res) => {
     }
     
     // Tronquer le message s'il est trop long
-    const truncatedMessage = messagePreview.length > 100 
+    const truncatedMessage = messagePreview?.length > 100 
       ? messagePreview.substring(0, 97) + '...' 
-      : messagePreview;
+      : messagePreview || '';
     
     // Envoyer la notification aux autres participants
     const notificationResult = await sendPushNotifications(
@@ -530,7 +554,7 @@ const sendMessageNotification = async (req, res) => {
       {
         type: 'new_message',
         conversationId,
-        senderId,
+        senderId: senderIdStr,
         messageType,
         timestamp: new Date().toISOString()
       }
