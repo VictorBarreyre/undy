@@ -466,70 +466,70 @@ const sendMessageNotification = async (req, res) => {
   try {
     const { conversationId, senderId, senderName, messagePreview, messageType = 'text' } = req.body;
     
-    // Vérifier les paramètres requis
-    if (!conversationId || !senderId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Paramètres manquants'
-      });
-    }
-    
-    // Récupérer les participants de la conversation avec leur langue
+    console.log(`[NOTIFICATION DEBUG] Détails de la requête:`, {
+      conversationId,
+      senderId,
+      senderName,
+      messagePreview,
+      messageType
+    });
+
+    // Récupérer la conversation avec tous les participants
     const conversation = await Conversation.findById(conversationId)
-      .populate('participants', '_id name language');
-    
+      .populate({
+        path: 'participants',
+        select: '_id name language expoPushToken', // Sélectionner les champs nécessaires
+        match: { _id: { $ne: senderId } } // Exclure l'expéditeur directement dans la requête
+      });
+
     if (!conversation) {
+      console.error(`[NOTIFICATION ERROR] Conversation non trouvée: ${conversationId}`);
       return res.status(404).json({
         success: false,
         message: 'Conversation non trouvée'
       });
     }
-    
-    // Filtrer les participants pour exclure l'expéditeur
+
+    console.log(`[NOTIFICATION DEBUG] Participants récupérés:`, 
+      conversation.participants.map(p => ({
+        id: p._id.toString(),
+        name: p.name,
+        language: p.language,
+        hasPushToken: !!p.expoPushToken
+      }))
+    );
+
+    // Filtrer les participants avec un token de notification
     const recipients = conversation.participants
-      .filter(p => p._id.toString() !== senderId);
-    
-    if (recipients.length === 0) {
+      .filter(p => p.expoPushToken);
+
+    console.log(`[NOTIFICATION DEBUG] Destinataires avec token:`, 
+      recipients.map(r => ({
+        id: r._id.toString(),
+        name: r.name,
+        token: r.expoPushToken
+      }))
+    );
+
+    // Récupérer les IDs des destinataires
+    const recipientIds = recipients.map(p => p._id.toString());
+
+    // Si aucun destinataire, retourner une réponse appropriée
+    if (recipientIds.length === 0) {
+      console.log('[NOTIFICATION DEBUG] Aucun destinataire trouvé');
       return res.status(200).json({
         success: true,
         message: 'Aucun destinataire à notifier'
       });
     }
-    
-    // Tronquer le message s'il est trop long
-    const truncatedMessage = messagePreview && messagePreview.length > 100 
-      ? messagePreview.substring(0, 97) + '...' 
-      : messagePreview || '';
-    
-    // Déterminer le corps du message selon le type
-    let bodyKey;
-    let bodyData = {};
-    
-    switch (messageType) {
-      case 'audio':
-        bodyKey = 'KEY_audioMessage';
-        break;
-      case 'image':
-        bodyKey = 'KEY_imageMessage';
-        break;
-      case 'mixed':
-        bodyKey = 'KEY_mixedMessage';
-        break;
-      default:
-        // Pour les messages texte, on utilise directement le contenu
-        bodyKey = truncatedMessage;
-    }
-    
-    // Récupérer les IDs des destinataires
-    const recipientIds = recipients.map(p => p._id.toString());
-    
-    // Envoyer la notification aux autres participants
+
+    // Envoyer la notification
     const notificationResult = await sendPushNotifications(
       recipientIds,
       'messageFrom',         // Clé pour le titre
       { senderName },        // Données pour le titre
-      bodyKey,               // Clé ou texte pour le corps
-      bodyData,              // Données pour le corps
+      messagePreview,        // Clé ou texte pour le corps
+      {},                    // Données pour le corps
       {                      // Données supplémentaires
         type: 'new_message',
         conversationId,

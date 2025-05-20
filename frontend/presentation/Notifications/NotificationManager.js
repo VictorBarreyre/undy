@@ -240,7 +240,7 @@ class NotificationManager {
   }
   
   
-  async scheduleMessageNotification(messageSender, conversationId, messagePreview) {
+  async scheduleMessageNotification(messageSender, conversationId, messagePreview, messageType = 'text') {
     console.log("[NOTIF_MANAGER] Préparation d'une notification de message:", { 
         sender: messageSender, 
         conversationId,
@@ -248,7 +248,25 @@ class NotificationManager {
     });
     
     try {
-        const result = await this.notificationService.sendLocalNotification(
+        const instance = getAxiosInstance();
+        if (!instance) {
+            console.error("[NOTIF_MANAGER] Client HTTP non initialisé");
+            return false;
+        }
+
+        // Appel à l'API backend pour envoyer la notification push
+        const response = await instance.post('/api/notifications/message', {
+            conversationId,
+            senderId: /* ID de l'utilisateur connecté */,
+            senderName: messageSender,
+            messagePreview,
+            messageType
+        });
+
+        console.log("[NOTIF_MANAGER] Résultat de l'envoi de notification de message:", response.data);
+        
+        // Notification locale optionnelle
+        await this.notificationService.sendLocalNotification(
             i18n.t('notifications.message.title', { sender: messageSender }),
             messagePreview.substring(0, 100) + (messagePreview.length > 100 ? '...' : ''),
             {
@@ -258,8 +276,7 @@ class NotificationManager {
             }
         );
         
-        console.log("[NOTIF_MANAGER] Résultat de l'envoi de notification:", result);
-        
+        // Tracking Mixpanel
         try {
             mixpanel.track("Notification Sent", {
                 notification_type: "new_message",
@@ -269,13 +286,12 @@ class NotificationManager {
             console.error("[NOTIF_MANAGER] Erreur Mixpanel:", mpError);
         }
         
-        return result;
+        return response.data.success;
     } catch (error) {
         console.error("[NOTIF_MANAGER] ERREUR lors de l'envoi de la notification:", error);
-        console.error(i18n.t('notifications.errors.messageNotification'), error);
         return false;
     }
-  }
+}
 
   // 2. Notification lorsqu'un secret est acheté
   async schedulePurchaseNotification(secretId, buyerName, price, currency) {
@@ -415,58 +431,59 @@ class NotificationManager {
           secretsCount,
           purchasesCount,
           timestamp: new Date().toISOString()
-        );
+        }
+      );
       
-        try {
-          mixpanel.track("Notification Sent", {
-            notification_type: "stats_update",
-            secrets_count: secretsCount,
-            purchases_count: purchasesCount
-          });
-        } catch (mpError) {
-          console.error("Erreur Mixpanel:", mpError);
-        }
-        
-        return true;
-      } catch (error) {
-        console.error(i18n.t('notifications.errors.statsNotification'), error);
-        return false;
-      }
-    }
-  
-    // 7. Notification pour les événements limités dans le temps
-    async scheduleTimeLimitedEventNotification(eventName, daysLeft) {
       try {
-        await this.notificationService.sendLocalNotification(
-          i18n.t('notifications.event.title'),
-          i18n.t('notifications.event.body', { 
-            event: eventName, 
-            days: daysLeft 
-          }),
-          {
-            type: 'time_limited_event',
-            eventName,
-            daysLeft,
-            timestamp: new Date().toISOString()
-          }
-        );
-        
-        try {
-          mixpanel.track("Notification Sent", {
-            notification_type: "time_limited_event",
-            event_name: eventName,
-            days_left: daysLeft
-          });
-        } catch (mpError) {
-          console.error("Erreur Mixpanel:", mpError);
-        }
-        
-        return true;
-      } catch (error) {
-        console.error(i18n.t('notifications.errors.eventNotification'), error);
-        return false;
+        mixpanel.track("Notification Sent", {
+          notification_type: "stats_update",
+          secrets_count: secretsCount,
+          purchases_count: purchasesCount
+        });
+      } catch (mpError) {
+        console.error("Erreur Mixpanel:", mpError);
       }
+      
+      return true;
+    } catch (error) {
+      console.error(i18n.t('notifications.errors.statsNotification'), error);
+      return false;
     }
   }
-  
-  export default new NotificationManager();
+
+  // 7. Notification pour les événements limités dans le temps
+  async scheduleTimeLimitedEventNotification(eventName, daysLeft) {
+    try {
+      await this.notificationService.sendLocalNotification(
+        i18n.t('notifications.event.title'),
+        i18n.t('notifications.event.body', { 
+          event: eventName, 
+          days: daysLeft 
+        }),
+        {
+          type: 'time_limited_event',
+          eventName,
+          daysLeft,
+          timestamp: new Date().toISOString()
+        }
+      );
+      
+      try {
+        mixpanel.track("Notification Sent", {
+          notification_type: "time_limited_event",
+          event_name: eventName,
+          days_left: daysLeft
+        });
+      } catch (mpError) {
+        console.error("Erreur Mixpanel:", mpError);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error(i18n.t('notifications.errors.eventNotification'), error);
+      return false;
+    }
+  }
+}
+
+export default new NotificationManager();
