@@ -15,5 +15,16 @@
   "statsUpdate": "Statistiques de la semaine",
   "statsUpdateText": "{{secretsCount}} nouveaux secrets et {{purchasesCount}} ventes cette semaine",
   "welcomeBack": "Bon retour parmi nous!",
-  "welcomeBackText": "Vous nous avez manqué pendant {{daysAbsent}} jours. Découvrez les nouveaux secrets!"
+  "welcomeBackText": "Vous nous avez manqué pendant {{daysAbsent}} jours. Découvrez les nouveaux secrets!",
+  "simulatorTestSuccess": "Test de notification simulé avec succès",
+  "testNotificationTitle": "Test de Notification",
+  "testNotificationBody": "Ceci est une notification de test de votre application",
+  "testNotificationSuccess": "Notification de test envoyée avec succès",
+  "testNotificationFailure": "Échec de l'envoi de la notification de test",
+  "noPushTokenFound": "Aucun token de notification trouvé pour cet utilisateur",
+  "errorFindingUserToken": "Erreur lors de la recherche du token de l'utilisateur",
+  "serverErrorDuringTest": "Erreur serveur lors du test de notification",
+  "apnsProviderNotInitialized": "Le service de notifications APNs n'est pas initialisé",
+  "invalidPushToken": "Token de notification invalide",
+  "tokenRegisteredSuccess": "Token enregistré avec succès"
 }
