@@ -240,10 +240,11 @@ class NotificationManager {
   }
   
   
-  async scheduleMessageNotification(messageSender, conversationId, messagePreview, messageType = 'text') {
+  async scheduleMessageNotification(messageSender, conversationId, messagePreview, messageType = 'text', senderId = null) {
     console.log("[NOTIF_MANAGER] Préparation d'une notification de message:", { 
         sender: messageSender, 
         conversationId,
+        senderId, // Ajout de l'ID de l'expéditeur dans les logs
         preview: messagePreview.substring(0, 50) + (messagePreview.length > 50 ? '...' : '')
     });
     
@@ -254,10 +255,34 @@ class NotificationManager {
             return false;
         }
 
+        // Si aucun senderId n'est fourni, tenter de l'obtenir depuis userData si possible
+        if (!senderId) {
+            try {
+                // Ici, nous supposons qu'il existe une variable globale ou une méthode pour accéder à userData
+                // Si ce n'est pas le cas, vous devrez adapter cette partie à votre application
+                const authContext = require('./AuthContext'); // ou toute autre manière d'accéder aux données utilisateur
+                if (authContext && authContext.userData && authContext.userData._id) {
+                    senderId = typeof authContext.userData._id === 'string' 
+                        ? authContext.userData._id 
+                        : authContext.userData._id.toString();
+                    console.log("[NOTIF_MANAGER] ID expéditeur récupéré du contexte:", senderId);
+                } else {
+                    console.warn("[NOTIF_MANAGER] Impossible de récupérer l'ID expéditeur du contexte");
+                }
+            } catch (userDataError) {
+                console.error("[NOTIF_MANAGER] Erreur lors de la récupération des données utilisateur:", userDataError);
+            }
+        }
+
+        // Si toujours pas d'ID expéditeur, alerter mais continuer
+        if (!senderId) {
+            console.warn("[NOTIF_MANAGER] ATTENTION: Aucun ID d'expéditeur disponible pour la notification");
+        }
+
         // Appel à l'API backend pour envoyer la notification push
         const response = await instance.post('/api/notifications/message', {
             conversationId,
-            senderId: /* ID de l'utilisateur connecté */,
+            senderId: senderId, // Utiliser l'ID récupéré ou transmis
             senderName: messageSender,
             messagePreview,
             messageType
@@ -280,7 +305,8 @@ class NotificationManager {
         try {
             mixpanel.track("Notification Sent", {
                 notification_type: "new_message",
-                conversation_id: conversationId
+                conversation_id: conversationId,
+                sender_id: senderId // Ajout de l'ID expéditeur pour le tracking
             });
         } catch (mpError) {
             console.error("[NOTIF_MANAGER] Erreur Mixpanel:", mpError);
