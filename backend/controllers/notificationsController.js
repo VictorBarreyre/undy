@@ -62,6 +62,170 @@ if (apnsKeyId && apnsTeamId && apnsKey) {
 
 console.log("======== FIN INFORMATIONS DE CONFIGURATION APNS ========");
 
+
+/**
+ * Enregistre un token de notification push pour un utilisateur
+ * Accepte à la fois les tokens APNs et Expo
+ * 
+ * @param {Object} req - Requête HTTP avec userId et token
+ * @param {Object} res - Réponse HTTP
+ * @returns {Object} Statut de l'opération
+ */
+const registerToken = async (req, res) => {
+  try {
+    const { expoPushToken } = req.body;
+    const userId = req.user._id;
+    
+    console.log(`Tentative d'enregistrement du token ${expoPushToken} pour l'utilisateur ${userId}`);
+    
+    // Valider le token (accepte les tokens APNs et Expo)
+    const isValidToken = expoPushToken && 
+      (expoPushToken.startsWith('ExponentPushToken[') || // Token Expo
+       expoPushToken.match(/^[a-f0-9]{64}$/i) || // Token APNs (hexadécimal 64 caractères)
+       expoPushToken === "SIMULATOR_MOCK_TOKEN"); // Token de simulateur
+    
+    if (!isValidToken) {
+      console.log('Token invalide:', expoPushToken);
+      return res.status(400).json({
+        success: false,
+        message: translate('invalidPushToken', { lng: req.user.language || 'fr' })
+      });
+    }
+    
+    // Mettre à jour le token dans la base de données
+    await User.findByIdAndUpdate(userId, { expoPushToken });
+    console.log(`Token enregistré avec succès pour l'utilisateur ${userId}`);
+    
+    res.status(200).json({
+      success: true,
+      message: translate('tokenRegisteredSuccess', { lng: req.user.language || 'fr' })
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'enregistrement du token:', error);
+    res.status(500).json({
+      success: false,
+      message: translate('serverError', { lng: req.user?.language || 'fr' })
+    });
+  }
+};
+
+/**
+ * Envoie une notification de test pour valider la configuration
+ * Compatible avec les tokens APNs et Expo
+ * 
+ * @param {Object} req - Requête HTTP avec userId et éventuellement token spécifique
+ * @param {Object} res - Réponse HTTP
+ * @returns {Object} Résultat du test
+ */
+const sendTestNotification = async (req, res) => {
+  console.log('=== DÉBUT DE LA FONCTION sendTestNotification ===');
+  
+  try {
+    const userId = req.user._id;
+    const { token } = req.body; // Optionnel: pour tester avec un token spécifique
+    const userLanguage = req.user.language || 'fr';
+    
+    console.log(`[TEST_NOTIF] Utilisateur: ${userId}, Langue: ${userLanguage}`);
+    console.log(`[TEST_NOTIF] Token fourni: ${token || 'aucun'}`);
+    
+    // Vérification de la configuration APNs
+    if (!apnProvider) {
+      console.error('[TEST_NOTIF] ERREUR: Le provider APNs n\'est pas initialisé');
+      return res.status(500).json({
+        success: false,
+        message: translate('apnsProviderNotInitialized', { lng: userLanguage }),
+        error: 'PROVIDER_NOT_INITIALIZED'
+      });
+    }
+    
+    // Si un token spécifique est fourni, l'utiliser directement
+    if (token) {
+      console.log(`[TEST_NOTIF] Utilisation du token spécifié: ${token}`);
+      
+      // Traiter le cas du token simulateur
+      if (token === "SIMULATOR_MOCK_TOKEN") {
+        console.log('[TEST_NOTIF] Token simulateur détecté, envoi d\'une réponse simulée');
+        return res.status(200).json({
+          success: true,
+          message: translate('simulatorTestSuccess', { lng: userLanguage }),
+          simulated: true
+        });
+      }
+      
+      // Envoyer la notification de test avec le token fourni
+      const notificationResult = await sendPushNotifications(
+        [userId],
+        translate('testNotificationTitle', { lng: userLanguage }),
+        {},
+        translate('testNotificationBody', { lng: userLanguage }),
+        {},
+        {
+          type: 'test',
+          timestamp: new Date().toISOString()
+        }
+      );
+      
+      return res.status(200).json({
+        success: notificationResult.success,
+        message: translate(notificationResult.success ? 'testNotificationSuccess' : 'testNotificationFailure', { lng: userLanguage }),
+        details: notificationResult
+      });
+    }
+    
+    // Si aucun token n'est fourni, tenter de récupérer celui de l'utilisateur
+    console.log(`[TEST_NOTIF] Recherche du token de l'utilisateur ${userId}`);
+    try {
+      const user = await User.findById(userId);
+      if (!user || !user.expoPushToken) {
+        console.log(`[TEST_NOTIF] Aucun token trouvé pour l'utilisateur ${userId}`);
+        return res.status(404).json({
+          success: false,
+          message: translate('noPushTokenFound', { lng: userLanguage })
+        });
+      }
+      
+      const userToken = user.expoPushToken;
+      console.log(`[TEST_NOTIF] Token trouvé pour l'utilisateur: ${userToken}`);
+      
+      // Envoyer la notification de test avec le token de l'utilisateur
+      const notificationResult = await sendPushNotifications(
+        [userId],
+        translate('testNotificationTitle', { lng: userLanguage }),
+        {},
+        translate('testNotificationBody', { lng: userLanguage }),
+        {},
+        {
+          type: 'test',
+          timestamp: new Date().toISOString()
+        }
+      );
+      
+      return res.status(200).json({
+        success: notificationResult.success,
+        message: translate(notificationResult.success ? 'testNotificationSuccess' : 'testNotificationFailure', { lng: userLanguage }),
+        details: notificationResult
+      });
+      
+    } catch (error) {
+      console.error(`[TEST_NOTIF] Erreur lors de la recherche du token de l'utilisateur:`, error);
+      return res.status(500).json({
+        success: false,
+        message: translate('errorFindingUserToken', { lng: userLanguage }),
+        error: error.message
+      });
+    }
+  } catch (error) {
+    console.error('[TEST_NOTIF] Erreur globale dans la fonction sendTestNotification:', error);
+    return res.status(500).json({
+      success: false,
+      message: translate('serverErrorDuringTest', { lng: req.user?.language || 'fr' }),
+      error: error.message
+    });
+  } finally {
+    console.log('=== FIN DE LA FONCTION sendTestNotification ===');
+  }
+};
+
 /**
  * Fonction pour envoyer des notifications push aux utilisateurs
  * Gère la traduction des messages selon la langue de chaque utilisateur
