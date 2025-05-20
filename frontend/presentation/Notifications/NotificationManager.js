@@ -242,82 +242,114 @@ class NotificationManager {
   
   async scheduleMessageNotification(messageSender, conversationId, messagePreview, messageType = 'text', senderId = null) {
     console.log("[NOTIF_MANAGER] Préparation d'une notification de message:", { 
-        sender: messageSender, 
-        conversationId,
-        senderId, // Ajout de l'ID de l'expéditeur dans les logs
-        preview: messagePreview.substring(0, 50) + (messagePreview.length > 50 ? '...' : '')
+      sender: messageSender, 
+      conversationId,
+      senderId,
+      preview: messagePreview.substring(0, 50) + (messagePreview.length > 50 ? '...' : '')
     });
     
     try {
-        const instance = getAxiosInstance();
-        if (!instance) {
-            console.error("[NOTIF_MANAGER] Client HTTP non initialisé");
-            return false;
-        }
-
-        // Si aucun senderId n'est fourni, tenter de l'obtenir depuis userData si possible
-        if (!senderId) {
-            try {
-                // Ici, nous supposons qu'il existe une variable globale ou une méthode pour accéder à userData
-                // Si ce n'est pas le cas, vous devrez adapter cette partie à votre application
-                const authContext = require('./AuthContext'); // ou toute autre manière d'accéder aux données utilisateur
-                if (authContext && authContext.userData && authContext.userData._id) {
-                    senderId = typeof authContext.userData._id === 'string' 
-                        ? authContext.userData._id 
-                        : authContext.userData._id.toString();
-                    console.log("[NOTIF_MANAGER] ID expéditeur récupéré du contexte:", senderId);
-                } else {
-                    console.warn("[NOTIF_MANAGER] Impossible de récupérer l'ID expéditeur du contexte");
-                }
-            } catch (userDataError) {
-                console.error("[NOTIF_MANAGER] Erreur lors de la récupération des données utilisateur:", userDataError);
-            }
-        }
-
-        // Si toujours pas d'ID expéditeur, alerter mais continuer
-        if (!senderId) {
-            console.warn("[NOTIF_MANAGER] ATTENTION: Aucun ID d'expéditeur disponible pour la notification");
-        }
-
-        // Appel à l'API backend pour envoyer la notification push
-        const response = await instance.post('/api/notifications/message', {
-            conversationId,
-            senderId: senderId, // Utiliser l'ID récupéré ou transmis
-            senderName: messageSender,
-            messagePreview,
-            messageType
-        });
-
-        console.log("[NOTIF_MANAGER] Résultat de l'envoi de notification de message:", response.data);
-        
-        // Notification locale optionnelle
-        await this.notificationService.sendLocalNotification(
-            i18n.t('notifications.message.title', { sender: messageSender }),
-            messagePreview.substring(0, 100) + (messagePreview.length > 100 ? '...' : ''),
-            {
-                type: 'new_message',
-                conversationId,
-                timestamp: new Date().toISOString()
-            }
-        );
-        
-        // Tracking Mixpanel
-        try {
-            mixpanel.track("Notification Sent", {
-                notification_type: "new_message",
-                conversation_id: conversationId,
-                sender_id: senderId // Ajout de l'ID expéditeur pour le tracking
-            });
-        } catch (mpError) {
-            console.error("[NOTIF_MANAGER] Erreur Mixpanel:", mpError);
-        }
-        
-        return response.data.success;
-    } catch (error) {
-        console.error("[NOTIF_MANAGER] ERREUR lors de l'envoi de la notification:", error);
+      const instance = getAxiosInstance();
+      if (!instance) {
+        console.error("[NOTIF_MANAGER] Client HTTP non initialisé");
         return false;
+      }
+  
+      // Si aucun senderId n'est fourni, tenter de l'obtenir depuis AsyncStorage
+      if (!senderId) {
+        try {
+          // Récupération des données utilisateur depuis AsyncStorage
+          const userDataStr = await AsyncStorage.getItem('userData');
+          if (userDataStr) {
+            const userData = JSON.parse(userDataStr);
+            if (userData && userData._id) {
+              senderId = typeof userData._id === 'string' 
+                ? userData._id 
+                : userData._id.toString();
+              console.log("[NOTIF_MANAGER] ID expéditeur récupéré d'AsyncStorage:", senderId);
+            }
+          }
+        } catch (userDataError) {
+          console.error("[NOTIF_MANAGER] Erreur lors de la récupération des données utilisateur:", userDataError);
+        }
+      }
+  
+      // Si toujours pas d'ID expéditeur, alerter mais continuer
+      if (!senderId) {
+        console.warn("[NOTIF_MANAGER] ATTENTION: Aucun ID d'expéditeur disponible pour la notification");
+      }
+  
+      // Appel à l'API backend pour envoyer la notification push
+      const response = await instance.post('/api/notifications/message', {
+        conversationId,
+        senderId: senderId, // Utiliser l'ID récupéré ou transmis
+        senderName: messageSender,
+        messagePreview,
+        messageType
+      });
+  
+      console.log("[NOTIF_MANAGER] Résultat de l'envoi de notification de message:", response.data);
+      
+      // Récupération de l'ID utilisateur courant pour vérifier s'il est l'expéditeur
+      let currentUserId = null;
+      try {
+        const userDataStr = await AsyncStorage.getItem('userData');
+        if (userDataStr) {
+          const userData = JSON.parse(userDataStr);
+          if (userData && userData._id) {
+            currentUserId = typeof userData._id === 'string' 
+              ? userData._id 
+              : userData._id.toString();
+          }
+        }
+      } catch (error) {
+        console.error("[NOTIF_MANAGER] Erreur lors de la récupération de l'ID utilisateur courant:", error);
+      }
+      
+      // Seulement envoyer une notification locale si l'utilisateur n'est PAS l'expéditeur
+      if (currentUserId && senderId && currentUserId !== senderId) {
+        console.log("[NOTIF_MANAGER] Envoi de notification locale car utilisateur différent de l'expéditeur");
+        
+        // Données enrichies pour la notification, incluant tout ce nécessaire pour la navigation
+        const notificationData = {
+          type: 'new_message',
+          conversationId,
+          senderId,
+          senderName: messageSender,
+          messageType,
+          timestamp: new Date().toISOString(),
+          // Ajout de données spécifiques à la navigation
+          navigationTarget: 'Chat',
+          navigationScreen: 'ChatTab',
+          navigationParams: { conversationId }
+        };
+        
+        await this.notificationService.sendLocalNotification(
+          i18n.t('notifications.message.title', { sender: messageSender }),
+          messagePreview.substring(0, 100) + (messagePreview.length > 100 ? '...' : ''),
+          notificationData
+        );
+      } else {
+        console.log("[NOTIF_MANAGER] Pas de notification locale car l'utilisateur est l'expéditeur");
+      }
+      
+      // Tracking Mixpanel
+      try {
+        mixpanel.track("Notification Sent", {
+          notification_type: "new_message",
+          conversation_id: conversationId,
+          sender_id: senderId
+        });
+      } catch (mpError) {
+        console.error("[NOTIF_MANAGER] Erreur Mixpanel:", mpError);
+      }
+      
+      return response.data.success;
+    } catch (error) {
+      console.error("[NOTIF_MANAGER] ERREUR lors de l'envoi de la notification:", error);
+      return false;
     }
-}
+  }
 
   // 2. Notification lorsqu'un secret est acheté
   async schedulePurchaseNotification(secretId, buyerName, price, currency) {

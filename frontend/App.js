@@ -13,7 +13,7 @@ import { StripeProvider } from "@stripe/stripe-react-native";
 import { STRIPE_PUBLISHABLE_KEY } from '@env';
 import DeepLinkHandler from "./presentation/components/DeepLinkHandler";
 import { Linking } from 'react-native';
-
+import NotificationHandlerWrapper from "./presentation/Notifications/NotificationHandlerWrapper"
 const Stack = createStackNavigator();
 
 const App = () => {
@@ -103,6 +103,7 @@ const App = () => {
               >
                 <StackNavigator />
                 <DeepLinkHandler />
+                <NotificationHandlerWrapper />
               </NavigationContainer>
             </SafeAreaProvider>
           </NativeBaseProvider>
