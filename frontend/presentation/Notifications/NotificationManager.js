@@ -1,4 +1,3 @@
-
 import * as Notifications from 'expo-notifications';
 import NotificationService from './NotificationService'; // Votre service existant
 import { getAxiosInstance } from '../../data/api/axiosInstance';
@@ -126,19 +125,38 @@ class NotificationManager {
     
     try {
         // Le token a été obtenu, tentative d'enregistrement sur le serveur
-        const response = await instance.post('/api/notifications/token', {
+        // CORRECTION: Utiliser "/api/notifications/register" au lieu de "/api/notifications/token"
+        console.log("[NOTIF_MANAGER] Envoi du token au serveur:", token);
+        const response = await instance.post('/api/notifications/register', {
             expoPushToken: token
         });
         
         // Si l'enregistrement réussit, sauvegarder le timestamp
         if (response.data && response.data.success) {
           await AsyncStorage.setItem(TOKEN_REGISTRATION_TIME_KEY, now.toString());
+          console.log("[NOTIF_MANAGER] Token enregistré avec succès sur le serveur");
         }
         
         console.log(i18n.t('notifications.logs.tokenRegistered'), response.data);
         return true;
     } catch (error) {
-        console.error(i18n.t('notifications.errors.tokenRegistration'), error);
+        console.error("[NOTIF_MANAGER] Erreur lors de l'enregistrement du token:", error);
+        
+        // Essayer une deuxième fois avec l'ancienne route si la première a échoué
+        try {
+            console.log("[NOTIF_MANAGER] Tentative avec la route alternative...");
+            const altResponse = await instance.post('/api/notifications/token', {
+                expoPushToken: token
+            });
+            
+            if (altResponse.data && altResponse.data.success) {
+                await AsyncStorage.setItem(TOKEN_REGISTRATION_TIME_KEY, now.toString());
+                console.log("[NOTIF_MANAGER] Token enregistré avec succès via la route alternative");
+                return true;
+            }
+        } catch (altError) {
+            console.error("[NOTIF_MANAGER] Échec également avec la route alternative:", altError);
+        }
         
         // Ignorer l'erreur en développement pour ne pas bloquer le flux
         if (__DEV__) {
@@ -147,6 +165,46 @@ class NotificationManager {
         }
         
         return false;
+    }
+  }
+
+  async testRemoteNotification() {
+    console.log("[NOTIF_MANAGER] Test de notification distante");
+    
+    try {
+        // Récupérer le token
+        const token = await this.notificationService.getToken();
+        if (!token) {
+            console.error("[NOTIF_MANAGER] Impossible d'obtenir un token pour le test");
+            return {
+                success: false,
+                message: "Aucun token disponible"
+            };
+        }
+        
+        const instance = getAxiosInstance();
+        if (!instance) {
+            throw new Error(i18n.t('notifications.errors.axiosNotInitialized'));
+        }
+        
+        // Étape 1: Enregistrer d'abord le token
+        await this.registerTokenWithServer(null, token);
+        
+        // Étape 2: Envoyer une notification de test avec le token
+        console.log("[NOTIF_MANAGER] Envoi de la requête de test avec token:", token);
+        const response = await instance.post('/api/notifications/test', {
+            token: token
+        });
+        
+        console.log("[NOTIF_MANAGER] Réponse du serveur:", response.data);
+        return response.data;
+        
+    } catch (error) {
+        console.error("[NOTIF_MANAGER] Erreur lors du test de notification:", error);
+        return {
+            success: false,
+            error: error.message
+        };
     }
   }
 
@@ -217,7 +275,8 @@ class NotificationManager {
         console.error(i18n.t('notifications.errors.messageNotification'), error);
         return false;
     }
-}
+  }
+
   // 2. Notification lorsqu'un secret est acheté
   async schedulePurchaseNotification(secretId, buyerName, price, currency) {
     try {
@@ -356,61 +415,58 @@ class NotificationManager {
           secretsCount,
           purchasesCount,
           timestamp: new Date().toISOString()
+        );
+      
+        try {
+          mixpanel.track("Notification Sent", {
+            notification_type: "stats_update",
+            secrets_count: secretsCount,
+            purchases_count: purchasesCount
+          });
+        } catch (mpError) {
+          console.error("Erreur Mixpanel:", mpError);
         }
-      );
-      
-      try {
-        mixpanel.track("Notification Sent", {
-          notification_type: "stats_update",
-          secrets_count: secretsCount,
-          purchases_count: purchasesCount
-        });
-      } catch (mpError) {
-        console.error("Erreur Mixpanel:", mpError);
+        
+        return true;
+      } catch (error) {
+        console.error(i18n.t('notifications.errors.statsNotification'), error);
+        return false;
       }
-      
-      return true;
-    } catch (error) {
-      console.error(i18n.t('notifications.errors.statsNotification'), error);
-      return false;
+    }
+  
+    // 7. Notification pour les événements limités dans le temps
+    async scheduleTimeLimitedEventNotification(eventName, daysLeft) {
+      try {
+        await this.notificationService.sendLocalNotification(
+          i18n.t('notifications.event.title'),
+          i18n.t('notifications.event.body', { 
+            event: eventName, 
+            days: daysLeft 
+          }),
+          {
+            type: 'time_limited_event',
+            eventName,
+            daysLeft,
+            timestamp: new Date().toISOString()
+          }
+        );
+        
+        try {
+          mixpanel.track("Notification Sent", {
+            notification_type: "time_limited_event",
+            event_name: eventName,
+            days_left: daysLeft
+          });
+        } catch (mpError) {
+          console.error("Erreur Mixpanel:", mpError);
+        }
+        
+        return true;
+      } catch (error) {
+        console.error(i18n.t('notifications.errors.eventNotification'), error);
+        return false;
+      }
     }
   }
-
-  // 7. Notification pour les événements limités dans le temps
-  async scheduleTimeLimitedEventNotification(eventName, daysLeft) {
-    try {
-      await this.notificationService.sendLocalNotification(
-        i18n.t('notifications.event.title'),
-        i18n.t('notifications.event.body', { 
-          event: eventName, 
-          days: daysLeft 
-        }),
-        {
-          type: 'time_limited_event',
-          eventName,
-          daysLeft,
-          timestamp: new Date().toISOString()
-        }
-      );
-      
-      try {
-        mixpanel.track("Notification Sent", {
-          notification_type: "time_limited_event",
-          event_name: eventName,
-          days_left: daysLeft
-        });
-      } catch (mpError) {
-        console.error("Erreur Mixpanel:", mpError);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error(i18n.t('notifications.errors.eventNotification'), error);
-      return false;
-    }
-  }
-
-
-}
-
-export default new NotificationManager();
+  
+  export default new NotificationManager();

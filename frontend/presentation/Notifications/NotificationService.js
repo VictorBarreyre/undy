@@ -156,6 +156,13 @@ class NotificationService {
         }
         
         try {
+            // Vérifier les permissions avant de récupérer un token
+            const hasPermission = await this.checkPermissions(false);
+            if (!hasPermission) {
+                console.log("[NOTIF] Permissions non accordées, impossible d'obtenir un token");
+                return null;
+            }
+            
             // Essayer de récupérer un token APNs natif
             const tokenData = await Notifications.getDevicePushTokenAsync();
             console.log("[NOTIF] Token APNs natif récupéré:", tokenData.data);
@@ -195,6 +202,9 @@ class NotificationService {
 
     async sendLocalNotification(title, body, data = {}) {
         console.log("[NOTIF] Tentative d'envoi de notification locale");
+        console.log("[NOTIF] Titre:", title);
+        console.log("[NOTIF] Corps:", body);
+        console.log("[NOTIF] Données:", JSON.stringify(data));
         
         // Vérifier si le titre et le corps sont des notifications de "Notifications activées"
         // Pour éviter d'envoyer des notifications test dupliquées
@@ -224,13 +234,13 @@ class NotificationService {
         try {
             const identifier = await Notifications.scheduleNotificationAsync({
                 content: {
-                    title: `${title}`, // Plus de 🔔 pour éviter la confusion
+                    title,
                     body,
                     data,
                     sound: true,
                 },
                 trigger: { 
-                    seconds: 2,
+                    seconds: 1, // Réduire à 1 seconde pour un test plus rapide
                     repeats: false 
                 }
             });
@@ -266,13 +276,14 @@ class NotificationService {
             const hasPermission = await this.checkPermissions(true); // Forcer l'affichage de l'alerte
             
             if (hasPermission) {
-                // Ne pas envoyer de notification test ici pour éviter la duplication
-                // La notification système iOS s'affichera déjà
-                console.log(i18n.t('notifications.logs.testSent'), true);
+                // Tester les notifications en envoyant une notification locale
+                console.log("[NOTIF] Permissions accordées, envoi d'une notification de test");
+                await this.sendTestNotification();
                 return true;
             }
             return false;
         } catch (error) {
+            console.error("[NOTIF] Erreur lors de l'activation:", error);
             console.error(i18n.t('notifications.errors.activation'), error);
             return false;
         }
@@ -309,6 +320,34 @@ class NotificationService {
         } catch (error) {
             console.warn("[NOTIF_SERVICE] Erreur lors de l'envoi de la notification de test:", error);
             return false;
+        }
+    }
+
+    async testRemoteNotification() {
+        console.log("[NOTIF_SERVICE] Test de notification distante");
+        
+        try {
+            // Récupérer le token
+            const token = await this.getToken();
+            if (!token) {
+                console.error("[NOTIF_SERVICE] Impossible d'obtenir un token pour le test");
+                return {
+                    success: false,
+                    message: "Aucun token disponible"
+                };
+            }
+            
+            console.log("[NOTIF_SERVICE] Test de notification avec le token:", token);
+            return {
+                success: true,
+                token: token
+            };
+        } catch (error) {
+            console.error("[NOTIF_SERVICE] Erreur lors du test de notification:", error);
+            return {
+                success: false,
+                error: error.message
+            };
         }
     }
 

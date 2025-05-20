@@ -75,33 +75,62 @@ const registerToken = async (req, res) => {
   try {
     const { expoPushToken } = req.body;
     const userId = req.user._id;
+    const userLanguage = req.user.language || 'fr';
     
-    console.log(`Tentative d'enregistrement du token ${expoPushToken} pour l'utilisateur ${userId}`);
+    console.log(`[TOKEN] Tentative d'enregistrement du token ${expoPushToken} pour l'utilisateur ${userId}`);
     
-    // Valider le token (accepte les tokens APNs et Expo)
-    const isValidToken = expoPushToken && 
-      (expoPushToken.startsWith('ExponentPushToken[') || // Token Expo
-       expoPushToken.match(/^[a-f0-9]{64}$/i) || // Token APNs (hexadécimal 64 caractères)
-       expoPushToken === "SIMULATOR_MOCK_TOKEN"); // Token de simulateur
-    
-    if (!isValidToken) {
-      console.log('Token invalide:', expoPushToken);
+    if (!expoPushToken) {
+      console.log('[TOKEN] Token manquant dans la requête');
       return res.status(400).json({
         success: false,
-        message: translate('invalidPushToken', { lng: req.user.language || 'fr' })
+        message: translate('missingPushToken', { lng: userLanguage })
+      });
+    }
+    
+    // Valider le token (accepte les tokens APNs et Expo)
+    const isValidToken = 
+      expoPushToken.startsWith('ExponentPushToken[') || // Token Expo
+      expoPushToken.match(/^[a-f0-9]{64}$/i) || // Token APNs (hexadécimal 64 caractères)
+      expoPushToken === "SIMULATOR_MOCK_TOKEN"; // Token de simulateur
+    
+    if (!isValidToken) {
+      console.log('[TOKEN] Token invalide:', expoPushToken);
+      return res.status(400).json({
+        success: false,
+        message: translate('invalidPushToken', { lng: userLanguage })
+      });
+    }
+    
+    // Trouver l'utilisateur actuel pour obtenir ses données
+    const currentUser = await User.findById(userId);
+    if (!currentUser) {
+      console.log('[TOKEN] Utilisateur non trouvé:', userId);
+      return res.status(404).json({
+        success: false,
+        message: translate('userNotFound', { lng: userLanguage })
+      });
+    }
+    
+    // Si le token est identique à celui déjà enregistré, ne pas mettre à jour la base de données
+    if (currentUser.expoPushToken === expoPushToken) {
+      console.log('[TOKEN] Le token fourni est déjà enregistré pour cet utilisateur');
+      return res.status(200).json({
+        success: true,
+        message: translate('tokenAlreadyRegistered', { lng: userLanguage }),
+        unchanged: true
       });
     }
     
     // Mettre à jour le token dans la base de données
     await User.findByIdAndUpdate(userId, { expoPushToken });
-    console.log(`Token enregistré avec succès pour l'utilisateur ${userId}`);
+    console.log(`[TOKEN] Token enregistré avec succès pour l'utilisateur ${userId}`);
     
     res.status(200).json({
       success: true,
-      message: translate('tokenRegisteredSuccess', { lng: req.user.language || 'fr' })
+      message: translate('tokenRegisteredSuccess', { lng: userLanguage })
     });
   } catch (error) {
-    console.error('Erreur lors de l\'enregistrement du token:', error);
+    console.error('[TOKEN] Erreur lors de l\'enregistrement du token:', error);
     res.status(500).json({
       success: false,
       message: translate('serverError', { lng: req.user?.language || 'fr' })
@@ -113,7 +142,7 @@ const registerToken = async (req, res) => {
  * Envoie une notification de test pour valider la configuration
  * Compatible avec les tokens APNs et Expo
  * 
- * @param {Object} req - Requête HTTP avec userId et éventuellement token spécifique
+ * @param {Object} req - Requête HTTP avec userId et token optionnel
  * @param {Object} res - Réponse HTTP
  * @returns {Object} Résultat du test
  */
@@ -122,7 +151,7 @@ const sendTestNotification = async (req, res) => {
   
   try {
     const userId = req.user._id;
-    const { token } = req.body; // Optionnel: pour tester avec un token spécifique
+    const { token } = req.body; // Token optionnel pour tester
     const userLanguage = req.user.language || 'fr';
     
     console.log(`[TEST_NOTIF] Utilisateur: ${userId}, Langue: ${userLanguage}`);
@@ -152,28 +181,71 @@ const sendTestNotification = async (req, res) => {
         });
       }
       
-      // Envoyer la notification de test avec le token fourni
-      const notificationResult = await sendPushNotifications(
-        [userId],
-        translate('testNotificationTitle', { lng: userLanguage }),
-        {},
-        translate('testNotificationBody', { lng: userLanguage }),
-        {},
-        {
-          type: 'test',
-          timestamp: new Date().toISOString()
-        }
-      );
+      // Créer directement la notification et l'envoyer avec le token fourni
+      const notification = new apn.Notification();
+      notification.expiry = Math.floor(Date.now() / 1000) + 3600;
+      notification.badge = 1;
+      notification.sound = 'default';
+      notification.alert = {
+        title: translate('testNotificationTitle', { lng: userLanguage }),
+        body: translate('testNotificationBody', { lng: userLanguage })
+      };
+      notification.payload = {
+        type: 'test',
+        timestamp: new Date().toISOString()
+      };
+      notification.topic = bundleId;
       
-      return res.status(200).json({
-        success: notificationResult.success,
-        message: translate(notificationResult.success ? 'testNotificationSuccess' : 'testNotificationFailure', { lng: userLanguage }),
-        details: notificationResult
-      });
+      console.log('Notification complète préparée:', JSON.stringify({
+        expiry: notification.expiry,
+        badge: notification.badge,
+        sound: notification.sound,
+        alert: notification.alert,
+        topic: notification.topic,
+        payload: notification.payload
+      }));
+      
+      try {
+        console.log(`[TEST_NOTIF] Envoi direct de la notification à ${token}`);
+        const response = await apnProvider.send(notification, token);
+        console.log('[TEST_NOTIF] Réponse directe APNs:', JSON.stringify(response, null, 2));
+        
+        const success = response.sent && response.sent.length > 0;
+        
+        // Mettre à jour le token dans la base de données si le test est réussi
+        if (success) {
+          try {
+            await User.findByIdAndUpdate(userId, { expoPushToken: token });
+            console.log(`[TEST_NOTIF] Token mis à jour en base de données pour l'utilisateur ${userId}`);
+          } catch (updateError) {
+            console.error('[TEST_NOTIF] Erreur lors de la mise à jour du token:', updateError);
+            // Continuer malgré l'erreur de mise à jour
+          }
+        }
+        
+        return res.status(200).json({
+          success: success,
+          message: translate(success ? 'testNotificationSuccess' : 'testNotificationFailure', { lng: userLanguage }),
+          details: {
+            success: success,
+            results: {
+              sent: response.sent || [],
+              failed: response.failed || []
+            }
+          }
+        });
+      } catch (error) {
+        console.error('[TEST_NOTIF] Erreur lors de l\'envoi direct:', error);
+        return res.status(500).json({
+          success: false,
+          message: translate('serverErrorDuringTest', { lng: userLanguage }),
+          error: error.message
+        });
+      }
     }
     
     // Si aucun token n'est fourni, tenter de récupérer celui de l'utilisateur
-    console.log(`[TEST_NOTIF] Recherche du token de l'utilisateur ${userId}`);
+    console.log(`[TEST_NOTIF] Aucun token fourni, recherche du token de l'utilisateur ${userId}`);
     try {
       const user = await User.findById(userId);
       if (!user || !user.expoPushToken) {
@@ -187,7 +259,7 @@ const sendTestNotification = async (req, res) => {
       const userToken = user.expoPushToken;
       console.log(`[TEST_NOTIF] Token trouvé pour l'utilisateur: ${userToken}`);
       
-      // Envoyer la notification de test avec le token de l'utilisateur
+      // Envoyer la notification avec le token de l'utilisateur
       const notificationResult = await sendPushNotifications(
         [userId],
         translate('testNotificationTitle', { lng: userLanguage }),
