@@ -149,6 +149,38 @@ class NotificationManager {
         return false;
     }
   }
+
+  async updateUserLanguage(userId, language) {
+    if (!language || !userId) {
+      console.log("[NOTIF_MANAGER] Langue ou ID utilisateur manquant, pas de mise à jour");
+      return false;
+    }
+    
+    // Vérifier si la langue est valide (fr ou en)
+    if (!['fr', 'en'].includes(language)) {
+      console.log(`[NOTIF_MANAGER] Langue '${language}' non supportée, pas de mise à jour`);
+      return false;
+    }
+    
+    const instance = getAxiosInstance();
+    if (!instance) {
+      console.error("[NOTIF_MANAGER] Client HTTP non initialisé");
+      return false;
+    }
+    
+    try {
+      const response = await instance.post('/api/users/update-language', {
+        language
+      });
+      
+      console.log(`[NOTIF_MANAGER] Langue mise à jour avec succès: ${language}`);
+      return response.data.success;
+    } catch (error) {
+      console.error("[NOTIF_MANAGER] Erreur lors de la mise à jour de la langue:", error);
+      return false;
+    }
+  }
+  
   
   async scheduleMessageNotification(messageSender, conversationId, messagePreview) {
     console.log("[NOTIF_MANAGER] Préparation d'une notification de message:", { 

@@ -17,6 +17,7 @@ const {
     deleteUserAccount,
     checkContactsInApp,
     getBankAccountDetails,
+    updateLanguage,
     getUserById } = require('../controllers/userController');
 const protect = require('../middleware/authMiddleware'); // Importation du middleware
 const { uploadMiddleware, handleMulterError } = require('../middleware/uploadMiddleware');
@@ -52,6 +53,9 @@ router.get('/bank-account-details', protect, getBankAccountDetails);
 router.get('/transactions', protect, getUserTransactions);
 
 router.post('/create-transfer-intent', protect, createTransferIntent);
+
+router.patch('/language', protect, updateLanguage);
+
 
 const { uploadImage } = require('../controllers/uploadController');
 

@@ -1297,3 +1297,46 @@ exports.deleteUserAccount = async (req, res) => {
         res.status(500).json({ message: 'Erreur lors de la suppression du compte de l\'utilisateur' });
     }
 };
+
+exports.updateLanguage = async (req, res) => {
+    try {
+      const userId = req.user._id;
+      const { language } = req.body;
+      
+      // Vérifier que la langue est valide
+      if (!['fr', 'en'].includes(language)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Langue non supportée. Les langues disponibles sont: fr, en'
+        });
+      }
+      
+      // Mettre à jour la langue de l'utilisateur
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { language },
+        { new: true }
+      );
+      
+      if (!updatedUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'Utilisateur non trouvé'
+        });
+      }
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Langue mise à jour avec succès',
+        language: updatedUser.language
+      });
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la langue:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur serveur',
+        error: error.message
+      });
+    }
+  };
+  

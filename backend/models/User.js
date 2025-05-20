@@ -33,6 +33,11 @@ const UserSchema = new mongoose.Schema({
             return !this.googleId && !this.appleId;
         }
     },
+    language: {
+        type: String,
+        enum: ['fr', 'en'], // Limitez aux langues que vous supportez
+        default: 'fr'       // Valeur par défaut: français
+      },
     birthdate: {
         type: Date,
         required: false,

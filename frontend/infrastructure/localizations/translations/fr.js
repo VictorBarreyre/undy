@@ -790,20 +790,69 @@ export default {
       "title": "Notifications activées",
       "body": "Vous recevrez désormais des notifications de l'application"
     },
+    "message": {
+      "title": "Message de {{sender}}",
+      "body": "{{text}}"
+    },
+    "purchase": {
+      "title": "Secret vendu !",
+      "body": "{{buyer}} a acheté votre secret pour {{price}}"
+    },
+    "nearby": {
+      "title": "Secrets à proximité",
+      "body": "Il y a {{count}} secrets à {{distance}} mètres de vous"
+    },
+    "stripeSetup": {
+      "title": "Configuration bancaire incomplète",
+      "body": "N'oubliez pas de compléter votre configuration bancaire pour recevoir vos paiements"
+    },
+    "event": {
+      "title": "Événement à durée limitée",
+      "body": "{{event}} se termine dans {{days}} jours"
+    },
+    "stats": {
+      "title": "Mise à jour de vos statistiques",
+      "body": "Vous avez {{secrets}} secrets et {{purchases}} achats"
+    },
+    "welcomeBack": {
+      "title": "Bon retour !",
+      "body": "Vous nous avez manqué ! Cela fait {{days}} jours que vous n'êtes pas venu"
+    },
+    "audio": {
+      "title": "Message audio",
+      "body": "Quelqu'un vous a envoyé un message audio"
+    },
+    "image": {
+      "title": "Image partagée",
+      "body": "Quelqu'un a partagé une image avec vous"
+    },
+    "mixed": {
+      "title": "Message multimédia",
+      "body": "Quelqu'un vous a envoyé un message multimédia"
+    },
     "errors": {
       "permissionCheck": "Erreur de vérification des permissions:",
       "tokenRetrieval": "Erreur lors de l'obtention du token:",
       "sending": "Erreur lors de l'envoi de la notification:",
-      "activation": "Erreur d'activation:"
+      "activation": "Erreur d'activation:",
+      "messageNotification": "Erreur lors de l'envoi de la notification de message",
+      "purchaseNotification": "Erreur lors de l'envoi de la notification d'achat",
+      "nearbyNotification": "Erreur lors de l'envoi de la notification de proximité",
+      "stripeReminderNotification": "Erreur lors de l'envoi du rappel bancaire",
+      "eventNotification": "Erreur lors de l'envoi de la notification d'événement",
+      "statsNotification": "Erreur lors de l'envoi de la notification de statistiques",
+      "welcomeBackNotification": "Erreur lors de l'envoi de la notification de bienvenue",
+      "tokenRegistration": "Erreur lors de l'enregistrement du token",
+      "axiosNotInitialized": "Le client HTTP n'est pas initialisé"
     },
     "logs": {
-      "devModePermission": "Mode développement: autorisation simulateur",
-      "existingStatus": "Status existant:",
-      "newStatus": "Nouveau status:",
-      "testSent": "Notification test envoyée:"
+      "devModePermission": "Mode développement: autorisation simulateur accordée",
+      "existingStatus": "Statut existant:",
+      "newStatus": "Nouveau statut:",
+      "testSent": "Notification test envoyée:",
+      "tokenRegistered": "Token d'appareil enregistré avec succès"
     }
   },
-
   "cardData": {
     "errors": {
       "fullError": "Erreur complète:",

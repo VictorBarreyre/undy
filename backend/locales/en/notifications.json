@@ -1,0 +1,19 @@
+{
+  "messageFrom": "Message from {{senderName}}",
+  "audioMessage": "🎵 Audio message",
+  "imageMessage": "📷 Image",
+  "mixedMessage": "📷 Image with message",
+  "newMessage": "New message",
+  "secretSold": "Secret sold!",
+  "secretPurchased": "{{buyerName}} purchased your secret for {{price}}",
+  "nearbySecrets": "Nearby secrets",
+  "nearbySecretsText": "{{count}} secrets are available within {{distance}}km of you",
+  "stripeReminder": "Stripe setup incomplete",
+  "stripeReminderText": "Complete your configuration to receive your payments",
+  "eventNotification": "Upcoming event",
+  "eventNotificationText": "{{eventName}} ends in {{daysLeft}} days",
+  "statsUpdate": "Weekly statistics",
+  "statsUpdateText": "{{secretsCount}} new secrets and {{purchasesCount}} sales this week",
+  "welcomeBack": "Welcome back!",
+  "welcomeBackText": "We missed you for {{daysAbsent}} days. Discover new secrets!"
+}
