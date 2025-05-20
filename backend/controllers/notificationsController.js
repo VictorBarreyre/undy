@@ -488,8 +488,8 @@ const sendMessageNotification = async (req, res) => {
       });
     }
 
-    // Log détaillé des participants
-    console.log('[NOTIFICATION] Tous les participants de la conversation:', 
+    // Log détaillé des participants avec leurs IDs
+    console.log('[NOTIFICATION] Participants de la conversation:', 
       conversation.participants.map(p => ({
         id: p._id.toString(),
         name: p.name,
@@ -497,10 +497,10 @@ const sendMessageNotification = async (req, res) => {
       }))
     );
     
-    // Filtrer les participants pour exclure l'expéditeur et ne garder que ceux avec un token
+    // Filtrer les participants UNIQUEMENT par ID
     const recipientIds = conversation.participants
       .filter(p => 
-        p._id.toString() !== senderId && // Exclure l'expéditeur
+        p._id.toString() !== senderId && // Exclure l'expéditeur par son ID strict
         p.expoPushToken // Garder uniquement les participants avec un token
       )
       .map(p => p._id.toString());
