@@ -1,40 +1,41 @@
 import React from 'react';
-import {  Image } from 'react-native';
+import { Image, View, Platform, StatusBar, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { Box } from 'native-base';
-import { styles } from '../infrastructure/theme/styles';
+import { styles as appStyles } from '../infrastructure/theme/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TabNavigator from './TabNavigator';
 
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
 
-
+// Conversion de Background en composant React Native pur
 export function Background({ children }) {
     return (
-        <Box flex={1} position="relative">
+        <View style={styles.backgroundContainer}>
             {/* Fond statique derrière tout */}
             <Image
                 source={require('../assets/images/backgroundbp.png')}
-                style={styles.staticBackground} // zIndex: -1 est appliqué ici
+                style={appStyles.staticBackground} // zIndex: -1 est appliqué ici
                 resizeMode="cover"
             />
             {/* Contenu des enfants */}
-            <Box flex={1} zIndex={1} backgroundColor="transparent">
+            <View style={styles.contentContainer}>
                 {children}
-            </Box>
-        </Box>
+            </View>
+        </View>
     );
 }
-
 
 function DrawerNavigator() {
     const insets = useSafeAreaInsets();
 
     return (
         <Background>
-            <Box style={{ paddingTop: insets.top || (Platform.OS === 'android' ? StatusBar.currentHeight : 0) }} flex={1}>
+            <View style={[
+                styles.drawerContainer, 
+                { paddingTop: insets.top || (Platform.OS === 'android' ? StatusBar.currentHeight : 0) }
+            ]}>
                 <Drawer.Navigator
                     initialRouteName="Tabs"
                     screenOptions={{
@@ -50,10 +51,25 @@ function DrawerNavigator() {
                         options={{ title: 'Navigation', headerShown: false }}
                     />
                 </Drawer.Navigator>
-            </Box>
-
+            </View>
         </Background>
     );
 }
+
+// Styles spécifiques à ce composant
+const styles = StyleSheet.create({
+    backgroundContainer: {
+        flex: 1,
+        position: 'relative',
+    },
+    contentContainer: {
+        flex: 1,
+        zIndex: 1,
+        backgroundColor: 'transparent',
+    },
+    drawerContainer: {
+        flex: 1,
+    }
+});
 
 export default DrawerNavigator;

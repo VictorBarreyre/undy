@@ -1,22 +1,37 @@
-import React, { useState } from 'react';
-import { Box, VStack } from 'native-base';
-import { Image, SafeAreaView } from 'react-native';
-import { styles } from '../infrastructure/theme/styles';
-
+import React from 'react';
+import { View, Image, StyleSheet } from 'react-native';
+import { styles as appStyles } from '../infrastructure/theme/styles';
 
 export function Background({ children }) {
     return (
-        <Box flex={1} position="relative">
+        <View style={styles.container}>
            
             <Image
                 source={require('../assets/images/backgroundbp.png')}
-                style={styles.staticBackground} 
+                style={[appStyles.staticBackground, styles.backgroundImage]} 
                 resizeMode="cover"
             />
 
-            <Box flex={1} zIndex={1} backgroundColor="transparent">
+            <View style={styles.content}>
                 {children}
-            </Box>
-        </Box>
+            </View>
+        </View>
     );
 }
+
+// Styles spécifiques à ce composant
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        position: 'relative',
+    },
+    backgroundImage: {
+        // Si vous avez besoin d'ajouter des styles supplémentaires à l'image
+        // non inclus dans appStyles.staticBackground
+    },
+    content: {
+        flex: 1,
+        zIndex: 1,
+        backgroundColor: 'transparent',
+    }
+});

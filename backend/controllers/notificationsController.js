@@ -146,6 +146,14 @@ const registerToken = async (req, res) => {
  * @param {Object} res - Réponse HTTP
  * @returns {Object} Résultat du test
  */
+/**
+ * Envoie une notification de test pour valider la configuration
+ * Compatible avec les tokens APNs et Expo
+ * 
+ * @param {Object} req - Requête HTTP avec userId et token optionnel
+ * @param {Object} res - Réponse HTTP
+ * @returns {Object} Résultat du test
+ */
 const sendTestNotification = async (req, res) => {
   console.log('=== DÉBUT DE LA FONCTION sendTestNotification ===');
   
@@ -183,27 +191,47 @@ const sendTestNotification = async (req, res) => {
       
       // Créer directement la notification et l'envoyer avec le token fourni
       const notification = new apn.Notification();
+      
+      // Configuration de base
       notification.expiry = Math.floor(Date.now() / 1000) + 3600;
       notification.badge = 1;
-      notification.sound = 'default';
+      notification.sound = "default";
+      
+      // Alerte - OBLIGATOIRE pour la notification
       notification.alert = {
         title: translate('testNotificationTitle', { lng: userLanguage }),
         body: translate('testNotificationBody', { lng: userLanguage })
       };
+      
+      // Structure complète du payload APNs
       notification.payload = {
+        aps: {
+          // Répéter certaines informations dans la structure aps
+          alert: notification.alert,
+          sound: notification.sound,
+          badge: notification.badge,
+          // Pour permettre la modification du contenu par l'application
+          "mutable-content": 1,
+          // Pour notifier l'application même en arrière-plan
+          "content-available": 1
+        },
+        // Données personnalisées pour l'application
         type: 'test',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        testId: Math.random().toString(36).substring(2, 10)
       };
+      
       notification.topic = bundleId;
       
-      console.log('Notification complète préparée:', JSON.stringify({
+      // Afficher la notification COMPLÈTE pour le débogage
+      console.log('Notification COMPLÈTE DE TEST préparée:', JSON.stringify({
         expiry: notification.expiry,
-        badge: notification.badge,
-        sound: notification.sound,
-        alert: notification.alert,
         topic: notification.topic,
+        alert: notification.alert,
+        sound: notification.sound,
+        badge: notification.badge,
         payload: notification.payload
-      }));
+      }, null, 2));
       
       try {
         console.log(`[TEST_NOTIF] Envoi direct de la notification à ${token}`);
@@ -259,25 +287,78 @@ const sendTestNotification = async (req, res) => {
       const userToken = user.expoPushToken;
       console.log(`[TEST_NOTIF] Token trouvé pour l'utilisateur: ${userToken}`);
       
-      // Envoyer la notification avec le token de l'utilisateur
-      const notificationResult = await sendPushNotifications(
-        [userId],
-        translate('testNotificationTitle', { lng: userLanguage }),
-        {},
-        translate('testNotificationBody', { lng: userLanguage }),
-        {},
-        {
-          type: 'test',
-          timestamp: new Date().toISOString()
-        }
-      );
+      // Envoyer une notification de test avec le token de l'utilisateur
+      const notification = new apn.Notification();
       
-      return res.status(200).json({
-        success: notificationResult.success,
-        message: translate(notificationResult.success ? 'testNotificationSuccess' : 'testNotificationFailure', { lng: userLanguage }),
-        details: notificationResult
-      });
+      // Configuration de base
+      notification.expiry = Math.floor(Date.now() / 1000) + 3600;
+      notification.badge = 1;
+      notification.sound = "default";
       
+      // Alerte - OBLIGATOIRE pour la notification
+      notification.alert = {
+        title: translate('testNotificationTitle', { lng: userLanguage }),
+        body: translate('testNotificationBody', { lng: userLanguage })
+      };
+      
+      // Structure complète du payload APNs
+      notification.payload = {
+        aps: {
+          // Répéter certaines informations dans la structure aps
+          alert: notification.alert,
+          sound: notification.sound,
+          badge: notification.badge,
+          // Pour permettre la modification du contenu par l'application
+          "mutable-content": 1,
+          // Pour notifier l'application même en arrière-plan
+          "content-available": 1
+        },
+        // Données personnalisées pour l'application
+        type: 'test',
+        userId: userId,
+        timestamp: new Date().toISOString(),
+        testId: Math.random().toString(36).substring(2, 10)
+      };
+      
+      notification.topic = bundleId;
+      
+      // Afficher la notification COMPLÈTE pour le débogage
+      console.log('Notification COMPLÈTE DE TEST pour utilisateur:', JSON.stringify({
+        expiry: notification.expiry,
+        topic: notification.topic,
+        alert: notification.alert,
+        sound: notification.sound,
+        badge: notification.badge,
+        payload: notification.payload
+      }, null, 2));
+      
+      try {
+        console.log(`[TEST_NOTIF] Envoi direct de la notification à ${userToken}`);
+        const response = await apnProvider.send(notification, userToken);
+        console.log('[TEST_NOTIF] Réponse directe APNs:', JSON.stringify(response, null, 2));
+        
+        const success = response.sent && response.sent.length > 0;
+        
+        return res.status(200).json({
+          success: success,
+          message: translate(success ? 'testNotificationSuccess' : 'testNotificationFailure', { lng: userLanguage }),
+          details: {
+            success: success,
+            token: userToken,
+            results: {
+              sent: response.sent || [],
+              failed: response.failed || []
+            }
+          }
+        });
+      } catch (error) {
+        console.error('[TEST_NOTIF] Erreur lors de l\'envoi direct:', error);
+        return res.status(500).json({
+          success: false,
+          message: translate('serverErrorDuringTest', { lng: userLanguage }),
+          error: error.message
+        });
+      }
     } catch (error) {
       console.error(`[TEST_NOTIF] Erreur lors de la recherche du token de l'utilisateur:`, error);
       return res.status(500).json({
@@ -392,26 +473,52 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
       try {
         // Créer la notification APNs
         const notification = new apn.Notification();
+        
+        // Configuration de base
         notification.expiry = Math.floor(Date.now() / 1000) + 3600; // Expire dans 1h
         notification.badge = 1;
         notification.sound = 'default';
+        
+        // Vérifier la présence des informations d'alerte
+        if (!title && !body) {
+          console.log("ATTENTION: Notification sans titre ni corps");
+        }
+        
+        // Définir l'alerte - OBLIGATOIRE pour que la notification s'affiche!
         notification.alert = {
-          title: title,
-          body: body,
+          title: title || "Nouvelle notification",
+          body: body || "",
         };
+        
+        // Configurer les données personnalisées
         notification.payload = {
+          aps: {
+            // Répéter certaines informations dans la structure aps pour plus de compatibilité
+            alert: notification.alert,
+            sound: notification.sound,
+            badge: notification.badge,
+            // Pour permettre la modification du contenu par l'application
+            "mutable-content": 1,
+            // Pour notifier l'application même en arrière-plan
+            "content-available": 1
+          },
+          // Données personnalisées pour l'application
           ...extraData,
           timestamp: new Date().toISOString()
         };
-        notification.topic = bundleId; // Utiliser la variable globale bundleId
         
-        console.log('Notification préparée:', JSON.stringify({
+        // Définir le sujet (bundle ID de l'application)
+        notification.topic = bundleId;
+        
+        // Afficher la notification COMPLÈTE pour le débogage
+        console.log('Notification COMPLÈTE préparée:', JSON.stringify({
           expiry: notification.expiry,
-          badge: notification.badge,
-          sound: notification.sound,
+          topic: notification.topic,
           alert: notification.alert,
-          topic: notification.topic
-        }));
+          sound: notification.sound,
+          badge: notification.badge,
+          payload: notification.payload
+        }, null, 2));
         
         // Envoyer la notification
         console.log(`Envoi de la notification à ${user.expoPushToken}`);

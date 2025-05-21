@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useContext } from 'react';
 import { Platform, AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
-import { AuthContext } from '../../infrastructure/context/AuthContext'
+import { AuthContext } from '../../infrastructure/context/AuthContext';
 import NotificationManager from './NotificationManager';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configuration du gestionnaire de notifications pour iOS
 Notifications.setNotificationHandler({
@@ -133,7 +134,18 @@ const NotificationHandler = () => {
     const initializeNotifications = async () => {
       try {
         if (NotificationManager && typeof NotificationManager.initialize === 'function') {
-          await NotificationManager.initialize();
+          // Passer les données utilisateur si disponibles
+          const userDataStr = await AsyncStorage.getItem('userData');
+          let userData = null;
+          if (userDataStr) {
+            try {
+              userData = JSON.parse(userDataStr);
+            } catch (parseError) {
+              console.error('[NOTIF_HANDLER] Erreur lors du parsing des données utilisateur:', parseError);
+            }
+          }
+          
+          await NotificationManager.initialize(userData);
           console.log('[NOTIF_HANDLER] NotificationManager initialisé');
         }
       } catch (error) {

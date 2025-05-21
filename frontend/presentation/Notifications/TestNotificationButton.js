@@ -1,12 +1,10 @@
 // TestNotificationButton.js
 import React, { useState, useContext } from 'react';
-import { Button, Text, Box, VStack, HStack, Badge } from 'native-base';
-import {  Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { getAxiosInstance } from '../../data/api/axiosInstance';
 import NotificationService from '../Notifications/NotificationService';
 import * as Notifications from 'expo-notifications';
-
 
 const TestNotificationButton = () => {
   const { userData } = useContext(AuthContext);
@@ -83,48 +81,137 @@ const TestNotificationButton = () => {
   };
 
   return (
-    <VStack space={4} width="100%" mt={4}>
-      <VStack space={2} justifyContent="center">
-        <Button
-          colorScheme="blue"
+    <View style={styles.container}>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.button, styles.blueButton]}
           onPress={testLocalNotification}
-          isLoading={loading && !result}
-          isLoadingText="Envoi..."
+          disabled={loading && !result}
         >
-          Test notification locale
-        </Button>
+          {loading && !result ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator color="white" />
+              <Text style={styles.buttonText}>Envoi...</Text>
+            </View>
+          ) : (
+            <Text style={styles.buttonText}>Test notification locale</Text>
+          )}
+        </TouchableOpacity>
 
-        <Button
-          colorScheme="purple"
+        <TouchableOpacity
+          style={[styles.button, styles.purpleButton]}
           onPress={testServerNotification}
-          isLoading={loading && !result}
-          isLoadingText="Envoi..."
+          disabled={loading && !result}
         >
-          Test notification serveur
-        </Button>
-      </VStack>
+          {loading && !result ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator color="white" />
+              <Text style={styles.buttonText}>Envoi...</Text>
+            </View>
+          ) : (
+            <Text style={styles.buttonText}>Test notification serveur</Text>
+          )}
+        </TouchableOpacity>
+      </View>
 
       {result && (
-        <Box
-          p={3}
-          borderRadius="md"
-          bg={result.success ? "green.100" : "red.100"}
+        <View
+          style={[
+            styles.resultContainer,
+            result.success ? styles.successContainer : styles.errorContainer
+          ]}
         >
-          <HStack space={2} mb={2}>
-            <Badge colorScheme={result.success ? "success" : "error"}>
-              {result.success ? "SUCCÈS" : "ÉCHEC"}
-            </Badge>
-          </HStack>
-          <Text fontWeight="medium">{result.message}</Text>
+          <View style={styles.badgeRow}>
+            <View style={[
+              styles.badge,
+              result.success ? styles.successBadge : styles.errorBadge
+            ]}>
+              <Text style={styles.badgeText}>
+                {result.success ? "SUCCÈS" : "ÉCHEC"}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.resultMessage}>{result.message}</Text>
           {result.error && (
-            <Text color="red.600" mt={1}>
+            <Text style={styles.errorText}>
               Erreur: {result.error}
             </Text>
           )}
-        </Box>
+        </View>
       )}
-    </VStack>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+    marginTop: 16,
+  },
+  buttonContainer: {
+    marginBottom: 8,
+  },
+  button: {
+    borderRadius: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blueButton: {
+    backgroundColor: '#3498db',
+  },
+  purpleButton: {
+    backgroundColor: '#9b59b6',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resultContainer: {
+    padding: 12,
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  successContainer: {
+    backgroundColor: 'rgba(72, 187, 120, 0.2)',
+  },
+  errorContainer: {
+    backgroundColor: 'rgba(245, 101, 101, 0.2)',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  badge: {
+    borderRadius: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+  },
+  successBadge: {
+    backgroundColor: '#48bb78',
+  },
+  errorBadge: {
+    backgroundColor: '#f56565',
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  resultMessage: {
+    fontWeight: '500',
+  },
+  errorText: {
+    color: '#e53e3e',
+    marginTop: 4,
+  },
+});
 
 export default TestNotificationButton;
