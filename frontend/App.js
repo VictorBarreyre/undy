@@ -84,8 +84,8 @@ const App = () => {
   return (
     <StripeProvider
       publishableKey={STRIPE_PUBLISHABLE_KEY}
-      merchantIdentifier="merchant.com.anonymous.frontend" // Ajout de cette ligne
-      urlScheme="frontend"
+      merchantIdentifier="merchant.com.hushy.payments"
+      urlScheme="hushy"
     >
       <AuthProvider>
         <CardDataProvider>
