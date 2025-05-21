@@ -27,11 +27,11 @@ let apnProvider = null;
 // Initialisation avec JWT uniquement
 if (apnsKeyId && apnsTeamId && apnsKey) {
   console.log("Configuration JWT avec clé encodée en Base64...");
-  
+
   try {
     // Décoder la clé Base64
     const keyBuffer = Buffer.from(apnsKey, 'base64').toString('utf8');
-    
+
     // Configuration du provider avec l'environnement approprié
     apnProvider = new apn.Provider({
       token: {
@@ -43,9 +43,9 @@ if (apnsKeyId && apnsTeamId && apnsKey) {
       // Gateway explicite pour plus de clarté
       gateway: apnsProduction ? 'api.push.apple.com' : 'api.sandbox.push.apple.com'
     });
-    
+
     console.log(`Provider APNs configuré avec succès (JWT) pour l'environnement ${apnsProduction ? 'PRODUCTION' : 'SANDBOX'}`);
-    
+
     // Ajouter un écouteur d'erreurs globales
     apnProvider.on('error', (err) => {
       console.error("Erreur APNs globale:", err);
@@ -76,9 +76,9 @@ const registerToken = async (req, res) => {
     const { expoPushToken } = req.body;
     const userId = req.user._id;
     const userLanguage = req.user.language || 'fr';
-    
+
     console.log(`[TOKEN] Tentative d'enregistrement du token ${expoPushToken} pour l'utilisateur ${userId}`);
-    
+
     if (!expoPushToken) {
       console.log('[TOKEN] Token manquant dans la requête');
       return res.status(400).json({
@@ -86,13 +86,13 @@ const registerToken = async (req, res) => {
         message: translate('missingPushToken', { lng: userLanguage })
       });
     }
-    
+
     // Valider le token (accepte les tokens APNs et Expo)
-    const isValidToken = 
+    const isValidToken =
       expoPushToken.startsWith('ExponentPushToken[') || // Token Expo
       expoPushToken.match(/^[a-f0-9]{64}$/i) || // Token APNs (hexadécimal 64 caractères)
       expoPushToken === "SIMULATOR_MOCK_TOKEN"; // Token de simulateur
-    
+
     if (!isValidToken) {
       console.log('[TOKEN] Token invalide:', expoPushToken);
       return res.status(400).json({
@@ -100,7 +100,7 @@ const registerToken = async (req, res) => {
         message: translate('invalidPushToken', { lng: userLanguage })
       });
     }
-    
+
     // Trouver l'utilisateur actuel pour obtenir ses données
     const currentUser = await User.findById(userId);
     if (!currentUser) {
@@ -110,7 +110,7 @@ const registerToken = async (req, res) => {
         message: translate('userNotFound', { lng: userLanguage })
       });
     }
-    
+
     // Si le token est identique à celui déjà enregistré, ne pas mettre à jour la base de données
     if (currentUser.expoPushToken === expoPushToken) {
       console.log('[TOKEN] Le token fourni est déjà enregistré pour cet utilisateur');
@@ -120,11 +120,11 @@ const registerToken = async (req, res) => {
         unchanged: true
       });
     }
-    
+
     // Mettre à jour le token dans la base de données
     await User.findByIdAndUpdate(userId, { expoPushToken });
     console.log(`[TOKEN] Token enregistré avec succès pour l'utilisateur ${userId}`);
-    
+
     res.status(200).json({
       success: true,
       message: translate('tokenRegisteredSuccess', { lng: userLanguage })
@@ -156,15 +156,15 @@ const registerToken = async (req, res) => {
  */
 const sendTestNotification = async (req, res) => {
   console.log('=== DÉBUT DE LA FONCTION sendTestNotification ===');
-  
+
   try {
     const userId = req.user._id;
     const { token } = req.body; // Token optionnel pour tester
     const userLanguage = req.user.language || 'fr';
-    
+
     console.log(`[TEST_NOTIF] Utilisateur: ${userId}, Langue: ${userLanguage}`);
     console.log(`[TEST_NOTIF] Token fourni: ${token || 'aucun'}`);
-    
+
     // Vérification de la configuration APNs
     if (!apnProvider) {
       console.error('[TEST_NOTIF] ERREUR: Le provider APNs n\'est pas initialisé');
@@ -174,11 +174,11 @@ const sendTestNotification = async (req, res) => {
         error: 'PROVIDER_NOT_INITIALIZED'
       });
     }
-    
+
     // Si un token spécifique est fourni, l'utiliser directement
     if (token) {
       console.log(`[TEST_NOTIF] Utilisation du token spécifié: ${token}`);
-      
+
       // Traiter le cas du token simulateur
       if (token === "SIMULATOR_MOCK_TOKEN") {
         console.log('[TEST_NOTIF] Token simulateur détecté, envoi d\'une réponse simulée');
@@ -188,43 +188,40 @@ const sendTestNotification = async (req, res) => {
           simulated: true
         });
       }
-      
+
       // Créer directement la notification et l'envoyer avec le token fourni
       const notification = new apn.Notification();
-      
-      // Configuration de base
-      notification.expiry = Math.floor(Date.now() / 1000) + 3600;
+      notification.expiry = Math.floor(Date.now() / 1000) + 3600; // Expire dans 1h
       notification.badge = 1;
       notification.sound = "default";
-      
-      // Alerte - OBLIGATOIRE pour la notification
+
+      // Définir l'alerte - ESSENTIEL POUR QUE LA NOTIFICATION S'AFFICHE
       notification.alert = {
-        title: translate('testNotificationTitle', { lng: userLanguage }),
-        body: translate('testNotificationBody', { lng: userLanguage })
+        title: title,
+        body: body
       };
-      
-      // Structure complète du payload APNs
+
+      // Structure du payload - ATTENTION à inclure alert, sound et badge dans aps
       notification.payload = {
         aps: {
-          // Répéter certaines informations dans la structure aps
+          // Ces éléments sont OBLIGATOIRES dans l'objet aps
           alert: notification.alert,
-          sound: notification.sound,
           badge: notification.badge,
-          // Pour permettre la modification du contenu par l'application
+          sound: notification.sound,
           "mutable-content": 1,
-          // Pour notifier l'application même en arrière-plan
           "content-available": 1
         },
-        // Données personnalisées pour l'application
-        type: 'test',
-        timestamp: new Date().toISOString(),
-        testId: Math.random().toString(36).substring(2, 10)
+        // Ajouter les données personnalisées en dehors de aps
+        type: extraData.type || 'notification',
+        conversationId: extraData.conversationId,
+        senderId: extraData.senderId,
+        messageType: extraData.messageType,
+        timestamp: new Date().toISOString()
       };
-      
+
       notification.topic = bundleId;
-      
-      // Afficher la notification COMPLÈTE pour le débogage
-      console.log('Notification COMPLÈTE DE TEST préparée:', JSON.stringify({
+
+      console.log('Notification COMPLÈTE préparée:', JSON.stringify({
         expiry: notification.expiry,
         topic: notification.topic,
         alert: notification.alert,
@@ -232,14 +229,14 @@ const sendTestNotification = async (req, res) => {
         badge: notification.badge,
         payload: notification.payload
       }, null, 2));
-      
+
       try {
         console.log(`[TEST_NOTIF] Envoi direct de la notification à ${token}`);
         const response = await apnProvider.send(notification, token);
         console.log('[TEST_NOTIF] Réponse directe APNs:', JSON.stringify(response, null, 2));
-        
+
         const success = response.sent && response.sent.length > 0;
-        
+
         // Mettre à jour le token dans la base de données si le test est réussi
         if (success) {
           try {
@@ -250,7 +247,7 @@ const sendTestNotification = async (req, res) => {
             // Continuer malgré l'erreur de mise à jour
           }
         }
-        
+
         return res.status(200).json({
           success: success,
           message: translate(success ? 'testNotificationSuccess' : 'testNotificationFailure', { lng: userLanguage }),
@@ -271,7 +268,7 @@ const sendTestNotification = async (req, res) => {
         });
       }
     }
-    
+
     // Si aucun token n'est fourni, tenter de récupérer celui de l'utilisateur
     console.log(`[TEST_NOTIF] Aucun token fourni, recherche du token de l'utilisateur ${userId}`);
     try {
@@ -283,24 +280,24 @@ const sendTestNotification = async (req, res) => {
           message: translate('noPushTokenFound', { lng: userLanguage })
         });
       }
-      
+
       const userToken = user.expoPushToken;
       console.log(`[TEST_NOTIF] Token trouvé pour l'utilisateur: ${userToken}`);
-      
+
       // Envoyer une notification de test avec le token de l'utilisateur
       const notification = new apn.Notification();
-      
+
       // Configuration de base
       notification.expiry = Math.floor(Date.now() / 1000) + 3600;
       notification.badge = 1;
       notification.sound = "default";
-      
+
       // Alerte - OBLIGATOIRE pour la notification
       notification.alert = {
         title: translate('testNotificationTitle', { lng: userLanguage }),
         body: translate('testNotificationBody', { lng: userLanguage })
       };
-      
+
       // Structure complète du payload APNs
       notification.payload = {
         aps: {
@@ -319,9 +316,9 @@ const sendTestNotification = async (req, res) => {
         timestamp: new Date().toISOString(),
         testId: Math.random().toString(36).substring(2, 10)
       };
-      
+
       notification.topic = bundleId;
-      
+
       // Afficher la notification COMPLÈTE pour le débogage
       console.log('Notification COMPLÈTE DE TEST pour utilisateur:', JSON.stringify({
         expiry: notification.expiry,
@@ -331,14 +328,14 @@ const sendTestNotification = async (req, res) => {
         badge: notification.badge,
         payload: notification.payload
       }, null, 2));
-      
+
       try {
         console.log(`[TEST_NOTIF] Envoi direct de la notification à ${userToken}`);
         const response = await apnProvider.send(notification, userToken);
         console.log('[TEST_NOTIF] Réponse directe APNs:', JSON.stringify(response, null, 2));
-        
+
         const success = response.sent && response.sent.length > 0;
-        
+
         return res.status(200).json({
           success: success,
           message: translate(success ? 'testNotificationSuccess' : 'testNotificationFailure', { lng: userLanguage }),
@@ -350,6 +347,7 @@ const sendTestNotification = async (req, res) => {
               failed: response.failed || []
             }
           }
+
         });
       } catch (error) {
         console.error('[TEST_NOTIF] Erreur lors de l\'envoi direct:', error);
@@ -396,24 +394,24 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
     console.log('Début de sendPushNotifications avec userIds:', userIds);
     console.log('TitleKey:', titleKey, 'TitleData:', titleData);
     console.log('BodyKey:', bodyKey, 'BodyData:', bodyData);
-    
+
     // Vérifier la configuration du provider APNs
     if (!apnProvider) {
       console.log('Provider APNs non configuré, impossible d\'envoyer des notifications');
       return { success: false, message: 'Provider APNs non configuré' };
     }
-    
+
     // Récupérer les utilisateurs avec leur langue préférée
     const users = await User.find({ _id: { $in: userIds } });
     console.log(`Nombre d'utilisateurs trouvés: ${users.length}`);
-    
+
     // Préparation des résultats
     const results = { sent: [], failed: [] };
-    
+
     // Traiter chaque utilisateur
     for (const user of users) {
       console.log(`Traitement de l'utilisateur ${user._id}, token: ${user.expoPushToken || 'non défini'}, langue: ${user.language || 'fr'}`);
-      
+
       // Vérifier que l'utilisateur a un token
       if (!user.expoPushToken) {
         console.log(`Pas de token pour l'utilisateur ${user._id}, on passe au suivant`);
@@ -423,11 +421,11 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
         });
         continue;
       }
-      
+
       // Vérifier le type de token
       const isExpoToken = user.expoPushToken.startsWith('ExponentPushToken[');
       console.log(`Token type: ${isExpoToken ? 'Expo' : 'APNs'}`);
-      
+
       // Les tokens Expo ne sont pas pris en charge directement
       if (isExpoToken) {
         console.log(`Token Expo détecté pour l'utilisateur ${user._id}, non supporté sans EAS`);
@@ -437,14 +435,14 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
         });
         continue;
       }
-      
+
       // Déterminer la langue de l'utilisateur (français par défaut)
       const userLanguage = user.language || 'fr';
       console.log(`Langue de l'utilisateur: ${userLanguage}`);
-      
+
       // Traduction du titre et du corps selon la langue
       let title, body;
-      
+
       // Traduire le titre
       if (typeof titleKey === 'string') {
         // Si c'est une clé standard de traduction
@@ -453,7 +451,7 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
         // Si c'est un texte direct ou un autre type
         title = titleKey;
       }
-      
+
       // Traduire le corps
       if (typeof bodyKey === 'string') {
         // Si c'est une clé de traduction avec préfixe KEY_
@@ -467,50 +465,42 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
         // Si c'est un autre type
         body = bodyKey;
       }
-      
+
       console.log(`Notification traduite: Titre="${title}" Corps="${body}"`);
-      
+
       try {
         // Créer la notification APNs
         const notification = new apn.Notification();
-        
-        // Configuration de base
         notification.expiry = Math.floor(Date.now() / 1000) + 3600; // Expire dans 1h
         notification.badge = 1;
-        notification.sound = 'default';
-        
-        // Vérifier la présence des informations d'alerte
-        if (!title && !body) {
-          console.log("ATTENTION: Notification sans titre ni corps");
-        }
-        
-        // Définir l'alerte - OBLIGATOIRE pour que la notification s'affiche!
+        notification.sound = "default";
+
+        // Définir l'alerte - ESSENTIEL POUR QUE LA NOTIFICATION S'AFFICHE
         notification.alert = {
-          title: title || "Nouvelle notification",
-          body: body || "",
+          title: title,
+          body: body
         };
-        
-        // Configurer les données personnalisées
+
+        // Structure du payload - ATTENTION à inclure alert, sound et badge dans aps
         notification.payload = {
           aps: {
-            // Répéter certaines informations dans la structure aps pour plus de compatibilité
+            // Ces éléments sont OBLIGATOIRES dans l'objet aps
             alert: notification.alert,
-            sound: notification.sound,
             badge: notification.badge,
-            // Pour permettre la modification du contenu par l'application
+            sound: notification.sound,
             "mutable-content": 1,
-            // Pour notifier l'application même en arrière-plan
             "content-available": 1
           },
-          // Données personnalisées pour l'application
-          ...extraData,
+          // Ajouter les données personnalisées en dehors de aps
+          type: extraData.type || 'notification',
+          conversationId: extraData.conversationId,
+          senderId: extraData.senderId,
+          messageType: extraData.messageType,
           timestamp: new Date().toISOString()
         };
-        
-        // Définir le sujet (bundle ID de l'application)
+
         notification.topic = bundleId;
-        
-        // Afficher la notification COMPLÈTE pour le débogage
+
         console.log('Notification COMPLÈTE préparée:', JSON.stringify({
           expiry: notification.expiry,
           topic: notification.topic,
@@ -519,12 +509,12 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
           badge: notification.badge,
           payload: notification.payload
         }, null, 2));
-        
+
         // Envoyer la notification
         console.log(`Envoi de la notification à ${user.expoPushToken}`);
         const response = await apnProvider.send(notification, user.expoPushToken);
         console.log('Réponse complète APNs:', JSON.stringify(response, null, 2));
-        
+
         // Vérifier le résultat
         if (response.failed && response.failed.length > 0) {
           console.log('Échec de l\'envoi:', JSON.stringify(response.failed[0], null, 2));
@@ -556,11 +546,11 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
         });
       }
     }
-    
+
     console.log('Résultats finaux:', JSON.stringify(results, null, 2));
-    return { 
-      success: results.sent.length > 0, 
-      results 
+    return {
+      success: results.sent.length > 0,
+      results
     };
   } catch (error) {
     console.error('Erreur globale lors de l\'envoi des notifications:', error);
@@ -572,16 +562,16 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
 const sendMessageNotification = async (req, res) => {
   try {
     const { conversationId, senderId, senderName, messagePreview, messageType = 'text' } = req.body;
-    
+
     // Log amélioré pour débogage
-    console.log('[NOTIFICATION] Données reçues:', { 
-      conversationId, 
-      senderId, 
-      senderName, 
+    console.log('[NOTIFICATION] Données reçues:', {
+      conversationId,
+      senderId,
+      senderName,
       messagePreview: messagePreview?.substring(0, 50),
       messageType
     });
-    
+
     // Vérifier les paramètres requis
     if (!conversationId || !senderId) {
       console.log('[NOTIFICATION] Paramètres manquants:', { conversationId, senderId });
@@ -590,18 +580,18 @@ const sendMessageNotification = async (req, res) => {
         message: 'Paramètres manquants'
       });
     }
-    
+
     // Assurer que senderId est bien une chaîne
     const senderIdStr = typeof senderId === 'string' ? senderId : senderId.toString();
     console.log('[NOTIFICATION] ID de l\'expéditeur (chaîne):', senderIdStr);
-    
+
     // Récupérer la conversation avec TOUS les participants et leurs tokens
     const conversation = await Conversation.findById(conversationId)
       .populate({
         path: 'participants',
         select: '_id name language expoPushToken'
       });
-    
+
     if (!conversation) {
       console.log('[NOTIFICATION] Conversation non trouvée:', conversationId);
       return res.status(404).json({
@@ -611,33 +601,33 @@ const sendMessageNotification = async (req, res) => {
     }
 
     // Log détaillé des participants avec leurs IDs
-    console.log('[NOTIFICATION] Participants de la conversation:', 
+    console.log('[NOTIFICATION] Participants de la conversation:',
       conversation.participants.map(p => ({
         id: typeof p._id === 'string' ? p._id : p._id.toString(),
         name: p.name,
         hasToken: !!p.expoPushToken
       }))
     );
-    
+
     // Filtrer les participants UNIQUEMENT par ID (en s'assurant que la comparaison est faite avec des chaînes)
     const recipientIds = conversation.participants
       .filter(p => {
         const participantIdStr = typeof p._id === 'string' ? p._id : p._id.toString();
         const isExpéditeur = participantIdStr === senderIdStr;
         const hasToken = !!p.expoPushToken;
-        
+
         console.log(`[NOTIFICATION] Évaluation du participant ${participantIdStr}:`, {
           isExpéditeur,
           hasToken,
           include: !isExpéditeur && hasToken
         });
-        
+
         return !isExpéditeur && hasToken; // Exclure l'expéditeur et garder que ceux avec token
       })
       .map(p => typeof p._id === 'string' ? p._id : p._id.toString());
-    
+
     console.log('[NOTIFICATION] IDs des destinataires après filtrage:', recipientIds);
-    
+
     if (recipientIds.length === 0) {
       console.log('[NOTIFICATION] Aucun destinataire valide trouvé');
       return res.status(200).json({
@@ -645,12 +635,12 @@ const sendMessageNotification = async (req, res) => {
         message: 'Aucun destinataire à notifier'
       });
     }
-    
+
     // Tronquer le message s'il est trop long
-    const truncatedMessage = messagePreview?.length > 100 
-      ? messagePreview.substring(0, 97) + '...' 
+    const truncatedMessage = messagePreview?.length > 100
+      ? messagePreview.substring(0, 97) + '...'
       : messagePreview || '';
-    
+
     // Envoyer la notification aux autres participants
     const notificationResult = await sendPushNotifications(
       recipientIds,
@@ -666,9 +656,9 @@ const sendMessageNotification = async (req, res) => {
         timestamp: new Date().toISOString()
       }
     );
-    
+
     console.log('[NOTIFICATION] Résultat de l\'envoi:', notificationResult);
-    
+
     res.status(200).json({
       success: true,
       message: 'Notification de message envoyée',
@@ -687,7 +677,7 @@ const sendMessageNotification = async (req, res) => {
 const sendPurchaseNotification = async (req, res) => {
   try {
     const { secretId, buyerId, buyerName, price, currency } = req.body;
-    
+
     // Vérifier les paramètres requis
     if (!secretId || !buyerId) {
       return res.status(400).json({
@@ -695,17 +685,17 @@ const sendPurchaseNotification = async (req, res) => {
         message: 'Paramètres manquants'
       });
     }
-    
+
     // Récupérer les informations du secret et la langue du vendeur
     const secret = await Secret.findById(secretId).populate('user', '_id name language');
-    
+
     if (!secret) {
       return res.status(404).json({
         success: false,
         message: 'Secret non trouvé'
       });
     }
-    
+
     // Ne pas notifier si l'acheteur est aussi le vendeur
     if (buyerId === secret.user._id.toString()) {
       return res.status(200).json({
@@ -713,10 +703,10 @@ const sendPurchaseNotification = async (req, res) => {
         message: 'Pas de notification, acheteur = vendeur'
       });
     }
-    
+
     // Formater le prix
     const formattedPrice = `${price} ${currency}`;
-    
+
     // Envoyer la notification au vendeur seulement
     const notificationResult = await sendPushNotifications(
       [secret.user._id.toString()],
@@ -735,7 +725,7 @@ const sendPurchaseNotification = async (req, res) => {
         timestamp: new Date().toISOString()
       }
     );
-    
+
     res.status(200).json({
       success: true,
       message: 'Notification d\'achat envoyée',
@@ -754,7 +744,7 @@ const sendPurchaseNotification = async (req, res) => {
 const sendNearbyNotification = async (req, res) => {
   try {
     const { userId, count, distance } = req.body;
-    
+
     // Vérifier les paramètres requis
     if (!userId || !count || !distance) {
       return res.status(400).json({
@@ -762,7 +752,7 @@ const sendNearbyNotification = async (req, res) => {
         message: 'Paramètres manquants'
       });
     }
-    
+
     // Envoyer la notification
     const notificationResult = await sendPushNotifications(
       [userId],
@@ -780,7 +770,7 @@ const sendNearbyNotification = async (req, res) => {
         timestamp: new Date().toISOString()
       }
     );
-    
+
     res.status(200).json({
       success: true,
       message: 'Notification de proximité envoyée',
@@ -799,7 +789,7 @@ const sendNearbyNotification = async (req, res) => {
 const sendStripeReminderNotification = async (req, res) => {
   try {
     const { userId } = req.body;
-    
+
     // Vérifier le paramètre requis
     if (!userId) {
       return res.status(400).json({
@@ -807,7 +797,7 @@ const sendStripeReminderNotification = async (req, res) => {
         message: 'ID utilisateur manquant'
       });
     }
-    
+
     // Envoyer la notification
     const notificationResult = await sendPushNotifications(
       [userId],
@@ -820,7 +810,7 @@ const sendStripeReminderNotification = async (req, res) => {
         timestamp: new Date().toISOString()
       }
     );
-    
+
     res.status(200).json({
       success: true,
       message: 'Notification de rappel Stripe envoyée',
@@ -839,7 +829,7 @@ const sendStripeReminderNotification = async (req, res) => {
 const sendEventNotification = async (req, res) => {
   try {
     const { userId, eventName, daysLeft } = req.body;
-    
+
     // Vérifier les paramètres requis
     if (!userId || !eventName) {
       return res.status(400).json({
@@ -847,7 +837,7 @@ const sendEventNotification = async (req, res) => {
         message: 'Paramètres manquants'
       });
     }
-    
+
     // Envoyer la notification
     const notificationResult = await sendPushNotifications(
       [userId],
@@ -865,7 +855,7 @@ const sendEventNotification = async (req, res) => {
         timestamp: new Date().toISOString()
       }
     );
-    
+
     res.status(200).json({
       success: true,
       message: 'Notification d\'événement envoyée',
@@ -884,7 +874,7 @@ const sendEventNotification = async (req, res) => {
 const sendStatsNotification = async (req, res) => {
   try {
     const { userId, secretsCount, purchasesCount } = req.body;
-    
+
     // Vérifier les paramètres requis
     if (!userId) {
       return res.status(400).json({
@@ -892,7 +882,7 @@ const sendStatsNotification = async (req, res) => {
         message: 'ID utilisateur manquant'
       });
     }
-    
+
     // Envoyer la notification
     const notificationResult = await sendPushNotifications(
       [userId],
@@ -910,7 +900,7 @@ const sendStatsNotification = async (req, res) => {
         timestamp: new Date().toISOString()
       }
     );
-    
+
     res.status(200).json({
       success: true,
       message: 'Notification de statistiques envoyée',
@@ -929,7 +919,7 @@ const sendStatsNotification = async (req, res) => {
 const sendWelcomeBackNotification = async (req, res) => {
   try {
     const { userId, daysAbsent } = req.body;
-    
+
     // Vérifier les paramètres requis
     if (!userId) {
       return res.status(400).json({
@@ -937,7 +927,7 @@ const sendWelcomeBackNotification = async (req, res) => {
         message: 'ID utilisateur manquant'
       });
     }
-    
+
     // Envoyer la notification
     const notificationResult = await sendPushNotifications(
       [userId],
@@ -953,7 +943,7 @@ const sendWelcomeBackNotification = async (req, res) => {
         timestamp: new Date().toISOString()
       }
     );
-    
+
     res.status(200).json({
       success: true,
       message: 'Notification de bienvenue envoyée',
@@ -977,6 +967,6 @@ module.exports = {
   sendNearbyNotification,
   sendStripeReminderNotification,
   sendEventNotification,
-  sendStatsNotification, 
+  sendStatsNotification,
   sendWelcomeBackNotification
 };
