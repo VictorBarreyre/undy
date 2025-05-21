@@ -24,7 +24,6 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 import { createAxiosInstance, getAxiosInstance } from '../../data/api/axiosInstance';
 import * as Notifications from 'expo-notifications';
 
-
 export default function Profile({ navigation }) {
     const { t } = useTranslation();
     const { userData, isLoadingUserData, updateUserData, logout, downloadUserData, clearUserData, deleteUserAccount, getContacts } = useContext(AuthContext);
@@ -46,6 +45,20 @@ export default function Profile({ navigation }) {
     const { height: windowHeight } = useWindowDimensions();
     const [actionSheetPosition] = useState(new Animated.Value(0));
     const [accurateEarnings, setAccurateEarnings] = useState(null);
+
+    // Fonction pour formatter les dates
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
+    };
+
+    // Fonction pour formater les numéros de téléphone
+    const formatPhoneNumber = (phoneNumber) => {
+        if (!phoneNumber) return '';
+        // Exemple: +33 6 12 34 56 78 ou autre format selon vos besoins
+        return phoneNumber.replace(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5');
+    };
 
     const fetchAccurateEarnings = async () => {
         try {
@@ -69,24 +82,18 @@ export default function Profile({ navigation }) {
         } catch (error) {
           console.error('Erreur lors du chargement des revenus précis:', error);
         }
-      };
-      
+    };
 
-      console.log(userData?.phone)
-
-      useEffect(() => {
+    useEffect(() => {
         if (userData?.stripeAccountId && userData?.stripeAccountStatus === 'active') {
           fetchAccurateEarnings();
         }
-      
-      }, [userData]); // Recharger si userData change
-      
+    }, [userData]);
 
     useEffect(() => {
         const keyboardWillShowListener = Keyboard.addListener(
             Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
             (e) => {
-                // Animation synchronisée avec le clavier
                 Animated.timing(actionSheetPosition, {
                     toValue: e.endCoordinates.height,
                     duration: e.duration || 250,
@@ -114,7 +121,6 @@ export default function Profile({ navigation }) {
 
     useEffect(() => {
         if (modalVisible && inputRef.current) {
-            // Court délai pour laisser le rendu se terminer
             const timer = setTimeout(() => {
                 inputRef.current?.focus();
             }, 100);
@@ -128,60 +134,49 @@ export default function Profile({ navigation }) {
         contacts: false
     });
 
-
     useEffect(() => {
         let permissionCheckInterval;
     
         const checkPermissions = async () => {
-            // Vérifier l'état de la permission des contacts
             if (!alertsCheckedRef.current.contacts) {
                 try {
                     const { status } = await ExpoContacts.getPermissionsAsync();
                     const contactsStatus = status === 'granted';
     
-                    // Ne mettre à jour l'état que si la valeur a changé
                     if (contactsPermissionStatus !== contactsStatus) {
                         setContactsPermissionStatus(contactsStatus);
                     }
     
-                    // Marquer comme vérifié une fois qu'on a obtenu le statut initial
                     alertsCheckedRef.current.contacts = true;
                 } catch (error) {
                     console.error('Erreur lors de la vérification des permissions de contacts:', error);
                 }
             }
     
-            // Vérifier l'état de la permission de localisation
             if (!alertsCheckedRef.current.location) {
                 try {
                     const { status } = await Location.getForegroundPermissionsAsync();
                     const locationStatus = status === 'granted';
     
-                    // Ne mettre à jour l'état que si la valeur a changé
                     if (locationPermissionStatus !== locationStatus) {
                         setLocationPermissionStatus(locationStatus);
                     }
     
-                    // Marquer comme vérifié une fois qu'on a obtenu le statut initial
                     alertsCheckedRef.current.location = true;
                 } catch (error) {
                     console.error('Erreur lors de la vérification des permissions de localisation:', error);
                 }
             }
     
-            // Vérifier l'état des permissions de notification sans forcer l'alerte
             if (!alertsCheckedRef.current.notification) {
                 try {
-                    // Ne PAS demander de nouvelles permissions, juste vérifier l'état actuel
                     const status = await Notifications.getPermissionsAsync();
                     const hasPermission = status.status === 'granted';
     
-                    // Ne mettre à jour l'état que si la valeur a changé
                     if (notificationsEnabled !== hasPermission) {
                         setNotificationsEnabled(hasPermission);
                     }
     
-                    // Marquer comme vérifié une fois qu'on a obtenu le statut initial
                     alertsCheckedRef.current.notification = true;
                 } catch (error) {
                     console.error('Erreur lors de la vérification des permissions de notifications:', error);
@@ -189,18 +184,14 @@ export default function Profile({ navigation }) {
             }
         };
     
-        // Exécuter la vérification une seule fois au montage du composant
         checkPermissions();
     
-        // Configurer un intervalle beaucoup moins fréquent (toutes les 30 secondes au lieu de 10)
         permissionCheckInterval = setInterval(async () => {
             try {
-                // Vérification périodique simplifiée sans appels à checkPermissions()
                 const contactsStatus = (await ExpoContacts.getPermissionsAsync()).status === 'granted';
                 const locationStatus = (await Location.getForegroundPermissionsAsync()).status === 'granted';
                 const notificationStatus = (await Notifications.getPermissionsAsync()).status === 'granted';
                 
-                // Mettre à jour les états uniquement en cas de changement
                 if (contactsPermissionStatus !== contactsStatus) {
                     setContactsPermissionStatus(contactsStatus);
                 }
@@ -213,7 +204,7 @@ export default function Profile({ navigation }) {
             } catch (error) {
                 console.error('Erreur lors de la vérification périodique des permissions:', error);
             }
-        }, 30000); // Vérifier toutes les 30 secondes au lieu de 10
+        }, 30000);
     
         return () => {
             if (permissionCheckInterval) {
@@ -222,13 +213,8 @@ export default function Profile({ navigation }) {
         };
     }, []);
 
-    if (userData) {
-        const { profilePicture, ...userDataWithoutPicture } = userData;
-        console.log(t('settings.userDataLog'), userDataWithoutPicture);
-    }
-
     const truncateText = (text, maxLength) => {
-        if (!text) return ''; // Gérer les cas où le texte est null ou undefined
+        if (!text) return ''; 
         return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
     };
 
@@ -236,7 +222,6 @@ export default function Profile({ navigation }) {
         console.log(t('settings.selectedFieldLog'), selectedField);
         console.log(t('settings.inputValueLog'), inputValue);
 
-        // Utilisez la valeur correcte en fonction du type de champ
         const valueToUpdate = selectedField === 'birthdate' ? tempValue : inputValue;
 
         const updatedData = {
@@ -270,30 +255,30 @@ export default function Profile({ navigation }) {
         syncNotificationState();
     }, [userData]);
 
+    // Fonction pour obtenir le texte de statut pour les permissions
     const getStatusText = (key, isEnabled) => {
         if (!isEnabled) {
-            // Pour les états désactivés
             switch (key) {
                 case 'notifs':
-                    return t('settings.disabledFemininePlural');  // "Désactivées"
+                    return t('settings.disabledFemininePlural');
                 case 'location':
-                    return t('settings.disabledFeminin');  // "Désactivée"
+                    return t('settings.disabledFeminin');
                 default:
-                    return t('settings.disabled');  // "Désactivé"
+                    return t('settings.disabled');
             }
         } else {
-            // Pour les états activés
             switch (key) {
                 case 'notifs':
-                    return t('settings.enabledFemininePlural');  // "Activées"
+                    return t('settings.enabledFemininePlural');
                 case 'location':
-                    return t('settings.enabledFeminin');  // "Activée"
+                    return t('settings.enabledFeminin');
                 default:
-                    return t('settings.enabled');  // "Activé"
+                    return t('settings.enabled');
             }
         }
     };
 
+    // Fonctions pour gérer les permissions
     const handleNotificationsSettings = () => {
         Alert.alert(
             t('permissions.notificationsNeededTitle'),
@@ -311,8 +296,6 @@ export default function Profile({ navigation }) {
         );
     };
 
-
-    // Fonction pour gérer les contacts - redirige vers les paramètres système
     const handleContactsSettings = () => {
         Alert.alert(
             t('permissions.contactsNeededTitle'),
@@ -330,7 +313,6 @@ export default function Profile({ navigation }) {
         );
     };
 
-    // Fonction pour gérer la localisation - redirige vers les paramètres système
     const handleLocationSettings = () => {
         Alert.alert(
             t('permissions.locationNeededTitle'),
@@ -348,25 +330,19 @@ export default function Profile({ navigation }) {
         );
     };
 
-    // Navigation vers l'écran des contacts - vérifie d'abord la permission
     const handleContactsPress = async () => {
         if (!contactsPermissionStatus) {
-            // Si l'accès aux contacts n'est pas autorisé, proposer d'aller dans les paramètres
             handleContactsSettings();
         } else {
-            // Si les contacts sont déjà autorisés, naviguer directement
             navigation.navigate('Contacts');
         }
     };
-
-
 
     const handleDownloadUserData = async () => {
         try {
             const response = await downloadUserData();
             console.log(t('settings.dataReceivedLog'), response);
 
-            // Utiliser la méthode setString de @react-native-clipboard/clipboard
             Clipboard.setString(JSON.stringify(response, null, 2));
 
             Alert.alert(
@@ -435,7 +411,6 @@ export default function Profile({ navigation }) {
                             Alert.alert(t('settings.success'), t('settings.accountDeletedSuccess'));
                             setMessage(t('settings.accountDeletedSuccess'));
                             setIsSuccess(true);
-                            // Navigation vers l'écran de connexion ou autre
                             navigation.navigate('Login');
                         } catch (error) {
                             console.error(t('settings.errors.genericLog'), error);
@@ -472,7 +447,6 @@ export default function Profile({ navigation }) {
                                         text: t('settings.ok'),
                                         onPress: () => {
                                             if (result.url) {
-                                                // Rediriger vers l'URL d'onboarding si disponible
                                                 Linking.openURL(result.url);
                                             }
                                         }
@@ -503,8 +477,8 @@ export default function Profile({ navigation }) {
     const handleLogout = async () => {
         try {
             await logout();
-            resetReadStatus(); // Réinitialise markedAsReadConversations
-            setUnreadCountsMap({}); // Réinitialisez également les compteurs
+            resetReadStatus();
+            setUnreadCountsMap({});
             setTotalUnreadCount(0);
         } catch (error) {
             console.error(t('settings.errors.logoutErrorLog'), error);
@@ -539,17 +513,16 @@ export default function Profile({ navigation }) {
     }
 
     const fieldMappings = {
-        name: { label: t('settings.fields.name'), icon: faUser, truncateLength: 10 },
-        email: { label: t('settings.fields.email'), icon: faEnvelope, truncateLength: 10 },
+        name: { label: t('settings.fields.name'), icon: faUser, truncateLength: 15 },
+        email: { label: t('settings.fields.email'), icon: faEnvelope, truncateLength: 20 },
         password: { label: t('settings.fields.password'), icon: faLock, value: '*********' },
         phone: { label: t('settings.fields.phone'), icon: faPhone, truncateLength: 10 },
-        birthdate: { label: t('settings.fields.birthdate'), icon: faBirthdayCake, truncateLength: 10 },
+        birthdate: { label: t('settings.fields.birthdate'), icon: faBirthdayCake, truncateLength: 20 },
         income: {
             label: t('settings.fields.income'),
             icon: faDollarSign,
             truncateLength: 15,
             getValue: (userData) => {
-              // Utiliser accurateEarnings s'il est disponible, sinon userData.totalEarnings
               const earningsValue = accurateEarnings !== null ? accurateEarnings : (userData?.totalEarnings || 0);
               
               return new Intl.NumberFormat('fr-FR', {
@@ -557,7 +530,7 @@ export default function Profile({ navigation }) {
                 currency: 'EUR'
               }).format(earningsValue);
             }
-          },
+        },
         bank: {
             label: t('settings.fields.bank'),
             icon: faBuildingColumns,
@@ -580,12 +553,49 @@ export default function Profile({ navigation }) {
         delete: { label: t('settings.account.deleteAccount') },
     };
 
+    // Fonction pour obtenir le texte à afficher pour chaque champ (preview)
+    const getFieldPreviewText = (key) => {
+        // Gestion spéciale pour notifications, contacts et location
+        if (key === 'notifs') {
+            return notificationsEnabled ? t('settings.enabledFemininePlural') : t('settings.disabledFemininePlural');
+        }
+        if (key === 'contacts') {
+            return contactsPermissionStatus ? t('settings.enabled') : t('settings.disabled');
+        }
+        if (key === 'location') {
+            return locationPermissionStatus ? t('settings.enabledFeminin') : t('settings.disabledFeminin');
+        }
+        
+        // Gestion spéciale pour les champs avec fonctions getValue
+        if (key === 'income' || key === 'bank') {
+            return fieldMappings[key].getValue(userData);
+        }
+        
+        // Gestion du mot de passe (toujours masqué)
+        if (key === 'password') {
+            return '••••••••';
+        }
+        
+        // Gestion de la date de naissance
+        if (key === 'birthdate' && userData[key]) {
+            return formatDate(userData[key]);
+        }
+        
+        // Gestion du numéro de téléphone
+        if (key === 'phone' && userData[key]) {
+            return formatPhoneNumber(userData[key]);
+        }
+        
+        // Gestion par défaut: afficher la valeur si elle existe, sinon "Non spécifié"
+        return userData[key] || t('settings.notSpecified');
+    };
+
     return (
         <Background>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} // Ajustez cette valeur selon vos besoins
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
             >
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                     <ScrollView contentContainerStyle={customStyles.scrollViewContent}>
@@ -626,19 +636,6 @@ export default function Profile({ navigation }) {
                                     <VStack justifyContent="space-between">
                                         {Object.keys(fieldMappings).map((key, index) => {
                                             const field = fieldMappings[key];
-                                            const value = key === 'password'
-                                                ? field.value
-                                                : key === 'income' || key === 'bank'
-                                                    ? field.getValue(userData)
-                                                    : key === 'notifs'
-                                                        ? (notificationsEnabled ? t('settings.enabled') : t('settings.disabled'))
-                                                        : key === 'contacts'
-                                                            ? (contactsPermissionStatus ? t('settings.enabled') : t('settings.disabled'))
-                                                            : key === 'location'
-                                                                ? (locationPermissionStatus ? t('settings.enabled') : t('settings.disabled'))
-                                                                : truncateText(userData?.[key] || t('settings.notSpecified'), field.truncateLength || 15);
-
-                                            // Vérifie si c'est le dernier élément
                                             const isLast = index === Object.keys(fieldMappings).length - 1;
 
                                             return (
@@ -659,9 +656,7 @@ export default function Profile({ navigation }) {
                                                     <HStack flex={1} justifyContent="space-between" px={4}>
                                                         <Text style={[styles.h5]} isTruncated>{field.label}</Text>
                                                         <Text style={[styles.caption]} color="#94A3B8">
-                                                            {getStatusText(key, key === 'notifs' ? notificationsEnabled : 
-                                                                          key === 'contacts' ? contactsPermissionStatus : 
-                                                                          key === 'location' ? locationPermissionStatus : null)}
+                                                            {truncateText(getFieldPreviewText(key), field.truncateLength || 15)}
                                                         </Text>
                                                     </HStack>
                                                     <FontAwesome name="chevron-right" size={14} color="#94A3B8" />
@@ -690,11 +685,6 @@ export default function Profile({ navigation }) {
                                     <VStack justifyContent="space-between">
                                         {Object.keys(accountFieldMapping).map((key, index) => {
                                             const field = accountFieldMapping[key];
-                                            const value = key === 'password'
-                                                ? field.value
-                                                : userData?.[key] || t('settings.notSpecified'); // Priorité à une valeur spécifique (ex: password)
-
-                                            // Vérifie si c'est le dernier élément
                                             const isLast = index === Object.keys(accountFieldMapping).length - 1;
 
                                             return (
@@ -718,8 +708,8 @@ export default function Profile({ navigation }) {
                                                         paddingTop={4}
                                                         paddingBottom={isLast ? 1 : 4}
                                                         px={1}
-                                                        borderBottomWidth={isLast ? 0 : 1} // Retire la bordure pour le dernier élément
-                                                        borderColor={isLast ? "transparent" : "gray.200"} // Rend la bordure invisible pour le dernier élément
+                                                        borderBottomWidth={isLast ? 0 : 1}
+                                                        borderColor={isLast ? "transparent" : "gray.200"}
                                                         alignItems="center"
                                                         width="100%"
                                                     >
@@ -765,8 +755,8 @@ export default function Profile({ navigation }) {
 
             <StripeProvider
                 publishableKey={STRIPE_PUBLISHABLE_KEY}
-                urlScheme="hushy" // S'assurer que c'est le même que dans app.json
-                merchantIdentifier="merchant.com.hushy" // Ajouter pour Apple Pay si nécessaire
+                urlScheme="hushy"
+                merchantIdentifier="merchant.com.hushy"
             >
                 <StripeVerificationModal
                     isOpen={stripeModalVisible}
@@ -784,155 +774,154 @@ export default function Profile({ navigation }) {
                     setModalVisible(false);
                 }}
                 bottom={selectedField === 'birthdate' ? undefined : "32%"}
-
             >
-                <Actionsheet.Content>
+                 <Actionsheet.Content>
 
-                    <VStack width="100%" space={4} px={4}>
+<VStack width="100%" space={4} px={4}>
 
-                        {selectedField === 'abonnements' && (!userData?.subscriptions || userData.subscriptions === 0) ? (
-                            <>
-                                <Text style={styles.h4} textAlign="center">
-                                    {t('settings.mySubscriptions')}
-                                </Text>
-                                <Text
-                                    style={styles.caption}
-                                    color="#94A3B8"
-                                    textAlign="center"
-                                >
-                                    {t('settings.noSubscriptionsYet')}
-                                </Text>
-                                <Button
-                                    onPress={() => {
-                                        navigation.navigate('Subscriptions');
-                                        setModalVisible(false);
-                                    }}
-                                    backgroundColor="black"
-                                    borderRadius="full"
-                                >
-                                    <Text color="white" style={styles.cta}>
-                                        {t('settings.viewSubscriptions')}
-                                    </Text>
-                                </Button>
-                            </>
-                        ) : (
-                            <>
-                                <Text style={styles.h4} textAlign="center">
-                                    {t('settings.editField', { field: fieldMappings[selectedField]?.label?.toLowerCase() || t('settings.information') })}
-                                </Text>
+    {selectedField === 'abonnements' && (!userData?.subscriptions || userData.subscriptions === 0) ? (
+        <>
+            <Text style={styles.h4} textAlign="center">
+                {t('settings.mySubscriptions')}
+            </Text>
+            <Text
+                style={styles.caption}
+                color="#94A3B8"
+                textAlign="center"
+            >
+                {t('settings.noSubscriptionsYet')}
+            </Text>
+            <Button
+                onPress={() => {
+                    navigation.navigate('Subscriptions');
+                    setModalVisible(false);
+                }}
+                backgroundColor="black"
+                borderRadius="full"
+            >
+                <Text color="white" style={styles.cta}>
+                    {t('settings.viewSubscriptions')}
+                </Text>
+            </Button>
+        </>
+    ) : (
+        <>
+            <Text style={styles.h4} textAlign="center">
+                {t('settings.editField', { field: fieldMappings[selectedField]?.label?.toLowerCase() || t('settings.information') })}
+            </Text>
 
-                                <Box width="100%">
-                                    {selectedField === 'birthdate' ? (
-                                        Platform.OS === 'web' ? (
-                                            <TextInput
-                                                value={tempValue}
-                                                onChangeText={setTempValue}
-                                                placeholder="YYYY-MM-DD"
-                                                style={{
-                                                    height: 48,
-                                                    paddingHorizontal: 16,
-                                                    backgroundColor: '#f5f5f5',
-                                                    borderRadius: 6,  // borderRadius="md" approximation
-                                                    fontSize: 16,
-                                                    borderWidth: 1,
-                                                    borderColor: 'transparent'
-                                                }}
-                                                keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
-                                            />
-                                        ) : (
-                                            <DateTimePicker
-                                                value={tempValue ? new Date(tempValue) : new Date()}
-                                                mode="date"
-                                                display="spinner"
-                                                textColor="#000"c
-                                                style={styles.datePicker}
-                                                onChange={handleDateChange}
-                                            />
-                                        )
-                                    ) : (
-                                        <TextInput
-                                            ref={inputRef}
-                                            placeholder={t('settings.editFieldPlaceholder', { field: fieldMappings[selectedField]?.label?.toLowerCase() || t('settings.information') })}
-                                            value={inputValue}
-                                            onChangeText={(text) => {
-                                                console.log('Texte modifié:', text);
-                                                setInputValue(text);
-                                            }}
-                                            style={{
-                                                marginTop: 16,
-                                                marginBottom: 16,
-                                                paddingHorizontal: 16,
-                                                paddingVertical: 12,
-                                                backgroundColor: '#f5f5f5',
-                                                borderRadius: 30,
-                                                fontSize: 16,
-                                                borderWidth: 1,
-                                                borderColor: 'transparent'
-                                            }}
-                                            autoCorrect={false}
-                                            spellCheck={false}
-                                            onFocus={() => console.log('Focus acquis')}
-                                            onBlur={() => console.log('Focus perdu')}
-                                        />
-                                    )}
-                                </Box>
+            <Box width="100%">
+                {selectedField === 'birthdate' ? (
+                    Platform.OS === 'web' ? (
+                        <TextInput
+                            value={tempValue}
+                            onChangeText={setTempValue}
+                            placeholder="YYYY-MM-DD"
+                            style={{
+                                height: 48,
+                                paddingHorizontal: 16,
+                                backgroundColor: '#f5f5f5',
+                                borderRadius: 6,  // borderRadius="md" approximation
+                                fontSize: 16,
+                                borderWidth: 1,
+                                borderColor: 'transparent'
+                            }}
+                            keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
+                        />
+                    ) : (
+                        <DateTimePicker
+                            value={tempValue ? new Date(tempValue) : new Date()}
+                            mode="date"
+                            display="spinner"
+                            textColor="#000"c
+                            style={styles.datePicker}
+                            onChange={handleDateChange}
+                        />
+                    )
+                ) : (
+                    <TextInput
+                        ref={inputRef}
+                        placeholder={t('settings.editFieldPlaceholder', { field: fieldMappings[selectedField]?.label?.toLowerCase() || t('settings.information') })}
+                        value={inputValue}
+                        onChangeText={(text) => {
+                            console.log('Texte modifié:', text);
+                            setInputValue(text);
+                        }}
+                        style={{
+                            marginTop: 16,
+                            marginBottom: 16,
+                            paddingHorizontal: 16,
+                            paddingVertical: 12,
+                            backgroundColor: '#f5f5f5',
+                            borderRadius: 30,
+                            fontSize: 16,
+                            borderWidth: 1,
+                            borderColor: 'transparent'
+                        }}
+                        autoCorrect={false}
+                        spellCheck={false}
+                        onFocus={() => console.log('Focus acquis')}
+                        onBlur={() => console.log('Focus perdu')}
+                    />
+                )}
+            </Box>
 
-                                <Button
-                                    backgroundColor="black"
-                                    onPress={saveChanges}
-                                    borderRadius="full"
-                                    py={3}
-                                    _pressed={{
-                                        backgroundColor: "gray.800"
-                                    }}
-                                >
-                                    <Text color="white" style={styles.cta}>
-                                        {t('settings.save')}
-                                    </Text>
-                                </Button>
-                            </>
-                        )}
-                    </VStack>
-                </Actionsheet.Content>
-            </Actionsheet>
-        </Background>
-    );
+            <Button
+                backgroundColor="black"
+                onPress={saveChanges}
+                borderRadius="full"
+                py={3}
+                _pressed={{
+                    backgroundColor: "gray.800"
+                }}
+            >
+                <Text color="white" style={styles.cta}>
+                    {t('settings.save')}
+                </Text>
+            </Button>
+        </>
+    )}
+</VStack>
+</Actionsheet.Content>
+</Actionsheet>
+</Background>
+);
 };
 
 const customStyles = StyleSheet.create({
-    container: {
-        display: 'flex',
-        flex: 1,
-        height: 'auto',
-        width: '100%',
-        justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
-        alignItems: 'start',
-        alignContent: 'start'
-    },
+container: {
+display: 'flex',
+flex: 1,
+height: 'auto',
+width: '100%',
+justifyContent: 'space-between', // Ajoute de l'espace entre les éléments
+alignItems: 'start',
+alignContent: 'start'
+},
 
-    datePicker: {
-        width: '100%',
-        backgroundColor: 'white',
-        borderRadius: 8,
-        overflow: 'hidden',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.2,
-                shadowRadius: 4,
-            },
-            android: {
-                elevation: 4,
-            },
-        }),
-    },
+datePicker: {
+width: '100%',
+backgroundColor: 'white',
+borderRadius: 8,
+overflow: 'hidden',
+...Platform.select({
+ios: {
+shadowColor: '#000',
+shadowOffset: { width: 0, height: 2 },
+shadowOpacity: 0.2,
+shadowRadius: 4,
+},
+android: {
+elevation: 4,
+},
+}),
+},
 
-    shadowBox: {
-        shadowColor: 'violet',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 5
-    },
+shadowBox: {
+shadowColor: 'violet',
+shadowOffset: { width: 0, height: 4 },
+shadowOpacity: 0.3,
+shadowRadius: 5,
+elevation: 5
+},
 });
