@@ -740,50 +740,7 @@ const sendPurchaseNotification = async (req, res) => {
   }
 };
 
-// Notification de secrets à proximité avec support multilingue
-const sendNearbyNotification = async (req, res) => {
-  try {
-    const { userId, count, distance } = req.body;
 
-    // Vérifier les paramètres requis
-    if (!userId || !count || !distance) {
-      return res.status(400).json({
-        success: false,
-        message: 'Paramètres manquants'
-      });
-    }
-
-    // Envoyer la notification
-    const notificationResult = await sendPushNotifications(
-      [userId],
-      'nearbySecrets',        // Clé pour le titre
-      {},                     // Pas de paramètres pour le titre
-      'KEY_nearbySecrets',    // Clé pour le corps
-      {                       // Données pour le corps
-        count,
-        distance
-      },
-      {                       // Données supplémentaires
-        type: 'nearby_secrets',
-        count,
-        distance,
-        timestamp: new Date().toISOString()
-      }
-    );
-
-    res.status(200).json({
-      success: true,
-      message: 'Notification de proximité envoyée',
-      details: notificationResult
-    });
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi de la notification de proximité:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
-};
 
 // Notification de rappel Stripe avec support multilingue
 const sendStripeReminderNotification = async (req, res) => {
@@ -825,138 +782,6 @@ const sendStripeReminderNotification = async (req, res) => {
   }
 };
 
-// Notification d'événement avec support multilingue
-const sendEventNotification = async (req, res) => {
-  try {
-    const { userId, eventName, daysLeft } = req.body;
-
-    // Vérifier les paramètres requis
-    if (!userId || !eventName) {
-      return res.status(400).json({
-        success: false,
-        message: 'Paramètres manquants'
-      });
-    }
-
-    // Envoyer la notification
-    const notificationResult = await sendPushNotifications(
-      [userId],
-      'eventNotification',        // Clé pour le titre
-      {},                         // Pas de paramètres pour le titre
-      'KEY_eventNotification',    // Clé pour le corps
-      {                           // Données pour le corps
-        eventName,
-        daysLeft
-      },
-      {                           // Données supplémentaires
-        type: 'time_limited_event',
-        eventName,
-        daysLeft,
-        timestamp: new Date().toISOString()
-      }
-    );
-
-    res.status(200).json({
-      success: true,
-      message: 'Notification d\'événement envoyée',
-      details: notificationResult
-    });
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi de la notification d\'événement:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
-};
-
-// Notification de statistiques avec support multilingue
-const sendStatsNotification = async (req, res) => {
-  try {
-    const { userId, secretsCount, purchasesCount } = req.body;
-
-    // Vérifier les paramètres requis
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'ID utilisateur manquant'
-      });
-    }
-
-    // Envoyer la notification
-    const notificationResult = await sendPushNotifications(
-      [userId],
-      'statsUpdate',              // Clé pour le titre
-      {},                         // Pas de paramètres pour le titre
-      'KEY_statsUpdate',          // Clé pour le corps
-      {                           // Données pour le corps
-        secretsCount,
-        purchasesCount
-      },
-      {                           // Données supplémentaires
-        type: 'stats_update',
-        secretsCount,
-        purchasesCount,
-        timestamp: new Date().toISOString()
-      }
-    );
-
-    res.status(200).json({
-      success: true,
-      message: 'Notification de statistiques envoyée',
-      details: notificationResult
-    });
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi de la notification de statistiques:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
-};
-
-// Notification de bienvenue avec support multilingue
-const sendWelcomeBackNotification = async (req, res) => {
-  try {
-    const { userId, daysAbsent } = req.body;
-
-    // Vérifier les paramètres requis
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'ID utilisateur manquant'
-      });
-    }
-
-    // Envoyer la notification
-    const notificationResult = await sendPushNotifications(
-      [userId],
-      'welcomeBack',              // Clé pour le titre
-      {},                         // Pas de paramètres pour le titre
-      'KEY_welcomeBack',          // Clé pour le corps
-      {                           // Données pour le corps
-        daysAbsent
-      },
-      {                           // Données supplémentaires
-        type: 'welcome_back',
-        daysAbsent,
-        timestamp: new Date().toISOString()
-      }
-    );
-
-    res.status(200).json({
-      success: true,
-      message: 'Notification de bienvenue envoyée',
-      details: notificationResult
-    });
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi de la notification de bienvenue:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
-};
 
 // Export du contrôleur
 module.exports = {
@@ -964,9 +789,5 @@ module.exports = {
   sendTestNotification,
   sendMessageNotification,
   sendPurchaseNotification,
-  sendNearbyNotification,
   sendStripeReminderNotification,
-  sendEventNotification,
-  sendStatsNotification,
-  sendWelcomeBackNotification
 };

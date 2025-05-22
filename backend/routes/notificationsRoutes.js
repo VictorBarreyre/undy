@@ -15,20 +15,8 @@ router.post('/purchase', protect, notificationsController.sendPurchaseNotificati
 // Route pour les notifications de nouveaux messages
 router.post('/message', protect, notificationsController.sendMessageNotification);
 
-// Route pour les notifications de secrets à proximité
-router.post('/nearby', protect, notificationsController.sendNearbyNotification);
-
 // Route pour les rappels Stripe
 router.post('/stripe-reminder', protect, notificationsController.sendStripeReminderNotification);
-
-// Route pour les notifications d'événements limités dans le temps
-router.post('/event', protect, notificationsController.sendEventNotification);
-
-// Route pour les notifications statistiques
-router.post('/stats', protect, notificationsController.sendStatsNotification);
-
-// Route pour les notifications de bienvenue
-router.post('/welcome-back', protect, notificationsController.sendWelcomeBackNotification);
 
 // Route pour les tests de notification
 router.post('/test', protect, notificationsController.sendTestNotification);

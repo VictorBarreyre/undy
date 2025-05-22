@@ -387,39 +387,7 @@ class NotificationManager {
     }
   }
 
-
-  // 3. Notification pour les secrets à proximité
-  async scheduleNearbySecretsNotification(count, distance) {
-    try {
-      await this.notificationService.sendLocalNotification(
-        i18n.t('notifications.nearby.title'),
-        i18n.t('notifications.nearby.body', { count, distance }),
-        {
-          type: 'nearby_secrets',
-          count,
-          distance,
-          timestamp: new Date().toISOString()
-        }
-      );
-      
-      try {
-        mixpanel.track("Notification Sent", {
-          notification_type: "nearby_secrets",
-          count: count,
-          distance: distance
-        });
-      } catch (mpError) {
-        console.error("Erreur Mixpanel:", mpError);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error(i18n.t('notifications.errors.nearbyNotification'), error);
-      return false;
-    }
-  }
-
-  // 4. Notification de rappel pour finaliser la configuration Stripe
+  // 3. Notification de rappel pour finaliser la configuration Stripe
   async scheduleStripeSetupReminderNotification() {
     try {
       await this.notificationService.sendLocalNotification(
@@ -446,102 +414,7 @@ class NotificationManager {
     }
   }
 
-  // 5. Notification quand un utilisateur revient après une longue période
-  async scheduleWelcomeBackNotification(daysAbsent) {
-    try {
-      await this.notificationService.sendLocalNotification(
-        i18n.t('notifications.welcomeBack.title'),
-        i18n.t('notifications.welcomeBack.body', { days: daysAbsent }),
-        {
-          type: 'welcome_back',
-          daysAbsent,
-          timestamp: new Date().toISOString()
-        }
-      );
-      
-      try {
-        mixpanel.track("Notification Sent", {
-          notification_type: "welcome_back",
-          days_absent: daysAbsent
-        });
-      } catch (mpError) {
-        console.error("Erreur Mixpanel:", mpError);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error(i18n.t('notifications.errors.welcomeBackNotification'), error);
-      return false;
-    }
-  }
 
-  // 6. Notification pour les tendances et statistiques
-  async scheduleStatsNotification(secretsCount, purchasesCount) {
-    try {
-      await this.notificationService.sendLocalNotification(
-        i18n.t('notifications.stats.title'),
-        i18n.t('notifications.stats.body', { 
-          secrets: secretsCount, 
-          purchases: purchasesCount 
-        }),
-        {
-          type: 'stats_update',
-          secretsCount,
-          purchasesCount,
-          timestamp: new Date().toISOString()
-        }
-      );
-      
-      try {
-        mixpanel.track("Notification Sent", {
-          notification_type: "stats_update",
-          secrets_count: secretsCount,
-          purchases_count: purchasesCount
-        });
-      } catch (mpError) {
-        console.error("Erreur Mixpanel:", mpError);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error(i18n.t('notifications.errors.statsNotification'), error);
-      return false;
-    }
-  }
-
-  // 7. Notification pour les événements limités dans le temps
-  async scheduleTimeLimitedEventNotification(eventName, daysLeft) {
-    try {
-      await this.notificationService.sendLocalNotification(
-        i18n.t('notifications.event.title'),
-        i18n.t('notifications.event.body', { 
-          event: eventName, 
-          days: daysLeft 
-        }),
-        {
-          type: 'time_limited_event',
-          eventName,
-          daysLeft,
-          timestamp: new Date().toISOString()
-        }
-      );
-      
-      try {
-        mixpanel.track("Notification Sent", {
-          notification_type: "time_limited_event",
-          event_name: eventName,
-          days_left: daysLeft
-        });
-      } catch (mpError) {
-        console.error("Erreur Mixpanel:", mpError);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error(i18n.t('notifications.errors.eventNotification'), error);
-      return false;
-    }
-  }
 }
 
 export default new NotificationManager();
