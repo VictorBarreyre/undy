@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const UserSchema = new mongoose.Schema({
-    expoPushToken: {
+    apnsToken: {  
         type: String,
         default: null
-      },
+    },
     appleId: {
         type: String,
         unique: true,
