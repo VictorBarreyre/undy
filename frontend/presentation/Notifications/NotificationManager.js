@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import NotificationService from './NotificationService'; // Votre service existant
+import NotificationService from './NotificationService';
 import { getAxiosInstance } from '../../data/api/axiosInstance';
 import i18n from 'i18next';
 import mixpanel from "../../services/mixpanel";
@@ -10,12 +10,27 @@ const TOKEN_REGISTRATION_TIME_KEY = 'token_registration_time';
 
 class NotificationManager {
   constructor() {
-    this.notificationService = NotificationService;
+    // CORRECTION: Vérifier que NotificationService existe avant de l'assigner
+    if (NotificationService && typeof NotificationService === 'object') {
+      this.notificationService = NotificationService;
+      console.log("[NOTIF_MANAGER] NotificationService importé avec succès");
+    } else {
+      console.error("[NOTIF_MANAGER] ERREUR: NotificationService non disponible");
+      console.error("[NOTIF_MANAGER] Type de NotificationService:", typeof NotificationService);
+      console.error("[NOTIF_MANAGER] NotificationService:", NotificationService);
+      this.notificationService = null;
+    }
     this.initialized = false;
     this.initializationInProgress = false;
   }
 
   async initialize(userData) {
+    // Vérification de sécurité
+    if (!this.notificationService) {
+      console.error("[NOTIF_MANAGER] Impossible d'initialiser: NotificationService manquant");
+      return false;
+    }
+
     // Si déjà en cours d'initialisation, ne pas recommencer
     if (this.initializationInProgress) {
       console.log("[NOTIF_MANAGER] Initialisation déjà en cours, sortie");
@@ -57,17 +72,38 @@ class NotificationManager {
       
       // S'assurer que le service de notification est initialisé
       console.log("[NOTIF_MANAGER] Initialisation du service de notifications");
-      await this.notificationService.initialize();
+      
+      // CORRECTION: Vérifier que la méthode initialize existe
+      if (this.notificationService.initialize && typeof this.notificationService.initialize === 'function') {
+        const initResult = await this.notificationService.initialize();
+        console.log("[NOTIF_MANAGER] Service de notifications initialisé:", initResult);
+      } else {
+        console.warn("[NOTIF_MANAGER] Méthode initialize non disponible sur NotificationService");
+        console.warn("[NOTIF_MANAGER] Méthodes disponibles:", Object.keys(this.notificationService || {}));
+      }
       
       // Vérifier les permissions sans forcer l'alerte
       console.log("[NOTIF_MANAGER] Vérification des permissions");
-      const hasPermission = await this.notificationService.checkPermissions(false);
-      console.log("[NOTIF_MANAGER] Résultat de la vérification des permissions:", hasPermission);
+      let hasPermission = false;
+      
+      if (this.notificationService.checkPermissions && typeof this.notificationService.checkPermissions === 'function') {
+        hasPermission = await this.notificationService.checkPermissions(false);
+        console.log("[NOTIF_MANAGER] Résultat de la vérification des permissions:", hasPermission);
+      } else {
+        console.warn("[NOTIF_MANAGER] Méthode checkPermissions non disponible");
+      }
       
       // Obtenir le token et l'envoyer au serveur si on a un utilisateur connecté
       if (userData && userData._id) {
           console.log("[NOTIF_MANAGER] Récupération et enregistrement du token");
-          const token = await this.notificationService.getToken();
+          
+          let token = null;
+          if (this.notificationService.getToken && typeof this.notificationService.getToken === 'function') {
+            token = await this.notificationService.getToken();
+          } else {
+            console.warn("[NOTIF_MANAGER] Méthode getToken non disponible");
+          }
+          
           if (token) {
               console.log("[NOTIF_MANAGER] Token obtenu, enregistrement avec le serveur");
               await this.registerTokenWithServer(userData._id, token);
@@ -120,12 +156,12 @@ class NotificationManager {
     
     const instance = getAxiosInstance();
     if (!instance) {
-        throw new Error(i18n.t('notifications.errors.axiosNotInitialized'));
+        console.error("[NOTIF_MANAGER] Instance Axios non disponible");
+        return false;
     }
     
     try {
         // Le token a été obtenu, tentative d'enregistrement sur le serveur
-        // CORRECTION: Utiliser "/api/notifications/register" au lieu de "/api/notifications/token"
         console.log("[NOTIF_MANAGER] Envoi du token au serveur:", token);
         const response = await instance.post('/api/notifications/register', {
           apnsToken: token
@@ -137,7 +173,7 @@ class NotificationManager {
           console.log("[NOTIF_MANAGER] Token enregistré avec succès sur le serveur");
         }
         
-        console.log(i18n.t('notifications.logs.tokenRegistered'), response.data);
+        console.log("[NOTIF_MANAGER] Réponse serveur:", response.data);
         return true;
     } catch (error) {
         console.error("[NOTIF_MANAGER] Erreur lors de l'enregistrement du token:", error);
@@ -173,7 +209,11 @@ class NotificationManager {
     
     try {
         // Récupérer le token
-        const token = await this.notificationService.getToken();
+        let token = null;
+        if (this.notificationService && this.notificationService.getToken) {
+          token = await this.notificationService.getToken();
+        }
+        
         if (!token) {
             console.error("[NOTIF_MANAGER] Impossible d'obtenir un token pour le test");
             return {
@@ -184,7 +224,7 @@ class NotificationManager {
         
         const instance = getAxiosInstance();
         if (!instance) {
-            throw new Error(i18n.t('notifications.errors.axiosNotInitialized'));
+            throw new Error("Instance Axios non initialisée");
         }
         
         // Étape 1: Enregistrer d'abord le token
@@ -239,7 +279,6 @@ class NotificationManager {
     }
   }
   
-  
   async scheduleMessageNotification(messageSender, conversationId, messagePreview, messageType = 'text', senderId = null) {
     console.log("[NOTIF_MANAGER] Préparation d'une notification de message:", { 
       sender: messageSender, 
@@ -254,7 +293,7 @@ class NotificationManager {
         console.error("[NOTIF_MANAGER] Client HTTP non initialisé");
         return false;
       }
-  
+
       // Si aucun senderId n'est fourni, tenter de l'obtenir depuis AsyncStorage
       if (!senderId) {
         try {
@@ -266,28 +305,27 @@ class NotificationManager {
               senderId = typeof userData._id === 'string' 
                 ? userData._id 
                 : userData._id.toString();
-              console.log("[NOTIF_MANAGER] ID expéditeur récupéré d'AsyncStorage:", senderId);
             }
           }
         } catch (userDataError) {
           console.error("[NOTIF_MANAGER] Erreur lors de la récupération des données utilisateur:", userDataError);
         }
       }
-  
+
       // Si toujours pas d'ID expéditeur, alerter mais continuer
       if (!senderId) {
         console.warn("[NOTIF_MANAGER] ATTENTION: Aucun ID d'expéditeur disponible pour la notification");
       }
-  
+
       // Appel à l'API backend pour envoyer la notification push
       const response = await instance.post('/api/notifications/message', {
         conversationId,
-        senderId: senderId, // Utiliser l'ID récupéré ou transmis
+        senderId: senderId,
         senderName: messageSender,
         messagePreview,
         messageType
       });
-  
+
       console.log("[NOTIF_MANAGER] Résultat de l'envoi de notification de message:", response.data);
       
       // Récupération de l'ID utilisateur courant pour vérifier s'il est l'expéditeur
@@ -324,22 +362,29 @@ class NotificationManager {
           navigationParams: { conversationId }
         };
         
-        await this.notificationService.sendLocalNotification(
-          i18n.t('notifications.message.title', { sender: messageSender }),
-          messagePreview.substring(0, 100) + (messagePreview.length > 100 ? '...' : ''),
-          notificationData
-        );
+        // Envoyer la notification locale si le service est disponible
+        if (this.notificationService && this.notificationService.sendLocalNotification) {
+          await this.notificationService.sendLocalNotification(
+            `Message de ${messageSender}`,
+            messagePreview.substring(0, 100) + (messagePreview.length > 100 ? '...' : ''),
+            notificationData
+          );
+        } else {
+          console.warn("[NOTIF_MANAGER] Service de notification locale non disponible");
+        }
       } else {
         console.log("[NOTIF_MANAGER] Pas de notification locale car l'utilisateur est l'expéditeur");
       }
       
       // Tracking Mixpanel
       try {
-        mixpanel.track("Notification Sent", {
-          notification_type: "new_message",
-          conversation_id: conversationId,
-          sender_id: senderId
-        });
+        if (mixpanel && mixpanel.track) {
+          mixpanel.track("Notification Sent", {
+            notification_type: "new_message",
+            conversation_id: conversationId,
+            sender_id: senderId
+          });
+        }
       } catch (mpError) {
         console.error("[NOTIF_MANAGER] Erreur Mixpanel:", mpError);
       }
@@ -356,33 +401,35 @@ class NotificationManager {
     try {
       const formattedPrice = `${price} ${currency}`;
       
-      await this.notificationService.sendLocalNotification(
-        i18n.t('notifications.purchase.title'),
-        i18n.t('notifications.purchase.body', { 
-          buyer: buyerName, 
-          price: formattedPrice 
-        }),
-        {
-          type: 'purchase',
-          secretId,
-          price,
-          timestamp: new Date().toISOString()
-        }
-      );
+      // Envoyer la notification locale si le service est disponible
+      if (this.notificationService && this.notificationService.sendLocalNotification) {
+        await this.notificationService.sendLocalNotification(
+          "Secret vendu !",
+          `${buyerName} a acheté votre secret pour ${formattedPrice}`,
+          {
+            type: 'purchase',
+            secretId,
+            price,
+            timestamp: new Date().toISOString()
+          }
+        );
+      }
       
       try {
-        mixpanel.track("Notification Sent", {
-          notification_type: "purchase",
-          secret_id: secretId,
-          price: price
-        });
+        if (mixpanel && mixpanel.track) {
+          mixpanel.track("Notification Sent", {
+            notification_type: "purchase",
+            secret_id: secretId,
+            price: price
+          });
+        }
       } catch (mpError) {
         console.error("Erreur Mixpanel:", mpError);
       }
       
       return true;
     } catch (error) {
-      console.error(i18n.t('notifications.errors.purchaseNotification'), error);
+      console.error("[NOTIF_MANAGER] Erreur lors de la notification d'achat:", error);
       return false;
     }
   }
@@ -390,31 +437,34 @@ class NotificationManager {
   // 3. Notification de rappel pour finaliser la configuration Stripe
   async scheduleStripeSetupReminderNotification() {
     try {
-      await this.notificationService.sendLocalNotification(
-        i18n.t('notifications.stripeSetup.title'),
-        i18n.t('notifications.stripeSetup.body'),
-        {
-          type: 'stripe_setup_reminder',
-          timestamp: new Date().toISOString()
-        }
-      );
+      // Envoyer la notification locale si le service est disponible
+      if (this.notificationService && this.notificationService.sendLocalNotification) {
+        await this.notificationService.sendLocalNotification(
+          "Configuration Stripe",
+          "N'oubliez pas de finaliser votre configuration Stripe pour recevoir vos paiements",
+          {
+            type: 'stripe_setup_reminder',
+            timestamp: new Date().toISOString()
+          }
+        );
+      }
       
       try {
-        mixpanel.track("Notification Sent", {
-          notification_type: "stripe_setup_reminder"
-        });
+        if (mixpanel && mixpanel.track) {
+          mixpanel.track("Notification Sent", {
+            notification_type: "stripe_setup_reminder"
+          });
+        }
       } catch (mpError) {
         console.error("Erreur Mixpanel:", mpError);
       }
       
       return true;
     } catch (error) {
-      console.error(i18n.t('notifications.errors.stripeReminderNotification'), error);
+      console.error("[NOTIF_MANAGER] Erreur lors de la notification de rappel Stripe:", error);
       return false;
     }
   }
-
-
 }
 
 export default new NotificationManager();

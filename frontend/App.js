@@ -13,6 +13,7 @@ import { StripeProvider } from "@stripe/stripe-react-native";
 import { STRIPE_PUBLISHABLE_KEY } from '@env';
 import { Linking, View } from 'react-native';
 import { navigationRef } from './navigation/NavigationService';
+import * as Notifications from 'expo-notifications';
 
 const Stack = createStackNavigator();
 
@@ -94,6 +95,67 @@ const App = () => {
     });
   };
   
+  // ÉCOUTEUR GLOBAL DE NOTIFICATION - DEBUG ET SOLUTION DE SECOURS
+  React.useEffect(() => {
+    console.log('[APP] 🔧 Configuration de l\'écouteur global de notifications');
+    
+    const globalNotificationListener = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('[APP] 🔔 NOTIFICATION GLOBALE INTERCEPTÉE!');
+      console.log('[APP] 📱 Données complètes:', JSON.stringify(response.notification.request.content.data, null, 2));
+      
+      const data = response.notification.request.content.data;
+      if (data?.type === 'new_message' && data?.conversationId) {
+        console.log('[APP] 🎯 ConversationId détecté:', data.conversationId);
+        console.log('[APP] 👤 SenderId:', data.senderId);
+        
+        // Navigation d'urgence directe
+        setTimeout(() => {
+          console.log('[APP] 🚨 NAVIGATION D\'URGENCE DEPUIS APP.JS');
+          try {
+            if (navigationRef.isReady()) {
+              console.log('[APP] ✅ NavigationRef prêt, lancement navigation...');
+              navigationRef.navigate('MainApp', {
+                screen: 'Tabs',
+                params: {
+                  screen: 'ChatTab',
+                  params: {
+                    screen: 'Chat',
+                    params: { conversationId: data.conversationId },
+                  },
+                },
+              });
+              console.log('[APP] 🎉 Navigation d\'urgence réussie!');
+            } else {
+              console.log('[APP] ❌ NavigationRef pas prêt');
+              
+              // Essayer de stocker pour plus tard
+              try {
+                const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+                AsyncStorage.setItem('EMERGENCY_NAVIGATION', JSON.stringify({
+                  type: 'conversation',
+                  conversationId: data.conversationId,
+                  timestamp: Date.now()
+                }));
+                console.log('[APP] 💾 Navigation stockée pour plus tard');
+              } catch (storageError) {
+                console.error('[APP] ❌ Erreur de stockage d\'urgence:', storageError);
+              }
+            }
+          } catch (error) {
+            console.error('[APP] ❌ Erreur navigation d\'urgence:', error);
+          }
+        }, 500);
+      } else {
+        console.log('[APP] ℹ️ Notification sans données de conversation');
+      }
+    });
+    
+    return () => {
+      console.log('[APP] 🧹 Nettoyage écouteur global');
+      Notifications.removeNotificationSubscription(globalNotificationListener);
+    };
+  }, []);
+  
   React.useEffect(() => {
     loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
     
@@ -131,6 +193,8 @@ const App = () => {
                   },
                 }}
                 onReady={() => {
+                  console.log('[APP] 🚀 NavigationContainer prêt!');
+                  
                   // Vérifier les navigations en attente une fois que NavigationContainer est prêt
                   setTimeout(() => {
                     try {
@@ -139,6 +203,38 @@ const App = () => {
                         NavigationService.checkPendingNavigation();
                       }
                       console.log("[APP] Services de navigation initialisés avec succès");
+                      
+                      // Vérifier s'il y a une navigation d'urgence en attente
+                      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+                      AsyncStorage.getItem('EMERGENCY_NAVIGATION').then(emergencyNavStr => {
+                        if (emergencyNavStr) {
+                          try {
+                            const emergencyNav = JSON.parse(emergencyNavStr);
+                            // Ne traiter que les navigations récentes (moins de 2 minutes)
+                            if (Date.now() - emergencyNav.timestamp < 120000) {
+                              console.log('[APP] 🚨 Navigation d\'urgence trouvée, exécution...');
+                              if (emergencyNav.type === 'conversation' && emergencyNav.conversationId) {
+                                navigationRef.navigate('MainApp', {
+                                  screen: 'Tabs',
+                                  params: {
+                                    screen: 'ChatTab',
+                                    params: {
+                                      screen: 'Chat',
+                                      params: { conversationId: emergencyNav.conversationId },
+                                    },
+                                  },
+                                });
+                                console.log('[APP] 🎉 Navigation d\'urgence exécutée avec succès!');
+                              }
+                            }
+                            // Nettoyer
+                            AsyncStorage.removeItem('EMERGENCY_NAVIGATION');
+                          } catch (parseError) {
+                            console.error('[APP] ❌ Erreur parsing navigation d\'urgence:', parseError);
+                          }
+                        }
+                      });
+                      
                     } catch (error) {
                       console.error("[APP] Erreur d'initialisation des services:", error);
                     }
@@ -169,6 +265,7 @@ const SafeHandlers = () => {
       // Délai de sécurité pour l'initialisation
       const timer = setTimeout(() => {
         setHandlersReady(true);
+        console.log('[SAFE_HANDLERS] ✅ Gestionnaires prêts à être rendus');
       }, 100);
       
       return () => clearTimeout(timer);
@@ -178,11 +275,15 @@ const SafeHandlers = () => {
     }
   }, []);
   
-  if (!handlersReady) return null;
+  if (!handlersReady) {
+    console.log('[SAFE_HANDLERS] ⏳ Gestionnaires pas encore prêts');
+    return null;
+  }
   
   try {
     // Importer uniquement le DeepLinkHandler qui gère maintenant tout
     const DeepLinkHandler = require('./presentation/components/DeepLinkHandler').default;
+    console.log('[SAFE_HANDLERS] 📦 DeepLinkHandler importé avec succès');
     
     return (
       <View style={{ display: 'none' }}>
@@ -190,7 +291,7 @@ const SafeHandlers = () => {
       </View>
     );
   } catch (error) {
-    console.error("[SAFE_HANDLERS] Erreur lors du rendu du gestionnaire:", error);
+    console.error("[SAFE_HANDLERS] ❌ Erreur lors du rendu du gestionnaire:", error);
     return null;
   }
 };
