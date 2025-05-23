@@ -11,18 +11,16 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import StackNavigator from './navigation/StackNavigator/StackNavigator';
 import { StripeProvider } from "@stripe/stripe-react-native";
 import { STRIPE_PUBLISHABLE_KEY } from '@env';
-import { Linking, View, Text } from 'react-native';
+import { Linking, View } from 'react-native';
 import { navigationRef } from './navigation/NavigationService';
 
-// Nous allons faire une solution EXTRÊMEMENT prudente
-// qui s'assure que NativeBase est complètement initialisé
 const Stack = createStackNavigator();
 
-// App sans les gestionnaires potentiellement problématiques
 const App = () => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [safeToRenderHandlers, setSafeToRenderHandlers] = useState(false);
   
+  // Configuration de deep linking mise à jour pour correspondre à la structure réelle
   const linking = {
     prefixes: ['hushy://', 'https://hushy.app'],
     config: {
@@ -35,9 +33,32 @@ const App = () => {
         },
         MainApp: {
           screens: {
-            ChatTab: {
+            // DrawerNavigator contient TabNavigator sous "Tabs"
+            Tabs: {
               screens: {
-                Chat: 'chat/:conversationId',
+                ChatTab: {
+                  screens: {
+                    // ConversationStackNavigator contient ces écrans
+                    Conversations: 'conversations',
+                    Chat: {
+                      path: 'chat/:conversationId',
+                      parse: {
+                        conversationId: (conversationId) => conversationId,
+                      },
+                    },
+                  },
+                },
+                HomeTab: {
+                  screens: {
+                    // Ajoutez ici les écrans de votre HomeStackNavigator si nécessaire
+                  },
+                },
+                Profile: {
+                  screens: {
+                    // Ajoutez ici les écrans de votre ProfileStackNavigator si nécessaire
+                  },
+                },
+                AddSecret: 'add-secret',
               },
             },
           },
@@ -76,11 +97,11 @@ const App = () => {
   React.useEffect(() => {
     loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
     
-    // N'activez les gestionnaires qu'après un délai suffisant pour garantir que NativeBase est initialisé
+    // Activer les gestionnaires après un délai pour s'assurer que NativeBase est initialisé
     const timer = setTimeout(() => {
       setSafeToRenderHandlers(true);
       console.log("[APP] Activation sécurisée des gestionnaires");
-    }, 1000); // Délai plus long pour être sûr
+    }, 1000);
     
     return () => clearTimeout(timer);
   }, []);
@@ -110,18 +131,12 @@ const App = () => {
                   },
                 }}
                 onReady={() => {
-                  // Attendez que NavigationContainer soit prêt puis initialisez
+                  // Vérifier les navigations en attente une fois que NavigationContainer est prêt
                   setTimeout(() => {
                     try {
                       const NavigationService = require('./navigation/NavigationService');
                       if (NavigationService.checkPendingNavigation) {
                         NavigationService.checkPendingNavigation();
-                      }
-                      if (NavigationService.setupNotificationDeepLinking) {
-                        NavigationService.setupNotificationDeepLinking();
-                      }
-                      if (NavigationService.checkInitialNotification) {
-                        NavigationService.checkInitialNotification();
                       }
                       console.log("[APP] Services de navigation initialisés avec succès");
                     } catch (error) {
@@ -132,7 +147,7 @@ const App = () => {
               >
                 <StackNavigator />
                 
-                {/* Charger les gestionnaires uniquement quand c'est sécuritaire */}
+                {/* Charger le gestionnaire unifié uniquement quand c'est sécuritaire */}
                 {safeToRenderHandlers && (
                   <SafeHandlers />
                 )}
@@ -145,14 +160,13 @@ const App = () => {
   );
 };
 
-// Composant séparé pour les gestionnaires problématiques
-// Cela garantit qu'ils sont importés uniquement lorsque NativeBase est prêt
+// Composant pour le gestionnaire unifié de deep links et notifications
 const SafeHandlers = () => {
   const [handlersReady, setHandlersReady] = useState(false);
   
   useEffect(() => {
     try {
-      // Initialisation des services de notification différée
+      // Délai de sécurité pour l'initialisation
       const timer = setTimeout(() => {
         setHandlersReady(true);
       }, 100);
@@ -167,19 +181,16 @@ const SafeHandlers = () => {
   if (!handlersReady) return null;
   
   try {
-    // Dynamiquement importer les composants problématiques
+    // Importer uniquement le DeepLinkHandler qui gère maintenant tout
     const DeepLinkHandler = require('./presentation/components/DeepLinkHandler').default;
-    const NotificationHandlerWrapper = require('./presentation/Notifications/NotificationHandlerWrapper').default;
     
-    // Essayer de les rendre dans un try/catch pour éviter les crashes
     return (
       <View style={{ display: 'none' }}>
         <DeepLinkHandler />
-        <NotificationHandlerWrapper />
       </View>
     );
   } catch (error) {
-    console.error("[SAFE_HANDLERS] Erreur lors du rendu des gestionnaires:", error);
+    console.error("[SAFE_HANDLERS] Erreur lors du rendu du gestionnaire:", error);
     return null;
   }
 };
