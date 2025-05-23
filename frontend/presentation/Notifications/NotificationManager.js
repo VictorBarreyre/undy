@@ -128,7 +128,7 @@ class NotificationManager {
         // CORRECTION: Utiliser "/api/notifications/register" au lieu de "/api/notifications/token"
         console.log("[NOTIF_MANAGER] Envoi du token au serveur:", token);
         const response = await instance.post('/api/notifications/register', {
-            expoPushToken: token
+          apnsToken: token
         });
         
         // Si l'enregistrement réussit, sauvegarder le timestamp
@@ -146,7 +146,7 @@ class NotificationManager {
         try {
             console.log("[NOTIF_MANAGER] Tentative avec la route alternative...");
             const altResponse = await instance.post('/api/notifications/token', {
-                expoPushToken: token
+              apnsToken: token
             });
             
             if (altResponse.data && altResponse.data.success) {
