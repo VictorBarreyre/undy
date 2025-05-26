@@ -1,144 +1,239 @@
 // presentation/screens/TestScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  StyleSheet, 
+  ScrollView, 
+  Alert, 
+  ActivityIndicator,
+  RefreshControl 
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NotificationDebugHelper from '../components/NotificationDebugHelper';
 
 const TestScreen = () => {
-
-  // État pour stocker les vraies conversations
+  // États
   const [realConversations, setRealConversations] = useState([]);
-  const [selectedConversationId, setSelectedConversationId] = useState("675a1234abcd5678efgh9012");
+  const [selectedConversationId, setSelectedConversationId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [testResults, setTestResults] = useState({});
+  const [currentTest, setCurrentTest] = useState(null);
 
-  // Charger les vraies conversations au montage du composant
+  // Charger les conversations au montage
   useEffect(() => {
     loadRealConversations();
   }, []);
-
   const loadRealConversations = async () => {
     setLoading(true);
-    console.log('🔍 Chargement des vraies conversations...');
     try {
       const conversations = await NotificationDebugHelper.getRealConversations();
+      console.log('Conversations chargées:', conversations); // Ajoutez ce log pour vérifier les conversations chargées
       setRealConversations(conversations);
-
-      // Utiliser la première conversation réelle si disponible
-      if (conversations.length > 0) {
+  
+      if (conversations.length > 0 && !selectedConversationId) {
         setSelectedConversationId(conversations[0]._id);
-        console.log('✅ Conversation sélectionnée:', conversations[0]._id);
       }
     } catch (error) {
       console.error('❌ Erreur chargement conversations:', error);
+      Alert.alert('Erreur', 'Impossible de charger les conversations');
     }
     setLoading(false);
+    setRefreshing(false);
   };
 
-  // Tests de base - utiliser l'ID sélectionné
-  const handleTestDirectNavigation = () => {
-    console.log('🧪 Test navigation directe...');
-    NotificationDebugHelper.testDirectNavigation(selectedConversationId);
-  };
-
-  const handleTestNotification = () => {
-    console.log('🧪 Test notification simulée...');
-    NotificationDebugHelper.simulateMessageNotification(selectedConversationId, "Test User");
-  };
-
-  const handleDebugNavigation = () => {
-    console.log('🧪 Debug état navigation...');
-    NotificationDebugHelper.debugNavigationState();
-  };
-
-  const handleFullTest = () => {
-    console.log('🧪 Test complet...');
-    NotificationDebugHelper.runFullTest(selectedConversationId);
-  };
-
-  const handleCheckPermissions = async () => {
-    console.log('🧪 Vérification permissions...');
-    const result = await NotificationDebugHelper.checkNotificationPermissions();
-    console.log('Résultat permissions:', result);
-  };
-
-  const handleCheckPendingNav = () => {
-    console.log('🧪 Vérification navigations en attente...');
-    NotificationDebugHelper.checkPendingNavigations();
-  };
-
-  const handleClearPendingNav = () => {
-    console.log('🧪 Nettoyage navigations en attente...');
-    NotificationDebugHelper.clearPendingNavigations();
-  };
-
-  // Nouveaux tests serveur
-  const handleCompareNotificationData = () => {
-    console.log('🧪 Comparaison des données...');
-    NotificationDebugHelper.compareNotificationData();
-  };
-
-  const handleSimulateServerNotification = async () => {
-    console.log('🧪 Simulation notification serveur...');
+  // Fonction pour lancer un test avec feedback visuel
+  const runTest = async (testName, testFunction) => {
+    setCurrentTest(testName);
+    setTestResults(prev => ({ ...prev, [testName]: 'running' }));
+    
     try {
-      const userDataStr = await AsyncStorage.getItem('userData');
-      if (userDataStr) {
-        const userData = JSON.parse(userDataStr);
-        await NotificationDebugHelper.simulateExactServerNotification(
-          selectedConversationId,
-          userData._id,
-          userData.name || "Test User"
-        );
-      } else {
-        console.error('Données utilisateur non trouvées');
-      }
+      const result = await testFunction();
+      setTestResults(prev => ({ ...prev, [testName]: result ? 'success' : 'failed' }));
+      return result;
     } catch (error) {
-      console.error('Erreur simulation serveur:', error);
+      console.error(`❌ Erreur test ${testName}:`, error);
+      setTestResults(prev => ({ ...prev, [testName]: 'error' }));
+      return false;
+    } finally {
+      setCurrentTest(null);
     }
   };
 
-  const handleTestExactServerData = async () => {
-    console.log('🧪 Test données serveur exactes...');
-    try {
-      const userDataStr = await AsyncStorage.getItem('userData');
-      if (userDataStr) {
-        const userData = JSON.parse(userDataStr);
-        await NotificationDebugHelper.testNotificationListenerWithServerData(
-          selectedConversationId,
-          userData._id
-        );
-      } else {
-        console.error('Données utilisateur non trouvées');
-      }
-    } catch (error) {
-      console.error('Erreur test serveur exact:', error);
-    }
-  };
-
-  const handleTestServerNotification = async () => {
-    console.log('🧪 Test notification serveur réelle...');
-    // Passer null pour forcer l'utilisation d'une vraie conversation
-    const result = await NotificationDebugHelper.testWithRealServerNotification();
-    console.log('Résultat test serveur:', result);
-  };
-
-  const handleTestServerBackground = async () => {
-    console.log('🧪 Test serveur en arrière-plan...');
-
+  // === TESTS RAPIDES ===
+  const handleQuickDiagnostic = async () => {
+    console.log('🏃 DIAGNOSTIC RAPIDE EN COURS...');
+    
+    // 1. Permissions
+    await runTest('permissions', async () => {
+      const result = await NotificationDebugHelper.checkNotificationPermissions();
+      console.log('📱 Permissions:', result ? '✅' : '❌');
+      return result;
+    });
+    
+    // 2. Navigation
+    await runTest('navigation', async () => {
+      const state = NotificationDebugHelper.debugNavigationState();
+      console.log('🧭 Navigation:', state ? '✅' : '❌');
+      return !!state;
+    });
+    
+    // 3. Navigations en attente
+    await runTest('pending', async () => {
+      await NotificationDebugHelper.checkPendingNavigations();
+      return true;
+    });
+    
     Alert.alert(
-      "Test Serveur Arrière-Plan",
-      "1. Appuyez sur OK\n2. Mettez l'app en ARRIÈRE-PLAN (bouton home)\n3. Une notification serveur arrivera dans 5 secondes\n4. Cliquez sur la notification pour tester",
-      [
-        {
-          text: "OK - Lancer le test",
-          onPress: async () => {
-            console.log('⏰ Mettez l\'app en arrière-plan MAINTENANT !');
-            console.log('📱 Notification serveur dans 5 secondes...');
+      'Diagnostic Terminé',
+      `Permissions: ${testResults.permissions === 'success' ? '✅' : '❌'}\n` +
+      `Navigation: ${testResults.navigation === 'success' ? '✅' : '❌'}\n` +
+      `État: Vérifié ✅`
+    );
+  };
 
-            // Attendre 5 secondes puis envoyer la notification serveur
+  // === TEST NOTIFICATION LOCALE ===
+  const handleTestLocal = async () => {
+    if (!selectedConversationId) {
+      Alert.alert('Erreur', 'Sélectionnez une conversation');
+      return;
+    }
+    
+    console.log('📱 TEST NOTIFICATION LOCALE');
+    Alert.alert(
+      'Test Local',
+      'Une notification locale va apparaître dans 2 secondes. Cliquez dessus pour tester la navigation.',
+      [{ text: 'OK', onPress: async () => {
+        await runTest('local', async () => {
+          return await NotificationDebugHelper.simulateMessageNotification(
+            selectedConversationId, 
+            "Test Local"
+          );
+        });
+      }}]
+    );
+  };
+
+  // === TEST NOTIFICATION SERVEUR ===
+  const handleTestServer = async () => {
+    if (!selectedConversationId) {
+      Alert.alert('Erreur', 'Sélectionnez une conversation');
+      return;
+    }
+    
+    console.log('🌐 TEST NOTIFICATION SERVEUR');
+    Alert.alert(
+      'Test Serveur',
+      'Une vraie notification serveur va être envoyée. Cliquez dessus pour tester la navigation.',
+      [{ text: 'OK', onPress: async () => {
+        await runTest('server', async () => {
+          return await NotificationDebugHelper.testServerNotification(
+            selectedConversationId,
+            "🧪 Test Serveur - Cliquez pour naviguer"
+          );
+        });
+      }}]
+    );
+  };
+
+  // === TEST COMPLET AUTOMATISÉ ===
+  const handleFullAutoTest = async () => {
+    if (!selectedConversationId) {
+      Alert.alert('Erreur', 'Sélectionnez une conversation');
+      return;
+    }
+    
+    console.log('🤖 TEST AUTOMATISÉ COMPLET');
+    
+    Alert.alert(
+      'Test Automatisé',
+      'Ce test va :\n' +
+      '1. Vérifier les permissions\n' +
+      '2. Nettoyer les navigations en attente\n' +
+      '3. Tester la navigation directe\n' +
+      '4. Envoyer une notification locale\n' +
+      '5. Envoyer une notification serveur\n\n' +
+      'Suivez les logs pour voir les résultats.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Démarrer', onPress: async () => {
+          // 1. Permissions
+          console.log('1️⃣ Vérification des permissions...');
+          const hasPermissions = await runTest('permissions', 
+            NotificationDebugHelper.checkNotificationPermissions
+          );
+          
+          if (!hasPermissions) {
+            Alert.alert('Erreur', 'Permissions requises');
+            return;
+          }
+          
+          // 2. Nettoyage
+          console.log('2️⃣ Nettoyage des navigations en attente...');
+          await runTest('cleanup', NotificationDebugHelper.clearPendingNavigations);
+          
+          // 3. Navigation directe
+          console.log('3️⃣ Test navigation directe...');
+          await runTest('directNav', () => 
+            NotificationDebugHelper.testDirectNavigation(selectedConversationId)
+          );
+          
+          // 4. Notification locale (après 2s)
+          setTimeout(async () => {
+            console.log('4️⃣ Test notification locale...');
+            await runTest('localNotif', () => 
+              NotificationDebugHelper.simulateMessageNotification(
+                selectedConversationId, 
+                "Test Auto Local"
+              )
+            );
+          }, 2000);
+          
+          // 5. Notification serveur (après 5s)
+          setTimeout(async () => {
+            console.log('5️⃣ Test notification serveur...');
+            await runTest('serverNotif', () => 
+              NotificationDebugHelper.testServerNotification(
+                selectedConversationId,
+                "Test Auto Serveur"
+              )
+            );
+          }, 5000);
+        }}
+      ]
+    );
+  };
+
+  // === TEST ARRIÈRE-PLAN ===
+  const handleBackgroundTest = async () => {
+    if (!selectedConversationId) {
+      Alert.alert('Erreur', 'Sélectionnez une conversation');
+      return;
+    }
+    
+    Alert.alert(
+      '🌙 Test Arrière-Plan',
+      'Instructions :\n\n' +
+      '1. Appuyez sur "Démarrer"\n' +
+      '2. Mettez IMMÉDIATEMENT l\'app en arrière-plan\n' +
+      '3. Une notification arrivera dans 5 secondes\n' +
+      '4. Cliquez sur la notification\n' +
+      '5. Vous devriez arriver sur la conversation',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Démarrer', 
+          onPress: () => {
+            console.log('🌙 TEST ARRIÈRE-PLAN DÉMARRÉ');
             setTimeout(async () => {
-              console.log('🌐 Envoi notification serveur...');
-              const result = await NotificationDebugHelper.testWithRealServerNotification();
-              console.log('📡 Notification serveur envoyée:', result);
+              await runTest('background', () => 
+                NotificationDebugHelper.testServerNotification(
+                  selectedConversationId,
+                  "🌙 Cliquez pour revenir dans l'app"
+                )
+              );
             }, 5000);
           }
         }
@@ -146,157 +241,239 @@ const TestScreen = () => {
     );
   };
 
+  // === COMPARAISON DÉTAILLÉE ===
+  const handleDetailedComparison = async () => {
+    console.log('🔍 COMPARAISON DÉTAILLÉE');
+    
+    // Afficher la structure attendue
+    NotificationDebugHelper.compareNotificationData();
+    
+    // Vérifier la structure serveur réelle
+    if (selectedConversationId) {
+      await NotificationDebugHelper.verifyServerNotificationStructure(selectedConversationId);
+    }
+    
+    Alert.alert(
+      'Comparaison',
+      'Vérifiez les logs pour voir :\n' +
+      '- Structure locale vs serveur\n' +
+      '- Champs présents/manquants\n' +
+      '- Recommandations'
+    );
+  };
+
+  // Interface de statut des tests
+  const getTestStatusIcon = (testName) => {
+    const status = testResults[testName];
+    if (currentTest === testName) return '⏳';
+    switch (status) {
+      case 'success': return '✅';
+      case 'failed': return '❌';
+      case 'error': return '⚠️';
+      default: return '⭕';
+    }
+  };
+
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Test des Notifications</Text>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => {
+            setRefreshing(true);
+            loadRealConversations();
+          }}
+        />
+      }
+    >
+      <View style={styles.header}>
+        <Text style={styles.title}>🧪 Centre de Test Notifications</Text>
+        <Text style={styles.subtitle}>Debug & Diagnostic</Text>
+      </View>
 
       {/* Sélection de conversation */}
-      <View style={styles.conversationSection}>
-        <Text style={styles.sectionTitle}>💬 Conversations Disponibles</Text>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>💬 Conversation de Test</Text>
+        
         {loading ? (
-          <Text style={styles.loadingText}>Chargement des conversations...</Text>
+          <ActivityIndicator size="large" color="#007AFF" />
         ) : realConversations.length > 0 ? (
-          <View>
-            <Text style={styles.selectedText}>
-              Sélectionnée: {realConversations.find(c => c._id === selectedConversationId)?.name || 'Sans nom'}
-            </Text>
-            <Text style={styles.selectedId}>ID: {selectedConversationId}</Text>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.conversationList}>
+          <>
+            <View style={styles.conversationInfo}>
+              <Text style={styles.label}>Active :</Text>
+              <Text style={styles.value}>
+                {realConversations.find(c => c._id === selectedConversationId)?.name || 'Sélectionnez'}
+              </Text>
+            </View>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              style={styles.conversationList}
+            >
               {realConversations.map((conv) => (
                 <TouchableOpacity
                   key={conv._id}
                   style={[
-                    styles.conversationItem,
-                    selectedConversationId === conv._id && styles.selectedConversation
+                    styles.conversationChip,
+                    selectedConversationId === conv._id && styles.selectedChip
                   ]}
                   onPress={() => setSelectedConversationId(conv._id)}
                 >
                   <Text style={[
-                    styles.conversationText,
-                    selectedConversationId === conv._id && styles.selectedConversationText
+                    styles.chipText,
+                    selectedConversationId === conv._id && styles.selectedChipText
                   ]}>
                     {conv.name || 'Sans nom'}
-                  </Text>
-                  <Text style={styles.conversationId}>
-                    {conv._id.substring(0, 8)}...
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
-
-            <TouchableOpacity style={styles.refreshButton} onPress={loadRealConversations}>
-              <Text style={styles.refreshButtonText}>🔄 Actualiser</Text>
-            </TouchableOpacity>
-            
-          </View>
+          </>
         ) : (
-          <View>
-            <Text style={styles.noConversationsText}>
-              ❌ Aucune conversation trouvée.
-            </Text>
-            <TouchableOpacity style={styles.refreshButton} onPress={loadRealConversations}>
-              <Text style={styles.refreshButtonText}>🔄 Réessayer</Text>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>Aucune conversation trouvée</Text>
+            <TouchableOpacity 
+              style={styles.refreshButton} 
+              onPress={loadRealConversations}
+            >
+              <Text style={styles.refreshButtonText}>Réessayer</Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
 
-      {/* Tests de base */}
-      <Text style={styles.sectionTitle}>📱 Tests de Base</Text>
+      {/* Tests Rapides */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>⚡ Tests Rapides</Text>
+        
+        <TouchableOpacity 
+          style={[styles.testButton, styles.diagnosticButton]}
+          onPress={handleQuickDiagnostic}
+        >
+          <Text style={styles.testButtonText}>
+            {getTestStatusIcon('permissions')} Diagnostic Rapide
+          </Text>
+          <Text style={styles.testDescription}>
+            Vérifie permissions, navigation et état
+          </Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={handleTestDirectNavigation}>
-        <Text style={styles.buttonText}>🚀 Test Navigation Directe</Text>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.testButton, styles.localButton]}
+          onPress={handleTestLocal}
+          disabled={!selectedConversationId}
+        >
+          <Text style={styles.testButtonText}>
+            {getTestStatusIcon('local')} Test Local
+          </Text>
+          <Text style={styles.testDescription}>
+            Notification locale avec navigation
+          </Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={handleTestNotification}>
-        <Text style={styles.buttonText}>🔔 Test Notification Locale</Text>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.testButton, styles.serverButton]}
+          onPress={handleTestServer}
+          disabled={!selectedConversationId}
+        >
+          <Text style={styles.testButtonText}>
+            {getTestStatusIcon('server')} Test Serveur
+          </Text>
+          <Text style={styles.testDescription}>
+            Notification réelle via backend
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleDebugNavigation}>
-        <Text style={styles.buttonText}>🔍 Debug État Navigation</Text>
-      </TouchableOpacity>
+      {/* Tests Avancés */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>🔬 Tests Avancés</Text>
+        
+        <TouchableOpacity 
+          style={[styles.testButton, styles.autoButton]}
+          onPress={handleFullAutoTest}
+          disabled={!selectedConversationId}
+        >
+          <Text style={styles.testButtonText}>
+            🤖 Test Automatisé Complet
+          </Text>
+          <Text style={styles.testDescription}>
+            Suite complète de tests (permissions → navigation → notifications)
+          </Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={handleCheckPermissions}>
-        <Text style={styles.buttonText}>🔐 Vérifier Permissions</Text>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.testButton, styles.backgroundButton]}
+          onPress={handleBackgroundTest}
+          disabled={!selectedConversationId}
+        >
+          <Text style={styles.testButtonText}>
+            🌙 Test Arrière-Plan
+          </Text>
+          <Text style={styles.testDescription}>
+            Test de notification quand l'app est en background
+          </Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={handleCheckPendingNav}>
-        <Text style={styles.buttonText}>📋 Vérifier Nav. En Attente</Text>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.testButton, styles.compareButton]}
+          onPress={handleDetailedComparison}
+        >
+          <Text style={styles.testButtonText}>
+            🔍 Analyse Détaillée
+          </Text>
+          <Text style={styles.testDescription}>
+            Compare structures local vs serveur
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleClearPendingNav}>
-        <Text style={styles.buttonText}>🧹 Nettoyer Nav. En Attente</Text>
-      </TouchableOpacity>
+      {/* Actions Utiles */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>🛠️ Utilitaires</Text>
+        
+        <View style={styles.utilityRow}>
+          <TouchableOpacity 
+            style={styles.utilityButton}
+            onPress={() => NotificationDebugHelper.checkPendingNavigations()}
+          >
+            <Text style={styles.utilityButtonText}>📋 Voir Attente</Text>
+          </TouchableOpacity>
 
-      {/* Tests serveur */}
-      <Text style={styles.sectionTitle}>🌐 Tests Serveur</Text>
+          <TouchableOpacity 
+            style={styles.utilityButton}
+            onPress={() => NotificationDebugHelper.clearPendingNavigations()}
+          >
+            <Text style={styles.utilityButtonText}>🧹 Nettoyer</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.button, styles.serverButton]} onPress={handleCompareNotificationData}>
-        <Text style={[styles.buttonText, styles.serverButtonText]}>🔍 Comparer Données Local/Serveur</Text>
-      </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.utilityButton}
+            onPress={() => NotificationDebugHelper.debugNavigationState()}
+          >
+            <Text style={styles.utilityButtonText}>🧭 État Nav</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-      <TouchableOpacity style={[styles.button, styles.serverButton]} onPress={handleSimulateServerNotification}>
-        <Text style={[styles.buttonText, styles.serverButtonText]}>🎭 Simuler Données Serveur Exactes</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={[styles.button, styles.serverButton]} onPress={handleTestExactServerData}>
-        <Text style={[styles.buttonText, styles.serverButtonText]}>🎧 Test Écouteur + Données Serveur</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={[styles.button, styles.criticalButton]} onPress={handleTestServerNotification}>
-        <Text style={[styles.buttonText, styles.criticalButtonText]}>🌐 TEST SERVEUR RÉEL</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={[styles.button, styles.backgroundTestButton]} onPress={handleTestServerBackground}>
-        <Text style={[styles.buttonText, styles.backgroundTestButtonText]}>📱 TEST SERVEUR ARRIÈRE-PLAN</Text>
-      </TouchableOpacity>
-
-      {/* Test complet */}
-      <Text style={styles.sectionTitle}>🧪 Test Global</Text>
-
-      <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={handleFullTest}>
-        <Text style={[styles.buttonText, styles.primaryButtonText]}>🧪 TEST COMPLET ORIGINAL</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.button, styles.fixTestButton]}
-        onPress={() => NotificationDebugHelper.debugCurrentNotificationState()}
-      >
-        <Text style={styles.buttonText}>🔍 Diagnostic État Notifications</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.button, styles.fixTestButton]}
-        onPress={() => NotificationDebugHelper.testServerNotificationWithNewFix(selectedConversationId)}
-      >
-        <Text style={styles.buttonText}>🔧 TEST NOUVELLE CORRECTION</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.button, styles.backgroundTestButton]}
-        onPress={() => NotificationDebugHelper.testBackgroundNotificationBehavior(selectedConversationId)}
-      >
-        <Text style={styles.buttonText}>🌙 Test Arrière-Plan</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.note}>
-        ⚠️ Vérifiez les logs de la console pour voir les résultats des tests.
-        {'\n'}
-        📱 Pour les tests de notification, des notifications apparaîtront sur votre appareil.
-        {'\n'}
-        👆 CLIQUEZ sur les notifications pour tester la navigation.
-        {'\n'}
-        🌐 Le test serveur réel enverra une vraie notification via votre backend.
-      </Text>
-
-      <Text style={styles.instructions}>
-        📋 <Text style={styles.bold}>Ordre de test recommandé :</Text>
-        {'\n'}1. Comparer Données Local/Serveur
-        {'\n'}2. Simuler Données Serveur Exactes
-        {'\n'}3. Test Écouteur + Données Serveur
-        {'\n'}4. TEST SERVEUR RÉEL
-      </Text>
+      {/* Instructions */}
+      <View style={styles.instructionsCard}>
+        <Text style={styles.instructionsTitle}>📚 Guide d'utilisation</Text>
+        <Text style={styles.instructionsText}>
+          <Text style={styles.bold}>Pour débugger rapidement :</Text>
+          {'\n'}1. Sélectionnez une conversation
+          {'\n'}2. Lancez le "Diagnostic Rapide"
+          {'\n'}3. Testez "Local" puis "Serveur"
+          {'\n'}4. Vérifiez les logs [APP] dans la console
+          {'\n\n'}
+          <Text style={styles.bold}>Points clés à vérifier :</Text>
+          {'\n'}• [APP] 📋 Données dans content.data
+          {'\n'}• [APP] ✅ Notification de message valide
+          {'\n'}• [APP] 🎉 Navigation notification réussie
+        </Text>
+      </View>
     </ScrollView>
   );
 };
@@ -304,179 +481,170 @@ const TestScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f0f0f5',
+  },
+  header: {
+    backgroundColor: '#fff',
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    paddingTop: 40,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
     color: '#333',
+    marginBottom: 5,
   },
   subtitle: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 20,
-    textAlign: 'center',
   },
-  sectionTitle: {
+  card: {
+    backgroundColor: '#fff',
+    margin: 15,
+    marginBottom: 0,
+    padding: 20,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 10,
     color: '#333',
+    marginBottom: 15,
   },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
+  conversationInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 10,
   },
-  serverButton: {
-    backgroundColor: '#34C759', // Vert pour les tests serveur
+  label: {
+    fontSize: 14,
+    color: '#666',
+    marginRight: 10,
   },
-  primaryButton: {
-    backgroundColor: '#FF3B30',
-    marginTop: 10,
-  },
-  criticalButton: {
-    backgroundColor: '#FF9500', // Orange pour le test critique
-    marginTop: 10,
-  },
-  buttonText: {
-    color: 'white',
-    textAlign: 'center',
+  value: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  serverButtonText: {
-    fontSize: 15,
-  },
-  primaryButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  criticalButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  note: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 20,
-    textAlign: 'center',
-    fontStyle: 'italic',
-    lineHeight: 18,
-  },
-  instructions: {
-    fontSize: 13,
-    color: '#444',
-    marginTop: 15,
-    padding: 15,
-    backgroundColor: '#e8f4f8',
-    borderRadius: 10,
-    lineHeight: 20,
-  },
-  conversationSection: {
-    marginBottom: 20,
-    padding: 15,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  loadingText: {
-    textAlign: 'center',
-    fontStyle: 'italic',
-    color: '#666',
-  },
-  selectedText: {
-    fontSize: 16,
-    fontWeight: 'bold',
     color: '#333',
-    marginBottom: 5,
-  },
-  selectedId: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: 'monospace',
-    marginBottom: 10,
+    flex: 1,
   },
   conversationList: {
-    marginBottom: 10,
+    marginTop: 10,
   },
-  conversationItem: {
-    padding: 10,
-    marginRight: 10,
+  conversationChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    minWidth: 120,
+    borderRadius: 20,
+    marginRight: 10,
   },
-  selectedConversation: {
+  selectedChip: {
     backgroundColor: '#007AFF',
   },
-  conversationText: {
+  chipText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  selectedChipText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 10,
+  },
+  refreshButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+  },
+  refreshButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  testButton: {
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  testButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  testDescription: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  diagnosticButton: {
+    backgroundColor: '#007AFF',
+  },
+  localButton: {
+    backgroundColor: '#34C759',
+  },
+  serverButton: {
+    backgroundColor: '#FF9500',
+  },
+  autoButton: {
+    backgroundColor: '#5856D6',
+  },
+  backgroundButton: {
+    backgroundColor: '#8E44AD',
+  },
+  compareButton: {
+    backgroundColor: '#FF3B30',
+  },
+  utilityRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  utilityButton: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    marginHorizontal: 4,
+    alignItems: 'center',
+  },
+  utilityButtonText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
-    textAlign: 'center',
   },
-  selectedConversationText: {
-    color: 'white',
+  instructionsCard: {
+    backgroundColor: '#e8f4f8',
+    margin: 15,
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 30,
   },
-  conversationId: {
-    fontSize: 10,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 2,
-    fontFamily: 'monospace',
-  },
-  refreshButton: {
-    backgroundColor: '#34C759',
-    padding: 8,
-    borderRadius: 6,
-    alignSelf: 'center',
-  },
-  refreshButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  noConversationsText: {
-    textAlign: 'center',
-    color: '#FF3B30',
-    fontWeight: '600',
+  instructionsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 10,
+  },
+  instructionsText: {
+    fontSize: 14,
+    color: '#444',
+    lineHeight: 22,
   },
   bold: {
     fontWeight: 'bold',
-    color: '#222',
-  },
-  backgroundTestButton: {
-    backgroundColor: '#8E44AD',
-    marginTop: 10,
-  },
-  backgroundTestButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  fixTestButton: {
-    backgroundColor: '#9C27B0', // Violet pour les tests de correction
-    marginTop: 5,
-  },
-  
-  verificationButton: {
-    backgroundColor: '#2196F3', // Bleu pour les vérifications
-    marginTop: 5,
-  },
-  
-  comparisonButton: {
-    backgroundColor: '#FF5722', // Orange foncé pour les comparaisons
-    marginTop: 5,
   },
 });
 
