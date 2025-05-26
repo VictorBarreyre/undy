@@ -11,7 +11,7 @@ import ProfileStackNavigator from './StackNavigator/ProfileStackNavigator';
 import HomeStackNavigator from './StackNavigator/HomeStackNavigator';
 import ConversationStackNavigator from './StackNavigator/ConversationStackNavigator';
 import MaskedView from '@react-native-masked-view/masked-view';
-
+import TestScreen from '../presentation/screens/TestScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -139,8 +139,8 @@ const TabNavigator = () => {
         options={{ headerShown: false }}
       />
       <Tab.Screen
-        name="AddSecret"
-        component={AddSecret}
+        name="Test"
+        component={TestScreen}
         options={{ headerShown: false }}
       />
       <Tab.Screen

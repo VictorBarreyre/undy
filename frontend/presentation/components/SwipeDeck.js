@@ -260,7 +260,6 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
                 ? t('swipeDeck.noSecretsNearby') 
                 : t('swipeDeck.checkBackLater')}
         </Text>
-        <TestNotificationButton />
       </VStack>
     );
   }

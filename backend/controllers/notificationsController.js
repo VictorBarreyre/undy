@@ -145,18 +145,17 @@ const registerToken = async (req, res) => {
  */
 const createApnsNotification = (title, body, extraData = {}) => {
   const notification = new apn.Notification();
-  notification.expiry = Math.floor(Date.now() / 1000) + 3600; // Expire dans 1h
+  notification.expiry = Math.floor(Date.now() / 1000) + 3600;
   notification.badge = 1;
   notification.sound = "default";
   notification.topic = bundleId;
 
-  // Définir l'alerte
   notification.alert = {
     title: title,
     body: body
   };
 
-  // Structure du payload APNs
+  // CORRECTION: Ajouter TOUTES les données nécessaires pour la navigation
   notification.payload = {
     aps: {
       alert: notification.alert,
@@ -165,20 +164,21 @@ const createApnsNotification = (title, body, extraData = {}) => {
       "mutable-content": 1,
       "content-available": 1
     },
-    // Données personnalisées
+    // Données personnalisées COMPLÈTES pour la navigation
     type: extraData.type || 'notification',
     conversationId: extraData.conversationId,
     senderId: extraData.senderId,
+    senderName: extraData.senderName, // AJOUTÉ
     messageType: extraData.messageType,
-    secretId: extraData.secretId,
-    buyerId: extraData.buyerId,
-    price: extraData.price,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    // AJOUT DES DONNÉES DE NAVIGATION
+    navigationTarget: extraData.navigationTarget || 'Chat',
+    navigationScreen: extraData.navigationScreen || 'ChatTab',
+    navigationParams: extraData.navigationParams || { conversationId: extraData.conversationId }
   };
 
   return notification;
 };
-
 /**
  * Envoie une notification de test pour valider la configuration APNs
  * 
@@ -452,7 +452,6 @@ const sendMessageNotification = async (req, res) => {
       messageType
     });
 
-    // Vérifier les paramètres requis
     if (!conversationId || !senderId) {
       console.log('[NOTIFICATION] Paramètres manquants:', { conversationId, senderId });
       return res.status(400).json({
@@ -464,7 +463,6 @@ const sendMessageNotification = async (req, res) => {
     const senderIdStr = typeof senderId === 'string' ? senderId : senderId.toString();
     console.log('[NOTIFICATION] ID de l\'expéditeur (chaîne):', senderIdStr);
 
-    // Récupérer la conversation avec tous les participants
     const conversation = await Conversation.findById(conversationId)
       .populate({
         path: 'participants',
@@ -479,32 +477,14 @@ const sendMessageNotification = async (req, res) => {
       });
     }
 
-    console.log('[NOTIFICATION] Participants de la conversation:',
-      conversation.participants.map(p => ({
-        id: typeof p._id === 'string' ? p._id : p._id.toString(),
-        name: p.name,
-        hasToken: !!p.apnsToken
-      }))
-    );
-
-    // Filtrer les participants (exclure l'expéditeur et garder ceux avec token APNs)
     const recipientIds = conversation.participants
       .filter(p => {
         const participantIdStr = typeof p._id === 'string' ? p._id : p._id.toString();
         const isExpéditeur = participantIdStr === senderIdStr;
         const hasToken = !!p.apnsToken;
-
-        console.log(`[NOTIFICATION] Évaluation du participant ${participantIdStr}:`, {
-          isExpéditeur,
-          hasToken,
-          include: !isExpéditeur && hasToken
-        });
-
         return !isExpéditeur && hasToken;
       })
       .map(p => typeof p._id === 'string' ? p._id : p._id.toString());
-
-    console.log('[NOTIFICATION] IDs des destinataires après filtrage:', recipientIds);
 
     if (recipientIds.length === 0) {
       console.log('[NOTIFICATION] Aucun destinataire valide trouvé');
@@ -514,12 +494,11 @@ const sendMessageNotification = async (req, res) => {
       });
     }
 
-    // Tronquer le message s'il est trop long
     const truncatedMessage = messagePreview?.length > 100
       ? messagePreview.substring(0, 97) + '...'
       : messagePreview || '';
 
-    // Envoyer la notification aux autres participants
+    // CORRECTION: Inclure TOUTES les données nécessaires
     const notificationResult = await sendPushNotifications(
       recipientIds,
       'messageFrom',
@@ -530,8 +509,13 @@ const sendMessageNotification = async (req, res) => {
         type: 'new_message',
         conversationId,
         senderId: senderIdStr,
+        senderName, // AJOUTÉ
         messageType,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        // AJOUT DES DONNÉES DE NAVIGATION
+        navigationTarget: 'Chat',
+        navigationScreen: 'ChatTab',
+        navigationParams: { conversationId }
       }
     );
 
@@ -550,7 +534,6 @@ const sendMessageNotification = async (req, res) => {
     });
   }
 };
-
 /**
  * Notification d'achat de secret avec support multilingue
  */

@@ -20,45 +20,58 @@ export function navigate(name, params) {
   }
 }
 
-// Navigation spécifique vers une conversation (utilisée par d'autres composants si nécessaire)
+// Navigation spécifique vers une conversation - CORRIGÉE SELON VOTRE STRUCTURE
 export function navigateToConversation(conversationId) {
   console.log("[NAVIGATION_SERVICE] Navigation vers conversation:", conversationId);
   
   if (navigationRef.isReady()) {
     try {
-      // Méthode 1: Navigation complète via la structure réelle
+      // CORRECTION: Navigation selon votre vraie structure de navigation
+      // StackNavigator -> MainApp (DrawerNavigator) -> Tabs (TabNavigator) -> ChatTab (ConversationStackNavigator) -> Chat (ChatScreen)
+      console.log("[NAVIGATION_SERVICE] Tentative navigation structure complète");
+      
       navigationRef.navigate('MainApp', {
-        screen: 'Tabs', // DrawerNavigator contient TabNavigator sous "Tabs"
+        screen: 'Tabs', // DrawerNavigator contient TabNavigator sous le nom "Tabs"
         params: {
-          screen: 'ChatTab', // TabNavigator contient ConversationStackNavigator sous "ChatTab"
+          screen: 'ChatTab', // TabNavigator contient ConversationStackNavigator sous le nom "ChatTab"
           params: {
-            screen: 'Chat', // ConversationStackNavigator contient ChatScreen sous "Chat"
+            screen: 'Chat', // ConversationStackNavigator contient ChatScreen sous le nom "Chat"
             params: { conversationId },
           },
         },
       });
+      
       console.log("[NAVIGATION_SERVICE] Navigation réussie (structure complète)");
     } catch (error) {
-      console.log("[NAVIGATION_SERVICE] Échec méthode 1, tentative fallback:", error);
+      console.log("[NAVIGATION_SERVICE] Échec méthode principale, tentative fallback:", error);
       try {
-        // Méthode 2: Navigation directe vers l'onglet
+        // Méthode 2: Navigation directe vers l'onglet si la structure complète échoue
         navigationRef.navigate('ChatTab', {
           screen: 'Chat',
           params: { conversationId },
         });
-        console.log("[NAVIGATION_SERVICE] Navigation réussie (fallback)");
+        console.log("[NAVIGATION_SERVICE] Navigation réussie (fallback ChatTab)");
       } catch (fallbackError) {
-        console.error("[NAVIGATION_SERVICE] Toutes les méthodes ont échoué:", fallbackError);
-        // Dernière tentative très directe
+        console.log("[NAVIGATION_SERVICE] Échec fallback ChatTab, tentative Chat direct:", fallbackError);
         try {
+          // Méthode 3: Navigation très directe
           navigationRef.navigate('Chat', { conversationId });
+          console.log("[NAVIGATION_SERVICE] Navigation réussie (Chat direct)");
         } catch (lastError) {
-          console.error("[NAVIGATION_SERVICE] Dernière tentative échouée:", lastError);
+          console.error("[NAVIGATION_SERVICE] Toutes les méthodes ont échoué:", lastError);
+          
+          // Debug: Afficher l'état de navigation actuel
+          try {
+            const state = navigationRef.getState?.();
+            console.log("[NAVIGATION_SERVICE] 🔍 État de navigation actuel:", JSON.stringify(state, null, 2));
+          } catch (debugError) {
+            console.log("[NAVIGATION_SERVICE] 🔍 Impossible d'obtenir l'état de navigation");
+          }
         }
       }
     }
   } else {
-    console.log("[NAVIGATION_SERVICE] Navigation mise en attente");
+    console.log("[NAVIGATION_SERVICE] NavigationContainer pas prêt, stockage pour plus tard");
     AsyncStorage.setItem(
       'PENDING_NAVIGATION',
       JSON.stringify({ 
@@ -100,5 +113,56 @@ export async function checkPendingNavigation() {
     }
   } catch (error) {
     console.error("[NAVIGATION_SERVICE] Erreur de vérification des navigations en attente:", error);
+  }
+}
+
+// Fonction utilitaire pour déboguer l'état de navigation
+export function debugNavigationState() {
+  if (navigationRef.isReady()) {
+    try {
+      const state = navigationRef.getState();
+      console.log("[NAVIGATION_SERVICE] 🔍 État de navigation complet:", JSON.stringify(state, null, 2));
+      return state;
+    } catch (error) {
+      console.error("[NAVIGATION_SERVICE] Erreur lors de la récupération de l'état:", error);
+      return null;
+    }
+  } else {
+    console.log("[NAVIGATION_SERVICE] NavigationContainer pas prêt pour le debug");
+    return null;
+  }
+}
+
+// Fonction pour naviguer vers AddSecret (utile pour les retours Stripe)
+export function navigateToAddSecret() {
+  console.log("[NAVIGATION_SERVICE] Navigation vers AddSecret");
+  
+  if (navigationRef.isReady()) {
+    try {
+      navigationRef.navigate('MainApp', {
+        screen: 'Tabs',
+        params: {
+          screen: 'AddSecret',
+        },
+      });
+      console.log("[NAVIGATION_SERVICE] Navigation vers AddSecret réussie");
+    } catch (error) {
+      console.error("[NAVIGATION_SERVICE] Erreur navigation vers AddSecret:", error);
+      // Fallback
+      try {
+        navigationRef.navigate('AddSecret');
+      } catch (fallbackError) {
+        console.error("[NAVIGATION_SERVICE] Fallback AddSecret échoué aussi:", fallbackError);
+      }
+    }
+  } else {
+    AsyncStorage.setItem(
+      'PENDING_NAVIGATION',
+      JSON.stringify({ 
+        name: 'AddSecret',
+        params: {},
+        timestamp: Date.now() 
+      })
+    ).catch(err => console.error('[NAVIGATION_SERVICE] Erreur de stockage AddSecret:', err));
   }
 }
