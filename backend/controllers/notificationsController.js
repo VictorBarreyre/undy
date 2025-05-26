@@ -155,36 +155,38 @@ const createApnsNotification = (title, body, extraData = {}) => {
     body: body
   };
 
-  // CORRECTION: Mettre les données personnalisées directement dans le payload
-  // sans les envelopper dans 'aps'
+  // Structure correcte pour APNs
+  // Les données 'aps' doivent être dans payload.aps
+  // Les données personnalisées doivent être au niveau racine du payload
   notification.payload = {
-    // Données pour l'affichage de la notification
+    // Données système APNs
     aps: {
-      alert: notification.alert,
-      badge: notification.badge,
-      sound: notification.sound,
+      alert: {
+        title: title,
+        body: body
+      },
+      badge: 1,
+      sound: "default",
       "mutable-content": 1,
       "content-available": 1
-    }
-  };
-
-  // IMPORTANT: Ajouter les données personnalisées au niveau racine du payload
-  // C'est là qu'Expo Notifications les récupérera dans content.data
-  Object.assign(notification.payload, {
+    },
+    // Données personnalisées au niveau racine (pas dans aps)
     type: extraData.type || 'notification',
     conversationId: extraData.conversationId,
     senderId: extraData.senderId,
     senderName: extraData.senderName,
     messageType: extraData.messageType,
-    timestamp: new Date().toISOString(),
+    timestamp: extraData.timestamp || new Date().toISOString(),
     navigationTarget: extraData.navigationTarget || 'Chat',
     navigationScreen: extraData.navigationScreen || 'ChatTab',
     navigationParams: extraData.navigationParams || { conversationId: extraData.conversationId }
-  });
+  };
+
+  // Log pour debug
+  console.log('Notification APNs créée avec payload:', JSON.stringify(notification.payload, null, 2));
 
   return notification;
 };
-
 
 /**
  * Envoie une notification de test pour valider la configuration APNs

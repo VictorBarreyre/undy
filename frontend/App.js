@@ -107,12 +107,20 @@ const App = () => {
 
   // FONCTION DE NAVIGATION VERS CONVERSATION - CENTRALISÉE
   const navigateToConversation = async (conversationId) => {
-    console.log('[APP] 🎯 NAVIGATION CENTRALISÉE vers conversation:', conversationId);
+    console.log('[APP] 🎯 === NAVIGATION CENTRALISÉE ===');
+    console.log('[APP] 🎯 ConversationId:', conversationId);
+    console.log('[APP] 🎯 NavigationRef isReady:', navigationRef.isReady());
     
     try {
       if (navigationRef.isReady()) {
         console.log('[APP] ✅ NavigationRef prêt, navigation immédiate');
         
+        // Log de l'état avant navigation
+        const stateBefore = navigationRef.getState();
+        console.log('[APP] 📍 État avant navigation:', JSON.stringify(stateBefore, null, 2));
+        
+        // Tentative de navigation
+        console.log('[APP] 🚀 Appel navigationRef.navigate...');
         navigationRef.navigate('MainApp', {
           screen: 'Tabs',
           params: {
@@ -123,6 +131,16 @@ const App = () => {
             },
           },
         });
+        
+        // Vérifier l'état après navigation
+        setTimeout(() => {
+          try {
+            const stateAfter = navigationRef.getState();
+            console.log('[APP] 📍 État après navigation:', JSON.stringify(stateAfter, null, 2));
+          } catch (error) {
+            console.log('[APP] ⚠️ Impossible de vérifier l\'état après navigation:', error);
+          }
+        }, 1000);
         
         console.log('[APP] 🎉 Navigation réussie !');
         
@@ -144,6 +162,13 @@ const App = () => {
       }
     } catch (error) {
       console.error('[APP] ❌ Erreur navigation:', error);
+      console.error('[APP] Stack trace:', error.stack);
+      
+      // Log détaillé de l'erreur
+      if (error.message) {
+        console.error('[APP] Message d\'erreur:', error.message);
+      }
+      
       return false;
     }
   };
@@ -153,47 +178,142 @@ const App = () => {
     console.log('[APP] 🔔 === GESTIONNAIRE PRINCIPAL NOTIFICATION ===');
     console.log('[APP] 📱 Response complète:', JSON.stringify(response, null, 2));
     
-    // Extraire les données de la notification
+    // Logs détaillés de la structure
+    console.log('[APP] 🔍 === ANALYSE STRUCTURE NOTIFICATION ===');
+    console.log('[APP] 1️⃣ response.notification:', response.notification);
+    console.log('[APP] 2️⃣ response.notification.request:', response.notification.request);
+    console.log('[APP] 3️⃣ response.notification.request.content:', response.notification.request.content);
+    console.log('[APP] 4️⃣ response.notification.request.content.data:', response.notification.request.content.data);
+    
+    // Vérifier tous les endroits possibles où les données pourraient être
+    console.log('[APP] 🔎 === RECHERCHE DES DONNÉES ===');
+    
+    // Cas 1: Dans content.data (standard)
     const content = response.notification.request.content;
     let data = content.data;
+    console.log('[APP] 📋 Données dans content.data:', data);
     
-    // CORRECTION SPÉCIALE POUR APNs : Parfois les données sont à la racine de content
+    // Cas 2: Directement dans content
     if (!data || !data.type) {
+      console.log('[APP] ⚠️ Pas de données dans content.data, recherche dans content...');
+      
+      // Lister toutes les propriétés de content
+      console.log('[APP] 📋 Toutes les propriétés de content:', Object.keys(content));
+      
       // Vérifier si les données sont directement dans content
-      if (content.conversationId) {
+      if (content.conversationId || content.type) {
+        console.log('[APP] ✅ Données trouvées directement dans content');
         data = {
           type: content.type || 'new_message',
           conversationId: content.conversationId,
           senderId: content.senderId,
           senderName: content.senderName,
           messageType: content.messageType || 'text',
-          timestamp: content.timestamp || new Date().toISOString()
+          timestamp: content.timestamp || new Date().toISOString(),
+          navigationTarget: content.navigationTarget,
+          navigationScreen: content.navigationScreen,
+          navigationParams: content.navigationParams
         };
-        console.log('[APP] 🔧 Données reconstruites depuis content:', data);
+        console.log('[APP] 📋 Données reconstruites:', data);
       }
     }
     
+    // Cas 3: Dans le payload original (APNs)
+    if (!data || !data.type) {
+      console.log('[APP] ⚠️ Toujours pas de données, recherche dans payload...');
+      
+      // Pour APNs, les données peuvent être dans request.trigger.payload
+      if (response.notification.request.trigger && response.notification.request.trigger.payload) {
+        console.log('[APP] 📋 Payload trouvé dans trigger:', response.notification.request.trigger.payload);
+        const payload = response.notification.request.trigger.payload;
+        
+        // Les données personnalisées APNs sont au niveau racine du payload
+        data = {
+          type: payload.type || 'new_message',
+          conversationId: payload.conversationId,
+          senderId: payload.senderId,
+          senderName: payload.senderName,
+          messageType: payload.messageType || 'text',
+          timestamp: payload.timestamp || new Date().toISOString(),
+          navigationTarget: payload.navigationTarget,
+          navigationScreen: payload.navigationScreen,
+          navigationParams: payload.navigationParams
+        };
+        console.log('[APP] 📋 Données extraites du payload APNs:', data);
+      }
+    }
+    
+    // Cas 4: Dans identifier (certaines versions)
+    if (!data || !data.type) {
+      console.log('[APP] ⚠️ Recherche dans identifier...');
+      if (response.notification.request.identifier) {
+        console.log('[APP] 📋 Identifier:', response.notification.request.identifier);
+      }
+    }
+    
+    console.log('[APP] 📋 === DONNÉES FINALES ===');
     console.log('[APP] 📋 Données finales extraites:', JSON.stringify(data, null, 2));
     
+    // Validation des données
     if (data?.type === 'new_message' && data?.conversationId) {
       console.log('[APP] ✅ Notification de message valide détectée');
       console.log('[APP] 🎯 ConversationId:', data.conversationId);
       console.log('[APP] 👤 SenderId:', data.senderId);
+      console.log('[APP] 👤 SenderName:', data.senderName);
       
-      // Navigation avec délai pour s'assurer que l'app est prête
-      setTimeout(async () => {
-        const success = await navigateToConversation(data.conversationId);
-        if (success) {
-          console.log('[APP] 🎉 Navigation notification réussie !');
-        } else {
-          console.log('[APP] ⏳ Navigation sauvegardée pour plus tard');
+      // Vérifier l'état de navigation avant de naviguer
+      console.log('[APP] 🔍 === ÉTAT DE NAVIGATION ===');
+      console.log('[APP] NavigationRef isReady:', navigationRef.isReady());
+      
+      if (navigationRef.isReady()) {
+        console.log('[APP] ✅ NavigationRef prêt');
+        
+        // Obtenir l'état actuel de navigation
+        try {
+          const currentState = navigationRef.getState();
+          console.log('[APP] 📍 État navigation actuel:', JSON.stringify(currentState, null, 2));
+        } catch (error) {
+          console.log('[APP] ⚠️ Impossible d\'obtenir l\'état de navigation:', error);
         }
-      }, 500);
+        
+        // Navigation avec délai pour s'assurer que l'app est prête
+        setTimeout(async () => {
+          console.log('[APP] 🚀 Tentative de navigation vers:', data.conversationId);
+          
+          try {
+            const success = await navigateToConversation(data.conversationId);
+            if (success) {
+              console.log('[APP] 🎉 Navigation notification réussie !');
+            } else {
+              console.log('[APP] ⏳ Navigation sauvegardée pour plus tard');
+            }
+          } catch (error) {
+            console.log('[APP] ❌ Erreur lors de la navigation:', error);
+            console.log('[APP] Stack trace:', error.stack);
+          }
+        }, 500);
+        
+      } else {
+        console.log('[APP] ❌ NavigationRef pas prêt, sauvegarde pour plus tard');
+        
+        // Sauvegarder pour navigation ultérieure
+        try {
+          await AsyncStorage.setItem('PENDING_CONVERSATION_NAV', JSON.stringify({
+            conversationId: data.conversationId,
+            timestamp: Date.now(),
+            data: data // Sauvegarder toutes les données pour debug
+          }));
+          console.log('[APP] 💾 Navigation sauvegardée dans AsyncStorage');
+        } catch (error) {
+          console.log('[APP] ❌ Erreur sauvegarde AsyncStorage:', error);
+        }
+      }
       
     } else {
       console.log('[APP] ❌ Notification ignorée - données invalides');
       console.log('[APP] 🔍 Type:', data?.type);
       console.log('[APP] 🔍 ConversationId:', data?.conversationId);
+      console.log('[APP] 🔍 Données complètes:', JSON.stringify(data, null, 2));
     }
   };
 
