@@ -138,22 +138,22 @@ class NotificationDebugHelper {
     console.log('\n🌐 === TEST NOTIFICATION SERVEUR ===');
     console.log('🎯 ConversationId:', conversationId);
     console.log('💬 Message:', testMessage);
-    
+  
     try {
       const axiosInstance = getAxiosInstance();
       if (!axiosInstance) {
         throw new Error('Instance Axios non disponible');
       }
-
+  
       // Récupérer les données utilisateur
       const userDataStr = await AsyncStorage.getItem('userData');
       if (!userDataStr) {
         throw new Error('Utilisateur non connecté');
       }
-
+  
       const userData = JSON.parse(userDataStr);
       console.log('👤 Expéditeur:', userData.name || userData._id);
-
+  
       // Envoyer la notification
       console.log('📡 Envoi au serveur...');
       const response = await axiosInstance.post('/api/notifications/message', {
@@ -163,18 +163,18 @@ class NotificationDebugHelper {
         messagePreview: testMessage,
         messageType: 'text'
       });
-
+  
       console.log('📨 Réponse:', response.data.success ? '✅ Succès' : '❌ Échec');
-      
+  
       if (response.data.details) {
         const { sent, failed } = response.data.details.results || {};
         if (sent?.length) console.log(`✅ Envoyé à ${sent.length} destinataire(s)`);
         if (failed?.length) console.log(`❌ Échec pour ${failed.length} destinataire(s)`);
       }
-      
+  
       console.log('👆 CLIQUEZ sur la notification pour tester');
       console.log('=== FIN TEST SERVEUR ===\n');
-      
+  
       return response.data.success;
     } catch (error) {
       console.error('❌ Erreur notification serveur:', error.message);

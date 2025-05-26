@@ -369,6 +369,7 @@ const App = () => {
     }
   };
   
+  
   // ÉCOUTEUR GLOBAL DE NOTIFICATION - SIMPLIFIÉ ET CORRECT
   useEffect(() => {
     console.log('[APP] 🎧 Configuration de l\'écouteur global de notifications');

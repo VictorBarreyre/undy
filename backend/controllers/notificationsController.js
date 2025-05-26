@@ -155,9 +155,20 @@ const createApnsNotification = (title, body, extraData = {}) => {
     body: body
   };
 
+  // CORRECTION : Structure unifiée pour APNs ET local
+  const notificationData = {
+    type: extraData.type || 'new_message',
+    conversationId: extraData.conversationId,
+    senderId: extraData.senderId,
+    senderName: extraData.senderName,
+    messageType: extraData.messageType || 'text',
+    timestamp: extraData.timestamp || new Date().toISOString(),
+    navigationTarget: extraData.navigationTarget || 'Chat',
+    navigationScreen: extraData.navigationScreen || 'ChatTab',
+    navigationParams: extraData.navigationParams || { conversationId: extraData.conversationId }
+  };
+
   // Structure correcte pour APNs
-  // Les données 'aps' doivent être dans payload.aps
-  // Les données personnalisées doivent être au niveau racine du payload
   notification.payload = {
     // Données système APNs
     aps: {
@@ -170,21 +181,15 @@ const createApnsNotification = (title, body, extraData = {}) => {
       "mutable-content": 1,
       "content-available": 1
     },
-    // Données personnalisées au niveau racine (pas dans aps)
-    type: extraData.type || 'notification',
-    conversationId: extraData.conversationId,
-    senderId: extraData.senderId,
-    senderName: extraData.senderName,
-    messageType: extraData.messageType,
-    timestamp: extraData.timestamp || new Date().toISOString(),
-    navigationTarget: extraData.navigationTarget || 'Chat',
-    navigationScreen: extraData.navigationScreen || 'ChatTab',
-    navigationParams: extraData.navigationParams || { conversationId: extraData.conversationId }
+    // AJOUT : Données dans content.data pour compatibilité
+    content: {
+      data: notificationData
+    },
+    // Conserver aussi au niveau racine pour compatibilité APNs
+    ...notificationData
   };
 
-  // Log pour debug
-  console.log('Notification APNs créée avec payload:', JSON.stringify(notification.payload, null, 2));
-
+  console.log('Notification APNs créée avec payload unifié:', JSON.stringify(notification.payload, null, 2));
   return notification;
 };
 
