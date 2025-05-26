@@ -1,4 +1,4 @@
-import React, { useEffect, useContext } from 'react';
+import React, { useEffect, useContext, useRef } from 'react';
 import { Linking, Alert, AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
@@ -13,6 +13,7 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
     const { handleStripeReturn, handlePostSecret, handleShareSecret } = useCardData();
     const navigation = useNavigation();
     const { userData, isLoggedIn } = useContext(AuthContext);
+    const notificationSubscriptionRef = useRef(null);
 
     const normalizeDeepLinkParams = (url) => {
         if (url.includes('?action=complete?action=')) {
@@ -23,16 +24,20 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
         return url;
     };
 
-    // Navigation robuste vers une conversation - SIMPLIFIÉE
+    // Navigation robuste vers une conversation
     const navigateToConversation = async (conversationId) => {
         if (!isLoggedIn) {
             console.log('[DEEPLINK] ❌ Utilisateur non connecté');
             return false;
         }
 
-        console.log('[DEEPLINK] 🚀 Navigation vers conversation:', conversationId);
+        console.log('[DEEPLINK] 🚀 === NAVIGATION VERS CONVERSATION ===');
+        console.log('[DEEPLINK] 🎯 ConversationId:', conversationId);
 
         try {
+            // Attendre un peu que la navigation soit prête
+            await new Promise(resolve => setTimeout(resolve, 500));
+
             navigation.navigate('MainApp', {
                 screen: 'Tabs',
                 params: {
@@ -45,6 +50,9 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
             });
 
             console.log('[DEEPLINK] ✅ Navigation réussie');
+            
+            // Nettoyer toute navigation en attente
+            await AsyncStorage.removeItem('PENDING_CONVERSATION_NAV');
             return true;
         } catch (error) {
             console.error('[DEEPLINK] ❌ Erreur navigation:', error);
@@ -61,6 +69,112 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
             }
             return false;
         }
+    };
+
+    // GESTIONNAIRE DE NOTIFICATIONS UNIFIÉ
+    const handleNotificationResponse = async (response) => {
+        console.log('[DEEPLINK] 🔔 === NOTIFICATION REÇUE DANS DEEPLINK ===');
+        console.log('[DEEPLINK] 📱 Response complète:', JSON.stringify(response, null, 2));
+
+        try {
+            const content = response.notification.request.content;
+            let data = null;
+
+            console.log('[DEEPLINK] 🔍 === RECHERCHE DES DONNÉES ===');
+            console.log('[DEEPLINK] 📋 Content keys:', Object.keys(content));
+            console.log('[DEEPLINK] 📋 Content.data:', JSON.stringify(content.data, null, 2));
+
+            // CORRECTION : Gestion de la structure APNs native
+            // La notification APNs arrive avec les données au niveau racine de content.data
+            if (content.data) {
+                console.log('[DEEPLINK] 🔍 Analyse de content.data...');
+                
+                // Cas 1: Structure APNs native - données directement dans content.data
+                if (content.data.conversationId && content.data.type) {
+                    console.log('[DEEPLINK] ✅ Données trouvées directement dans content.data (APNs native)');
+                    data = {
+                        type: content.data.type,
+                        conversationId: content.data.conversationId,
+                        senderId: content.data.senderId,
+                        senderName: content.data.senderName,
+                        messageType: content.data.messageType || 'text',
+                        timestamp: content.data.timestamp || new Date().toISOString(),
+                        navigationTarget: content.data.navigationTarget,
+                        navigationScreen: content.data.navigationScreen,
+                        navigationParams: content.data.navigationParams
+                    };
+                }
+                // Cas 2: Structure imbriquée - données dans content.data.content.data
+                else if (content.data.content && content.data.content.data) {
+                    console.log('[DEEPLINK] ✅ Données trouvées dans content.data.content.data');
+                    data = content.data.content.data;
+                }
+                // Cas 3: Notification locale - type directement présent
+                else if (content.data.type) {
+                    console.log('[DEEPLINK] ✅ Données trouvées dans content.data (notification locale)');
+                    data = content.data;
+                }
+            }
+
+            console.log('[DEEPLINK] 📋 === DONNÉES EXTRAITES ===');
+            console.log('[DEEPLINK] 📋 Données finales:', JSON.stringify(data, null, 2));
+
+            // Validation et traitement
+            if (data?.type === 'new_message' && data?.conversationId) {
+                console.log('[DEEPLINK] ✅ Notification de message valide détectée');
+                console.log('[DEEPLINK] 🎯 ConversationId:', data.conversationId);
+                console.log('[DEEPLINK] 👤 SenderName:', data.senderName);
+
+                // Vérifier si l'utilisateur est connecté
+                if (!isLoggedIn) {
+                    console.log('[DEEPLINK] ❌ Utilisateur non connecté, navigation impossible');
+                    return;
+                }
+
+                // Navigation immédiate
+                console.log('[DEEPLINK] 🚀 Déclenchement navigation immédiate...');
+                const success = await navigateToConversation(data.conversationId);
+                
+                if (success) {
+                    console.log('[DEEPLINK] 🎉 Navigation notification réussie !');
+                } else {
+                    console.log('[DEEPLINK] ⏳ Navigation sauvegardée pour plus tard');
+                }
+
+            } else {
+                console.log('[DEEPLINK] ❌ Notification ignorée - données invalides');
+                console.log('[DEEPLINK] 🔍 Type reçu:', data?.type);
+                console.log('[DEEPLINK] 🔍 ConversationId reçu:', data?.conversationId);
+                
+                // Debug détaillé
+                console.log('[DEEPLINK] 🚨 === DEBUG STRUCTURE COMPLÈTE ===');
+                console.log('[DEEPLINK] 🚨 content.data structure:');
+                if (content.data && typeof content.data === 'object') {
+                    Object.keys(content.data).forEach(key => {
+                        console.log(`[DEEPLINK] 🔍 content.data.${key}:`, content.data[key]);
+                    });
+                }
+            }
+
+        } catch (error) {
+            console.error('[DEEPLINK] ❌ Erreur traitement notification:', error);
+            console.error('[DEEPLINK] Stack trace:', error.stack);
+        }
+    };
+
+    // Configuration de l'écouteur de notifications
+    const setupNotificationListener = () => {
+        console.log('[DEEPLINK] 🎧 Configuration de l\'écouteur de notifications...');
+        
+        // Nettoyer l'ancien écouteur s'il existe
+        if (notificationSubscriptionRef.current) {
+            console.log('[DEEPLINK] 🧹 Nettoyage de l\'ancien écouteur');
+            notificationSubscriptionRef.current.remove();
+        }
+
+        // Créer le nouvel écouteur
+        notificationSubscriptionRef.current = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
+        console.log('[DEEPLINK] ✅ Écouteur de notifications configuré');
     };
 
     // Vérifier et exécuter les navigations en attente
@@ -298,14 +412,10 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
             const response = await Notifications.getLastNotificationResponseAsync();
             if (response) {
                 console.log('[DEEPLINK] 📱 Notification initiale trouvée!');
-                const data = response.notification.request.content.data;
+                console.log('[DEEPLINK] 📋 Données notification initiale:', JSON.stringify(response, null, 2));
                 
-                if (data?.type === 'new_message' && data?.conversationId) {
-                    console.log('[DEEPLINK] 🎯 Navigation initiale vers conversation:', data.conversationId);
-                    setTimeout(() => {
-                        navigateToConversation(data.conversationId);
-                    }, 2000); // Délai plus long pour l'initialisation
-                }
+                // Utiliser le même gestionnaire que pour les notifications en cours d'exécution
+                await handleNotificationResponse(response);
             } else {
                 console.log('[DEEPLINK] ℹ️ Aucune notification initiale trouvée');
             }
@@ -318,14 +428,16 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
     const handleAppStateChange = (nextAppState) => {
         console.log('[DEEPLINK] 📱 Changement état app:', nextAppState);
         if (nextAppState === 'active') {
+            // CORRECTION : Configurer l'écouteur à chaque activation
             setTimeout(() => {
+                setupNotificationListener();
                 checkInitialNotification();
                 checkPendingConversationNav();
-            }, 1000);
+            }, 500); // Délai réduit pour une réactivité meilleure
         }
     };
 
-    // Initialiser les notifications (SANS ÉCOUTEUR - géré dans App.js)
+    // Initialiser les notifications
     const initializeNotifications = async () => {
         try {
             console.log('[DEEPLINK] 🔧 Initialisation du NotificationManager...');
@@ -355,9 +467,12 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
         console.log('[DEEPLINK] 🔄 INITIALISATION DEEPLINK HANDLER');
         console.log('[DEEPLINK] 👤 Utilisateur connecté:', isLoggedIn);
 
-        // Écouteurs d'événements (SANS gestionnaire de notifications - géré dans App.js)
+        // Écouteurs d'événements
         const linkingSubscription = Linking.addEventListener('url', handleDeepLink);
         const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+        
+        // CORRECTION : Configuration immédiate de l'écouteur de notifications
+        setupNotificationListener();
 
         // Vérifier l'URL initiale au lancement
         Linking.getInitialURL().then(url => {
@@ -374,7 +489,7 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
                 checkInitialNotification();
                 checkPendingConversationNav();
                 initializeNotifications();
-            }, 1500);
+            }, 1000);
         } else {
             console.log('[DEEPLINK] ❌ Utilisateur non connecté - attente...');
         }
@@ -383,7 +498,12 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
             console.log('[DEEPLINK] 🧹 Nettoyage des écouteurs...');
             linkingSubscription.remove();
             appStateSubscription.remove();
-            // PAS de nettoyage d'écouteur de notification car géré dans App.js
+            
+            // Nettoyer l'écouteur de notifications
+            if (notificationSubscriptionRef.current) {
+                notificationSubscriptionRef.current.remove();
+                notificationSubscriptionRef.current = null;
+            }
         };
     }, [userId, userData, onStripeSuccess, isLoggedIn]);
 
