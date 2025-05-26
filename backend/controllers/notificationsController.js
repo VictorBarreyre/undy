@@ -155,30 +155,37 @@ const createApnsNotification = (title, body, extraData = {}) => {
     body: body
   };
 
-  // CORRECTION: Ajouter TOUTES les données nécessaires pour la navigation
+  // CORRECTION: Mettre les données personnalisées directement dans le payload
+  // sans les envelopper dans 'aps'
   notification.payload = {
+    // Données pour l'affichage de la notification
     aps: {
       alert: notification.alert,
       badge: notification.badge,
       sound: notification.sound,
       "mutable-content": 1,
       "content-available": 1
-    },
-    // Données personnalisées COMPLÈTES pour la navigation
+    }
+  };
+
+  // IMPORTANT: Ajouter les données personnalisées au niveau racine du payload
+  // C'est là qu'Expo Notifications les récupérera dans content.data
+  Object.assign(notification.payload, {
     type: extraData.type || 'notification',
     conversationId: extraData.conversationId,
     senderId: extraData.senderId,
-    senderName: extraData.senderName, // AJOUTÉ
+    senderName: extraData.senderName,
     messageType: extraData.messageType,
     timestamp: new Date().toISOString(),
-    // AJOUT DES DONNÉES DE NAVIGATION
     navigationTarget: extraData.navigationTarget || 'Chat',
     navigationScreen: extraData.navigationScreen || 'ChatTab',
     navigationParams: extraData.navigationParams || { conversationId: extraData.conversationId }
-  };
+  });
 
   return notification;
 };
+
+
 /**
  * Envoie une notification de test pour valider la configuration APNs
  * 

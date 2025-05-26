@@ -108,15 +108,20 @@ class NotificationDebugHelper {
   static compareNotificationData() {
     console.log('[DEBUG] 🔍 COMPARAISON DES DONNÉES DE NOTIFICATION');
     
-    // Structure attendue du serveur (selon votre contrôleur)
+    // Structure ACTUELLE du serveur (après vos corrections)
     const serverNotificationStructure = {
       type: 'new_message',
       conversationId: 'string',
       senderId: 'string',
+      senderName: 'string', // ✅ MAINTENANT INCLUS
       messageType: 'text',
-      timestamp: 'ISO string'
+      timestamp: 'ISO string',
+      // ✅ MAINTENANT INCLUS AUSSI
+      navigationTarget: 'Chat',
+      navigationScreen: 'ChatTab',
+      navigationParams: { conversationId: 'string' }
     };
-
+  
     // Structure de votre notification locale de test
     const localNotificationStructure = {
       type: 'new_message',
@@ -129,14 +134,234 @@ class NotificationDebugHelper {
       navigationScreen: 'ChatTab',
       navigationParams: { conversationId: 'string' }
     };
-
-    console.log('[DEBUG] 📋 Structure serveur attendue:', JSON.stringify(serverNotificationStructure, null, 2));
+  
+    console.log('[DEBUG] 📋 Structure serveur CORRIGÉE:', JSON.stringify(serverNotificationStructure, null, 2));
     console.log('[DEBUG] 📋 Structure locale de test:', JSON.stringify(localNotificationStructure, null, 2));
     
-    console.log('[DEBUG] ⚠️  DIFFÉRENCES IDENTIFIÉES:');
-    console.log('[DEBUG] 1. La notification serveur n\'inclut PAS senderName');
-    console.log('[DEBUG] 2. La notification serveur n\'inclut PAS navigationTarget, navigationScreen, navigationParams');
-    console.log('[DEBUG] 3. Seules les données essentielles sont envoyées par le serveur');
+    console.log('[DEBUG] ✅ COMPARAISON APRÈS CORRECTIONS:');
+    console.log('[DEBUG] 1. ✅ La notification serveur INCLUT maintenant senderName');
+    console.log('[DEBUG] 2. ✅ La notification serveur INCLUT maintenant navigationTarget, navigationScreen, navigationParams');
+    console.log('[DEBUG] 3. ✅ Les structures locale et serveur sont maintenant IDENTIQUES !');
+    console.log('[DEBUG] 4. 🎯 Les deux types de notifications devraient maintenant fonctionner de la même façon');
+  }
+  
+  // AJOUTER aussi cette nouvelle méthode pour vérifier l'état du serveur
+  
+  // Vérifier que le serveur envoie bien les bonnes données
+  static async verifyServerNotificationStructure(conversationId = null) {
+    console.log('[DEBUG] 🔍 === VÉRIFICATION STRUCTURE SERVEUR RÉELLE ===');
+    
+    try {
+      // 1. Récupérer une conversation réelle si nécessaire
+      let realConversationId = conversationId;
+      if (!realConversationId || realConversationId === "675a1234abcd5678efgh9012") {
+        const conversations = await this.getRealConversations();
+        if (conversations.length > 0) {
+          realConversationId = conversations[0]._id;
+        } else {
+          console.log('[DEBUG] ❌ Aucune conversation trouvée');
+          return false;
+        }
+      }
+      
+      // 2. Créer un écouteur temporaire pour capturer la structure exacte
+      const verificationListener = Notifications.addNotificationResponseReceivedListener(response => {
+        console.log('[DEBUG] 🔔 STRUCTURE SERVEUR CAPTURÉE !');
+        
+        try {
+          const content = response.notification.request.content;
+          let data = content.data;
+          
+          // Vérifier si les données sont dans content.data ou directement dans content
+          if (!data || !data.type) {
+            if (content.conversationId || content.type === 'new_message') {
+              data = {
+                type: content.type || 'new_message',
+                conversationId: content.conversationId,
+                senderId: content.senderId,
+                senderName: content.senderName,
+                messageType: content.messageType || 'text',
+                timestamp: content.timestamp,
+                navigationTarget: content.navigationTarget,
+                navigationScreen: content.navigationScreen,
+                navigationParams: content.navigationParams
+              };
+            }
+          }
+          
+          console.log('[DEBUG] 📋 DONNÉES SERVEUR RÉELLES CAPTURÉES:');
+          console.log(JSON.stringify(data, null, 2));
+          
+          // Vérifier chaque champ important
+          const fieldsToCheck = [
+            'type', 'conversationId', 'senderId', 'senderName', 
+            'messageType', 'timestamp', 'navigationTarget', 
+            'navigationScreen', 'navigationParams'
+          ];
+          
+          console.log('[DEBUG] ✅ VÉRIFICATION DES CHAMPS:');
+          fieldsToCheck.forEach(field => {
+            const hasField = data && data[field] !== undefined;
+            console.log(`[DEBUG] ${hasField ? '✅' : '❌'} ${field}: ${hasField ? 'PRÉSENT' : 'MANQUANT'}`);
+          });
+          
+          // Conclusion
+          const hasAllFields = fieldsToCheck.every(field => data && data[field] !== undefined);
+          if (hasAllFields) {
+            console.log('[DEBUG] 🎉 PARFAIT ! Le serveur envoie toutes les données nécessaires');
+          } else {
+            console.log('[DEBUG] ⚠️ Il manque encore des données côté serveur');
+          }
+          
+        } catch (error) {
+          console.error('[DEBUG] ❌ Erreur analyse structure:', error);
+        }
+        
+        // Nettoyer
+        setTimeout(() => {
+          Notifications.removeNotificationSubscription(verificationListener);
+          console.log('[DEBUG] 🧹 Écouteur de vérification nettoyé');
+        }, 5000);
+      });
+      
+      // 3. Envoyer une notification serveur pour capturer sa structure
+      console.log('[DEBUG] 🌐 Envoi notification serveur pour vérification...');
+      const result = await this.testServerNotification(
+        realConversationId,
+        "🔍 Vérification structure - CLIQUEZ pour analyser"
+      );
+      
+      if (result) {
+        console.log('[DEBUG] ✅ Notification serveur envoyée');
+        console.log('[DEBUG] 👆 CLIQUEZ sur la notification pour voir la structure réelle !');
+        return true;
+      } else {
+        console.log('[DEBUG] ❌ Échec envoi notification serveur');
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('[DEBUG] ❌ Erreur vérification structure:', error);
+      return false;
+    }
+  }
+  
+  // AJOUTER cette méthode pour un test de comparaison en temps réel
+  
+  static async testRealTimeComparison(conversationId = null) {
+    console.log('[DEBUG] 🔄 === TEST COMPARAISON EN TEMPS RÉEL ===');
+    
+    try {
+      // 1. Récupérer une conversation réelle
+      let realConversationId = conversationId;
+      if (!realConversationId || realConversationId === "675a1234abcd5678efgh9012") {
+        const conversations = await this.getRealConversations();
+        if (conversations.length > 0) {
+          realConversationId = conversations[0]._id;
+        } else {
+          console.log('[DEBUG] ❌ Aucune conversation trouvée');
+          return false;
+        }
+      }
+      
+      console.log('[DEBUG] 🎯 Conversation utilisée:', realConversationId);
+      
+      // 2. Variables pour stocker les données capturées
+      let serverData = null;
+      let localData = null;
+      
+      // 3. Écouteur pour capturer les deux types
+      const comparisonListener = Notifications.addNotificationResponseReceivedListener(response => {
+        console.log('[DEBUG] 🔔 NOTIFICATION CAPTURÉE POUR COMPARAISON');
+        
+        try {
+          const content = response.notification.request.content;
+          let data = content.data;
+          
+          // Reconstruction si nécessaire
+          if (!data || !data.type) {
+            if (content.conversationId || content.type === 'new_message') {
+              data = {
+                type: content.type || 'new_message',
+                conversationId: content.conversationId,
+                senderId: content.senderId,
+                senderName: content.senderName,
+                messageType: content.messageType || 'text',
+                timestamp: content.timestamp,
+                navigationTarget: content.navigationTarget,
+                navigationScreen: content.navigationScreen,
+                navigationParams: content.navigationParams
+              };
+            }
+          }
+          
+          // Identifier le type de notification (serveur vs local)
+          if (data?.senderId === 'test-sender-id') {
+            console.log('[DEBUG] 📱 NOTIFICATION LOCALE CAPTURÉE');
+            localData = data;
+          } else {
+            console.log('[DEBUG] 🌐 NOTIFICATION SERVEUR CAPTURÉE');
+            serverData = data;
+          }
+          
+          // Si on a les deux, faire la comparaison
+          if (serverData && localData) {
+            console.log('[DEBUG] 🔍 === COMPARAISON COMPLÈTE ===');
+            console.log('[DEBUG] 📋 Données serveur:', JSON.stringify(serverData, null, 2));
+            console.log('[DEBUG] 📋 Données locales:', JSON.stringify(localData, null, 2));
+            
+            // Comparer chaque champ
+            const fieldsToCompare = [
+              'type', 'conversationId', 'messageType', 'timestamp',
+              'senderName', 'navigationTarget', 'navigationScreen', 'navigationParams'
+            ];
+            
+            console.log('[DEBUG] ⚖️ COMPARAISON DÉTAILLÉE:');
+            fieldsToCompare.forEach(field => {
+              const serverHas = serverData[field] !== undefined;
+              const localHas = localData[field] !== undefined;
+              const match = serverHas === localHas;
+              
+              console.log(`[DEBUG] ${match ? '✅' : '❌'} ${field}: Serveur=${serverHas}, Local=${localHas}`);
+            });
+            
+            // Nettoyer
+            setTimeout(() => {
+              Notifications.removeNotificationSubscription(comparisonListener);
+              console.log('[DEBUG] 🧹 Écouteur de comparaison nettoyé');
+            }, 2000);
+          }
+          
+        } catch (error) {
+          console.error('[DEBUG] ❌ Erreur comparaison:', error);
+        }
+      });
+      
+      // 4. Envoyer une notification serveur
+      console.log('[DEBUG] 🌐 Envoi notification serveur...');
+      await this.testServerNotification(realConversationId, "🔄 Test comparaison serveur");
+      
+      // 5. Attendre puis envoyer une notification locale
+      setTimeout(async () => {
+        console.log('[DEBUG] 📱 Envoi notification locale...');
+        await this.simulateMessageNotification(realConversationId, "Test Comparaison");
+        console.log('[DEBUG] 👆 CLIQUEZ sur les deux notifications pour les comparer !');
+      }, 8000);
+      
+      // 6. Nettoyage de sécurité
+      setTimeout(() => {
+        if (comparisonListener) {
+          Notifications.removeNotificationSubscription(comparisonListener);
+          console.log('[DEBUG] 🧹 Nettoyage de sécurité effectué');
+        }
+      }, 30000);
+      
+      return true;
+      
+    } catch (error) {
+      console.error('[DEBUG] ❌ Erreur test comparaison:', error);
+      return false;
+    }
   }
 
   // Simuler les données exactes du serveur (pour comparaison)
@@ -514,6 +739,168 @@ class NotificationDebugHelper {
     
     return result;
   }
+  static async testServerNotificationWithNewFix(conversationId = null) {
+    console.log('[DEBUG] 🔧 === TEST AVEC NOUVELLE CORRECTION APP.JS ===');
+    
+    try {
+      // 1. S'assurer qu'on a une vraie conversation
+      let realConversationId = conversationId;
+      
+      if (!realConversationId || realConversationId === "675a1234abcd5678efgh9012") {
+        console.log('[DEBUG] 🔍 Récupération d\'une vraie conversation...');
+        const conversations = await this.getRealConversations();
+        
+        if (conversations.length > 0) {
+          realConversationId = conversations[0]._id;
+          console.log('[DEBUG] ✅ Conversation réelle trouvée:', realConversationId);
+        } else {
+          console.log('[DEBUG] ❌ Aucune conversation trouvée');
+          return false;
+        }
+      }
+      
+      // 2. Nettoyer toute navigation en attente
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      await AsyncStorage.multiRemove([
+        'PENDING_CONVERSATION_NAV',
+        'EMERGENCY_NAVIGATION',
+        'PENDING_NAVIGATION'
+      ]);
+      console.log('[DEBUG] 🧹 Navigations en attente nettoyées');
+      
+      // 3. Vérifier que le gestionnaire App.js est actif
+      console.log('[DEBUG] 🎧 Le gestionnaire App.js devrait être actif maintenant');
+      console.log('[DEBUG] ⚠️  IMPORTANT: Vérifiez que vous voyez ces logs au démarrage:');
+      console.log('[DEBUG]     - "[APP] 🎧 Configuration de l\'écouteur global de notifications"');
+      console.log('[DEBUG]     - "[APP] 🚀 NavigationContainer prêt!"');
+      
+      // 4. Envoyer la notification serveur
+      console.log('[DEBUG] 🌐 Envoi de notification serveur avec conversation réelle...');
+      const serverResult = await this.testServerNotification(
+        realConversationId, 
+        "🔧 Test nouvelle correction - CLIQUEZ pour tester !"
+      );
+      
+      if (serverResult) {
+        console.log('[DEBUG] ✅ Notification serveur envoyée avec succès !');
+        console.log('[DEBUG] 📱 Une notification va apparaître...');
+        console.log('[DEBUG] 👆 CLIQUEZ SUR LA NOTIFICATION pour tester');
+        console.log('[DEBUG] 🔍 Regardez les logs pour voir:');
+        console.log('[DEBUG]     1. "[APP] 🔔 === GESTIONNAIRE PRINCIPAL NOTIFICATION ==="');
+        console.log('[DEBUG]     2. "[APP] ✅ Notification de message valide détectée"');
+        console.log('[DEBUG]     3. "[APP] 🎯 ConversationId: ' + realConversationId + '"');
+        console.log('[DEBUG]     4. "[APP] 🎉 Navigation notification réussie !"');
+        
+        // 5. Programmer un test de notification locale pour comparer
+        setTimeout(async () => {
+          console.log('[DEBUG] 📱 Envoi notification locale pour comparaison...');
+          await this.simulateMessageNotification(realConversationId, "Test Local - Comparaison");
+          console.log('[DEBUG] 👆 CLIQUEZ aussi sur cette notification');
+          console.log('[DEBUG] 🎯 Les deux devraient maintenant fonctionner identiquement !');
+        }, 15000); // 15 secondes après
+        
+        return true;
+      } else {
+        console.log('[DEBUG] ❌ Échec envoi notification serveur');
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('[DEBUG] ❌ Erreur dans le test:', error);
+      return false;
+    }
+  }
+  
+  // Méthode pour diagnostiquer l'état actuel
+  static async debugCurrentNotificationState() {
+    console.log('[DEBUG] 🔍 === DIAGNOSTIC ÉTAT NOTIFICATIONS ===');
+    
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      
+      // 1. Vérifier les navigations en attente
+      const pendingKeys = ['PENDING_CONVERSATION_NAV', 'EMERGENCY_NAVIGATION', 'PENDING_NAVIGATION'];
+      
+      for (const key of pendingKeys) {
+        const value = await AsyncStorage.getItem(key);
+        if (value) {
+          console.log(`[DEBUG] 📋 ${key}:`, JSON.parse(value));
+        } else {
+          console.log(`[DEBUG] ✅ ${key}: Aucune donnée en attente`);
+        }
+      }
+      
+      // 2. Vérifier les permissions
+      const { status } = await Notifications.getPermissionsAsync();
+      console.log('[DEBUG] 🔐 Permissions notifications:', status);
+      
+      // 3. Vérifier l'état de navigation
+      const { navigationRef } = require('../../navigation/NavigationService');
+      if (navigationRef.isReady()) {
+        console.log('[DEBUG] 🚀 NavigationRef: PRÊT');
+        const state = navigationRef.getState();
+        console.log('[DEBUG] 📍 État navigation actuel:', state?.routeNames || 'Indisponible');
+      } else {
+        console.log('[DEBUG] ❌ NavigationRef: PAS PRÊT');
+      }
+      
+      // 4. Instructions pour le test
+      console.log('[DEBUG] 📋 === INSTRUCTIONS DE TEST ===');
+      console.log('[DEBUG] 1. Assurez-vous que l\'app est active (foreground)');
+      console.log('[DEBUG] 2. Utilisez testServerNotificationWithNewFix()');
+      console.log('[DEBUG] 3. Cliquez sur la notification qui apparaît');
+      console.log('[DEBUG] 4. Vérifiez que vous êtes redirigé vers la conversation');
+      console.log('[DEBUG] 5. Regardez les logs pour "[APP]" au lieu de "[DEEPLINK]"');
+      
+    } catch (error) {
+      console.error('[DEBUG] ❌ Erreur diagnostic:', error);
+    }
+  }
+  
+  // Méthode pour forcer un test en arrière-plan
+  static async testBackgroundNotificationBehavior(conversationId = null) {
+    console.log('[DEBUG] 📱 === TEST COMPORTEMENT ARRIÈRE-PLAN ===');
+    
+    try {
+      // Récupérer une vraie conversation
+      let realConversationId = conversationId;
+      if (!realConversationId || realConversationId === "675a1234abcd5678efgh9012") {
+        const conversations = await this.getRealConversations();
+        if (conversations.length > 0) {
+          realConversationId = conversations[0]._id;
+        } else {
+          console.log('[DEBUG] ❌ Aucune conversation trouvée');
+          return false;
+        }
+      }
+      
+      console.log('[DEBUG] ⏰ Vous avez 10 secondes pour mettre l\'app en arrière-plan');
+      console.log('[DEBUG] 📱 Appuyez sur le bouton HOME maintenant !');
+      
+      // Attendre 10 secondes puis envoyer la notification
+      setTimeout(async () => {
+        console.log('[DEBUG] 🌐 Envoi notification serveur (app en arrière-plan)...');
+        
+        const result = await this.testServerNotification(
+          realConversationId,
+          "🌙 Test arrière-plan - Cliquez pour revenir à l'app !"
+        );
+        
+        if (result) {
+          console.log('[DEBUG] ✅ Notification arrière-plan envoyée');
+          console.log('[DEBUG] 👆 Cliquez sur la notification pour revenir dans l\'app');
+          console.log('[DEBUG] 🎯 Vous devriez arriver directement sur la conversation');
+        }
+      }, 10000);
+      
+      return true;
+      
+    } catch (error) {
+      console.error('[DEBUG] ❌ Erreur test arrière-plan:', error);
+      return false;
+    }
+  }
+  
 }
 
 

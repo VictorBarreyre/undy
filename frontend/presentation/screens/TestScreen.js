@@ -1,6 +1,6 @@
 // presentation/screens/TestScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NotificationDebugHelper from '../components/NotificationDebugHelper';
 
@@ -188,6 +188,7 @@ const TestScreen = () => {
             <TouchableOpacity style={styles.refreshButton} onPress={loadRealConversations}>
               <Text style={styles.refreshButtonText}>🔄 Actualiser</Text>
             </TouchableOpacity>
+            
           </View>
         ) : (
           <View>
@@ -256,6 +257,27 @@ const TestScreen = () => {
 
       <TouchableOpacity style={[styles.button, styles.primaryButton]} onPress={handleFullTest}>
         <Text style={[styles.buttonText, styles.primaryButtonText]}>🧪 TEST COMPLET ORIGINAL</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, styles.fixTestButton]}
+        onPress={() => NotificationDebugHelper.debugCurrentNotificationState()}
+      >
+        <Text style={styles.buttonText}>🔍 Diagnostic État Notifications</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, styles.fixTestButton]}
+        onPress={() => NotificationDebugHelper.testServerNotificationWithNewFix(selectedConversationId)}
+      >
+        <Text style={styles.buttonText}>🔧 TEST NOUVELLE CORRECTION</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, styles.backgroundTestButton]}
+        onPress={() => NotificationDebugHelper.testBackgroundNotificationBehavior(selectedConversationId)}
+      >
+        <Text style={styles.buttonText}>🌙 Test Arrière-Plan</Text>
       </TouchableOpacity>
 
       <Text style={styles.note}>
@@ -441,6 +463,20 @@ const styles = StyleSheet.create({
   backgroundTestButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  fixTestButton: {
+    backgroundColor: '#9C27B0', // Violet pour les tests de correction
+    marginTop: 5,
+  },
+  
+  verificationButton: {
+    backgroundColor: '#2196F3', // Bleu pour les vérifications
+    marginTop: 5,
+  },
+  
+  comparisonButton: {
+    backgroundColor: '#FF5722', // Orange foncé pour les comparaisons
+    marginTop: 5,
   },
 });
 
