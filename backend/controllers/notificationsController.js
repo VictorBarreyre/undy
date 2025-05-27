@@ -155,57 +155,27 @@ const createApnsNotification = (title, body, extraData = {}) => {
     body: body
   };
 
-  // CORRECTION : Ajouter le deep link pour les notifications APNs
-  const deepLink = `hushy://notification?conversationId=${extraData.conversationId}&type=${extraData.type || 'new_message'}&senderId=${extraData.senderId}&senderName=${encodeURIComponent(extraData.senderName || '')}&timestamp=${extraData.timestamp || new Date().toISOString()}`;
-
-  // Structure correcte pour APNs avec deep link
+  // Structure du payload pour une navigation propre
   notification.payload = {
-    // Données système APNs
-    aps: {
-      alert: {
-        title: title,
-        body: body
-      },
-      badge: 1,
-      sound: "default",
-      "mutable-content": 1,
-      "content-available": 1,
-      // AJOUT : Deep link qui se déclenche au clic
-      "url-args": [deepLink]
-    },
-    // Données de navigation pour compatibilité
-    content: {
-      data: {
-        type: extraData.type || 'new_message',
-        conversationId: extraData.conversationId,
-        senderId: extraData.senderId,
-        senderName: extraData.senderName,
-        messageType: extraData.messageType || 'text',
-        timestamp: extraData.timestamp || new Date().toISOString(),
-        navigationTarget: extraData.navigationTarget || 'Chat',
-        navigationScreen: extraData.navigationScreen || 'ChatTab',
-        navigationParams: extraData.navigationParams || { conversationId: extraData.conversationId }
-      }
-    },
-    // Conserver aussi au niveau racine pour compatibilité
+    // Données pour la navigation
     type: extraData.type || 'new_message',
     conversationId: extraData.conversationId,
     senderId: extraData.senderId,
     senderName: extraData.senderName,
     messageType: extraData.messageType || 'text',
-    timestamp: extraData.timestamp || new Date().toISOString(),
-    navigationTarget: extraData.navigationTarget || 'Chat',
-    navigationScreen: extraData.navigationScreen || 'ChatTab',
-    navigationParams: extraData.navigationParams || { conversationId: extraData.conversationId },
-    // AJOUT : Deep link dans le payload pour debug
-    deepLink: deepLink
+    timestamp: extraData.timestamp || new Date().toISOString()
   };
 
-  console.log('Notification APNs créée avec deep link:', deepLink);
-  console.log('Payload complet:', JSON.stringify(notification.payload, null, 2));
+  // Activer le content-available pour les notifications en arrière-plan
+  notification.contentAvailable = true;
+  
+  console.log('Notification APNs créée:', {
+    topic: notification.topic,
+    payload: notification.payload
+  });
+  
   return notification;
 };
-
 
 /**
  * Envoie une notification de test pour valider la configuration APNs
