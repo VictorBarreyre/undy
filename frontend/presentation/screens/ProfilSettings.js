@@ -15,7 +15,7 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import StripeVerificationModal from '../components/StripeVerificationModal';
 import * as ExpoContacts from 'expo-contacts';
 import * as Location from 'expo-location';
-import NotificationService from '../Notifications/NotificationService';
+import NotificationService from '../notifications/NotificationService';
 import { useTranslation } from 'react-i18next';
 import Clipboard from '@react-native-clipboard/clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';

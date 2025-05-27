@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { View, Button, Text, StyleSheet } from 'react-native';
-import NotificationService from '../Notifications/NotificationService';
-import NotificationManager from '../Notifications/NotificationManager';
+import NotificationService from '../notifications/NotificationService';
+import NotificationManager from '../notifications/NotificationManager';
 
 const TestNotifications = () => {
   const [status, setStatus] = React.useState('');

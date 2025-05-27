@@ -37,7 +37,7 @@ class NotificationManager {
 
   // Enregistrer le token sur le serveur
   async registerTokenWithServer(userId, token) {
-    if (!token || token === 'SIMULATOR_TOKEN') {
+    if (!token || token === 'SIMULATOR_TOKEN' || token === 'SIMULATOR_MOCK_TOKEN') {
       console.log('[NotificationManager] Token simulateur, pas d\'envoi au serveur');
       return true;
     }

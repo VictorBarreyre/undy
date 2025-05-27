@@ -1,117 +1,110 @@
-import React, { useEffect, useContext, useRef } from 'react';
-import { Platform, AppState } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import { useEffect, useRef, useContext } from 'react';
+import { AppState } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Configuration globale des notifications
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+import NotificationService from '../notifications/NotificationService';
+import NotificationManager from '../notifications//NotificationManager';
 
 const NotificationHandler = () => {
   const navigation = useNavigation();
-  const { isLoggedIn } = useContext(AuthContext);
-  const notificationListener = useRef();
-  const responseListener = useRef();
-  const appState = useRef(AppState.currentState);
-
-  // Fonction pour naviguer vers une conversation
-  const navigateToConversation = (conversationId) => {
-    if (!isLoggedIn || !conversationId) {
-      console.log('[NOTIF] Navigation impossible - utilisateur non connecté ou ID manquant');
-      return;
-    }
-
-    console.log('[NOTIF] Navigation vers conversation:', conversationId);
-    
-    // Navigation directe vers la conversation
-    navigation.navigate('MainApp', {
-      screen: 'Tabs',
-      params: {
-        screen: 'ChatTab',
-        params: {
-          screen: 'Chat',
-          params: { conversationId },
-        },
-      },
-    });
-  };
-
-  // Gérer la réponse aux notifications (clic sur la notification)
-  const handleNotificationResponse = (response) => {
-    console.log('[NOTIF] Réponse notification reçue:', response);
-    
-    const data = response.notification.request.content.data;
-    
-    if (data?.conversationId && data?.type === 'new_message') {
-      // Petit délai pour s'assurer que l'app est bien active
-      setTimeout(() => {
-        navigateToConversation(data.conversationId);
-      }, 100);
-    }
-  };
-
-  // Vérifier les notifications au démarrage
-  const checkInitialNotification = async () => {
-    try {
-      // Vérifier la dernière réponse de notification
-      const lastResponse = await Notifications.getLastNotificationResponseAsync();
-      
-      if (lastResponse) {
-        console.log('[NOTIF] Notification initiale trouvée');
-        handleNotificationResponse(lastResponse);
-      }
-    } catch (error) {
-      console.error('[NOTIF] Erreur vérification initiale:', error);
-    }
-  };
-
-  // Gérer les changements d'état de l'app
-  const handleAppStateChange = (nextAppState) => {
-    if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-      console.log('[NOTIF] App redevenue active');
-      // Vérifier s'il y a une notification en attente
-      checkInitialNotification();
-    }
-    appState.current = nextAppState;
-  };
+  const { userData } = useContext(AuthContext);
+  const appStateRef = useRef(AppState.currentState);
+  const removeNotificationListener = useRef(null);
 
   useEffect(() => {
-    if (!isLoggedIn) return;
+    let isSubscribed = true;
 
-    console.log('[NOTIF] Configuration du gestionnaire de notifications');
-
-    // Listener pour les notifications reçues pendant que l'app est ouverte
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log('[NOTIF] Notification reçue:', notification);
-    });
-
-    // Listener pour les interactions avec les notifications
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
-
-    // Listener pour les changements d'état de l'app
-    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
-
-    // Vérifier s'il y a une notification au démarrage
-    checkInitialNotification();
-
-    // Nettoyage
-    return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+    const initializeNotifications = async () => {
+      if (userData && isSubscribed) {
+        console.log('[NotificationHandler] Initialisation pour l\'utilisateur:', userData._id);
+        
+        // Initialiser le service de notifications
+        await NotificationService.initialize();
+        
+        // Initialiser le manager
+        await NotificationManager.initialize(userData);
+        
+        // Ajouter un listener pour les clics sur notifications
+        removeNotificationListener.current = NotificationService.addNotificationListener((data) => {
+          handleNotificationData(data);
+        });
       }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
-      }
-      appStateSubscription.remove();
     };
-  }, [isLoggedIn, navigation]);
+
+    initializeNotifications();
+
+    // Écouter les changements d'état de l'app
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      isSubscribed = false;
+      subscription.remove();
+      
+      // Retirer le listener des notifications
+      if (removeNotificationListener.current) {
+        removeNotificationListener.current();
+      }
+    };
+  }, [userData]);
+
+  const handleAppStateChange = (nextAppState) => {
+    if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+      // L'app revient au premier plan, effacer le badge
+      NotificationService.setBadgeCount(0);
+    }
+    appStateRef.current = nextAppState;
+  };
+
+  const handleNotificationData = (data) => {
+    console.log('[NotificationHandler] Traitement des données:', data);
+
+    if (!data || !navigation) return;
+
+    // Navigation selon le type de notification
+    switch (data.type) {
+      case 'new_message':
+        if (data.conversationId) {
+          console.log('[NotificationHandler] Navigation vers la conversation:', data.conversationId);
+          
+          // Naviguer vers la conversation
+          navigation.navigate('MainApp', {
+            screen: 'Tabs',
+            params: {
+              screen: 'ChatTab',
+              params: {
+                screen: 'Chat',
+                params: {
+                  conversationId: data.conversationId,
+                  // Passer les autres données si nécessaire
+                  senderId: data.senderId,
+                  senderName: data.senderName,
+                },
+              },
+            },
+          });
+        }
+        break;
+
+      case 'purchase':
+        if (data.secretId) {
+          console.log('[NotificationHandler] Navigation vers le secret:', data.secretId);
+          navigation.navigate('SecretDetail', { secretId: data.secretId });
+        }
+        break;
+
+      case 'stripe_setup_reminder':
+        console.log('[NotificationHandler] Navigation vers les paramètres Stripe');
+        navigation.navigate('StripeSetup');
+        break;
+
+      case 'test':
+        console.log('[NotificationHandler] Notification de test reçue');
+        break;
+
+      default:
+        console.log('[NotificationHandler] Type de notification non géré:', data.type);
+    }
+  };
 
   return null;
 };

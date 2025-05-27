@@ -11,19 +11,21 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import StackNavigator from './navigation/StackNavigator/StackNavigator';
 import { StripeProvider } from "@stripe/stripe-react-native";
 import { STRIPE_PUBLISHABLE_KEY } from '@env';
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { navigationRef } from './navigation/NavigationService';
-import * as Notifications from 'expo-notifications';
+import PushNotificationIOS from '@react-native-community/push-notification-ios';
 
 // Import des nouveaux composants
-import NotificationHandler from './presentation/Notifications/NotificationHandler';
+import NotificationHandler from './presentation/notifications/NotificationHandler';
 import DeepLinkHandler from './presentation/components/DeepLinkHandler';
+import NotificationService from './presentation/notifications/NotificationService';
 
 const Stack = createStackNavigator();
 
 const App = () => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [isNavigationReady, setNavigationReady] = useState(false);
+  const [initialNotification, setInitialNotification] = useState(null);
 
   // Configuration du linking avec support des notifications
   const linking = {
@@ -58,12 +60,13 @@ const App = () => {
     },
     // Gestion personnalisée de l'URL initiale
     async getInitialURL() {
-      // Vérifier d'abord s'il y a une notification
-      const response = await Notifications.getLastNotificationResponseAsync();
-      if (response?.notification?.request?.content?.data?.conversationId) {
-        const conversationId = response.notification.request.content.data.conversationId;
-        console.log('[APP] Navigation depuis notification:', conversationId);
-        return `hushy://chat/${conversationId}`;
+      // Vérifier d'abord s'il y a une notification initiale (iOS)
+      if (Platform.OS === 'ios' && initialNotification) {
+        const data = initialNotification.getData();
+        if (data?.conversationId && data?.type === 'new_message') {
+          console.log('[APP] Navigation depuis notification initiale:', data.conversationId);
+          return `hushy://chat/${data.conversationId}`;
+        }
       }
 
       // Sinon vérifier les deep links classiques
@@ -83,19 +86,11 @@ const App = () => {
         listener(url);
       });
 
-      // Écouter les clics sur notifications
-      const notificationSubscription = Notifications.addNotificationResponseReceivedListener(response => {
-        const data = response.notification.request.content.data;
-        if (data?.conversationId && data?.type === 'new_message') {
-          const url = `hushy://chat/${data.conversationId}`;
-          console.log('[APP] Navigation depuis notification vers:', url);
-          listener(url);
-        }
-      });
+      // Pour iOS, les notifications sont gérées par NotificationService
+      // qui notifiera NotificationHandler directement
 
       return () => {
         linkingSubscription.remove();
-        notificationSubscription.remove();
       };
     },
   };
@@ -110,7 +105,27 @@ const App = () => {
   };
 
   useEffect(() => {
+    // Charger les fonts
     loadFonts().then(() => setFontsLoaded(true)).catch(console.warn);
+
+    // Pour iOS, récupérer la notification initiale si l'app a été lancée via notification
+    if (Platform.OS === 'ios') {
+      PushNotificationIOS.getInitialNotification()
+        .then(notification => {
+          if (notification) {
+            console.log('[APP] Notification initiale détectée:', notification);
+            setInitialNotification(notification);
+          }
+        })
+        .catch(err => console.error('[APP] Erreur récupération notification initiale:', err));
+    }
+
+    // Cleanup
+    return () => {
+      if (Platform.OS === 'ios') {
+        NotificationService.cleanup();
+      }
+    };
   }, []);
 
   if (!fontsLoaded) {
@@ -140,6 +155,11 @@ const App = () => {
                 onReady={() => {
                   console.log('[APP] Navigation prête');
                   setNavigationReady(true);
+                  
+                  // Si on avait une notification initiale, la traiter maintenant
+                  if (Platform.OS === 'ios' && initialNotification) {
+                    NotificationService.handleNotificationOpen(initialNotification);
+                  }
                 }}
               >
                 <StackNavigator />
