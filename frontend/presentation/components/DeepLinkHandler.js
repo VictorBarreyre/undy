@@ -36,8 +36,8 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
         console.log('[DEEPLINK] 🎯 ConversationId:', conversationId);
 
         try {
-            // Attendre un peu que la navigation soit prête
-            await new Promise(resolve => setTimeout(resolve, 800));
+            // Attendre que la navigation soit prête
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             navigation.navigate('MainApp', {
                 screen: 'Tabs',
@@ -54,6 +54,7 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
             
             // Nettoyer toute navigation en attente
             await AsyncStorage.removeItem('PENDING_CONVERSATION_NAV');
+            await AsyncStorage.removeItem('APNS_NOTIFICATION_DATA');
             return true;
         } catch (error) {
             console.error('[DEEPLINK] ❌ Erreur navigation:', error);
@@ -72,107 +73,57 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
         }
     };
 
-    // Extraction des données de notification - FONCTION COMMUNE
-    const extractNotificationData = (notificationData) => {
-        console.log('[DEEPLINK] 🔍 === EXTRACTION DES DONNÉES ===');
-        console.log('[DEEPLINK] 📋 Données brutes:', JSON.stringify(notificationData, null, 2));
-
-        let data = null;
-
-        // Cas 1: Structure APNs native - données directement disponibles
-        if (notificationData.conversationId && notificationData.type) {
-            console.log('[DEEPLINK] ✅ Données trouvées directement (APNs native/iOS)');
-            data = {
-                type: notificationData.type,
-                conversationId: notificationData.conversationId,
-                senderId: notificationData.senderId,
-                senderName: notificationData.senderName,
-                messageType: notificationData.messageType || 'text',
-                timestamp: notificationData.timestamp || new Date().toISOString(),
-                navigationTarget: notificationData.navigationTarget,
-                navigationScreen: notificationData.navigationScreen,
-                navigationParams: notificationData.navigationParams
-            };
-        }
-        // Cas 2: Structure imbriquée - données dans content.data
-        else if (notificationData.content && notificationData.content.data) {
-            console.log('[DEEPLINK] ✅ Données trouvées dans content.data');
-            const contentData = notificationData.content.data;
-            data = {
-                type: contentData.type,
-                conversationId: contentData.conversationId,
-                senderId: contentData.senderId,
-                senderName: contentData.senderName,
-                messageType: contentData.messageType || 'text',
-                timestamp: contentData.timestamp || new Date().toISOString(),
-                navigationTarget: contentData.navigationTarget,
-                navigationScreen: contentData.navigationScreen,
-                navigationParams: contentData.navigationParams
-            };
-        }
-        // Cas 3: Structure React Native standard
-        else if (notificationData.data) {
-            console.log('[DEEPLINK] ✅ Données trouvées dans data');
-            data = notificationData.data;
-        }
-
-        console.log('[DEEPLINK] 📋 Données extraites:', JSON.stringify(data, null, 2));
-        return data;
-    };
-
-    // TRAITEMENT UNIFIÉ DES NOTIFICATIONS
-    const processNotification = async (data, source = 'unknown') => {
-        console.log(`[DEEPLINK] 🔔 === TRAITEMENT NOTIFICATION (${source}) ===`);
-
-        // Éviter le double traitement
-        const notificationId = `${data?.conversationId}_${data?.timestamp}`;
-        if (lastProcessedNotificationRef.current === notificationId) {
-            console.log('[DEEPLINK] ⚠️ Notification déjà traitée, ignorée');
-            return;
-        }
-        lastProcessedNotificationRef.current = notificationId;
-
-        const extractedData = extractNotificationData(data);
-
-        // Validation et traitement
-        if (extractedData?.type === 'new_message' && extractedData?.conversationId) {
-            console.log('[DEEPLINK] ✅ Notification de message valide détectée');
-            console.log('[DEEPLINK] 🎯 ConversationId:', extractedData.conversationId);
-            console.log('[DEEPLINK] 👤 SenderName:', extractedData.senderName);
-
-            // Vérifier si l'utilisateur est connecté
-            if (!isLoggedIn) {
-                console.log('[DEEPLINK] ❌ Utilisateur non connecté, navigation impossible');
-                return;
-            }
-
-            // Navigation
-            console.log('[DEEPLINK] 🚀 Déclenchement navigation...');
-            const success = await navigateToConversation(extractedData.conversationId);
-            
-            if (success) {
-                console.log('[DEEPLINK] 🎉 Navigation notification réussie !');
+    // NOUVEAU : Gestionnaire spécial pour notifications APNs via données stockées
+    const checkForAPNsNotificationData = async () => {
+        console.log('[DEEPLINK] 🔍 Vérification données APNs stockées...');
+        
+        try {
+            // Vérifier si des données de notification APNs ont été stockées
+            const apnsDataStr = await AsyncStorage.getItem('APNS_NOTIFICATION_DATA');
+            if (apnsDataStr) {
+                console.log('[DEEPLINK] 📱 Données APNs trouvées dans le storage!');
+                
+                const apnsData = JSON.parse(apnsDataStr);
+                console.log('[DEEPLINK] 📋 Données APNs:', JSON.stringify(apnsData, null, 2));
+                
+                // Vérifier que c'est récent (moins de 2 minutes)
+                if (Date.now() - apnsData.timestamp < 120000) {
+                    console.log('[DEEPLINK] ✅ Données APNs récentes, traitement...');
+                    
+                    if (apnsData.type === 'new_message' && apnsData.conversationId) {
+                        console.log('[DEEPLINK] 🎯 Navigation APNs vers:', apnsData.conversationId);
+                        
+                        const success = await navigateToConversation(apnsData.conversationId);
+                        if (success) {
+                            console.log('[DEEPLINK] 🎉 Navigation APNs réussie !');
+                        }
+                    }
+                } else {
+                    console.log('[DEEPLINK] ⏰ Données APNs trop anciennes, nettoyage...');
+                    await AsyncStorage.removeItem('APNS_NOTIFICATION_DATA');
+                }
             } else {
-                console.log('[DEEPLINK] ⏳ Navigation sauvegardée pour plus tard');
+                console.log('[DEEPLINK] ℹ️ Aucune donnée APNs stockée');
             }
-
-        } else {
-            console.log('[DEEPLINK] ❌ Notification ignorée - données invalides');
-            console.log('[DEEPLINK] 🔍 Type reçu:', extractedData?.type);
-            console.log('[DEEPLINK] 🔍 ConversationId reçu:', extractedData?.conversationId);
+        } catch (error) {
+            console.error('[DEEPLINK] ❌ Erreur vérification APNs:', error);
         }
     };
 
-    // GESTIONNAIRE POUR NOTIFICATIONS EN PREMIER PLAN
+    // GESTIONNAIRE POUR NOTIFICATIONS EN PREMIER PLAN (locales uniquement)
     const handleNotificationResponse = async (response) => {
-        console.log('[DEEPLINK] 📱 Notification reçue en premier plan');
+        console.log('[DEEPLINK] 📱 Notification locale reçue en premier plan');
         const content = response.notification.request.content;
-        await processNotification(content.data, 'foreground');
+        
+        if (content.data?.type === 'new_message' && content.data?.conversationId) {
+            console.log('[DEEPLINK] 🎯 Navigation notification locale:', content.data.conversationId);
+            await navigateToConversation(content.data.conversationId);
+        }
     };
 
     // Configuration de l'écouteur de notifications
     const setupNotificationListener = () => {
-        console.log('[DEEPLINK] 🎧 Configuration de l\'écouteur de notifications...');
+        console.log('[DEEPLINK] 🎧 Configuration de l\'écouteur de notifications locales...');
         
         // Nettoyer l'ancien écouteur s'il existe
         if (notificationSubscriptionRef.current) {
@@ -180,48 +131,9 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
             notificationSubscriptionRef.current.remove();
         }
 
-        // Créer le nouvel écouteur
+        // Créer le nouvel écouteur (pour notifications locales seulement)
         notificationSubscriptionRef.current = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
-        console.log('[DEEPLINK] ✅ Écouteur de notifications configuré');
-    };
-
-    // MÉCANISME SPÉCIAL POUR NOTIFICATIONS EN ARRIÈRE-PLAN
-    const checkForBackgroundNotification = async () => {
-        console.log('[DEEPLINK] 🔍 Vérification notification en arrière-plan...');
-        
-        try {
-            // Vérifier si on revient d'une notification (iOS log présent)
-            // Utiliser un délai pour laisser le temps à la notification d'être traitée
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Essayer de récupérer la dernière notification
-            const response = await Notifications.getLastNotificationResponseAsync();
-            if (response) {
-                console.log('[DEEPLINK] 📱 Dernière notification trouvée');
-                console.log('[DEEPLINK] 📋 Response:', JSON.stringify(response, null, 2));
-                
-                const content = response.notification.request.content;
-                await processNotification(content.data, 'background_check');
-            }
-            
-            // MÉCANISME ALTERNATIF : Vérifier s'il y a eu interaction récente
-            // Si on voit des logs système iOS mais aucune notification React Native,
-            // essayer de parser les dernières notifications
-            const notifications = await Notifications.getPresentedNotificationsAsync();
-            console.log('[DEEPLINK] 📋 Notifications présentées:', notifications.length);
-            
-            if (notifications.length > 0) {
-                const lastNotification = notifications[0];
-                console.log('[DEEPLINK] 📋 Dernière notification présentée:', JSON.stringify(lastNotification, null, 2));
-                
-                if (lastNotification.request.content.data) {
-                    await processNotification(lastNotification.request.content.data, 'presented_check');
-                }
-            }
-            
-        } catch (error) {
-            console.error('[DEEPLINK] ❌ Erreur vérification arrière-plan:', error);
-        }
+        console.log('[DEEPLINK] ✅ Écouteur de notifications locales configuré');
     };
 
     // Vérifier et exécuter les navigations en attente
@@ -246,7 +158,7 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
         }
     };
 
-    // Gestionnaire principal des deep links (CONSERVÉ)
+    // Gestionnaire principal des deep links
     const handleDeepLink = async (event) => {
         try {
             const url = event.url || event;
@@ -262,6 +174,31 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
             }
 
             const fullUrl = decodeURIComponent(url);
+
+            // NOUVEAU : Gestion des deep links de notifications APNs
+            // Format: hushy://notification?conversationId=xxx&type=new_message&senderId=xxx
+            if (fullUrl.includes('hushy://notification')) {
+                console.log("[DEEPLINK] 🔔 Deep link de notification APNs détecté");
+                
+                try {
+                    const urlObj = new URL(fullUrl);
+                    const conversationId = urlObj.searchParams.get('conversationId');
+                    const type = urlObj.searchParams.get('type');
+                    const senderId = urlObj.searchParams.get('senderId');
+                    
+                    console.log("[DEEPLINK] 📋 Paramètres notification:", { conversationId, type, senderId });
+                    
+                    if (type === 'new_message' && conversationId) {
+                        console.log("[DEEPLINK] 🎯 Navigation via deep link APNs:", conversationId);
+                        setTimeout(() => {
+                            navigateToConversation(conversationId);
+                        }, 500);
+                        return;
+                    }
+                } catch (parseError) {
+                    console.error("[DEEPLINK] ❌ Erreur parsing URL notification:", parseError);
+                }
+            }
 
             // === GESTION STRIPE (CONSERVÉE INTÉGRALEMENT) ===
             if (fullUrl.includes('action=bank_update_complete')) {
@@ -456,10 +393,9 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
     const handleAppStateChange = (nextAppState) => {
         console.log('[DEEPLINK] 📱 Changement état app:', nextAppState);
         if (nextAppState === 'active') {
-            // CORRECTION : Vérifier les notifications en arrière-plan
             setTimeout(() => {
                 setupNotificationListener();
-                checkForBackgroundNotification();
+                checkForAPNsNotificationData();
                 checkPendingConversationNav();
             }, 500);
         }
@@ -499,7 +435,7 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
         const linkingSubscription = Linking.addEventListener('url', handleDeepLink);
         const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
         
-        // Configuration immédiate de l'écouteur de notifications
+        // Configuration immédiate de l'écouteur de notifications locales
         setupNotificationListener();
 
         // Vérifier l'URL initiale au lancement
@@ -514,7 +450,7 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
         if (isLoggedIn) {
             console.log('[DEEPLINK] 👤 Utilisateur connecté - initialisation...');
             setTimeout(() => {
-                checkForBackgroundNotification();
+                checkForAPNsNotificationData();
                 checkPendingConversationNav();
                 initializeNotifications();
             }, 1000);

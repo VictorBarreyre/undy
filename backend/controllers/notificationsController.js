@@ -155,20 +155,10 @@ const createApnsNotification = (title, body, extraData = {}) => {
     body: body
   };
 
-  // CORRECTION : Structure unifiée pour APNs ET local
-  const notificationData = {
-    type: extraData.type || 'new_message',
-    conversationId: extraData.conversationId,
-    senderId: extraData.senderId,
-    senderName: extraData.senderName,
-    messageType: extraData.messageType || 'text',
-    timestamp: extraData.timestamp || new Date().toISOString(),
-    navigationTarget: extraData.navigationTarget || 'Chat',
-    navigationScreen: extraData.navigationScreen || 'ChatTab',
-    navigationParams: extraData.navigationParams || { conversationId: extraData.conversationId }
-  };
+  // CORRECTION : Ajouter le deep link pour les notifications APNs
+  const deepLink = `hushy://notification?conversationId=${extraData.conversationId}&type=${extraData.type || 'new_message'}&senderId=${extraData.senderId}&senderName=${encodeURIComponent(extraData.senderName || '')}&timestamp=${extraData.timestamp || new Date().toISOString()}`;
 
-  // Structure correcte pour APNs
+  // Structure correcte pour APNs avec deep link
   notification.payload = {
     // Données système APNs
     aps: {
@@ -179,19 +169,43 @@ const createApnsNotification = (title, body, extraData = {}) => {
       badge: 1,
       sound: "default",
       "mutable-content": 1,
-      "content-available": 1
+      "content-available": 1,
+      // AJOUT : Deep link qui se déclenche au clic
+      "url-args": [deepLink]
     },
-    // AJOUT : Données dans content.data pour compatibilité
+    // Données de navigation pour compatibilité
     content: {
-      data: notificationData
+      data: {
+        type: extraData.type || 'new_message',
+        conversationId: extraData.conversationId,
+        senderId: extraData.senderId,
+        senderName: extraData.senderName,
+        messageType: extraData.messageType || 'text',
+        timestamp: extraData.timestamp || new Date().toISOString(),
+        navigationTarget: extraData.navigationTarget || 'Chat',
+        navigationScreen: extraData.navigationScreen || 'ChatTab',
+        navigationParams: extraData.navigationParams || { conversationId: extraData.conversationId }
+      }
     },
-    // Conserver aussi au niveau racine pour compatibilité APNs
-    ...notificationData
+    // Conserver aussi au niveau racine pour compatibilité
+    type: extraData.type || 'new_message',
+    conversationId: extraData.conversationId,
+    senderId: extraData.senderId,
+    senderName: extraData.senderName,
+    messageType: extraData.messageType || 'text',
+    timestamp: extraData.timestamp || new Date().toISOString(),
+    navigationTarget: extraData.navigationTarget || 'Chat',
+    navigationScreen: extraData.navigationScreen || 'ChatTab',
+    navigationParams: extraData.navigationParams || { conversationId: extraData.conversationId },
+    // AJOUT : Deep link dans le payload pour debug
+    deepLink: deepLink
   };
 
-  console.log('Notification APNs créée avec payload unifié:', JSON.stringify(notification.payload, null, 2));
+  console.log('Notification APNs créée avec deep link:', deepLink);
+  console.log('Payload complet:', JSON.stringify(notification.payload, null, 2));
   return notification;
 };
+
 
 /**
  * Envoie une notification de test pour valider la configuration APNs
