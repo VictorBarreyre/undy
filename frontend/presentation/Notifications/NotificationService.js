@@ -12,6 +12,7 @@ class NotificationService {
   constructor() {
     this.isConfigured = false;
     this.notificationListeners = [];
+    this.removeListeners = [];
   }
 
   // Initialiser le service
@@ -23,23 +24,34 @@ class NotificationService {
         // Configuration iOS avec push-notification-ios
         PushNotificationIOS.setApplicationIconBadgeNumber(0);
         
-        // Écouter les notifications reçues en foreground
-        PushNotificationIOS.addEventListener('notification', this.onRemoteNotification);
+        // Écouter les notifications reçues
+        this.removeListeners.push(
+          PushNotificationIOS.addEventListener('notification', this.onRemoteNotification)
+        );
         
         // Écouter les notifications locales
-        PushNotificationIOS.addEventListener('localNotification', this.onLocalNotification);
+        this.removeListeners.push(
+          PushNotificationIOS.addEventListener('localNotification', this.onLocalNotification)
+        );
         
         // Écouter l'enregistrement du token
-        PushNotificationIOS.addEventListener('register', this.onRegistered);
+        this.removeListeners.push(
+          PushNotificationIOS.addEventListener('register', this.onRegistered)
+        );
         
         // Écouter les erreurs d'enregistrement
-        PushNotificationIOS.addEventListener('registrationError', this.onRegistrationError);
+        this.removeListeners.push(
+          PushNotificationIOS.addEventListener('registrationError', this.onRegistrationError)
+        );
         
-        // Récupérer la notification initiale si l'app a été lancée via notification
+        // IMPORTANT: Récupérer la notification initiale
         const notification = await PushNotificationIOS.getInitialNotification();
         if (notification) {
           console.log('[NotificationService] Notification initiale:', notification);
-          this.handleNotificationOpen(notification);
+          // Traiter la notification initiale après un délai
+          setTimeout(() => {
+            this.handleNotificationOpen(notification);
+          }, 1000);
         }
       }
 
@@ -73,12 +85,11 @@ class NotificationService {
         if (permissions.alert || permissions.badge || permissions.sound) {
           // Attendre que le token soit enregistré
           return new Promise((resolve) => {
-            // Timeout au cas où le token ne viendrait pas
             const timeout = setTimeout(() => {
               resolve({ granted: true, token: null });
             }, 5000);
 
-            // Écouter l'événement d'enregistrement une seule fois
+            // Écouter l'événement d'enregistrement
             const removeListener = PushNotificationIOS.addEventListener('register', (token) => {
               clearTimeout(timeout);
               removeListener();
@@ -99,7 +110,6 @@ class NotificationService {
 
         return { granted: false, token: null };
       } else {
-        // Pour Android, garder la logique expo-notifications
         console.log('[NotificationService] Android non supporté avec cette librairie');
         return { granted: false, token: null };
       }
@@ -121,98 +131,91 @@ class NotificationService {
   }
 
   // Callback pour les notifications reçues
-  onRemoteNotification = (notification) => {
-    console.log('[NotificationService] Notification reçue:', notification);
-    console.log('[NotificationService] Type de notification:', typeof notification);
-    console.log('[NotificationService] Propriétés:', Object.keys(notification));
-    
-    // Pour les notifications locales sur simulateur, la structure peut être différente
-    let notificationData = notification;
-    
-    // Si c'est un objet avec une méthode getData
-    if (notification && typeof notification.getData === 'function') {
-      notificationData = notification.getData();
-    } else if (notification && notification.data) {
-      notificationData = notification.data;
-    }
-    
-    // Vérifier si c'est une interaction utilisateur
-    const isUserInteraction = notification.userInteraction || 
-                            (notificationData && notificationData.userInteraction);
-    
-    console.log('[NotificationService] User interaction:', isUserInteraction);
-    console.log('[NotificationService] App state:', AppState.currentState);
-    
-    // Marquer la notification comme terminée si nécessaire
-    if (notification && typeof notification.finish === 'function') {
-      notification.finish(PushNotificationIOS.FetchResult.NoData);
-    }
-    
-    // Si c'est une interaction utilisateur ou si l'app n'est pas active
-    if (isUserInteraction || AppState.currentState !== 'active') {
-      this.handleNotificationOpen({ getData: () => notificationData });
-    } else {
-      // App en foreground
-      this.handleForegroundNotification({ 
-        getData: () => notificationData,
-        getAlert: () => notification.alert || notification.aps?.alert || {}
-      });
-    }
+onRemoteNotification = (notification) => {
+  console.log('[NotificationService] Notification reçue:', notification);
+  
+  // IMPORTANT: Vérifier si la notification a déjà été complétée
+  if (notification._remoteNotificationCompleteCallbackCalled) {
+    console.log('[NotificationService] ⚠️ Notification déjà traitée, skip');
+    return;
   }
-
-  // Callback pour les notifications locales
-  onLocalNotification = (notification) => {
-    console.log('[NotificationService] Notification locale reçue:', notification);
-    console.log('[NotificationService] Structure:', JSON.stringify(notification, null, 2));
-    
-    // Pour les notifications locales, la structure peut être directement l'objet de données
-    const data = notification.userInfo || notification;
-    
-    // Créer un objet compatible avec notre handler
-    const notificationWrapper = {
-      getData: () => data,
-      getAlert: () => ({
-        title: notification.alertTitle || notification.title || data.aps?.alert?.title,
-        body: notification.alertBody || notification.body || data.aps?.alert?.body
-      })
-    };
-    
-    // Toujours considérer les notifications locales comme des interactions utilisateur
-    this.handleNotificationOpen(notificationWrapper);
+  
+  const isUserInteraction = notification.userInteraction || 
+                          (AppState.currentState !== 'active');
+  
+  console.log('[NotificationService] User interaction:', isUserInteraction);
+  console.log('[NotificationService] App state:', AppState.currentState);
+  
+  // CORRECTION: Appeler finish() APRÈS le traitement
+  const finishNotification = () => {
+    if (notification.finish && !notification._remoteNotificationCompleteCallbackCalled) {
+      try {
+        notification.finish(PushNotificationIOS.FetchResult.NoData);
+      } catch (error) {
+        console.error('[NotificationService] Erreur lors du finish:', error);
+      }
+    }
+  };
+  
+  // Traiter la notification
+  if (isUserInteraction) {
+    console.log('[NotificationService] 👆 Traitement comme interaction utilisateur');
+    this.handleNotificationOpen(notification);
+    // Finish après le traitement
+    setTimeout(finishNotification, 100);
+  } else {
+    console.log('[NotificationService] 📱 App active, affichage en foreground');
+    this.handleForegroundNotification(notification);
+    finishNotification();
   }
+}
 
   // Gérer l'ouverture d'une notification
   handleNotificationOpen = (notification) => {
     console.log('[NotificationService] 🎯 handleNotificationOpen appelé');
-    console.log('[NotificationService] 📱 Type de notification:', typeof notification);
-    console.log('[NotificationService] 📊 Structure:', {
-      hasGetData: typeof notification.getData === 'function',
-      hasData: !!notification.data,
-      hasUserInfo: !!notification.userInfo,
-      keys: Object.keys(notification || {})
-    });
     
     let data = null;
     
-    // Extraire les données selon la structure
-    if (notification && typeof notification.getData === 'function') {
-      data = notification.getData();
-      console.log('[NotificationService] 📊 Données via getData():', data);
-    } else if (notification && notification.userInfo) {
-      data = notification.userInfo;
-      console.log('[NotificationService] 📊 Données via userInfo:', data);
+    // CORRECTION: Gérer correctement l'extraction des données
+    if (notification && notification._data) {
+      data = notification._data;
     } else if (notification && notification.data) {
       data = notification.data;
-      console.log('[NotificationService] 📊 Données via data:', data);
+    } else if (notification && typeof notification.getData === 'function') {
+      try {
+        data = notification.getData();
+      } catch (error) {
+        console.error('[NotificationService] Erreur getData():', error);
+        // Fallback sur _data
+        data = notification._data || notification.data || {};
+      }
+    } else if (notification && notification.userInfo) {
+      data = notification.userInfo;
     } else {
-      data = notification;
-      console.log('[NotificationService] 📊 Utilisation directe:', data);
+      data = notification || {};
     }
     
-    console.log('[NotificationService] 📊 Données finales:', JSON.stringify(data, null, 2));
+    console.log('[NotificationService] 📊 Données extraites:', JSON.stringify(data, null, 2));
     console.log('[NotificationService] 👥 Nombre de listeners:', this.notificationListeners.length);
 
-    // Notifier les listeners
+    // IMPORTANT: Éviter les appels multiples en vérifiant si déjà traité
+    const notificationId = data.notificationId || data.id || Date.now().toString();
+    if (this.processedNotifications && this.processedNotifications.has(notificationId)) {
+      console.log('[NotificationService] ⚠️ Notification déjà traitée:', notificationId);
+      return;
+    }
+    
+    if (!this.processedNotifications) {
+      this.processedNotifications = new Set();
+    }
+    this.processedNotifications.add(notificationId);
+    
+    // Nettoyer les notifications traitées après 1 minute
+    setTimeout(() => {
+      this.processedNotifications.delete(notificationId);
+    }, 60000);
+
+    // Notifier les listeners une seule fois
     this.notificationListeners.forEach((listener, index) => {
       console.log(`[NotificationService] 📣 Appel du listener ${index + 1}/${this.notificationListeners.length}`);
       try {
@@ -234,11 +237,19 @@ class NotificationService {
 
   // Gérer les notifications en foreground
   handleForegroundNotification = (notification) => {
-    const data = notification.getData();
-    const alert = notification.getAlert();
+    let data = {};
+    let alert = {};
     
-    if (alert?.title && alert?.body) {
-      // Afficher une alerte ou un toast custom
+    // Extraire les données et l'alerte
+    if (notification._data) {
+      data = notification._data;
+    }
+    if (notification._alert) {
+      alert = notification._alert;
+    }
+    
+    if (alert.title && alert.body) {
+      // Afficher une alerte
       Alert.alert(
         alert.title,
         alert.body,
@@ -330,11 +341,14 @@ class NotificationService {
     }
   }
 
-  // Ajouter une méthode pour la compatibilité avec votre code existant
+  // Ajouter une méthode pour la compatibilité
   async checkPermissions() {
     if (Platform.OS === 'ios') {
-      const settings = await PushNotificationIOS.checkPermissions();
-      return settings.alert || settings.badge || settings.sound;
+      return new Promise((resolve) => {
+        PushNotificationIOS.checkPermissions((permissions) => {
+          resolve(permissions.alert || permissions.badge || permissions.sound);
+        });
+      });
     }
     return false;
   }
@@ -357,15 +371,19 @@ class NotificationService {
   // Nettoyer les listeners
   cleanup() {
     if (Platform.OS === 'ios') {
-      PushNotificationIOS.removeEventListener('notification');
-      PushNotificationIOS.removeEventListener('localNotification');
-      PushNotificationIOS.removeEventListener('register');
-      PushNotificationIOS.removeEventListener('registrationError');
+      // Retirer tous les listeners enregistrés
+      this.removeListeners.forEach(remove => {
+        if (typeof remove === 'function') {
+          remove();
+        }
+      });
+      this.removeListeners = [];
     }
     this.notificationListeners = [];
+    this.processedNotifications = null;
   }
 
-  // Méthode pour annuler toutes les notifications (compatibilité)
+  // Méthode pour annuler toutes les notifications
   async cancelAllNotifications() {
     if (Platform.OS === 'ios') {
       PushNotificationIOS.removeAllDeliveredNotifications();

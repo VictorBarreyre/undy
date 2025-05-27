@@ -1,168 +1,372 @@
-import { createNavigationContainerRef } from '@react-navigation/native';
+import PushNotificationIOS from '@react-native-community/push-notification-ios';
+import { Platform, Alert, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// Créer une référence de navigation globale
-export const navigationRef = createNavigationContainerRef();
+// Fonction pour détecter si on est sur simulateur
+const isSimulator = () => {
+  return !Constants.isDevice;
+};
 
-// Fonction utilitaire pour naviguer depuis n'importe où
-export function navigate(name, params) {
-  console.log("[NAVIGATION_SERVICE] Tentative de navigation vers:", name, params);
-  if (navigationRef.isReady()) {
-    console.log("[NAVIGATION_SERVICE] Navigation exécutée");
-    navigationRef.navigate(name, params);
-  } else {
-    console.log("[NAVIGATION_SERVICE] Navigation mise en attente - NavigationContainer pas prêt");
-    // Stocker la navigation pour l'exécuter plus tard
-    AsyncStorage.setItem(
-      'PENDING_NAVIGATION',
-      JSON.stringify({ name, params, timestamp: Date.now() })
-    ).catch(err => console.error('[NAVIGATION_SERVICE] Erreur de stockage de navigation:', err));
+class NotificationService {
+  constructor() {
+    this.isConfigured = false;
+    this.notificationListeners = [];
   }
-}
 
-// Navigation spécifique vers une conversation - CORRIGÉE SELON VOTRE STRUCTURE
-export function navigateToConversation(conversationId) {
-  console.log("[NAVIGATION_SERVICE] Navigation vers conversation:", conversationId);
-  
-  if (navigationRef.isReady()) {
+  // Initialiser le service
+  async initialize() {
+    if (this.isConfigured) return true;
+
     try {
-      // CORRECTION: Navigation selon votre vraie structure de navigation
-      // StackNavigator -> MainApp (DrawerNavigator) -> Tabs (TabNavigator) -> ChatTab (ConversationStackNavigator) -> Chat (ChatScreen)
-      console.log("[NAVIGATION_SERVICE] Tentative navigation structure complète");
-      
-      navigationRef.navigate('MainApp', {
-        screen: 'Tabs', // DrawerNavigator contient TabNavigator sous le nom "Tabs"
-        params: {
-          screen: 'ChatTab', // TabNavigator contient ConversationStackNavigator sous le nom "ChatTab"
-          params: {
-            screen: 'Chat', // ConversationStackNavigator contient ChatScreen sous le nom "Chat"
-            params: { conversationId },
-          },
-        },
-      });
-      
-      console.log("[NAVIGATION_SERVICE] Navigation réussie (structure complète)");
-    } catch (error) {
-      console.log("[NAVIGATION_SERVICE] Échec méthode principale, tentative fallback:", error);
-      try {
-        // Méthode 2: Navigation directe vers l'onglet si la structure complète échoue
-        navigationRef.navigate('ChatTab', {
-          screen: 'Chat',
-          params: { conversationId },
-        });
-        console.log("[NAVIGATION_SERVICE] Navigation réussie (fallback ChatTab)");
-      } catch (fallbackError) {
-        console.log("[NAVIGATION_SERVICE] Échec fallback ChatTab, tentative Chat direct:", fallbackError);
-        try {
-          // Méthode 3: Navigation très directe
-          navigationRef.navigate('Chat', { conversationId });
-          console.log("[NAVIGATION_SERVICE] Navigation réussie (Chat direct)");
-        } catch (lastError) {
-          console.error("[NAVIGATION_SERVICE] Toutes les méthodes ont échoué:", lastError);
-          
-          // Debug: Afficher l'état de navigation actuel
-          try {
-            const state = navigationRef.getState?.();
-            console.log("[NAVIGATION_SERVICE] 🔍 État de navigation actuel:", JSON.stringify(state, null, 2));
-          } catch (debugError) {
-            console.log("[NAVIGATION_SERVICE] 🔍 Impossible d'obtenir l'état de navigation");
-          }
-        }
-      }
-    }
-  } else {
-    console.log("[NAVIGATION_SERVICE] NavigationContainer pas prêt, stockage pour plus tard");
-    AsyncStorage.setItem(
-      'PENDING_NAVIGATION',
-      JSON.stringify({ 
-        type: 'conversation',
-        conversationId, 
-        timestamp: Date.now() 
-      })
-    ).catch(err => console.error('[NAVIGATION_SERVICE] Erreur de stockage:', err));
-  }
-}
-
-// Vérifier s'il y a des navigations en attente (appelé depuis App.js)
-export async function checkPendingNavigation() {
-  if (!navigationRef.isReady()) {
-    console.log("[NAVIGATION_SERVICE] NavigationContainer pas encore prêt");
-    return;
-  }
-  
-  try {
-    const pendingNavStr = await AsyncStorage.getItem('PENDING_NAVIGATION');
-    if (pendingNavStr) {
-      const pendingNav = JSON.parse(pendingNavStr);
-      
-      // Ne traiter que les navigations récentes (moins de 2 minutes)
-      if (Date.now() - pendingNav.timestamp < 120000) {
-        console.log("[NAVIGATION_SERVICE] Exécution d'une navigation en attente:", pendingNav);
+      if (Platform.OS === 'ios') {
+        // Configuration iOS avec push-notification-ios
+        PushNotificationIOS.setApplicationIconBadgeNumber(0);
         
-        if (pendingNav.type === 'conversation' && pendingNav.conversationId) {
-          navigateToConversation(pendingNav.conversationId);
-        } else if (pendingNav.name && pendingNav.params) {
-          navigate(pendingNav.name, pendingNav.params);
+        // Écouter les notifications reçues en foreground
+        PushNotificationIOS.addEventListener('notification', this.onRemoteNotification);
+        
+        // Écouter les notifications locales
+        PushNotificationIOS.addEventListener('localNotification', this.onLocalNotification);
+        
+        // Écouter l'enregistrement du token
+        PushNotificationIOS.addEventListener('register', this.onRegistered);
+        
+        // Écouter les erreurs d'enregistrement
+        PushNotificationIOS.addEventListener('registrationError', this.onRegistrationError);
+        
+        // IMPORTANT: Écouter aussi remoteNotificationReceived pour les clics
+        PushNotificationIOS.addEventListener('remoteNotificationReceived', this.onRemoteNotification);
+        
+        // Récupérer la notification initiale si l'app a été lancée via notification
+        const notification = await PushNotificationIOS.getInitialNotification();
+        if (notification) {
+          console.log('[NotificationService] Notification initiale:', notification);
+          // Traiter comme une interaction utilisateur car l'app a été lancée via notification
+          setTimeout(() => this.handleNotificationOpen(notification), 1000);
         }
-      } else {
-        console.log("[NAVIGATION_SERVICE] Navigation en attente trop ancienne, ignorée");
       }
-      
-      // Nettoyer
-      await AsyncStorage.removeItem('PENDING_NAVIGATION');
-    }
-  } catch (error) {
-    console.error("[NAVIGATION_SERVICE] Erreur de vérification des navigations en attente:", error);
-  }
-}
 
-// Fonction utilitaire pour déboguer l'état de navigation
-export function debugNavigationState() {
-  if (navigationRef.isReady()) {
-    try {
-      const state = navigationRef.getState();
-      console.log("[NAVIGATION_SERVICE] 🔍 État de navigation complet:", JSON.stringify(state, null, 2));
-      return state;
+      this.isConfigured = true;
+      console.log('[NotificationService] Service initialisé');
+      return true;
     } catch (error) {
-      console.error("[NAVIGATION_SERVICE] Erreur lors de la récupération de l'état:", error);
+      console.error('[NotificationService] Erreur initialisation:', error);
+      return false;
+    }
+  }
+
+  // Demander les permissions et obtenir le token
+  async requestPermissions() {
+    try {
+      if (isSimulator()) {
+        console.log('[NotificationService] Simulateur détecté');
+        return { granted: true, token: 'SIMULATOR_MOCK_TOKEN' };
+      }
+
+      if (Platform.OS === 'ios') {
+        // Demander les permissions pour iOS
+        const permissions = await PushNotificationIOS.requestPermissions({
+          alert: true,
+          badge: true,
+          sound: true,
+        });
+
+        console.log('[NotificationService] Permissions iOS:', permissions);
+
+        if (permissions.alert || permissions.badge || permissions.sound) {
+          // Attendre que le token soit enregistré
+          return new Promise((resolve) => {
+            // Timeout au cas où le token ne viendrait pas
+            const timeout = setTimeout(() => {
+              resolve({ granted: true, token: null });
+            }, 5000);
+
+            // Écouter l'événement d'enregistrement une seule fois
+            const removeListener = PushNotificationIOS.addEventListener('register', (token) => {
+              clearTimeout(timeout);
+              removeListener();
+              console.log('[NotificationService] Token APNs reçu:', token);
+              resolve({ granted: true, token });
+            });
+
+            // Écouter les erreurs
+            const removeErrorListener = PushNotificationIOS.addEventListener('registrationError', (error) => {
+              clearTimeout(timeout);
+              removeListener();
+              removeErrorListener();
+              console.error('[NotificationService] Erreur enregistrement:', error);
+              resolve({ granted: true, token: null });
+            });
+          });
+        }
+
+        return { granted: false, token: null };
+      } else {
+        // Pour Android, garder la logique expo-notifications
+        console.log('[NotificationService] Android non supporté avec cette librairie');
+        return { granted: false, token: null };
+      }
+    } catch (error) {
+      console.error('[NotificationService] Erreur permissions:', error);
+      return { granted: false, token: null };
+    }
+  }
+
+  // Callback quand le token est reçu
+  onRegistered = (deviceToken) => {
+    console.log('[NotificationService] Token enregistré:', deviceToken);
+    AsyncStorage.setItem('apnsToken', deviceToken).catch(console.error);
+  }
+
+  // Callback pour les erreurs d'enregistrement
+  onRegistrationError = (error) => {
+    console.error('[NotificationService] Erreur enregistrement token:', error);
+  }
+
+  // Callback pour les notifications reçues
+  onRemoteNotification = (notification) => {
+    console.log('[NotificationService] Notification reçue:', notification);
+    console.log('[NotificationService] Type de notification:', typeof notification);
+    console.log('[NotificationService] Propriétés:', Object.keys(notification));
+    
+    // Pour les notifications remote, vérifier si c'est une interaction utilisateur
+    const isUserInteraction = notification._data?.userInteraction || 
+                            notification._userInteraction ||
+                            notification.userInteraction ||
+                            false;
+    
+    console.log('[NotificationService] User interaction:', isUserInteraction);
+    console.log('[NotificationService] App state:', AppState.currentState);
+    
+    // Marquer la notification comme terminée
+    if (notification && typeof notification.finish === 'function') {
+      notification.finish(PushNotificationIOS.FetchResult.NoData);
+    }
+    
+    // IMPORTANT: Traiter comme une interaction si l'app n'est pas active
+    // Car cela signifie que l'utilisateur a cliqué sur la notification
+    if (AppState.currentState !== 'active' || isUserInteraction) {
+      console.log('[NotificationService] 👆 Traitement comme interaction utilisateur');
+      this.handleNotificationOpen(notification);
+    } else {
+      console.log('[NotificationService] 📱 App active, affichage en foreground');
+      this.handleForegroundNotification(notification);
+    }
+  }
+
+  // Callback pour les notifications locales
+  onLocalNotification = (notification) => {
+    console.log('[NotificationService] Notification locale reçue:', notification);
+    console.log('[NotificationService] Structure:', JSON.stringify(notification, null, 2));
+    
+    // Pour les notifications locales, la structure peut être directement l'objet de données
+    const data = notification.userInfo || notification;
+    
+    // Créer un objet compatible avec notre handler
+    const notificationWrapper = {
+      getData: () => data,
+      getAlert: () => ({
+        title: notification.alertTitle || notification.title || data.aps?.alert?.title,
+        body: notification.alertBody || notification.body || data.aps?.alert?.body
+      })
+    };
+    
+    // Toujours considérer les notifications locales comme des interactions utilisateur
+    this.handleNotificationOpen(notificationWrapper);
+  }
+
+  // Gérer l'ouverture d'une notification
+  handleNotificationOpen = (notification) => {
+    console.log('[NotificationService] 🎯 handleNotificationOpen appelé');
+    console.log('[NotificationService] 📱 Type de notification:', typeof notification);
+    console.log('[NotificationService] 📊 Structure:', {
+      hasGetData: typeof notification.getData === 'function',
+      hasData: !!notification.data,
+      hasUserInfo: !!notification.userInfo,
+      keys: Object.keys(notification || {})
+    });
+    
+    let data = null;
+    
+    // Extraire les données selon la structure
+    if (notification && typeof notification.getData === 'function') {
+      data = notification.getData();
+      console.log('[NotificationService] 📊 Données via getData():', data);
+    } else if (notification && notification.userInfo) {
+      data = notification.userInfo;
+      console.log('[NotificationService] 📊 Données via userInfo:', data);
+    } else if (notification && notification.data) {
+      data = notification.data;
+      console.log('[NotificationService] 📊 Données via data:', data);
+    } else {
+      data = notification;
+      console.log('[NotificationService] 📊 Utilisation directe:', data);
+    }
+    
+    console.log('[NotificationService] 📊 Données finales:', JSON.stringify(data, null, 2));
+    console.log('[NotificationService] 👥 Nombre de listeners:', this.notificationListeners.length);
+
+    // Notifier les listeners
+    this.notificationListeners.forEach((listener, index) => {
+      console.log(`[NotificationService] 📣 Appel du listener ${index + 1}/${this.notificationListeners.length}`);
+      try {
+        listener(data);
+        console.log(`[NotificationService] ✅ Listener ${index + 1} exécuté avec succès`);
+      } catch (error) {
+        console.error(`[NotificationService] ❌ Erreur listener ${index + 1}:`, error);
+      }
+    });
+
+    // Log spécifique pour le type de notification
+    if (data?.type === 'new_message' && data?.conversationId) {
+      console.log('[NotificationService] 💬 Notification de message détectée');
+      console.log('[NotificationService] 🆔 ConversationId:', data.conversationId);
+      console.log('[NotificationService] 👤 SenderId:', data.senderId);
+      console.log('[NotificationService] 📝 SenderName:', data.senderName);
+    }
+  }
+
+  // Gérer les notifications en foreground
+  handleForegroundNotification = (notification) => {
+    const data = notification.getData();
+    const alert = notification.getAlert();
+    
+    if (alert?.title && alert?.body) {
+      // Afficher une alerte ou un toast custom
+      Alert.alert(
+        alert.title,
+        alert.body,
+        [
+          { text: 'Ignorer', style: 'cancel' },
+          { 
+            text: 'Voir', 
+            onPress: () => this.handleNotificationOpen(notification)
+          }
+        ]
+      );
+    }
+  }
+
+  // Ajouter un listener pour les notifications
+  addNotificationListener(callback) {
+    this.notificationListeners.push(callback);
+    
+    // Retourner une fonction pour retirer le listener
+    return () => {
+      const index = this.notificationListeners.indexOf(callback);
+      if (index > -1) {
+        this.notificationListeners.splice(index, 1);
+      }
+    };
+  }
+
+  // Obtenir le token stocké
+  async getToken() {
+    try {
+      if (isSimulator()) {
+        return 'SIMULATOR_MOCK_TOKEN';
+      }
+
+      const token = await AsyncStorage.getItem('apnsToken');
+      return token;
+    } catch (error) {
+      console.error('[NotificationService] Erreur récupération token:', error);
       return null;
     }
-  } else {
-    console.log("[NAVIGATION_SERVICE] NavigationContainer pas prêt pour le debug");
-    return null;
+  }
+
+  // Envoyer une notification locale
+  async sendLocalNotification(title, body, data = {}) {
+    try {
+      if (Platform.OS === 'ios') {
+        PushNotificationIOS.addNotificationRequest({
+          id: String(Date.now()),
+          title: title,
+          body: body,
+          userInfo: data,
+          sound: 'default',
+        });
+        
+        console.log('[NotificationService] Notification locale programmée');
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('[NotificationService] Erreur notification locale:', error);
+      return false;
+    }
+  }
+
+  // Obtenir le nombre de badges
+  async getBadgeCount() {
+    if (Platform.OS === 'ios') {
+      return new Promise((resolve) => {
+        PushNotificationIOS.getApplicationIconBadgeNumber((num) => {
+          resolve(num);
+        });
+      });
+    }
+    return 0;
+  }
+
+  // Définir le nombre de badges
+  async setBadgeCount(count) {
+    if (Platform.OS === 'ios') {
+      PushNotificationIOS.setApplicationIconBadgeNumber(count);
+    }
+  }
+
+  // Effacer toutes les notifications
+  async clearAllNotifications() {
+    if (Platform.OS === 'ios') {
+      PushNotificationIOS.removeAllDeliveredNotifications();
+      await this.setBadgeCount(0);
+    }
+  }
+
+  // Ajouter une méthode pour la compatibilité avec votre code existant
+  async checkPermissions() {
+    if (Platform.OS === 'ios') {
+      const settings = await PushNotificationIOS.checkPermissions();
+      return settings.alert || settings.badge || settings.sound;
+    }
+    return false;
+  }
+
+  // Méthode pour envoyer une notification de test
+  async sendTestNotification() {
+    try {
+      await this.sendLocalNotification(
+        'Test de notification',
+        'Les notifications fonctionnent correctement !',
+        { type: 'test' }
+      );
+      return { success: true };
+    } catch (error) {
+      console.error('[NotificationService] Erreur test notification:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Nettoyer les listeners
+  cleanup() {
+    if (Platform.OS === 'ios') {
+      PushNotificationIOS.removeEventListener('notification');
+      PushNotificationIOS.removeEventListener('localNotification');
+      PushNotificationIOS.removeEventListener('register');
+      PushNotificationIOS.removeEventListener('registrationError');
+    }
+    this.notificationListeners = [];
+  }
+
+  // Méthode pour annuler toutes les notifications (compatibilité)
+  async cancelAllNotifications() {
+    if (Platform.OS === 'ios') {
+      PushNotificationIOS.removeAllDeliveredNotifications();
+      await this.setBadgeCount(0);
+    }
   }
 }
 
-// Fonction pour naviguer vers AddSecret (utile pour les retours Stripe)
-export function navigateToAddSecret() {
-  console.log("[NAVIGATION_SERVICE] Navigation vers AddSecret");
-  
-  if (navigationRef.isReady()) {
-    try {
-      navigationRef.navigate('MainApp', {
-        screen: 'Tabs',
-        params: {
-          screen: 'AddSecret',
-        },
-      });
-      console.log("[NAVIGATION_SERVICE] Navigation vers AddSecret réussie");
-    } catch (error) {
-      console.error("[NAVIGATION_SERVICE] Erreur navigation vers AddSecret:", error);
-      // Fallback
-      try {
-        navigationRef.navigate('AddSecret');
-      } catch (fallbackError) {
-        console.error("[NAVIGATION_SERVICE] Fallback AddSecret échoué aussi:", fallbackError);
-      }
-    }
-  } else {
-    AsyncStorage.setItem(
-      'PENDING_NAVIGATION',
-      JSON.stringify({ 
-        name: 'AddSecret',
-        params: {},
-        timestamp: Date.now() 
-      })
-    ).catch(err => console.error('[NAVIGATION_SERVICE] Erreur de stockage AddSecret:', err));
-  }
-}
+export default new NotificationService();

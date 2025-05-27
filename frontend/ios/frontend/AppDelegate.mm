@@ -4,7 +4,6 @@
 #import <React/RCTLinkingManager.h>
 #import <UserNotifications/UserNotifications.h>
 #import <RNCPushNotificationIOS.h> // AJOUT IMPORTANT
-#import <RNCPushNotificationIOS.h>
 
 
 @interface AppDelegate () <UNUserNotificationCenterDelegate>

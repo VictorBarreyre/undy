@@ -139,8 +139,8 @@ const TabNavigator = () => {
         options={{ headerShown: false }}
       />
       <Tab.Screen
-        name="Test"
-        component={TestScreen}
+        name="AddSecret"
+        component={AddSecret}
         options={{ headerShown: false }}
       />
       <Tab.Screen

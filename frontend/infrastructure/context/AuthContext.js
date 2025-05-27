@@ -515,86 +515,92 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (accessToken, refreshToken) => {
-    try {
-      console.log('[AuthProvider] Début de la connexion');
-
-      // Étape 1: Stockez les tokens
-      await AsyncStorage.multiSet([
-        ['accessToken', accessToken],
-        ['refreshToken', refreshToken]
-      ]);
-
-      // Étape 2: Mettez à jour l'instance Axios avec le nouveau token
-      const instance = getAxiosInstance();
-      if (instance) {
-        instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      }
-
-      // Étape 3: Mettez à jour l'état local
-      setUserToken(accessToken);
-
-      // Étape 4: Récupérez les données utilisateur et attendez le résultat
-      let user = null;
-      try {
-        user = await fetchUserData();
-        console.log('[AuthProvider] Données utilisateur récupérées avec succès');
-
-        // Après la récupération des données utilisateur, initialiser les notifications
-        if (user && user._id) {
-          try {
-            // Importation dynamique pour éviter les dépendances circulaires
-            const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
-
-            if (NotificationManager) {
-              console.warn('[NOTIF_AUTH] Initialisation des notifications pour l\'utilisateur:', user._id);
-              const success = await NotificationManager.initialize(user);
-              console.warn('[NOTIF_AUTH] Résultat de l\'initialisation:', success);
-
-              // Stockez l'état d'initialisation des notifications
-              await AsyncStorage.setItem('notificationsInitialized', success ? 'true' : 'false');
-            }
-          } catch (notifError) {
-            console.error('[AuthProvider] Erreur d\'initialisation des notifications:', notifError);
-          }
-        } else {
-          console.warn('[NOTIF_AUTH] Impossible d\'initialiser les notifications: userData incomplet');
-        }
-      } catch (error) {
-        console.error('[AuthProvider] Erreur fetchUserData:', error);
-
-        // Réessayez après un court délai (le serveur peut avoir besoin d'un moment pour valider le token)
-        setTimeout(async () => {
-          try {
-            const secondUser = await fetchUserData();
-
-            // Réessayer l'initialisation des notifications après la récupération des données
-            if (secondUser && secondUser._id) {
-              try {
-                const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
-                if (NotificationManager) {
-                  console.warn('[NOTIF_AUTH] Seconde tentative d\'initialisation des notifications');
-                  await NotificationManager.initialize(secondUser);
-                }
-              } catch (notifError) {
-                console.error('[AuthProvider] Erreur lors de la seconde tentative d\'initialisation des notifications:', notifError);
-              }
-            }
-          } catch (secondError) {
-            console.error('[AuthProvider] Échec de la 2e tentative:', secondError);
-          }
-        }, 500);
-      }
-
-      // Étape 5: Terminez la connexion
-      setIsLoggedIn(true);
-
-      console.log('[AuthProvider] Connexion réussie');
-    } catch (error) {
-      console.error('[AuthProvider] Erreur lors de la connexion:', error);
-      throw error;
+ const login = async (accessToken, refreshToken) => {
+  try {
+    console.log('[AuthProvider] Début de la connexion');
+    
+    // Étape 1: Stockez les tokens
+    await AsyncStorage.multiSet([
+      ['accessToken', accessToken],
+      ['refreshToken', refreshToken]
+    ]);
+    
+    // Étape 2: Mettez à jour l'instance Axios avec le nouveau token
+    const instance = getAxiosInstance();
+    if (instance) {
+      instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
     }
-  };
+    
+    // Étape 3: Mettez à jour l'état local
+    setUserToken(accessToken);
+    
+    // Étape 4: Récupérez les données utilisateur
+    let user = null;
+    try {
+      user = await fetchUserData();
+      console.log('[AuthProvider] Données utilisateur récupérées avec succès');
+      
+      // Étape 5: Initialiser les notifications après avoir les données utilisateur
+      if (user && user._id) {
+        try {
+          const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
+          const NotificationService = require('../../presentation/notifications/NotificationService').default;
+          
+          if (NotificationManager && NotificationService) {
+            // Initialiser d'abord le service
+            await NotificationService.initialize();
+            
+            // Puis initialiser le manager avec l'utilisateur
+            console.warn('[NOTIF_AUTH] Initialisation des notifications pour l\'utilisateur:', user._id);
+            const success = await NotificationManager.initialize(user);
+            console.warn('[NOTIF_AUTH] Résultat de l\'initialisation:', success);
+            
+            // Stocker l'état
+            await AsyncStorage.setItem('notificationsInitialized', success ? 'true' : 'false');
+            setNotificationsInitialized(success);
+          }
+        } catch (notifError) {
+          console.error('[AuthProvider] Erreur d\'initialisation des notifications:', notifError);
+          // Ne pas bloquer la connexion si les notifications échouent
+        }
+      }
+    } catch (error) {
+      console.error('[AuthProvider] Erreur fetchUserData:', error);
+      
+      // Réessayer après un court délai
+      setTimeout(async () => {
+        try {
+          const secondUser = await fetchUserData();
+          
+          if (secondUser && secondUser._id) {
+            try {
+              const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
+              const NotificationService = require('../../presentation/notifications/NotificationService').default;
+              
+              if (NotificationManager && NotificationService && !notificationsInitialized) {
+                await NotificationService.initialize();
+                await NotificationManager.initialize(secondUser);
+                setNotificationsInitialized(true);
+              }
+            } catch (notifError) {
+              console.error('[AuthProvider] Erreur lors de la seconde tentative:', notifError);
+            }
+          }
+        } catch (secondError) {
+          console.error('[AuthProvider] Échec de la 2e tentative:', secondError);
+        }
+      }, 1000);
+    }
+    
+    // Étape 6: Terminez la connexion
+    setIsLoggedIn(true);
+    
+    console.log('[AuthProvider] Connexion réussie');
+  } catch (error) {
+    console.error('[AuthProvider] Erreur lors de la connexion:', error);
+    throw error;
+  }
+};
 
   const logout = async () => {
     try {
@@ -660,43 +666,47 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  useEffect(() => {
-    if (userData && isLoggedIn && !notificationTestComplete.current) {
-      const testNotificationSetup = async () => {
-        console.warn("[AUTH_TEST] Vérification du système de notifications (exécution unique)");
-
-        try {
-          console.warn("[AUTH_TEST] Utilisateur connecté, test des notifications");
-
-          // Importation dynamique
-          const NotificationService = require('../../presentation/notifications/NotificationService').default;
-
-
-
-          if (NotificationService) {
-            // Vérifie les permissions
-            const hasPermission = await NotificationService.checkPermissions();
-            console.warn("[AUTH_TEST] Statut des permissions:", hasPermission);
-
-            if (hasPermission) {
-              // Envoie une notification de test
-              console.warn("[AUTH_TEST] Envoi d'une notification de test");
-              const result = await NotificationService.sendTestNotification();
-              console.warn("[AUTH_TEST] Résultat de l'envoi:", result);
-            }
+useEffect(() => {
+  if (userData && isLoggedIn && !notificationTestComplete.current) {
+    const testNotificationSetup = async () => {
+      console.warn("[AUTH_TEST] Vérification du système de notifications (exécution unique)");
+      
+      try {
+        console.warn("[AUTH_TEST] Utilisateur connecté, test des notifications");
+        
+        // Importation dynamique
+        const NotificationService = require('../../presentation/notifications/NotificationService').default;
+        
+        if (NotificationService) {
+          // Initialiser d'abord le service
+          await NotificationService.initialize();
+          
+          // CORRECTION: checkPermissions retourne directement un booléen, pas un objet
+          const hasPermission = await NotificationService.checkPermissions();
+          console.warn("[AUTH_TEST] Statut des permissions:", hasPermission);
+          
+          if (!hasPermission) {
+            // Demander les permissions si nécessaire
+            const { granted } = await NotificationService.requestPermissions();
+            console.warn("[AUTH_TEST] Permissions accordées:", granted);
           }
-        } catch (error) {
-          console.warn("[AUTH_TEST] Erreur lors du test:", error);
-        } finally {
-          // Toujours marquer comme terminé, même en cas d'erreur
-          notificationTestComplete.current = true;
+          
+          // Ne pas envoyer de notification de test automatiquement
+          // Cela évite de spammer l'utilisateur à chaque connexion
+          console.warn("[AUTH_TEST] Système de notifications prêt");
         }
-      };
-
-      // Délai pour s'assurer que tout est bien initialisé
-      setTimeout(testNotificationSetup, 2000);
-    }
-  }, [userData, isLoggedIn]);
+      } catch (error) {
+        console.warn("[AUTH_TEST] Erreur lors du test:", error);
+      } finally {
+        // Toujours marquer comme terminé
+        notificationTestComplete.current = true;
+      }
+    };
+    
+    // Délai pour s'assurer que tout est bien initialisé
+    setTimeout(testNotificationSetup, 2000);
+  }
+}, [userData, isLoggedIn]);
 
   useEffect(() => {
     loadPersistedUserData();

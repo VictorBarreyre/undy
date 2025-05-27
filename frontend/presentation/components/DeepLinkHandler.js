@@ -29,19 +29,37 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
                 
                 if (!url) return;
                 
-                console.log("Deep link intercepté:", url);
+                console.log("[DeepLinkHandler] Deep link intercepté:", url);
+                
+                // IMPORTANT: Ignorer les URLs qui sont gérées par NotificationHandler
+                // Cela évite les conflits entre les deux systèmes
+                if (url.includes('/chat/') || 
+                    url.includes('type=new_message') || 
+                    url.includes('notification') ||
+                    url.includes('conversationId=')) {
+                    console.log("[DeepLinkHandler] URL de notification détectée, ignorée car gérée par NotificationHandler");
+                    return;
+                }
+                
                 const fullUrl = decodeURIComponent(url);
                 
                 // Normaliser l'URL
                 const normalizedUrl = normalizeDeepLinkParams(fullUrl);
-                const parsedUrl = new URL(normalizedUrl);
+                
+                // Parser l'URL
+                let parsedUrl;
+                try {
+                    parsedUrl = new URL(normalizedUrl);
+                } catch (urlError) {
+                    console.error("[DeepLinkHandler] URL invalide:", normalizedUrl);
+                    return;
+                }
 
+                // Gérer le retour de mise à jour de compte bancaire Stripe
                 if (normalizedUrl.includes('action=bank_update_complete')) {
-                    // Traitement du retour de mise à jour de compte bancaire
-                    console.log("Retour de mise à jour de compte bancaire détecté");
+                    console.log("[DeepLinkHandler] Retour de mise à jour de compte bancaire détecté");
                     await handleStripeReturn(normalizedUrl);
                     
-                    // Afficher l'alerte spécifique à la mise à jour du compte bancaire
                     Alert.alert(
                         t('stripe.bankUpdateSuccess.title'),
                         t('stripe.bankUpdateSuccess.message'),
@@ -50,11 +68,13 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
                     return;
                 }
                 
-                // Vérifier le host et le schéma
+                // Gérer les retours Stripe
                 if (parsedUrl.protocol === 'hushy:' && 
-                    (parsedUrl.hostname === 'stripe-return' || parsedUrl.hostname === 'profile' || parsedUrl.hostname === '')) {
+                    (parsedUrl.hostname === 'stripe-return' || 
+                     parsedUrl.hostname === 'profile' || 
+                     parsedUrl.hostname === '')) {
                     
-                    console.log("Traitement du retour Stripe...");
+                    console.log("[DeepLinkHandler] Traitement du retour Stripe...");
                     const result = await handleStripeReturn(normalizedUrl);
                     
                     // Définir la clé de stockage
@@ -70,18 +90,18 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
                         const pendingDataJson = await AsyncStorage.getItem(storageKey);
                         if (pendingDataJson) {
                             pendingSecretData = JSON.parse(pendingDataJson);
-                            console.log("Données de secret en attente trouvées:", pendingSecretData);
+                            console.log("[DeepLinkHandler] Données de secret en attente trouvées:", pendingSecretData);
                         } else {
-                            console.log('Aucune donnée de secret en attente trouvée');
+                            console.log('[DeepLinkHandler] Aucune donnée de secret en attente trouvée');
                         }
                     } catch (storageError) {
-                        console.error("Erreur lors de la récupération des données en attente:", storageError);
+                        console.error("[DeepLinkHandler] Erreur lors de la récupération des données en attente:", storageError);
                     }
                     
                     if (result.success) {
                         if (pendingSecretData) {
                             try {
-                                console.log("Tentative de publication automatique du secret...");
+                                console.log("[DeepLinkHandler] Tentative de publication automatique du secret...");
                                 
                                 // Préparer les données du secret avec localisation si disponibles
                                 const postData = { ...pendingSecretData };
@@ -96,7 +116,7 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
                                             type: 'Point',
                                             coordinates: [lng, lat]
                                         };
-                                        console.log("Ajout des données de localisation au secret:", postData.location);
+                                        console.log("[DeepLinkHandler] Ajout des données de localisation au secret:", postData.location);
                                     }
                                 }
                                 
@@ -124,7 +144,10 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
                                                     try {
                                                         await handleShareSecret(postResult.secret);
                                                     } catch (error) {
-                                                        Alert.alert(t('addSecret.errors.title'), t('addSecret.errors.unableToShare'));
+                                                        Alert.alert(
+                                                            t('addSecret.errors.title'), 
+                                                            t('addSecret.errors.unableToShare')
+                                                        );
                                                     }
                                                 }
                                             },
@@ -136,7 +159,7 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
                                     );
                                 }
                             } catch (error) {
-                                console.error("Erreur lors de la publication automatique:", error);
+                                console.error("[DeepLinkHandler] Erreur lors de la publication automatique:", error);
                                 Alert.alert(
                                     t('deepLink.alerts.error.title'),
                                     error.message || t('deepLink.alerts.error.postingFailed'),
@@ -171,8 +194,12 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
                         );
                     }
                 }
+                
+                // Vous pouvez ajouter d'autres handlers de deep links ici
+                // Par exemple pour les secrets partagés, etc.
+                
             } catch (error) {
-                console.error(t('deepLink.errors.deepLinkError'), error);
+                console.error("[DeepLinkHandler] Erreur globale:", error);
                 Alert.alert(
                     t('deepLink.errors.title'), 
                     error.message || t('deepLink.errors.unableToProcessLink'),
@@ -187,6 +214,7 @@ const DeepLinkHandler = ({ onStripeSuccess, userId }) => {
         // Vérifier l'URL initiale au lancement
         Linking.getInitialURL().then(url => {
             if (url) {
+                console.log("[DeepLinkHandler] URL initiale détectée:", url);
                 handleDeepLink({ url });
             }
         });

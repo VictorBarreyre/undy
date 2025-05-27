@@ -1,5 +1,5 @@
 import { useEffect, useRef, useContext } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import NotificationService from '../notifications/NotificationService';
@@ -19,58 +19,49 @@ const NotificationHandler = () => {
       if (userData && isSubscribed) {
         console.log('[NotificationHandler] ✅ Initialisation pour l\'utilisateur:', userData._id);
         
-        // Initialiser le service de notifications
-        await NotificationService.initialize();
-        console.log('[NotificationHandler] ✅ NotificationService initialisé');
-        
-        // Initialiser le manager
-        await NotificationManager.initialize(userData);
-        console.log('[NotificationHandler] ✅ NotificationManager initialisé');
-        
-        // Ajouter un listener pour les clics sur notifications
-        removeNotificationListener.current = NotificationService.addNotificationListener((data) => {
-          console.log('[NotificationHandler] 🔔 Listener déclenché avec data:', JSON.stringify(data, null, 2));
-          handleNotificationData(data);
-        });
-        console.log('[NotificationHandler] ✅ Listener enregistré');
-
-        // Vérifier s'il y a une notification initiale
         try {
-          const initialNotification = await PushNotificationIOS.getInitialNotification();
-          console.log('[NotificationHandler] 📱 Notification initiale:', initialNotification);
+          // Initialiser le service de notifications
+          await NotificationService.initialize();
+          console.log('[NotificationHandler] ✅ NotificationService initialisé');
           
-          if (initialNotification) {
-            console.log('[NotificationHandler] 📱 Structure notification initiale:', {
-              hasUserInfo: !!initialNotification.userInfo,
-              hasData: !!initialNotification.data,
-              hasGetData: typeof initialNotification.getData === 'function',
-              keys: Object.keys(initialNotification)
-            });
+          // Initialiser le manager
+          await NotificationManager.initialize(userData);
+          console.log('[NotificationHandler] ✅ NotificationManager initialisé');
+          
+          // Ajouter un listener pour les clics sur notifications
+          removeNotificationListener.current = NotificationService.addNotificationListener((data) => {
+            console.log('[NotificationHandler] 🔔 Listener déclenché avec data:', JSON.stringify(data, null, 2));
+            handleNotificationData(data);
+          });
+          console.log('[NotificationHandler] ✅ Listener enregistré');
+
+          // Vérifier s'il y a une notification initiale
+          try {
+            const initialNotification = await PushNotificationIOS.getInitialNotification();
+            console.log('[NotificationHandler] 📱 Notification initiale:', initialNotification);
             
-            // Extraire les données selon la structure
-            let data = null;
-            if (initialNotification.userInfo) {
-              data = initialNotification.userInfo;
-              console.log('[NotificationHandler] 📱 Utilisation de userInfo');
-            } else if (initialNotification.data) {
-              data = initialNotification.data;
-              console.log('[NotificationHandler] 📱 Utilisation de data');
-            } else if (typeof initialNotification.getData === 'function') {
-              data = initialNotification.getData();
-              console.log('[NotificationHandler] 📱 Utilisation de getData()');
-            } else {
-              data = initialNotification;
-              console.log('[NotificationHandler] 📱 Utilisation directe de l\'objet');
+            if (initialNotification) {
+              // Extraire les données
+              let data = null;
+              if (initialNotification._data) {
+                data = initialNotification._data;
+              } else if (initialNotification.userInfo) {
+                data = initialNotification.userInfo;
+              } else if (initialNotification.data) {
+                data = initialNotification.data;
+              }
+              
+              if (data && data.conversationId) {
+                console.log('[NotificationHandler] 📱 Navigation depuis notification initiale');
+                // Délai pour s'assurer que la navigation est prête
+                setTimeout(() => handleNotificationData(data), 1500);
+              }
             }
-            
-            if (data && data.conversationId) {
-              console.log('[NotificationHandler] 📱 Navigation depuis notification initiale');
-              // Délai pour s'assurer que la navigation est prête
-              setTimeout(() => handleNotificationData(data), 1000);
-            }
+          } catch (error) {
+            console.log('[NotificationHandler] ℹ️ Pas de notification initiale ou erreur:', error.message);
           }
         } catch (error) {
-          console.log('[NotificationHandler] ℹ️ Pas de notification initiale ou erreur:', error.message);
+          console.error('[NotificationHandler] ❌ Erreur d\'initialisation:', error);
         }
       }
     };
@@ -129,7 +120,8 @@ const NotificationHandler = () => {
             console.log('[NotificationHandler] 🚀 Navigation vers la conversation:', data.conversationId);
             
             try {
-              // Naviguer vers la conversation
+              // CORRECTION: Utiliser la structure correcte de votre navigation
+              // DrawerNavigator → TabNavigator → ConversationStackNavigator → ChatScreen
               navigation.navigate('MainApp', {
                 screen: 'Tabs',
                 params: {
@@ -138,22 +130,54 @@ const NotificationHandler = () => {
                     screen: 'Chat',
                     params: {
                       conversationId: data.conversationId,
-                      senderId: data.senderId,
-                      senderName: data.senderName,
+                      senderId: data.senderId || '',
+                      senderName: data.senderName || '',
                     },
                   },
                 },
               });
+              
               console.log('[NotificationHandler] ✅ Navigation réussie');
             } catch (error) {
               console.error('[NotificationHandler] ❌ Erreur navigation:', error);
               
-              // Essayer une navigation plus simple
+              // Essayer une approche différente
               try {
-                navigation.navigate('Chat', { conversationId: data.conversationId });
-                console.log('[NotificationHandler] ✅ Navigation simple réussie');
-              } catch (simpleError) {
-                console.error('[NotificationHandler] ❌ Erreur navigation simple:', simpleError);
+                // D'abord naviguer vers le tab Chat
+                navigation.navigate('ChatTab');
+                
+                // Puis vers la conversation après un délai
+                setTimeout(() => {
+                  navigation.navigate('Chat', { 
+                    conversationId: data.conversationId,
+                    senderId: data.senderId || '',
+                    senderName: data.senderName || ''
+                  });
+                }, 300);
+                
+                console.log('[NotificationHandler] ✅ Navigation alternative réussie');
+              } catch (altError) {
+                console.error('[NotificationHandler] ❌ Erreur navigation alternative:', altError);
+                
+                // Dernière tentative : afficher une alerte
+                Alert.alert(
+                  'Nouveau message',
+                  `De: ${data.senderName || 'Inconnu'}`,
+                  [
+                    { text: 'Ignorer', style: 'cancel' },
+                    { 
+                      text: 'Voir', 
+                      onPress: () => {
+                        // Essayer de naviguer juste vers l'onglet chat
+                        try {
+                          navigation.navigate('ChatTab');
+                        } catch (err) {
+                          console.error('[NotificationHandler] ❌ Impossible de naviguer:', err);
+                        }
+                      }
+                    }
+                  ]
+                );
               }
             }
           } else {
@@ -164,17 +188,36 @@ const NotificationHandler = () => {
         case 'purchase':
           if (data.secretId) {
             console.log('[NotificationHandler] 🚀 Navigation vers le secret:', data.secretId);
-            navigation.navigate('SecretDetail', { secretId: data.secretId });
+            // Adapter selon votre structure de navigation pour les secrets
+            try {
+              navigation.navigate('SecretDetail', { secretId: data.secretId });
+            } catch (error) {
+              console.error('[NotificationHandler] ❌ Erreur navigation purchase:', error);
+            }
           }
           break;
 
         case 'stripe_setup_reminder':
           console.log('[NotificationHandler] 🚀 Navigation vers les paramètres Stripe');
-          navigation.navigate('StripeSetup');
+          try {
+            // CORRECTION: Utiliser 'ProfileTab' au lieu de 'Profile'
+            navigation.navigate('MainApp', {
+              screen: 'Tabs',
+              params: {
+                screen: 'ProfileTab',
+                params: {
+                  screen: 'ProfilSettings'
+                }
+              }
+            });
+          } catch (error) {
+            console.error('[NotificationHandler] ❌ Erreur navigation Stripe:', error);
+          }
           break;
 
         case 'test':
           console.log('[NotificationHandler] 🧪 Notification de test reçue');
+          Alert.alert('Test', 'Notification de test reçue avec succès !');
           break;
 
         default:
