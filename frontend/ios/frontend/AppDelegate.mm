@@ -3,6 +3,9 @@
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTLinkingManager.h>
 #import <UserNotifications/UserNotifications.h>
+#import <RNCPushNotificationIOS.h> // AJOUT IMPORTANT
+#import <RNCPushNotificationIOS.h>
+
 
 @interface AppDelegate () <UNUserNotificationCenterDelegate>
 @end
@@ -66,23 +69,32 @@
   return [super application:application continueUserActivity:userActivity restorationHandler:restorationHandler] || result;
 }
 
-// Explicitly define remote notification delegates to ensure compatibility with some third-party libraries
+// MODIFICATION: Ajouter l'appel à RNCPushNotificationIOS
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken
 {
+  [RNCPushNotificationIOS didRegisterForRemoteNotificationsWithDeviceToken:deviceToken]; // AJOUT
   return [super application:application didRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
 }
 
-// Explicitly define remote notification delegates to ensure compatibility with some third-party libraries
+// MODIFICATION: Ajouter l'appel à RNCPushNotificationIOS
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error
 {
   NSLog(@"Failed to register for remote notifications: %@", error);
+  [RNCPushNotificationIOS didFailToRegisterForRemoteNotificationsWithError:error]; // AJOUT
   return [super application:application didFailToRegisterForRemoteNotificationsWithError:error];
 }
 
-// Explicitly define remote notification delegates to ensure compatibility with some third-party libraries
+// MODIFICATION: Ajouter l'appel à RNCPushNotificationIOS
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
 {
+  [RNCPushNotificationIOS didReceiveRemoteNotification:userInfo fetchCompletionHandler:completionHandler]; // AJOUT
   return [super application:application didReceiveRemoteNotification:userInfo fetchCompletionHandler:completionHandler];
+}
+
+// AJOUT: Méthode pour les notifications locales (iOS < 10)
+- (void)application:(UIApplication *)application didReceiveLocalNotification:(UILocalNotification *)notification
+{
+  [RNCPushNotificationIOS didReceiveLocalNotification:notification];
 }
 
 #pragma mark - UNUserNotificationCenterDelegate
@@ -102,7 +114,7 @@
                    UNNotificationPresentationOptionAlert);
 }
 
-// Called when user taps on a notification
+// MODIFICATION: Ajouter l'appel à RNCPushNotificationIOS
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
 didReceiveNotificationResponse:(UNNotificationResponse *)response
          withCompletionHandler:(void(^)(void))completionHandler {
@@ -110,6 +122,9 @@ didReceiveNotificationResponse:(UNNotificationResponse *)response
   
   // Log user interaction with notification
   NSLog(@"User interacted with notification: %@", userInfo);
+  
+  // AJOUT IMPORTANT: Notifier RNCPushNotificationIOS
+  [RNCPushNotificationIOS didReceiveNotificationResponse:response];
   
   completionHandler();
 }

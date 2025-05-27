@@ -123,39 +123,112 @@ class NotificationService {
   // Callback pour les notifications reçues
   onRemoteNotification = (notification) => {
     console.log('[NotificationService] Notification reçue:', notification);
+    console.log('[NotificationService] Type de notification:', typeof notification);
+    console.log('[NotificationService] Propriétés:', Object.keys(notification));
     
-    // Marquer la notification comme terminée (important pour iOS)
-    notification.finish(PushNotificationIOS.FetchResult.NoData);
+    // Pour les notifications locales sur simulateur, la structure peut être différente
+    let notificationData = notification;
     
-    // Si l'app est en foreground, on peut afficher une alerte ou gérer différemment
-    if (AppState.currentState === 'active') {
-      this.handleForegroundNotification(notification);
+    // Si c'est un objet avec une méthode getData
+    if (notification && typeof notification.getData === 'function') {
+      notificationData = notification.getData();
+    } else if (notification && notification.data) {
+      notificationData = notification.data;
+    }
+    
+    // Vérifier si c'est une interaction utilisateur
+    const isUserInteraction = notification.userInteraction || 
+                            (notificationData && notificationData.userInteraction);
+    
+    console.log('[NotificationService] User interaction:', isUserInteraction);
+    console.log('[NotificationService] App state:', AppState.currentState);
+    
+    // Marquer la notification comme terminée si nécessaire
+    if (notification && typeof notification.finish === 'function') {
+      notification.finish(PushNotificationIOS.FetchResult.NoData);
+    }
+    
+    // Si c'est une interaction utilisateur ou si l'app n'est pas active
+    if (isUserInteraction || AppState.currentState !== 'active') {
+      this.handleNotificationOpen({ getData: () => notificationData });
     } else {
-      // L'app était en background ou fermée
-      this.handleNotificationOpen(notification);
+      // App en foreground
+      this.handleForegroundNotification({ 
+        getData: () => notificationData,
+        getAlert: () => notification.alert || notification.aps?.alert || {}
+      });
     }
   }
 
   // Callback pour les notifications locales
   onLocalNotification = (notification) => {
     console.log('[NotificationService] Notification locale reçue:', notification);
-    this.handleNotificationOpen(notification);
+    console.log('[NotificationService] Structure:', JSON.stringify(notification, null, 2));
+    
+    // Pour les notifications locales, la structure peut être directement l'objet de données
+    const data = notification.userInfo || notification;
+    
+    // Créer un objet compatible avec notre handler
+    const notificationWrapper = {
+      getData: () => data,
+      getAlert: () => ({
+        title: notification.alertTitle || notification.title || data.aps?.alert?.title,
+        body: notification.alertBody || notification.body || data.aps?.alert?.body
+      })
+    };
+    
+    // Toujours considérer les notifications locales comme des interactions utilisateur
+    this.handleNotificationOpen(notificationWrapper);
   }
 
   // Gérer l'ouverture d'une notification
   handleNotificationOpen = (notification) => {
-    const data = notification.getData();
-    console.log('[NotificationService] Données de la notification:', data);
+    console.log('[NotificationService] 🎯 handleNotificationOpen appelé');
+    console.log('[NotificationService] 📱 Type de notification:', typeof notification);
+    console.log('[NotificationService] 📊 Structure:', {
+      hasGetData: typeof notification.getData === 'function',
+      hasData: !!notification.data,
+      hasUserInfo: !!notification.userInfo,
+      keys: Object.keys(notification || {})
+    });
+    
+    let data = null;
+    
+    // Extraire les données selon la structure
+    if (notification && typeof notification.getData === 'function') {
+      data = notification.getData();
+      console.log('[NotificationService] 📊 Données via getData():', data);
+    } else if (notification && notification.userInfo) {
+      data = notification.userInfo;
+      console.log('[NotificationService] 📊 Données via userInfo:', data);
+    } else if (notification && notification.data) {
+      data = notification.data;
+      console.log('[NotificationService] 📊 Données via data:', data);
+    } else {
+      data = notification;
+      console.log('[NotificationService] 📊 Utilisation directe:', data);
+    }
+    
+    console.log('[NotificationService] 📊 Données finales:', JSON.stringify(data, null, 2));
+    console.log('[NotificationService] 👥 Nombre de listeners:', this.notificationListeners.length);
 
     // Notifier les listeners
-    this.notificationListeners.forEach(listener => {
-      listener(data);
+    this.notificationListeners.forEach((listener, index) => {
+      console.log(`[NotificationService] 📣 Appel du listener ${index + 1}/${this.notificationListeners.length}`);
+      try {
+        listener(data);
+        console.log(`[NotificationService] ✅ Listener ${index + 1} exécuté avec succès`);
+      } catch (error) {
+        console.error(`[NotificationService] ❌ Erreur listener ${index + 1}:`, error);
+      }
     });
 
-    // Gérer la navigation selon le type
+    // Log spécifique pour le type de notification
     if (data?.type === 'new_message' && data?.conversationId) {
-      // La navigation sera gérée par NotificationHandler
-      console.log('[NotificationService] Notification de message, conversationId:', data.conversationId);
+      console.log('[NotificationService] 💬 Notification de message détectée');
+      console.log('[NotificationService] 🆔 ConversationId:', data.conversationId);
+      console.log('[NotificationService] 👤 SenderId:', data.senderId);
+      console.log('[NotificationService] 📝 SenderName:', data.senderName);
     }
   }
 
@@ -254,6 +327,30 @@ class NotificationService {
     if (Platform.OS === 'ios') {
       PushNotificationIOS.removeAllDeliveredNotifications();
       await this.setBadgeCount(0);
+    }
+  }
+
+  // Ajouter une méthode pour la compatibilité avec votre code existant
+  async checkPermissions() {
+    if (Platform.OS === 'ios') {
+      const settings = await PushNotificationIOS.checkPermissions();
+      return settings.alert || settings.badge || settings.sound;
+    }
+    return false;
+  }
+
+  // Méthode pour envoyer une notification de test
+  async sendTestNotification() {
+    try {
+      await this.sendLocalNotification(
+        'Test de notification',
+        'Les notifications fonctionnent correctement !',
+        { type: 'test' }
+      );
+      return { success: true };
+    } catch (error) {
+      console.error('[NotificationService] Erreur test notification:', error);
+      return { success: false, error: error.message };
     }
   }
 

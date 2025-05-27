@@ -110,14 +110,75 @@ const App = () => {
 
     // Pour iOS, récupérer la notification initiale si l'app a été lancée via notification
     if (Platform.OS === 'ios') {
+      console.log('[APP] 🔍 Vérification notification initiale iOS...');
+      
       PushNotificationIOS.getInitialNotification()
         .then(notification => {
           if (notification) {
-            console.log('[APP] Notification initiale détectée:', notification);
+            console.log('[APP] 📱 Notification initiale détectée:', notification);
+            console.log('[APP] 📱 Structure:', {
+              hasUserInfo: !!notification.userInfo,
+              hasData: !!notification.data,
+              keys: Object.keys(notification)
+            });
             setInitialNotification(notification);
+          } else {
+            console.log('[APP] ℹ️ Pas de notification initiale');
           }
         })
-        .catch(err => console.error('[APP] Erreur récupération notification initiale:', err));
+        .catch(err => console.error('[APP] ❌ Erreur récupération notification initiale:', err));
+        
+      // Ajouter un listener de secours pour les notifications
+      const notificationListener = (notification) => {
+        console.log('[APP] 🔔 Notification reçue (listener de secours):', notification);
+        
+        if (notification && isNavigationReady) {
+          let data = null;
+          
+          // Extraire les données
+          if (notification.userInfo) {
+            data = notification.userInfo;
+          } else if (notification.data) {
+            data = notification.data;
+          } else if (typeof notification.getData === 'function') {
+            data = notification.getData();
+          }
+          
+          if (data && data.type === 'new_message' && data.conversationId) {
+            console.log('[APP] 🚀 Navigation de secours vers conversation:', data.conversationId);
+            
+            // Délai pour s'assurer que tout est prêt
+            setTimeout(() => {
+              if (navigationRef.current) {
+                try {
+                  navigationRef.current.navigate('MainApp', {
+                    screen: 'Tabs',
+                    params: {
+                      screen: 'ChatTab',
+                      params: {
+                        screen: 'Chat',
+                        params: {
+                          conversationId: data.conversationId,
+                        },
+                      },
+                    },
+                  });
+                  console.log('[APP] ✅ Navigation de secours réussie');
+                } catch (error) {
+                  console.error('[APP] ❌ Erreur navigation de secours:', error);
+                }
+              }
+            }, 500);
+          }
+        }
+      };
+      
+      // Écouter les événements de notification locale
+      PushNotificationIOS.addEventListener('localNotification', notificationListener);
+      
+      return () => {
+        PushNotificationIOS.removeEventListener('localNotification', notificationListener);
+      };
     }
 
     // Cleanup
@@ -126,7 +187,7 @@ const App = () => {
         NotificationService.cleanup();
       }
     };
-  }, []);
+  }, [isNavigationReady]); // Ajouter isNavigationReady aux dépendances
 
   if (!fontsLoaded) {
     return <TypewriterLoader />;
@@ -153,12 +214,46 @@ const App = () => {
                   },
                 }}
                 onReady={() => {
-                  console.log('[APP] Navigation prête');
+                  console.log('[APP] ✅ Navigation prête');
                   setNavigationReady(true);
                   
                   // Si on avait une notification initiale, la traiter maintenant
                   if (Platform.OS === 'ios' && initialNotification) {
-                    NotificationService.handleNotificationOpen(initialNotification);
+                    console.log('[APP] 📱 Traitement de la notification initiale...');
+                    
+                    let data = null;
+                    if (initialNotification.userInfo) {
+                      data = initialNotification.userInfo;
+                    } else if (initialNotification.data) {
+                      data = initialNotification.data;
+                    } else if (typeof initialNotification.getData === 'function') {
+                      data = initialNotification.getData();
+                    }
+                    
+                    if (data && data.type === 'new_message' && data.conversationId) {
+                      console.log('[APP] 🚀 Navigation immédiate vers:', data.conversationId);
+                      
+                      // Navigation immédiate
+                      setTimeout(() => {
+                        navigationRef.current?.navigate('MainApp', {
+                          screen: 'Tabs',
+                          params: {
+                            screen: 'ChatTab',
+                            params: {
+                              screen: 'Chat',
+                              params: {
+                                conversationId: data.conversationId,
+                              },
+                            },
+                          },
+                        });
+                      }, 100);
+                    }
+                    
+                    // Passer aussi au NotificationService
+                    if (NotificationService.handleNotificationOpen) {
+                      NotificationService.handleNotificationOpen(initialNotification);
+                    }
                   }
                 }}
               >
