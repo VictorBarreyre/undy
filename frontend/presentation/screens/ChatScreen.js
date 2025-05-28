@@ -82,6 +82,47 @@ const ChatScreen = ({ route }) => {
 
 
   const [messagesAwaitingModeration, setMessagesAwaitingModeration] = useState({});
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+
+
+useEffect(() => {
+  const loadMessagesIfNeeded = async () => {
+    if (conversationId && (!conversation?.messages || conversation.messages.length === 0)) {
+      console.log('[ChatScreen] Messages manquants, chargement...');
+      setIsLoadingMessages(true);
+      
+      try {
+        const messagesData = await getConversationMessages(conversationId);
+        console.log('[ChatScreen] Messages chargés:', messagesData.messages.length);
+        
+        navigation.setParams({
+          conversation: {
+            ...conversation,
+            messages: messagesData.messages
+          }
+        });
+      } catch (error) {
+        console.error('[ChatScreen] Erreur chargement messages:', error);
+      } finally {
+        setIsLoadingMessages(false);
+      }
+    }
+  };
+
+  loadMessagesIfNeeded();
+}, [conversationId, conversation?.messages?.length]);
+
+// Afficher un loader pendant le chargement
+if (isLoadingMessages) {
+  return (
+    <Background>
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <TypewriterLoader />
+        <Text style={{ marginTop: 20 }}>Chargement des messages...</Text>
+      </SafeAreaView>
+    </Background>
+  );
+}
 
   useEffect(() => {
 

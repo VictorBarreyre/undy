@@ -114,29 +114,45 @@ const NotificationHandler = () => {
     // S'assurer que la navigation est prête
     setTimeout(async () => {
       console.log('[NotificationHandler] ⏰ Tentative de navigation après délai');
-      
+
       // Navigation selon le type de notification
       switch (data.type) {
         case 'new_message':
           if (data.conversationId) {
             console.log('[NotificationHandler] 🚀 Navigation vers la conversation:', data.conversationId);
-            
+
             try {
               console.log('[NotificationHandler] 📋 Chargement de la conversation complète...');
-              
+
               // ✅ CORRECTION: Utiliser getUserConversations déjà déclaré en haut
               // ❌ SUPPRIMER: const { getUserConversations } = useCardData();
               const conversations = await getUserConversations();
               console.log('[NotificationHandler] 📋 Conversations récupérées:', conversations.length);
-              
+
               // Trouver la conversation spécifique
               const targetConversation = conversations.find(
                 conv => conv._id === data.conversationId
               );
-              
+
               if (targetConversation) {
                 console.log('[NotificationHandler] ✅ Conversation trouvée, préparation des données...');
-                
+
+                let conversationWithMessages = targetConversation;
+
+                if (!targetConversation.messages || targetConversation.messages.length === 0) {
+                  console.log('[NotificationHandler] 📨 Chargement des messages...');
+                  try {
+                    const messagesData = await getConversationMessages(targetConversation._id);
+                    conversationWithMessages = {
+                      ...targetConversation,
+                      messages: messagesData.messages
+                    };
+                    console.log('[NotificationHandler] 📨 Messages chargés:', messagesData.messages.length);
+                  } catch (error) {
+                    console.error('[NotificationHandler] ❌ Erreur chargement messages:', error);
+                  }
+                }
+
                 // Préparer les données secretData selon ce que ChatScreen attend
                 const secretData = {
                   _id: targetConversation.secret._id,
@@ -145,9 +161,9 @@ const NotificationHandler = () => {
                   user: targetConversation.secret.user,
                   shareLink: targetConversation.secret.shareLink || `hushy://secret/${targetConversation.secret._id}`
                 };
-                
+
                 console.log('[NotificationHandler] 📦 SecretData préparé:', JSON.stringify(secretData, null, 2));
-                
+
                 // Navigation structurée
                 navigation.navigate('MainApp', {
                   screen: 'Tabs',
@@ -164,36 +180,36 @@ const NotificationHandler = () => {
                     },
                   },
                 });
-                
+
                 console.log('[NotificationHandler] ✅ Navigation réussie avec données complètes');
-                
+
               } else {
                 console.error('[NotificationHandler] ❌ Conversation non trouvée:', data.conversationId);
                 console.log('[NotificationHandler] 📋 IDs disponibles:', conversations.map(c => c._id));
-                
+
                 // Fallback: navigation simple
                 try {
                   navigation.navigate('ChatTab');
-                  
+
                   setTimeout(() => {
-                    navigation.navigate('Chat', { 
+                    navigation.navigate('Chat', {
                       conversationId: data.conversationId,
                       senderId: data.senderId || '',
                       senderName: data.senderName || ''
                     });
                   }, 300);
-                  
+
                   console.log('[NotificationHandler] ⚠️ Navigation fallback sans données complètes');
                 } catch (fallbackError) {
                   console.error('[NotificationHandler] ❌ Erreur navigation fallback:', fallbackError);
-                  
+
                   Alert.alert(
                     'Nouveau message',
                     `De: ${data.senderName || 'Inconnu'}`,
                     [
                       { text: 'Ignorer', style: 'cancel' },
-                      { 
-                        text: 'Voir', 
+                      {
+                        text: 'Voir',
                         onPress: () => {
                           try {
                             navigation.navigate('ChatTab');
@@ -206,33 +222,33 @@ const NotificationHandler = () => {
                   );
                 }
               }
-              
+
             } catch (error) {
               console.error('[NotificationHandler] ❌ Erreur lors du chargement de la conversation:', error);
-              
+
               // Navigation alternative en cas d'erreur
               try {
                 navigation.navigate('ChatTab');
-                
+
                 setTimeout(() => {
-                  navigation.navigate('Chat', { 
+                  navigation.navigate('Chat', {
                     conversationId: data.conversationId,
                     senderId: data.senderId || '',
                     senderName: data.senderName || ''
                   });
                 }, 300);
-                
+
                 console.log('[NotificationHandler] ✅ Navigation alternative réussie');
               } catch (altError) {
                 console.error('[NotificationHandler] ❌ Erreur navigation alternative:', altError);
-                
+
                 Alert.alert(
                   'Nouveau message',
                   `De: ${data.senderName || 'Inconnu'}`,
                   [
                     { text: 'Ignorer', style: 'cancel' },
-                    { 
-                      text: 'Voir', 
+                    {
+                      text: 'Voir',
                       onPress: () => {
                         try {
                           navigation.navigate('ChatTab');

@@ -9,7 +9,7 @@ import PaymentSheet from './PaymentSheet';
 import TypewriterSpinner from './TypewriterSpinner';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import TestNotificationsButton from '../notifications/TestNotificationButton';
+
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height
@@ -312,9 +312,6 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
                 ? t('swipeDeck.noSecretsNearby')
                 : t('swipeDeck.checkBackLater')}
         </Text>
-        <TestNotificationsButton
-    
-        />
       </VStack>
     );
   }

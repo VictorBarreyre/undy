@@ -16,46 +16,46 @@ class NotificationService {
   }
 
   // Initialiser le service
-async initialize() {
-  if (this.isConfigured) return true;
+  async initialize() {
+    if (this.isConfigured) return true;
 
-  try {
-    if (Platform.OS === 'ios') {
-      PushNotificationIOS.setApplicationIconBadgeNumber(0);
-      
-      // IMPORTANT: Vérifier que les handlers sont définis avant de les ajouter
-      if (typeof this.onRemoteNotification === 'function') {
-        this.removeListeners.push(
-          PushNotificationIOS.addEventListener('notification', this.onRemoteNotification)
-        );
+    try {
+      if (Platform.OS === 'ios') {
+        PushNotificationIOS.setApplicationIconBadgeNumber(0);
+
+        // IMPORTANT: Vérifier que les handlers sont définis avant de les ajouter
+        if (typeof this.onRemoteNotification === 'function') {
+          this.removeListeners.push(
+            PushNotificationIOS.addEventListener('notification', this.onRemoteNotification)
+          );
+        }
+
+        if (typeof this.onLocalNotification === 'function') {
+          this.removeListeners.push(
+            PushNotificationIOS.addEventListener('localNotification', this.onLocalNotification)
+          );
+        }
+
+        if (typeof this.onRegistered === 'function') {
+          this.removeListeners.push(
+            PushNotificationIOS.addEventListener('register', this.onRegistered)
+          );
+        }
+
+        if (typeof this.onRegistrationError === 'function') {
+          this.removeListeners.push(
+            PushNotificationIOS.addEventListener('registrationError', this.onRegistrationError)
+          );
+        }
       }
-      
-      if (typeof this.onLocalNotification === 'function') {
-        this.removeListeners.push(
-          PushNotificationIOS.addEventListener('localNotification', this.onLocalNotification)
-        );
-      }
-      
-      if (typeof this.onRegistered === 'function') {
-        this.removeListeners.push(
-          PushNotificationIOS.addEventListener('register', this.onRegistered)
-        );
-      }
-      
-      if (typeof this.onRegistrationError === 'function') {
-        this.removeListeners.push(
-          PushNotificationIOS.addEventListener('registrationError', this.onRegistrationError)
-        );
-      }
+
+      this.isConfigured = true;
+      return true;
+    } catch (error) {
+      console.error('[NotificationService] Erreur initialisation:', error);
+      return false;
     }
-    
-    this.isConfigured = true;
-    return true;
-  } catch (error) {
-    console.error('[NotificationService] Erreur initialisation:', error);
-    return false;
   }
-}
 
   // Demander les permissions et obtenir le token
   async requestPermissions() {
@@ -124,7 +124,7 @@ async initialize() {
   }
 
   // Callback pour les notifications reçues
-onRemoteNotification = (notification) => {
+ onRemoteNotification = (notification) => {
   console.log('[NotificationService] Notification reçue:', notification);
   
   // Éviter les appels multiples
@@ -148,16 +148,48 @@ onRemoteNotification = (notification) => {
     this.handleForegroundNotification(notification);
   }
   
-  // IMPORTANT: Ne PAS appeler finish() manuellement pour éviter les erreurs natives
-  console.log('[NotificationService] ✅ Traitement terminé sans appel finish()');
+  console.log('[NotificationService] ✅ Traitement terminé');
+  
+  // 🧪 TEST : Ajouter finish() de manière sécurisée
+  if (notification._notificationId) {
+    console.log('[NotificationService] 🎯 Préparation finish() avec ID:', notification._notificationId);
+    
+    setTimeout(() => {
+      try {
+        console.log('[NotificationService] 📞 Appel PushNotificationIOS.finishRemoteNotification...');
+        
+        PushNotificationIOS.finishRemoteNotification(
+          notification._notificationId,
+          PushNotificationIOS.FetchResult.NoData
+        );
+        
+        // Marquer comme complété
+        notification._remoteNotificationCompleteCallbackCalled = true;
+        
+        console.log('[NotificationService] ✅ finish() appelé avec succès pour:', notification._notificationId);
+        
+      } catch (error) {
+        console.error('[NotificationService] ❌ Erreur finish():', error);
+        console.error('[NotificationService] 📊 Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      }
+    }, 500); // Délai de 500ms pour laisser le temps à la navigation
+    
+  } else {
+    console.log('[NotificationService] ⚠️ Pas de _notificationId disponible, skip finish()');
+    console.log('[NotificationService] 📋 Notification keys:', Object.keys(notification));
+  }
 }
 
   // Gérer l'ouverture d'une notification
   handleNotificationOpen = (notification) => {
     console.log('[NotificationService] 🎯 handleNotificationOpen appelé');
-    
+
     let data = null;
-    
+
     // CORRECTION: Gérer correctement l'extraction des données
     if (notification && notification._data) {
       data = notification._data;
@@ -176,7 +208,7 @@ onRemoteNotification = (notification) => {
     } else {
       data = notification || {};
     }
-    
+
     console.log('[NotificationService] 📊 Données extraites:', JSON.stringify(data, null, 2));
     console.log('[NotificationService] 👥 Nombre de listeners:', this.notificationListeners.length);
 
@@ -186,12 +218,12 @@ onRemoteNotification = (notification) => {
       console.log('[NotificationService] ⚠️ Notification déjà traitée:', notificationId);
       return;
     }
-    
+
     if (!this.processedNotifications) {
       this.processedNotifications = new Set();
     }
     this.processedNotifications.add(notificationId);
-    
+
     // Nettoyer les notifications traitées après 1 minute
     setTimeout(() => {
       this.processedNotifications.delete(notificationId);
@@ -221,7 +253,7 @@ onRemoteNotification = (notification) => {
   handleForegroundNotification = (notification) => {
     let data = {};
     let alert = {};
-    
+
     // Extraire les données et l'alerte
     if (notification._data) {
       data = notification._data;
@@ -229,7 +261,7 @@ onRemoteNotification = (notification) => {
     if (notification._alert) {
       alert = notification._alert;
     }
-    
+
     if (alert.title && alert.body) {
       // Afficher une alerte
       Alert.alert(
@@ -237,8 +269,8 @@ onRemoteNotification = (notification) => {
         alert.body,
         [
           { text: 'Ignorer', style: 'cancel' },
-          { 
-            text: 'Voir', 
+          {
+            text: 'Voir',
             onPress: () => this.handleNotificationOpen(notification)
           }
         ]
@@ -249,7 +281,7 @@ onRemoteNotification = (notification) => {
   // Ajouter un listener pour les notifications
   addNotificationListener(callback) {
     this.notificationListeners.push(callback);
-    
+
     // Retourner une fonction pour retirer le listener
     return () => {
       const index = this.notificationListeners.indexOf(callback);
@@ -285,7 +317,7 @@ onRemoteNotification = (notification) => {
           userInfo: data,
           sound: 'default',
         });
-        
+
         console.log('[NotificationService] Notification locale programmée');
         return true;
       }
