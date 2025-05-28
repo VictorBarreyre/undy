@@ -2,6 +2,7 @@ import { useEffect, useRef, useContext } from 'react';
 import { AppState, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
+import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import NotificationService from '../notifications/NotificationService';
 import NotificationManager from '../notifications/NotificationManager';
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
@@ -11,6 +12,7 @@ const NotificationHandler = () => {
   const { userData } = useContext(AuthContext);
   const appStateRef = useRef(AppState.currentState);
   const removeNotificationListener = useRef(null);
+  const { getUserConversations } = useCardData(); // ✅ Hook correctement placé ici
 
   useEffect(() => {
     let isSubscribed = true;
@@ -18,16 +20,16 @@ const NotificationHandler = () => {
     const initializeNotifications = async () => {
       if (userData && isSubscribed) {
         console.log('[NotificationHandler] ✅ Initialisation pour l\'utilisateur:', userData._id);
-        
+
         try {
           // Initialiser le service de notifications
           await NotificationService.initialize();
           console.log('[NotificationHandler] ✅ NotificationService initialisé');
-          
+
           // Initialiser le manager
           await NotificationManager.initialize(userData);
           console.log('[NotificationHandler] ✅ NotificationManager initialisé');
-          
+
           // Ajouter un listener pour les clics sur notifications
           removeNotificationListener.current = NotificationService.addNotificationListener((data) => {
             console.log('[NotificationHandler] 🔔 Listener déclenché avec data:', JSON.stringify(data, null, 2));
@@ -39,7 +41,7 @@ const NotificationHandler = () => {
           try {
             const initialNotification = await PushNotificationIOS.getInitialNotification();
             console.log('[NotificationHandler] 📱 Notification initiale:', initialNotification);
-            
+
             if (initialNotification) {
               // Extraire les données
               let data = null;
@@ -50,7 +52,7 @@ const NotificationHandler = () => {
               } else if (initialNotification.data) {
                 data = initialNotification.data;
               }
-              
+
               if (data && data.conversationId) {
                 console.log('[NotificationHandler] 📱 Navigation depuis notification initiale');
                 // Délai pour s'assurer que la navigation est prête
@@ -75,13 +77,13 @@ const NotificationHandler = () => {
       console.log('[NotificationHandler] 🧹 Nettoyage des listeners');
       isSubscribed = false;
       subscription.remove();
-      
+
       // Retirer le listener des notifications
       if (removeNotificationListener.current) {
         removeNotificationListener.current();
       }
     };
-  }, [userData, navigation]);
+  }, [userData, navigation, getUserConversations]); // ✅ Ajouter getUserConversations aux dépendances
 
   const handleAppStateChange = (nextAppState) => {
     console.log('[NotificationHandler] 📱 App state change:', appStateRef.current, '→', nextAppState);
@@ -92,7 +94,7 @@ const NotificationHandler = () => {
     appStateRef.current = nextAppState;
   };
 
-  const handleNotificationData = (data) => {
+  const handleNotificationData = async (data) => {
     console.log('[NotificationHandler] 🎯 handleNotificationData appelé');
     console.log('[NotificationHandler] 📊 Données complètes:', JSON.stringify(data, null, 2));
     console.log('[NotificationHandler] 🧭 Navigation disponible:', !!navigation);
@@ -110,7 +112,7 @@ const NotificationHandler = () => {
     }
 
     // S'assurer que la navigation est prête
-    setTimeout(() => {
+    setTimeout(async () => {
       console.log('[NotificationHandler] ⏰ Tentative de navigation après délai');
       
       // Navigation selon le type de notification
@@ -120,33 +122,98 @@ const NotificationHandler = () => {
             console.log('[NotificationHandler] 🚀 Navigation vers la conversation:', data.conversationId);
             
             try {
-              // CORRECTION: Utiliser la structure correcte de votre navigation
-              // DrawerNavigator → TabNavigator → ConversationStackNavigator → ChatScreen
-              navigation.navigate('MainApp', {
-                screen: 'Tabs',
-                params: {
-                  screen: 'ChatTab',
+              console.log('[NotificationHandler] 📋 Chargement de la conversation complète...');
+              
+              // ✅ CORRECTION: Utiliser getUserConversations déjà déclaré en haut
+              // ❌ SUPPRIMER: const { getUserConversations } = useCardData();
+              const conversations = await getUserConversations();
+              console.log('[NotificationHandler] 📋 Conversations récupérées:', conversations.length);
+              
+              // Trouver la conversation spécifique
+              const targetConversation = conversations.find(
+                conv => conv._id === data.conversationId
+              );
+              
+              if (targetConversation) {
+                console.log('[NotificationHandler] ✅ Conversation trouvée, préparation des données...');
+                
+                // Préparer les données secretData selon ce que ChatScreen attend
+                const secretData = {
+                  _id: targetConversation.secret._id,
+                  content: targetConversation.secret.content,
+                  label: targetConversation.secret.label,
+                  user: targetConversation.secret.user,
+                  shareLink: targetConversation.secret.shareLink || `hushy://secret/${targetConversation.secret._id}`
+                };
+                
+                console.log('[NotificationHandler] 📦 SecretData préparé:', JSON.stringify(secretData, null, 2));
+                
+                // Navigation structurée
+                navigation.navigate('MainApp', {
+                  screen: 'Tabs',
                   params: {
-                    screen: 'Chat',
+                    screen: 'ChatTab',
                     params: {
-                      conversationId: data.conversationId,
-                      senderId: data.senderId || '',
-                      senderName: data.senderName || '',
+                      screen: 'Chat',
+                      params: {
+                        conversationId: targetConversation._id,
+                        conversation: targetConversation,
+                        secretData: secretData,
+                        showModalOnMount: false
+                      },
                     },
                   },
-                },
-              });
+                });
+                
+                console.log('[NotificationHandler] ✅ Navigation réussie avec données complètes');
+                
+              } else {
+                console.error('[NotificationHandler] ❌ Conversation non trouvée:', data.conversationId);
+                console.log('[NotificationHandler] 📋 IDs disponibles:', conversations.map(c => c._id));
+                
+                // Fallback: navigation simple
+                try {
+                  navigation.navigate('ChatTab');
+                  
+                  setTimeout(() => {
+                    navigation.navigate('Chat', { 
+                      conversationId: data.conversationId,
+                      senderId: data.senderId || '',
+                      senderName: data.senderName || ''
+                    });
+                  }, 300);
+                  
+                  console.log('[NotificationHandler] ⚠️ Navigation fallback sans données complètes');
+                } catch (fallbackError) {
+                  console.error('[NotificationHandler] ❌ Erreur navigation fallback:', fallbackError);
+                  
+                  Alert.alert(
+                    'Nouveau message',
+                    `De: ${data.senderName || 'Inconnu'}`,
+                    [
+                      { text: 'Ignorer', style: 'cancel' },
+                      { 
+                        text: 'Voir', 
+                        onPress: () => {
+                          try {
+                            navigation.navigate('ChatTab');
+                          } catch (err) {
+                            console.error('[NotificationHandler] ❌ Impossible de naviguer:', err);
+                          }
+                        }
+                      }
+                    ]
+                  );
+                }
+              }
               
-              console.log('[NotificationHandler] ✅ Navigation réussie');
             } catch (error) {
-              console.error('[NotificationHandler] ❌ Erreur navigation:', error);
+              console.error('[NotificationHandler] ❌ Erreur lors du chargement de la conversation:', error);
               
-              // Essayer une approche différente
+              // Navigation alternative en cas d'erreur
               try {
-                // D'abord naviguer vers le tab Chat
                 navigation.navigate('ChatTab');
                 
-                // Puis vers la conversation après un délai
                 setTimeout(() => {
                   navigation.navigate('Chat', { 
                     conversationId: data.conversationId,
@@ -159,7 +226,6 @@ const NotificationHandler = () => {
               } catch (altError) {
                 console.error('[NotificationHandler] ❌ Erreur navigation alternative:', altError);
                 
-                // Dernière tentative : afficher une alerte
                 Alert.alert(
                   'Nouveau message',
                   `De: ${data.senderName || 'Inconnu'}`,
@@ -168,7 +234,6 @@ const NotificationHandler = () => {
                     { 
                       text: 'Voir', 
                       onPress: () => {
-                        // Essayer de naviguer juste vers l'onglet chat
                         try {
                           navigation.navigate('ChatTab');
                         } catch (err) {
@@ -188,7 +253,6 @@ const NotificationHandler = () => {
         case 'purchase':
           if (data.secretId) {
             console.log('[NotificationHandler] 🚀 Navigation vers le secret:', data.secretId);
-            // Adapter selon votre structure de navigation pour les secrets
             try {
               navigation.navigate('SecretDetail', { secretId: data.secretId });
             } catch (error) {
@@ -200,7 +264,6 @@ const NotificationHandler = () => {
         case 'stripe_setup_reminder':
           console.log('[NotificationHandler] 🚀 Navigation vers les paramètres Stripe');
           try {
-            // CORRECTION: Utiliser 'ProfileTab' au lieu de 'Profile'
             navigation.navigate('MainApp', {
               screen: 'Tabs',
               params: {

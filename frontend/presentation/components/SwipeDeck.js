@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useContext } from 'react';
-import { Animated, PanResponder, Dimensions, StyleSheet, View } from 'react-native';
+import { Animated, PanResponder, Dimensions, StyleSheet, Button } from 'react-native';
 import { Box, Spinner, Text, VStack } from 'native-base';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
@@ -9,7 +9,7 @@ import PaymentSheet from './PaymentSheet';
 import TypewriterSpinner from './TypewriterSpinner';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-
+import TestNotificationsButton from '../notifications/TestNotificationButton';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height
@@ -17,7 +17,7 @@ const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 300;
 
 const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocation, isDataLoading }) => {
-  const { data, purchaseAndAccessConversation, isLoadingData, fetchUnpurchasedSecrets } = useCardData();
+  const { data, purchaseAndAccessConversation, isLoadingData, fetchUnpurchasedSecrets, getUserConversations } = useCardData();
   const { isLoggedIn } = useContext(AuthContext);
   const position = useRef(new Animated.ValueXY()).current;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -31,6 +31,58 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
   const { t } = useTranslation();
   const prevActiveType = useRef(activeType);
   const prevSelectedFilters = useRef(selectedFilters);
+
+  const navigateToChat = async () => {
+    try {
+      console.log("🚀 Début de la navigation vers le chat...");
+
+      // Récupérer toutes les conversations
+      const conversations = await getUserConversations();
+      console.log("📋 Conversations récupérées:", conversations.length);
+
+      // Trouver la conversation spécifique
+      const targetConversation = conversations.find(
+        conv => conv._id === '6834506cf3c68470b83a18c3'
+      );
+
+      if (targetConversation) {
+        console.log("✅ Conversation trouvée, préparation des données...");
+
+        // Préparer les données secretData selon ce que ChatScreen attend
+        const secretData = {
+          _id: targetConversation.secret._id,
+          content: targetConversation.secret.content,
+          label: targetConversation.secret.label,
+          user: targetConversation.secret.user,
+          shareLink: targetConversation.secret.shareLink || `hushy://secret/${targetConversation.secret._id}`
+        };
+
+        console.log("📦 SecretData préparé:", JSON.stringify(secretData, null, 2));
+
+        // Navigation avec tous les paramètres requis
+        console.log("🧭 Navigation vers ChatTab...");
+        navigation.navigate('ChatTab');
+
+        setTimeout(() => {
+          console.log("🧭 Navigation vers Chat avec paramètres complets...");
+          navigation.navigate('Chat', {
+            conversationId: targetConversation._id,
+            conversation: targetConversation,
+            secretData: secretData,
+            showModalOnMount: false
+          });
+          console.log("✅ Navigation terminée !");
+        }, 300);
+
+      } else {
+        console.error('❌ Conversation non trouvée');
+        alert('Cette conversation n\'existe plus ou n\'est pas accessible');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la navigation:', error);
+      alert(`Erreur: ${error.message}`);
+    }
+  };
 
   useFocusEffect(
     React.useCallback(() => {
@@ -55,7 +107,7 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
         }
       }
     };
-  
+
     loadInitialData();
   }, [isLoggedIn, data.length, isDataLoading]);
 
@@ -63,13 +115,13 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
   useEffect(() => {
     const hasActiveTypeChanged = prevActiveType.current !== activeType;
     const hasSelectedFiltersChanged = JSON.stringify(prevSelectedFilters.current) !== JSON.stringify(selectedFilters);
-    
+
     if (hasActiveTypeChanged || hasSelectedFiltersChanged) {
       console.log(`Filtres changés - activeType: ${activeType}, selectedFilters: ${selectedFilters.join(', ')}`);
       console.log(`Réinitialisation de l'index (était: ${currentIndex})`);
       setCurrentIndex(0); // Réinitialiser l'index lorsque les filtres changent
       position.setValue({ x: 0, y: 0 }); // Réinitialiser la position
-      
+
       // Mettre à jour les références
       prevActiveType.current = activeType;
       prevSelectedFilters.current = [...selectedFilters];
@@ -80,7 +132,7 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
   useEffect(() => {
     const processData = () => {
       console.log(`Traitement des données: ${data.length} éléments, activeType: ${activeType}`);
-      
+
       let filtered = [...data]; // Créer une copie pour éviter de modifier l'original
 
       // D'abord appliquer les filtres de catégorie
@@ -249,17 +301,20 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
     return (
       <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
         <Text style={styles.h3} textAlign="center">
-        {t('swipeDeck.noSecrets')}
+          {t('swipeDeck.noSecrets')}
         </Text>
         <Text style={styles.caption} textAlign="center" color="#94A3B8" mt={2}>
           {selectedFilters.length > 0
-              ? t('swipeDeck.tryChangingFilters')
+            ? t('swipeDeck.tryChangingFilters')
             : activeType === t('filter.contacts')
               ? t('swipeDeck.noContactsUsingApp')
               : activeType === t('filter.aroundMe')
-                ? t('swipeDeck.noSecretsNearby') 
+                ? t('swipeDeck.noSecretsNearby')
                 : t('swipeDeck.checkBackLater')}
         </Text>
+        <TestNotificationsButton
+    
+        />
       </VStack>
     );
   }

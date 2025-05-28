@@ -16,53 +16,46 @@ class NotificationService {
   }
 
   // Initialiser le service
-  async initialize() {
-    if (this.isConfigured) return true;
+async initialize() {
+  if (this.isConfigured) return true;
 
-    try {
-      if (Platform.OS === 'ios') {
-        // Configuration iOS avec push-notification-ios
-        PushNotificationIOS.setApplicationIconBadgeNumber(0);
-        
-        // Écouter les notifications reçues
+  try {
+    if (Platform.OS === 'ios') {
+      PushNotificationIOS.setApplicationIconBadgeNumber(0);
+      
+      // IMPORTANT: Vérifier que les handlers sont définis avant de les ajouter
+      if (typeof this.onRemoteNotification === 'function') {
         this.removeListeners.push(
           PushNotificationIOS.addEventListener('notification', this.onRemoteNotification)
         );
-        
-        // Écouter les notifications locales
+      }
+      
+      if (typeof this.onLocalNotification === 'function') {
         this.removeListeners.push(
           PushNotificationIOS.addEventListener('localNotification', this.onLocalNotification)
         );
-        
-        // Écouter l'enregistrement du token
+      }
+      
+      if (typeof this.onRegistered === 'function') {
         this.removeListeners.push(
           PushNotificationIOS.addEventListener('register', this.onRegistered)
         );
-        
-        // Écouter les erreurs d'enregistrement
+      }
+      
+      if (typeof this.onRegistrationError === 'function') {
         this.removeListeners.push(
           PushNotificationIOS.addEventListener('registrationError', this.onRegistrationError)
         );
-        
-        // IMPORTANT: Récupérer la notification initiale
-        const notification = await PushNotificationIOS.getInitialNotification();
-        if (notification) {
-          console.log('[NotificationService] Notification initiale:', notification);
-          // Traiter la notification initiale après un délai
-          setTimeout(() => {
-            this.handleNotificationOpen(notification);
-          }, 1000);
-        }
       }
-
-      this.isConfigured = true;
-      console.log('[NotificationService] Service initialisé');
-      return true;
-    } catch (error) {
-      console.error('[NotificationService] Erreur initialisation:', error);
-      return false;
     }
+    
+    this.isConfigured = true;
+    return true;
+  } catch (error) {
+    console.error('[NotificationService] Erreur initialisation:', error);
+    return false;
   }
+}
 
   // Demander les permissions et obtenir le token
   async requestPermissions() {
@@ -134,7 +127,7 @@ class NotificationService {
 onRemoteNotification = (notification) => {
   console.log('[NotificationService] Notification reçue:', notification);
   
-  // IMPORTANT: Vérifier si la notification a déjà été complétée
+  // Éviter les appels multiples
   if (notification._remoteNotificationCompleteCallbackCalled) {
     console.log('[NotificationService] ⚠️ Notification déjà traitée, skip');
     return;
@@ -146,28 +139,17 @@ onRemoteNotification = (notification) => {
   console.log('[NotificationService] User interaction:', isUserInteraction);
   console.log('[NotificationService] App state:', AppState.currentState);
   
-  // CORRECTION: Appeler finish() APRÈS le traitement
-  const finishNotification = () => {
-    if (notification.finish && !notification._remoteNotificationCompleteCallbackCalled) {
-      try {
-        notification.finish(PushNotificationIOS.FetchResult.NoData);
-      } catch (error) {
-        console.error('[NotificationService] Erreur lors du finish:', error);
-      }
-    }
-  };
-  
   // Traiter la notification
   if (isUserInteraction) {
     console.log('[NotificationService] 👆 Traitement comme interaction utilisateur');
     this.handleNotificationOpen(notification);
-    // Finish après le traitement
-    setTimeout(finishNotification, 100);
   } else {
     console.log('[NotificationService] 📱 App active, affichage en foreground');
     this.handleForegroundNotification(notification);
-    finishNotification();
   }
+  
+  // IMPORTANT: Ne PAS appeler finish() manuellement pour éviter les erreurs natives
+  console.log('[NotificationService] ✅ Traitement terminé sans appel finish()');
 }
 
   // Gérer l'ouverture d'une notification
