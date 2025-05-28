@@ -1153,77 +1153,199 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
-  const getConversationMessages = async (conversationId) => {
-    const instance = getAxiosInstance();
-    if (!instance) {
-      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
-    }
-    try {
-      const response = await instance.get(
-        `/api/secrets/conversations/${conversationId}/messages`
-      );
+const getConversationMessages = async (conversationId) => {
+  console.log('[CardDataContexte] 📞 getConversationMessages pour:', conversationId);
+  
+  if (!conversationId) {
+    console.error('[CardDataContexte] ❌ Pas de conversationId fourni');
+    throw new Error('ID de conversation requis');
+  }
 
-      console.log(i18n.t('cardData.logs.messagesReceived'), JSON.stringify(response.data, null, 2));
+  const instance = getAxiosInstance();
+  if (!instance) {
+    console.error('[CardDataContexte] ❌ Instance Axios non disponible');
+    throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
+  }
+  
+  try {
+    console.log('[CardDataContexte] 🔄 Appel API pour les messages...');
+    const response = await instance.get(
+      `/api/secrets/conversations/${conversationId}/messages`
+    );
 
-      const messages = response.data.messages.map(msg => ({
-        ...msg,
-        sender: msg.sender ? {
-          _id: msg.sender._id,
-          name: msg.sender.name
-        } : null
-      }));
+    console.log('[CardDataContexte] 📦 Réponse messages reçue:', {
+      status: response.status,
+      hasMessages: !!response.data?.messages,
+      messageCount: response.data?.messages?.length || 0,
+      conversationId: response.data?.conversationId
+    });
 
+    // Vérifier que la réponse contient les données attendues
+    if (!response.data || !response.data.messages) {
+      console.warn('[CardDataContexte] ⚠️ Réponse API inattendue:', response.data);
       return {
-        messages,
-        conversationId: response.data.conversationId
+        messages: [],
+        conversationId: conversationId
       };
-    } catch (error) {
-      console.error(i18n.t('cardData.errors.fetchingMessages'), error);
-      throw error;
     }
-  };
 
-  const getUserConversations = async () => {
-    const instance = getAxiosInstance();
-    if (!instance) {
-      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
-    }
-    try {
-      const response = await instance.get('/api/secrets/conversations');
-
-      if (!userData) {
-        console.log(i18n.t('cardData.logs.userDataNull'));
-        return [];
-      }
-
-      // Normaliser la structure des unreadCount
-      const normalizedConversations = (response.data || []).map(conv => {
-        // Création d'un objet conversation normalisé
-        const normalizedConv = { ...conv };
-
-        // Obtenir l'ID utilisateur correctement
-        const userIdStr = userData?._id?.toString() || '';
-
-        // Déterminer unreadCount selon le format retourné par l'API
-        if (typeof conv.unreadCount === 'number') {
-          normalizedConv.unreadCount = conv.unreadCount;
-        } else if (conv.unreadCount instanceof Map || typeof conv.unreadCount === 'object') {
-          normalizedConv.unreadCount = (conv.unreadCount instanceof Map)
-            ? (conv.unreadCount.get(userIdStr) || 0)
-            : (conv.unreadCount?.[userIdStr] || 0);
-        } else {
-          normalizedConv.unreadCount = 0;
-        }
-
-        return normalizedConv;
+    // Traiter et nettoyer les messages
+    const messages = response.data.messages.map((msg, index) => {
+      console.log(`[CardDataContexte] 🔧 Traitement message ${index + 1}:`, {
+        id: msg._id,
+        type: msg.messageType,
+        hasContent: !!msg.content,
+        hasSender: !!msg.sender,
+        createdAt: msg.createdAt
       });
 
-      return normalizedConversations;
-    } catch (error) {
-      console.error(i18n.t('cardData.errors.fetchingConversations'), error);
+      // S'assurer que chaque message a une structure cohérente
+      return {
+        ...msg,
+        _id: msg._id || `temp-${index}-${Date.now()}`,
+        content: msg.content || '',
+        messageType: msg.messageType || 'text',
+        createdAt: msg.createdAt || new Date().toISOString(),
+        sender: msg.sender ? {
+          _id: typeof msg.sender === 'object' ? msg.sender._id : msg.sender,
+          name: typeof msg.sender === 'object' ? msg.sender.name : msg.senderName || 'Utilisateur'
+        } : null,
+        // Préserver les données audio/image si présentes
+        audio: msg.audio || null,
+        audioDuration: msg.audioDuration || null,
+        image: msg.image || null
+      };
+    });
+
+    console.log('[CardDataContexte] ✅ Messages traités:', {
+      totalMessages: messages.length,
+      messageTypes: [...new Set(messages.map(m => m.messageType))],
+      dateRange: messages.length > 0 ? {
+        first: messages[0]?.createdAt,
+        last: messages[messages.length - 1]?.createdAt
+      } : null
+    });
+
+    return {
+      messages,
+      conversationId: response.data.conversationId || conversationId
+    };
+  } catch (error) {
+    console.error('[CardDataContexte] ❌ Erreur getConversationMessages:', {
+      conversationId,
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    
+    // En cas d'erreur, retourner une structure vide plutôt que de planter
+    return {
+      messages: [],
+      conversationId: conversationId
+    };
+  }
+};
+
+
+const getUserConversations = async () => {
+  console.log('[CardDataContexte] 🔄 Début getUserConversations');
+  
+  const instance = getAxiosInstance();
+  if (!instance) {
+    console.error('[CardDataContexte] ❌ Instance Axios non disponible');
+    throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
+  }
+  
+  try {
+    console.log('[CardDataContexte] 📞 Appel API /api/secrets/conversations');
+    const response = await instance.get('/api/secrets/conversations');
+    
+    console.log('[CardDataContexte] 📦 Réponse reçue:', {
+      status: response.status,
+      dataType: typeof response.data,
+      isArray: Array.isArray(response.data),
+      count: response.data?.length || 0
+    });
+
+    if (!userData) {
+      console.log('[CardDataContexte] ⚠️ Pas de données utilisateur');
       return [];
     }
-  };
+
+    const userIdStr = userData?._id?.toString() || '';
+    console.log('[CardDataContexte] 👤 ID utilisateur:', userIdStr);
+
+    // Normaliser la structure des conversations
+    const normalizedConversations = (response.data || []).map((conv, index) => {
+      console.log(`[CardDataContexte] 🔧 Normalisation conversation ${index + 1}:`, {
+        id: conv._id,
+        hasMessages: !!conv.messages,
+        messageCount: conv.messages?.length || 0,
+        hasSecret: !!conv.secret,
+        unreadCountType: typeof conv.unreadCount
+      });
+
+      // Création d'un objet conversation normalisé
+      const normalizedConv = { 
+        ...conv,
+        // S'assurer que les messages sont toujours un tableau
+        messages: Array.isArray(conv.messages) ? conv.messages : [],
+        // S'assurer que les participants sont toujours un tableau  
+        participants: Array.isArray(conv.participants) ? conv.participants : []
+      };
+
+      // Déterminer unreadCount selon le format retourné par l'API
+      if (typeof conv.unreadCount === 'number') {
+        normalizedConv.unreadCount = conv.unreadCount;
+      } else if (conv.unreadCount instanceof Map || typeof conv.unreadCount === 'object') {
+        normalizedConv.unreadCount = (conv.unreadCount instanceof Map)
+          ? (conv.unreadCount.get(userIdStr) || 0)
+          : (conv.unreadCount?.[userIdStr] || 0);
+      } else {
+        normalizedConv.unreadCount = 0;
+      }
+
+      // Vérifier et compléter les données du secret si nécessaire
+      if (conv.secret) {
+        normalizedConv.secret = {
+          _id: conv.secret._id,
+          content: conv.secret.content,
+          label: conv.secret.label,
+          user: conv.secret.user || conv.secret.createdBy,
+          shareLink: conv.secret.shareLink,
+          price: conv.secret.price,
+          currency: conv.secret.currency,
+          expiresAt: conv.secret.expiresAt,
+          ...conv.secret
+        };
+      }
+
+      console.log(`[CardDataContexte] ✅ Conversation ${index + 1} normalisée:`, {
+        id: normalizedConv._id,
+        messageCount: normalizedConv.messages.length,
+        unreadCount: normalizedConv.unreadCount,
+        hasSecret: !!normalizedConv.secret
+      });
+
+      return normalizedConv;
+    });
+
+    console.log('[CardDataContexte] 🎯 Résultat final:', {
+      totalConversations: normalizedConversations.length,
+      conversationsWithMessages: normalizedConversations.filter(c => c.messages.length > 0).length,
+      conversationsWithSecrets: normalizedConversations.filter(c => c.secret).length
+    });
+
+    return normalizedConversations;
+  } catch (error) {
+    console.error('[CardDataContexte] ❌ Erreur getUserConversations:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    return [];
+  }
+};
 
   const handleShareSecret = async (secret) => {
     try {

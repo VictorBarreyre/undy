@@ -87,38 +87,134 @@ const ChatScreen = ({ route }) => {
 
 useEffect(() => {
   const loadMessagesIfNeeded = async () => {
-    if (conversationId && (!conversation?.messages || conversation.messages.length === 0)) {
-      console.log('[ChatScreen] Messages manquants, chargement...');
-      setIsLoadingMessages(true);
+    console.log('[ChatScreen] 🔍 Vérification du chargement des messages...');
+    console.log('[ChatScreen] 📊 État actuel:', {
+      hasConversationId: !!conversationId,
+      hasConversation: !!conversation,
+      hasMessages: !!conversation?.messages,
+      messageCount: conversation?.messages?.length || 0,
+      conversationFromParams: !!route.params?.conversation
+    });
+
+    // CONDITION 1: Pas de conversationId = erreur critique
+    if (!conversationId) {
+      console.error('[ChatScreen] ❌ Pas de conversationId fourni');
+      return;
+    }
+
+    // CONDITION 2: Messages déjà présents et récents
+    if (conversation?.messages && conversation.messages.length > 0) {
+      console.log('[ChatScreen] ✅ Messages déjà présents:', conversation.messages.length);
+      return;
+    }
+
+    // CONDITION 3: Chargement nécessaire
+    console.log('[ChatScreen] 🔄 Chargement des messages nécessaire...');
+    setIsLoadingMessages(true);
+    
+    try {
+      // ÉTAPE 1: Récupérer les messages de la conversation
+      console.log('[ChatScreen] 📞 Appel getConversationMessages...');
+      const messagesData = await getConversationMessages(conversationId);
+      console.log('[ChatScreen] 📦 Messages récupérés:', {
+        count: messagesData?.messages?.length || 0,
+        conversationId: messagesData?.conversationId
+      });
+
+      // ÉTAPE 2: Récupérer les détails complets de la conversation si nécessaire
+      let fullConversation = conversation;
       
-      try {
-        const messagesData = await getConversationMessages(conversationId);
-        console.log('[ChatScreen] Messages chargés:', messagesData.messages.length);
-        
-        navigation.setParams({
-          conversation: {
-            ...conversation,
-            messages: messagesData.messages
+      if (!fullConversation || !fullConversation.secret) {
+        console.log('[ChatScreen] 🔄 Récupération des détails de la conversation...');
+        try {
+          const { getAxiosInstance } = require('../../data/api/axiosInstance');
+          const instance = getAxiosInstance();
+          
+          if (instance) {
+            // Récupérer la conversation complète
+            const response = await instance.get(`/api/secrets/conversations/${conversationId}`);
+            if (response.data) {
+              fullConversation = response.data;
+              console.log('[ChatScreen] ✅ Conversation complète récupérée');
+            }
           }
-        });
-      } catch (error) {
-        console.error('[ChatScreen] Erreur chargement messages:', error);
-      } finally {
-        setIsLoadingMessages(false);
+        } catch (error) {
+          console.error('[ChatScreen] ⚠️ Erreur récupération conversation complète:', error);
+          // Continuer avec les données existantes
+        }
       }
+
+      // ÉTAPE 3: Mettre à jour les paramètres de navigation avec toutes les données
+      const updatedConversation = {
+        ...fullConversation,
+        messages: messagesData?.messages || []
+      };
+
+      console.log('[ChatScreen] 📋 Mise à jour des paramètres de navigation...');
+      navigation.setParams({
+        conversation: updatedConversation,
+        // S'assurer que secretData est présent
+        secretData: secretData || (fullConversation?.secret ? {
+          _id: fullConversation.secret._id,
+          content: fullConversation.secret.content,
+          label: fullConversation.secret.label,
+          user: fullConversation.secret.user || fullConversation.secret.createdBy,
+          shareLink: fullConversation.secret.shareLink
+        } : null)
+      });
+
+      console.log('[ChatScreen] ✅ Messages chargés avec succès:', messagesData?.messages?.length || 0);
+      
+    } catch (error) {
+      console.error('[ChatScreen] ❌ Erreur chargement messages:', error);
+      // Optionnel: Afficher une alerte à l'utilisateur
+      Alert.alert(
+        "Erreur",
+        "Impossible de charger les messages de cette conversation. Veuillez réessayer.",
+        [
+          { text: "Retour", onPress: () => navigation.goBack() },
+          { text: "Réessayer", onPress: () => loadMessagesIfNeeded() }
+        ]
+      );
+    } finally {
+      setIsLoadingMessages(false);
     }
   };
 
-  loadMessagesIfNeeded();
-}, [conversationId, conversation?.messages?.length]);
+  // Déclencher le chargement avec un délai pour s'assurer que tout est initialisé
+  const timeoutId = setTimeout(() => {
+    loadMessagesIfNeeded();
+  }, 100);
 
-// Afficher un loader pendant le chargement
+  return () => clearTimeout(timeoutId);
+}, [conversationId, conversation?.messages?.length, navigation]);
+
+// AJOUT: Effet pour surveiller les changements de paramètres de navigation
+useEffect(() => {
+  console.log('[ChatScreen] 🔄 Paramètres de navigation mis à jour');
+  console.log('[ChatScreen] 📊 Nouvelles données:', {
+    conversationId: route.params?.conversationId,
+    hasConversation: !!route.params?.conversation,
+    hasSecretData: !!route.params?.secretData,
+    messageCount: route.params?.conversation?.messages?.length || 0
+  });
+}, [route.params]);
+
+// CORRECTION: Amélioration du loader pour être plus informatif
 if (isLoadingMessages) {
   return (
     <Background>
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <TypewriterLoader />
-        <Text style={{ marginTop: 20 }}>Chargement des messages...</Text>
+        <View style={{ alignItems: 'center' }}>
+          {/* Remplacez TypewriterLoader par votre composant de loader */}
+          <ActivityIndicator size="large" color="#FF587E" />
+          <Text style={{ marginTop: 20, textAlign: 'center', paddingHorizontal: 20 }}>
+            Chargement des messages...
+          </Text>
+          <Text style={{ marginTop: 10, fontSize: 12, color: '#888', textAlign: 'center' }}>
+            Conversation ID: {conversationId}
+          </Text>
+        </View>
       </SafeAreaView>
     </Background>
   );

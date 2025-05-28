@@ -13,6 +13,27 @@ class NotificationService {
     this.isConfigured = false;
     this.notificationListeners = [];
     this.removeListeners = [];
+    this.processedNotifications = new Set(); // AJOUT: Déduplication des notifications
+  }
+
+  // Méthode pour nettoyer les listeners en double
+  cleanupDuplicateListeners() {
+    console.log('[NotificationService] 🧹 Nettoyage des listeners dupliqués');
+    console.log('[NotificationService] 📊 Listeners avant nettoyage:', this.notificationListeners.length);
+    
+    // Garder seulement les listeners uniques (par référence de fonction)
+    const uniqueListeners = [];
+    const seenListeners = new Set();
+    
+    this.notificationListeners.forEach(listener => {
+      if (!seenListeners.has(listener)) {
+        seenListeners.add(listener);
+        uniqueListeners.push(listener);
+      }
+    });
+    
+    this.notificationListeners = uniqueListeners;
+    console.log('[NotificationService] 📊 Listeners après nettoyage:', this.notificationListeners.length);
   }
 
   // Initialiser le service
@@ -123,74 +144,47 @@ class NotificationService {
     console.error('[NotificationService] Erreur enregistrement token:', error);
   }
 
-  // Callback pour les notifications reçues
- onRemoteNotification = (notification) => {
-  console.log('[NotificationService] Notification reçue:', notification);
-  
-  // Éviter les appels multiples
-  if (notification._remoteNotificationCompleteCallbackCalled) {
-    console.log('[NotificationService] ⚠️ Notification déjà traitée, skip');
-    return;
-  }
-  
-  const isUserInteraction = notification.userInteraction || 
-                          (AppState.currentState !== 'active');
-  
-  console.log('[NotificationService] User interaction:', isUserInteraction);
-  console.log('[NotificationService] App state:', AppState.currentState);
-  
-  // Traiter la notification
-  if (isUserInteraction) {
-    console.log('[NotificationService] 👆 Traitement comme interaction utilisateur');
-    this.handleNotificationOpen(notification);
-  } else {
-    console.log('[NotificationService] 📱 App active, affichage en foreground');
-    this.handleForegroundNotification(notification);
-  }
-  
-  console.log('[NotificationService] ✅ Traitement terminé');
-  
-  // 🧪 TEST : Ajouter finish() de manière sécurisée
-  if (notification._notificationId) {
-    console.log('[NotificationService] 🎯 Préparation finish() avec ID:', notification._notificationId);
+  // Callback pour les notifications reçues - VERSION SÉCURISÉE
+  onRemoteNotification = (notification) => {
+    console.log('[NotificationService] Notification reçue:', notification);
     
-    setTimeout(() => {
-      try {
-        console.log('[NotificationService] 📞 Appel PushNotificationIOS.finishRemoteNotification...');
-        
-        PushNotificationIOS.finishRemoteNotification(
-          notification._notificationId,
-          PushNotificationIOS.FetchResult.NoData
-        );
-        
-        // Marquer comme complété
-        notification._remoteNotificationCompleteCallbackCalled = true;
-        
-        console.log('[NotificationService] ✅ finish() appelé avec succès pour:', notification._notificationId);
-        
-      } catch (error) {
-        console.error('[NotificationService] ❌ Erreur finish():', error);
-        console.error('[NotificationService] 📊 Error details:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        });
-      }
-    }, 500); // Délai de 500ms pour laisser le temps à la navigation
+    // Éviter les appels multiples
+    if (notification._remoteNotificationCompleteCallbackCalled) {
+      console.log('[NotificationService] ⚠️ Notification déjà traitée, skip');
+      return;
+    }
     
-  } else {
-    console.log('[NotificationService] ⚠️ Pas de _notificationId disponible, skip finish()');
-    console.log('[NotificationService] 📋 Notification keys:', Object.keys(notification));
+    const isUserInteraction = notification.userInteraction || 
+                            (AppState.currentState !== 'active');
+    
+    console.log('[NotificationService] User interaction:', isUserInteraction);
+    console.log('[NotificationService] App state:', AppState.currentState);
+    
+    // Traiter la notification
+    if (isUserInteraction) {
+      console.log('[NotificationService] 👆 Traitement comme interaction utilisateur');
+      this.handleNotificationOpen(notification);
+    } else {
+      console.log('[NotificationService] 📱 App active, affichage en foreground');
+      this.handleForegroundNotification(notification);
+    }
+    
+    console.log('[NotificationService] ✅ Traitement terminé');
+    
+    // SOLUTION SÉCURISÉE: Ne pas appeler finish() pour éviter les erreurs
+    // Le système iOS gère automatiquement la complétion dans la plupart des cas
+    notification._remoteNotificationCompleteCallbackCalled = true;
+    
+    console.log('[NotificationService] 🔒 Notification marquée comme traitée (sans finish() pour éviter les erreurs)');
   }
-}
 
-  // Gérer l'ouverture d'une notification
+  // Gérer l'ouverture d'une notification avec déduplication
   handleNotificationOpen = (notification) => {
     console.log('[NotificationService] 🎯 handleNotificationOpen appelé');
 
     let data = null;
 
-    // CORRECTION: Gérer correctement l'extraction des données
+    // Extraction des données
     if (notification && notification._data) {
       data = notification._data;
     } else if (notification && notification.data) {
@@ -200,7 +194,6 @@ class NotificationService {
         data = notification.getData();
       } catch (error) {
         console.error('[NotificationService] Erreur getData():', error);
-        // Fallback sur _data
         data = notification._data || notification.data || {};
       }
     } else if (notification && notification.userInfo) {
@@ -209,27 +202,25 @@ class NotificationService {
       data = notification || {};
     }
 
-    console.log('[NotificationService] 📊 Données extraites:', JSON.stringify(data, null, 2));
-    console.log('[NotificationService] 👥 Nombre de listeners:', this.notificationListeners.length);
-
-    // IMPORTANT: Éviter les appels multiples en vérifiant si déjà traité
+    // AJOUT: Déduplication par notification ID
     const notificationId = data.notificationId || data.id || Date.now().toString();
-    if (this.processedNotifications && this.processedNotifications.has(notificationId)) {
+    
+    if (this.processedNotifications.has(notificationId)) {
       console.log('[NotificationService] ⚠️ Notification déjà traitée:', notificationId);
       return;
     }
-
-    if (!this.processedNotifications) {
-      this.processedNotifications = new Set();
-    }
+    
     this.processedNotifications.add(notificationId);
-
-    // Nettoyer les notifications traitées après 1 minute
+    
+    // Nettoyer après 30 secondes
     setTimeout(() => {
       this.processedNotifications.delete(notificationId);
-    }, 60000);
+    }, 30000);
+    
+    console.log('[NotificationService] 📊 Données extraites:', JSON.stringify(data, null, 2));
+    console.log('[NotificationService] 👥 Nombre de listeners:', this.notificationListeners.length);
 
-    // Notifier les listeners une seule fois
+    // Appeler les listeners UNE SEULE FOIS
     this.notificationListeners.forEach((listener, index) => {
       console.log(`[NotificationService] 📣 Appel du listener ${index + 1}/${this.notificationListeners.length}`);
       try {
@@ -278,15 +269,48 @@ class NotificationService {
     }
   }
 
-  // Ajouter un listener pour les notifications
+  // Ajouter un listener pour les notifications avec déduplication améliorée
   addNotificationListener(callback) {
-    this.notificationListeners.push(callback);
-
+    console.log('[NotificationService] 🎯 Tentative d\'ajout de listener');
+    console.log('[NotificationService] 📊 État actuel:', {
+      listenersCount: this.notificationListeners.length,
+      callbackType: typeof callback
+    });
+    
+    // Vérification du callback
+    if (typeof callback !== 'function') {
+      console.error('[NotificationService] ❌ Le callback n\'est pas une fonction');
+      return () => {}; // Retourner une fonction vide pour éviter les erreurs
+    }
+    
+    // Éviter les doublons en vérifiant la référence ET le contenu
+    const callbackString = callback.toString();
+    const isDuplicate = this.notificationListeners.some(existingCallback => {
+      return existingCallback === callback || existingCallback.toString() === callbackString;
+    });
+    
+    if (!isDuplicate) {
+      this.notificationListeners.push(callback);
+      console.log('[NotificationService] ➕ Listener ajouté, total:', this.notificationListeners.length);
+    } else {
+      console.log('[NotificationService] ⚠️ Listener déjà existant, ignoré');
+    }
+    
+    // Nettoyer périodiquement si trop de listeners
+    if (this.notificationListeners.length > 3) {
+      console.log('[NotificationService] 🧹 Nettoyage automatique déclenché');
+      this.cleanupDuplicateListeners();
+    }
+    
     // Retourner une fonction pour retirer le listener
     return () => {
+      console.log('[NotificationService] 🗑️ Suppression du listener demandée');
       const index = this.notificationListeners.indexOf(callback);
       if (index > -1) {
         this.notificationListeners.splice(index, 1);
+        console.log('[NotificationService] ➖ Listener retiré, total:', this.notificationListeners.length);
+      } else {
+        console.log('[NotificationService] ⚠️ Listener non trouvé lors de la suppression');
       }
     };
   }
@@ -394,7 +418,7 @@ class NotificationService {
       this.removeListeners = [];
     }
     this.notificationListeners = [];
-    this.processedNotifications = null;
+    this.processedNotifications.clear(); // Nettoyer les notifications traitées
   }
 
   // Méthode pour annuler toutes les notifications
@@ -403,6 +427,15 @@ class NotificationService {
       PushNotificationIOS.removeAllDeliveredNotifications();
       await this.setBadgeCount(0);
     }
+  }
+
+  // Méthode pour forcer le nettoyage des listeners (debug)
+  forceCleanupListeners() {
+    console.log('[NotificationService] 🔧 Nettoyage forcé des listeners');
+    console.log('[NotificationService] 📊 Listeners avant:', this.notificationListeners.length);
+    this.notificationListeners = [];
+    this.processedNotifications.clear();
+    console.log('[NotificationService] ✅ Listeners nettoyés');
   }
 }
 
