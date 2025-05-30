@@ -1,16 +1,14 @@
+// src/infrastructure/hook/useContentModeration.js - TOUTE MODÉRATION MÉDIA DÉSACTIVÉE
+
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { 
   moderateContent, 
-  moderateImage, 
-  submitVideoForModeration,
-  checkVideoModerationStatus,
-  moderateMessage,
   getViolationMessage 
 } from '../../services/ModerationService';
 
 /**
- * Hook pour faciliter l'utilisation de la modération dans les composants
+ * Hook pour la modération - SEUL LE TEXTE EST VÉRIFIÉ
  * @param {Object} options - Options de configuration
  * @returns {Object} - Fonctions et états pour la modération
  */
@@ -19,97 +17,30 @@ const useContentModeration = (options = {}) => {
   const [lastResult, setLastResult] = useState(null);
   const [violationsCount, setViolationsCount] = useState(0);
   const [isUserRestricted, setIsUserRestricted] = useState(false);
-  const [pendingModeration, setPendingModeration] = useState({});
   
   // Référence pour éviter les problèmes avec les fermetures (closures)
   const violationsCountRef = useRef(0);
   
-  // Options par défaut
+  // Options par défaut - SEULE LA MODÉRATION TEXTE EST ACTIVE
   const defaultOptions = {
-    showAlerts: true,          // Afficher des alertes pour les violations
-    blockContent: true,        // Bloquer le contenu inapproprié
-    trackViolations: true,     // Suivre le nombre de violations
-    autoRestrict: true,        // Restreindre automatiquement l'utilisateur après plusieurs violations
+    showAlerts: true,          // Afficher des alertes pour les violations DE TEXTE
+    blockContent: true,        // Bloquer le contenu inapproprié DE TEXTE
+    trackViolations: true,     // Suivre le nombre de violations DE TEXTE
+    autoRestrict: true,        // Restreindre automatiquement l'utilisateur après violations DE TEXTE
     restrictThreshold: 3,      // Nombre de violations avant restriction
     restrictDuration: 30000,   // Durée de restriction en ms (30 secondes par défaut)
     onViolation: null,         // Callback pour une violation détectée
     onContentCleared: null,    // Callback quand un contenu est autorisé
     onUserRestricted: null,    // Callback quand l'utilisateur est restreint
     onUserUnrestricted: null,  // Callback quand la restriction est levée
-    checkPendingInterval: 10000, // Intervalle pour vérifier les modérations en attente (vidéos)
+    // PLUS DE VÉRIFICATIONS MÉDIA
+    enableImageModeration: false,
+    enableVideoModeration: false,
+    enableAudioModeration: false,
   };
   
   // Fusionner les options fournies avec les options par défaut
   const settings = { ...defaultOptions, ...options };
-  
-  // Vérifier périodiquement les modérations en attente (vidéos)
-  useEffect(() => {
-    const checkPendingModerations = async () => {
-      const pendingIds = Object.keys(pendingModeration);
-      if (pendingIds.length === 0) return;
-      
-      for (const messageId of pendingIds) {
-        const pendingData = pendingModeration[messageId];
-        
-        try {
-          // Vérifier le statut actuel
-          const statusResult = await checkVideoModerationStatus(
-            pendingData.videoUri,
-            pendingData.workflowId
-          );
-          
-          // Si terminé, mettre à jour et traiter le résultat
-          if (statusResult.status === 'completed') {
-            const updatedPending = { ...pendingModeration };
-            delete updatedPending[messageId];
-            setPendingModeration(updatedPending);
-            
-            // Si flaggé, traiter comme une violation
-            if (statusResult.isFlagged) {
-              handleViolation(statusResult);
-              
-              // Appeler le callback personnalisé si fourni avec l'ID du message
-              if (pendingData.onComplete && typeof pendingData.onComplete === 'function') {
-                pendingData.onComplete({
-                  messageId,
-                  result: statusResult,
-                  status: 'flagged'
-                });
-              }
-            } else {
-              // Sinon, notifier que le contenu est OK
-              if (pendingData.onComplete && typeof pendingData.onComplete === 'function') {
-                pendingData.onComplete({
-                  messageId,
-                  result: statusResult,
-                  status: 'cleared'
-                });
-              }
-            }
-          } 
-          // Si toujours en cours, mettre à jour le statut
-          else if (statusResult.status === 'pending' || statusResult.status === 'processing') {
-            setPendingModeration(prev => ({
-              ...prev,
-              [messageId]: {
-                ...prev[messageId],
-                progress: statusResult.progress || prev[messageId].progress,
-                lastChecked: Date.now()
-              }
-            }));
-          }
-        } catch (error) {
-          console.error('Erreur lors de la vérification des modérations en attente:', error);
-        }
-      }
-    };
-    
-    // Mettre en place l'intervalle de vérification
-    const intervalId = setInterval(checkPendingModerations, settings.checkPendingInterval);
-    
-    // Nettoyage à la destruction du composant
-    return () => clearInterval(intervalId);
-  }, [pendingModeration, settings.checkPendingInterval]);
   
   /**
    * Afficher une alerte pour une violation de modération
@@ -175,7 +106,7 @@ const useContentModeration = (options = {}) => {
   }, [settings, showViolationAlert]);
   
   /**
-   * Vérifier si un texte est conforme aux règles de modération
+   * Vérifier si un texte est conforme aux règles de modération (SEULE VÉRIFICATION ACTIVE)
    * @param {string} text - Texte à vérifier
    * @returns {Promise<boolean>} - True si le contenu est approprié, false sinon
    */
@@ -219,92 +150,52 @@ const useContentModeration = (options = {}) => {
   }, [settings, handleViolation, isUserRestricted]);
   
   /**
-   * Vérifier une image avec l'API Sightengine
+   * VÉRIFICATION D'IMAGE COMPLÈTEMENT DÉSACTIVÉE
    * @param {string} imageUri - URI de l'image
-   * @returns {Promise<boolean>} - True si l'image est appropriée
+   * @returns {Promise<boolean>} - True (toujours autorisé)
    */
   const checkImage = useCallback(async (imageUri) => {
-    // Si l'utilisateur est restreint, bloquer tout contenu
-    if (isUserRestricted) {
-      return false;
-    }
-    
-    // Si pas d'URI, valide par défaut
-    if (!imageUri) {
-      return true;
-    }
-    
-    setIsChecking(true);
-    
-    try {
-      const result = await moderateImage(imageUri);
-      
-      if (result.isFlagged) {
-        handleViolation(result);
-        setIsChecking(false);
-        return !settings.blockContent;
-      }
-      
-      // L'image est appropriée
-      setIsChecking(false);
-      return true;
-    } catch (error) {
-      console.error('Erreur lors de la vérification de l\'image:', error);
-      setIsChecking(false);
-      return true; // En cas d'erreur, permettre par défaut
-    }
-  }, [settings, handleViolation, isUserRestricted]);
-  
+    console.log('🖼️ VÉRIFICATION D\'IMAGE COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
+    return true; // TOUJOURS AUTORISÉ
+  }, []);
+
   /**
-   * Soumettre une vidéo pour modération
+   * SOUMISSION DE VIDÉO COMPLÈTEMENT DÉSACTIVÉE
    * @param {string} videoUri - URI de la vidéo
    * @param {string} messageId - ID du message contenant la vidéo
    * @param {Function} onComplete - Callback quand la modération est terminée
    */
   const submitVideo = useCallback(async (videoUri, messageId, onComplete) => {
-    if (!videoUri || !messageId) return true;
+    console.log('🎥 SOUMISSION DE VIDÉO COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
     
-    try {
-      // Soumettre la vidéo
-      const result = await submitVideoForModeration(videoUri);
-      
-      // Si déjà flaggé (rare mais possible), gérer immédiatement
-      if (result.isFlagged) {
-        handleViolation(result);
-        if (onComplete) onComplete({ messageId, result, status: 'flagged' });
-        return !settings.blockContent;
-      }
-      
-      // Si en attente, enregistrer pour suivi
-      if (result.status === 'pending' && result.workflowId) {
-        setPendingModeration(prev => ({
-          ...prev,
-          [messageId]: {
-            videoUri,
-            workflowId: result.workflowId,
-            submittedAt: Date.now(),
-            lastChecked: Date.now(),
-            progress: 0,
-            onComplete
-          }
-        }));
-        
-        // Permettre l'envoi (la modération se fait en arrière-plan)
-        return true;
-      }
-      
-      // En cas d'erreur ou autre statut, permettre par défaut
-      return true;
-    } catch (error) {
-      console.error('Erreur lors de la soumission de la vidéo:', error);
-      return true; // En cas d'erreur, permettre par défaut
+    // Appeler immédiatement le callback avec un statut autorisé
+    if (onComplete && typeof onComplete === 'function') {
+      setTimeout(() => {
+        onComplete({
+          messageId,
+          result: { isFlagged: false, reason: null, disabled: true },
+          status: 'disabled'
+        });
+      }, 100);
     }
-  }, [settings, handleViolation]);
+    
+    return true; // TOUJOURS AUTORISÉ
+  }, []);
+
+  /**
+   * VÉRIFICATION D'AUDIO COMPLÈTEMENT DÉSACTIVÉE
+   * @param {string} audioUri - URI de l'audio
+   * @returns {Promise<boolean>} - True (toujours autorisé)
+   */
+  const checkAudio = useCallback(async (audioUri) => {
+    console.log('🎵 VÉRIFICATION D\'AUDIO COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
+    return true; // TOUJOURS AUTORISÉ
+  }, []);
   
   /**
-   * Vérifier un message complet (texte, images, vidéos)
+   * Vérifier un message complet - SEUL LE TEXTE EST VÉRIFIÉ
    * @param {Object} message - Message à vérifier
-   * @returns {Promise<Object>} - Résultat avec status et éventuellement workflowId
+   * @returns {Promise<Object>} - Résultat avec status
    */
   const checkMessage = useCallback(async (message) => {
     // Si l'utilisateur est restreint, bloquer tout contenu
@@ -315,38 +206,32 @@ const useContentModeration = (options = {}) => {
     setIsChecking(true);
     
     try {
-      const result = await moderateMessage(message);
-      
-      // Si flaggé, bloquer immédiatement
-      if (result.isFlagged) {
-        handleViolation(result);
-        setIsChecking(false);
-        return { 
-          isValid: !settings.blockContent,
-          reason: result.reason
-        };
+      // SEULE LA VÉRIFICATION DU TEXTE EST ACTIVE
+      if (message.content) {
+        const result = await moderateContent(message.content);
+        
+        // Si le texte est flaggé, bloquer immédiatement
+        if (result.isFlagged) {
+          handleViolation(result);
+          setIsChecking(false);
+          return { 
+            isValid: !settings.blockContent,
+            reason: result.reason
+          };
+        }
       }
       
-      // Si en attente (vidéo en cours de modération)
-      if (result.status === 'pending' && result.workflowId && message.id) {
-        setPendingModeration(prev => ({
-          ...prev,
-          [message.id]: {
-            videoUri: message.video,
-            workflowId: result.workflowId,
-            submittedAt: Date.now(),
-            lastChecked: Date.now(),
-            progress: 0,
-            onComplete: message.onModerationComplete
-          }
-        }));
-        
-        setIsChecking(false);
-        return { 
-          isValid: true, 
-          status: 'pending',
-          workflowId: result.workflowId
-        };
+      // TOUT LE RESTE EST IGNORÉ
+      if (message.image) {
+        console.log('🖼️ Image dans le message - IGNORÉE (modération désactivée)');
+      }
+      
+      if (message.video) {
+        console.log('🎥 Vidéo dans le message - IGNORÉE (modération désactivée)');
+      }
+      
+      if (message.audio) {
+        console.log('🎵 Audio dans le message - IGNORÉ (modération désactivée)');
       }
       
       // Message valide
@@ -358,14 +243,6 @@ const useContentModeration = (options = {}) => {
       return { isValid: true }; // En cas d'erreur, permettre l'envoi
     }
   }, [settings, handleViolation, isUserRestricted]);
-  
-  /**
-   * Récupérer l'état actuel des modérations en attente
-   * @returns {Object} - État des modérations en attente
-   */
-  const getPendingModerations = useCallback(() => {
-    return pendingModeration;
-  }, [pendingModeration]);
   
   /**
    * Réinitialiser le compteur de violations
@@ -387,9 +264,8 @@ const useContentModeration = (options = {}) => {
   }, [settings]);
   
   return {
+    // SEULES LES FONCTIONS DE TEXTE SONT ACTIVES
     checkText,
-    checkImage,
-    submitVideo,
     checkMessage,
     isChecking,
     lastResult,
@@ -397,8 +273,15 @@ const useContentModeration = (options = {}) => {
     isUserRestricted,
     resetViolationsCount,
     removeUserRestriction,
-    pendingModeration,
-    getPendingModerations
+    
+    // FONCTIONS MÉDIA DÉSACTIVÉES MAIS CONSERVÉES POUR COMPATIBILITÉ
+    checkImage: checkImage,        // Retourne toujours true
+    submitVideo: submitVideo,      // Retourne toujours true
+    checkAudio: checkAudio,        // Retourne toujours true
+    
+    // Plus de pending moderation car tout est désactivé
+    pendingModeration: {},
+    getPendingModerations: () => ({})
   };
 };
 
