@@ -243,6 +243,8 @@ exports.uploadVideo = async (req, res) => {
         moderation: 'aws_rek'
       });
     }
+
+    
     
     // Nettoyer le fichier temporaire
     if (videoPath) {
