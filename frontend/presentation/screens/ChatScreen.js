@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef, memo, useCallback } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Share, ActionSheetIOS } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Share, ActionSheetIOS, Alert, Linking, PermissionsAndroid, ActivityIndicator } from 'react-native';
 import { Box, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown, faPaperPlane, faCheck, faMicrophone, faStop, faPlay, faPause } from '@fortawesome/free-solid-svg-icons';
@@ -25,8 +25,6 @@ import RNFS from 'react-native-fs';
 import { AudioRecorder, AudioUtils } from 'react-native-audio';
 import Sound from 'react-native-sound';
 import useContentModeration from '../../infrastructure/hook/useContentModeration';
-
-
 
 const ChatScreen = ({ route }) => {
   const { t } = useTranslation();
@@ -76,152 +74,149 @@ const ChatScreen = ({ route }) => {
     showAlerts: true,
     onViolation: (result) => {
       console.log('Contenu inapproprié détecté:', result);
-      // Vous pourriez ajouter une journalisation spécifique ici
     }
   });
-
 
   const [messagesAwaitingModeration, setMessagesAwaitingModeration] = useState({});
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
-
-useEffect(() => {
-  const loadMessagesIfNeeded = async () => {
-    console.log('[ChatScreen] 🔍 Vérification du chargement des messages...');
-    console.log('[ChatScreen] 📊 État actuel:', {
-      hasConversationId: !!conversationId,
-      hasConversation: !!conversation,
-      hasMessages: !!conversation?.messages,
-      messageCount: conversation?.messages?.length || 0,
-      conversationFromParams: !!route.params?.conversation
-    });
-
-    // CONDITION 1: Pas de conversationId = erreur critique
-    if (!conversationId) {
-      console.error('[ChatScreen] ❌ Pas de conversationId fourni');
-      return;
-    }
-
-    // CONDITION 2: Messages déjà présents et récents
-    if (conversation?.messages && conversation.messages.length > 0) {
-      console.log('[ChatScreen] ✅ Messages déjà présents:', conversation.messages.length);
-      return;
-    }
-
-    // CONDITION 3: Chargement nécessaire
-    console.log('[ChatScreen] 🔄 Chargement des messages nécessaire...');
-    setIsLoadingMessages(true);
-    
+  // Fonction pour récupérer les messages de conversation
+  const getConversationMessages = async (conversationId) => {
     try {
-      // ÉTAPE 1: Récupérer les messages de la conversation
-      console.log('[ChatScreen] 📞 Appel getConversationMessages...');
-      const messagesData = await getConversationMessages(conversationId);
-      console.log('[ChatScreen] 📦 Messages récupérés:', {
-        count: messagesData?.messages?.length || 0,
-        conversationId: messagesData?.conversationId
-      });
-
-      // ÉTAPE 2: Récupérer les détails complets de la conversation si nécessaire
-      let fullConversation = conversation;
-      
-      if (!fullConversation || !fullConversation.secret) {
-        console.log('[ChatScreen] 🔄 Récupération des détails de la conversation...');
-        try {
-          const { getAxiosInstance } = require('../../data/api/axiosInstance');
-          const instance = getAxiosInstance();
-          
-          if (instance) {
-            // Récupérer la conversation complète
-            const response = await instance.get(`/api/secrets/conversations/${conversationId}`);
-            if (response.data) {
-              fullConversation = response.data;
-              console.log('[ChatScreen] ✅ Conversation complète récupérée');
-            }
-          }
-        } catch (error) {
-          console.error('[ChatScreen] ⚠️ Erreur récupération conversation complète:', error);
-          // Continuer avec les données existantes
-        }
+      const instance = getAxiosInstance();
+      if (!instance) {
+        throw new Error('Axios non initialisé');
       }
-
-      // ÉTAPE 3: Mettre à jour les paramètres de navigation avec toutes les données
-      const updatedConversation = {
-        ...fullConversation,
-        messages: messagesData?.messages || []
-      };
-
-      console.log('[ChatScreen] 📋 Mise à jour des paramètres de navigation...');
-      navigation.setParams({
-        conversation: updatedConversation,
-        // S'assurer que secretData est présent
-        secretData: secretData || (fullConversation?.secret ? {
-          _id: fullConversation.secret._id,
-          content: fullConversation.secret.content,
-          label: fullConversation.secret.label,
-          user: fullConversation.secret.user || fullConversation.secret.createdBy,
-          shareLink: fullConversation.secret.shareLink
-        } : null)
-      });
-
-      console.log('[ChatScreen] ✅ Messages chargés avec succès:', messagesData?.messages?.length || 0);
       
+      const response = await instance.get(`/api/secrets/conversations/${conversationId}`);
+      return response.data;
     } catch (error) {
-      console.error('[ChatScreen] ❌ Erreur chargement messages:', error);
-      // Optionnel: Afficher une alerte à l'utilisateur
-      Alert.alert(
-        "Erreur",
-        "Impossible de charger les messages de cette conversation. Veuillez réessayer.",
-        [
-          { text: "Retour", onPress: () => navigation.goBack() },
-          { text: "Réessayer", onPress: () => loadMessagesIfNeeded() }
-        ]
-      );
-    } finally {
-      setIsLoadingMessages(false);
+      console.error('Erreur récupération messages:', error);
+      throw error;
     }
   };
 
-  // Déclencher le chargement avec un délai pour s'assurer que tout est initialisé
-  const timeoutId = setTimeout(() => {
-    loadMessagesIfNeeded();
-  }, 100);
+  useEffect(() => {
+    const loadMessagesIfNeeded = async () => {
+      console.log('[ChatScreen] 🔍 Vérification du chargement des messages...');
+      console.log('[ChatScreen] 📊 État actuel:', {
+        hasConversationId: !!conversationId,
+        hasConversation: !!conversation,
+        hasMessages: !!conversation?.messages,
+        messageCount: conversation?.messages?.length || 0,
+        conversationFromParams: !!route.params?.conversation
+      });
 
-  return () => clearTimeout(timeoutId);
-}, [conversationId, conversation?.messages?.length, navigation]);
+      if (!conversationId) {
+        console.error('[ChatScreen] ❌ Pas de conversationId fourni');
+        return;
+      }
 
-// AJOUT: Effet pour surveiller les changements de paramètres de navigation
-useEffect(() => {
-  console.log('[ChatScreen] 🔄 Paramètres de navigation mis à jour');
-  console.log('[ChatScreen] 📊 Nouvelles données:', {
-    conversationId: route.params?.conversationId,
-    hasConversation: !!route.params?.conversation,
-    hasSecretData: !!route.params?.secretData,
-    messageCount: route.params?.conversation?.messages?.length || 0
-  });
-}, [route.params]);
+      if (conversation?.messages && conversation.messages.length > 0) {
+        console.log('[ChatScreen] ✅ Messages déjà présents:', conversation.messages.length);
+        return;
+      }
 
-// CORRECTION: Amélioration du loader pour être plus informatif
-if (isLoadingMessages) {
-  return (
-    <Background>
-      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <View style={{ alignItems: 'center' }}>
-          {/* Remplacez TypewriterLoader par votre composant de loader */}
-          <ActivityIndicator size="large" color="#FF587E" />
-          <Text style={{ marginTop: 20, textAlign: 'center', paddingHorizontal: 20 }}>
-            Chargement des messages...
-          </Text>
-          <Text style={{ marginTop: 10, fontSize: 12, color: '#888', textAlign: 'center' }}>
-            Conversation ID: {conversationId}
-          </Text>
-        </View>
-      </SafeAreaView>
-    </Background>
-  );
-}
+      console.log('[ChatScreen] 🔄 Chargement des messages nécessaire...');
+      setIsLoadingMessages(true);
+      
+      try {
+        console.log('[ChatScreen] 📞 Appel getConversationMessages...');
+        const messagesData = await getConversationMessages(conversationId);
+        console.log('[ChatScreen] 📦 Messages récupérés:', {
+          count: messagesData?.messages?.length || 0,
+          conversationId: messagesData?.conversationId
+        });
+
+        let fullConversation = conversation;
+        
+        if (!fullConversation || !fullConversation.secret) {
+          console.log('[ChatScreen] 🔄 Récupération des détails de la conversation...');
+          try {
+            const instance = getAxiosInstance();
+            
+            if (instance) {
+              const response = await instance.get(`/api/secrets/conversations/${conversationId}`);
+              if (response.data) {
+                fullConversation = response.data;
+                console.log('[ChatScreen] ✅ Conversation complète récupérée');
+              }
+            }
+          } catch (error) {
+            console.error('[ChatScreen] ⚠️ Erreur récupération conversation complète:', error);
+          }
+        }
+
+        const updatedConversation = {
+          ...fullConversation,
+          messages: messagesData?.messages || []
+        };
+
+        console.log('[ChatScreen] 📋 Mise à jour des paramètres de navigation...');
+        navigation.setParams({
+          conversation: updatedConversation,
+          secretData: secretData || (fullConversation?.secret ? {
+            _id: fullConversation.secret._id,
+            content: fullConversation.secret.content,
+            label: fullConversation.secret.label,
+            user: fullConversation.secret.user || fullConversation.secret.createdBy,
+            shareLink: fullConversation.secret.shareLink
+          } : null)
+        });
+
+        console.log('[ChatScreen] ✅ Messages chargés avec succès:', messagesData?.messages?.length || 0);
+        
+      } catch (error) {
+        console.error('[ChatScreen] ❌ Erreur chargement messages:', error);
+        Alert.alert(
+          "Erreur",
+          "Impossible de charger les messages de cette conversation. Veuillez réessayer.",
+          [
+            { text: "Retour", onPress: () => navigation.goBack() },
+            { text: "Réessayer", onPress: () => loadMessagesIfNeeded() }
+          ]
+        );
+      } finally {
+        setIsLoadingMessages(false);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      loadMessagesIfNeeded();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [conversationId, conversation?.messages?.length, navigation]);
 
   useEffect(() => {
+    console.log('[ChatScreen] 🔄 Paramètres de navigation mis à jour');
+    console.log('[ChatScreen] 📊 Nouvelles données:', {
+      conversationId: route.params?.conversationId,
+      hasConversation: !!route.params?.conversation,
+      hasSecretData: !!route.params?.secretData,
+      messageCount: route.params?.conversation?.messages?.length || 0
+    });
+  }, [route.params]);
 
+  if (isLoadingMessages) {
+    return (
+      <Background>
+        <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#FF587E" />
+            <Text style={{ marginTop: 20, textAlign: 'center', paddingHorizontal: 20 }}>
+              Chargement des messages...
+            </Text>
+            <Text style={{ marginTop: 10, fontSize: 12, color: '#888', textAlign: 'center' }}>
+              Conversation ID: {conversationId}
+            </Text>
+          </View>
+        </SafeAreaView>
+      </Background>
+    );
+  }
+
+  useEffect(() => {
     setTimeout(() => {
       if (Platform.OS === 'ios') {
         try {
@@ -235,17 +230,14 @@ if (isLoadingMessages) {
       }
     }, 500);
 
-    // Configuration initiale
-    Sound.setCategory('Playback', true); // Activez la lecture audio même quand l'appareil est en mode silencieux
+    Sound.setCategory('Playback', true);
 
-    // Préparer l'enregistreur pour iOS
     if (Platform.OS === 'ios') {
       AudioRecorder.requestAuthorization().then((isAuthorized) => {
         setIsRecordingPermitted(isAuthorized);
       });
     }
 
-    // Nettoyage lors du démontage du composant
     return () => {
       if (isRecording) {
         AudioRecorder.stopRecording();
@@ -258,7 +250,6 @@ if (isLoadingMessages) {
     };
   }, []);
 
-  // Fonction pour vérifier les permissions
   const checkPermission = async () => {
     if (Platform.OS === 'android') {
       try {
@@ -279,14 +270,12 @@ if (isLoadingMessages) {
       }
     }
     else if (Platform.OS === 'ios') {
-      // Pour iOS, utiliser l'autorisation déjà demandée
       return isRecordingPermitted;
     }
 
     return false;
   };
 
-  // Fonction pour formater le temps (MM:SS)
   const formatTime = (milliseconds) => {
     const seconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(seconds / 60);
@@ -294,7 +283,6 @@ if (isLoadingMessages) {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // Démarrer l'enregistrement
   const startRecording = async () => {
     try {
       const hasPermission = await checkPermission();
@@ -310,10 +298,8 @@ if (isLoadingMessages) {
         return;
       }
 
-      // Définir le chemin d'enregistrement
       const audioPath = `${AudioUtils.DocumentDirectoryPath}/recording_${Date.now()}.aac`;
 
-      // Préparer l'enregistrement avec des options
       await AudioRecorder.prepareRecordingAtPath(audioPath, {
         SampleRate: 44100,
         Channels: 2,
@@ -324,20 +310,16 @@ if (isLoadingMessages) {
         IncludeBase64: false
       });
 
-      // Événement de progression
       AudioRecorder.onProgress = (data) => {
         setRecordTime(formatTime(data.currentTime * 1000));
         setRecordingDuration(data.currentTime);
       };
 
-      // Événement de fin d'enregistrement
       AudioRecorder.onFinished = (data) => {
-        // data contient {status, audioFileURL}
         setAudioPath(data.audioFileURL || audioPath);
         setAudioLength(formatTime(recordingDuration * 1000));
       };
 
-      // Démarrer l'enregistrement
       await AudioRecorder.startRecording();
 
       setIsRecording(true);
@@ -349,48 +331,41 @@ if (isLoadingMessages) {
     }
   };
 
-// Pour react-native-audio
-const stopRecording = async () => {
-  if (!isRecording) return;
-  
-  try {
-    const filePath = await AudioRecorder.stopRecording();
-    console.log('Enregistrement terminé à:', filePath);
+  const stopRecording = async () => {
+    if (!isRecording) return;
     
-    setIsRecording(false);
-    setAudioPath(filePath);
-    setAudioLength(formatTime(recordingDuration * 1000));
-    
-  } catch (error) {
-    console.error('Erreur lors de l\'arrêt de l\'enregistrement:', error);
-    setIsRecording(false);
-  }
-};
-  // Lire l'enregistrement
+    try {
+      const filePath = await AudioRecorder.stopRecording();
+      console.log('Enregistrement terminé à:', filePath);
+      
+      setIsRecording(false);
+      setAudioPath(filePath);
+      setAudioLength(formatTime(recordingDuration * 1000));
+      
+    } catch (error) {
+      console.error('Erreur lors de l\'arrêt de l\'enregistrement:', error);
+      setIsRecording(false);
+    }
+  };
+
   const startPlaying = () => {
     if (!audioPath) return;
 
     try {
-      // Si un son est déjà en cours de lecture, le nettoyer
       if (soundRef.current) {
         soundRef.current.stop();
         soundRef.current.release();
       }
 
-      // Créer un nouvel objet Sound
       const sound = new Sound(audioPath, '', (error) => {
         if (error) {
           console.log('Erreur lors du chargement du son', error);
           return;
         }
 
-        // Durée totale
         const duration = sound.getDuration();
-
-        // Définir la référence
         soundRef.current = sound;
 
-        // Démarrer la lecture
         sound.play((success) => {
           if (success) {
             console.log('Lecture terminée avec succès');
@@ -401,16 +376,13 @@ const stopRecording = async () => {
           }
         });
 
-        // Mettre à jour l'état
         setIsPlaying(true);
 
-        // Mettre à jour le temps de lecture
         const interval = setInterval(() => {
           if (soundRef.current) {
             soundRef.current.getCurrentTime((seconds) => {
               setPlayTime(formatTime(seconds * 1000));
 
-              // Si la lecture est terminée, nettoyer l'intervalle
               if (seconds >= duration) {
                 clearInterval(interval);
               }
@@ -427,12 +399,10 @@ const stopRecording = async () => {
     }
   };
 
-  // Arrêter la lecture
   const stopPlaying = () => {
     try {
       if (!soundRef.current || !isPlaying) return;
 
-      // Arrêter la lecture
       soundRef.current.stop();
       setIsPlaying(false);
       setPlayTime('00:00');
@@ -443,25 +413,9 @@ const stopRecording = async () => {
     }
   };
 
-  // Fonction pour préparer le fichier audio pour l'upload
-  const prepareAudioForUpload = () => {
-    if (!audioPath) return null;
-
-    // Créer un objet FormData pour l'upload
-    const formData = new FormData();
-    formData.append('audio', {
-      uri: Platform.OS === 'ios' ? audioPath.replace('file://', '') : audioPath,
-      type: 'audio/aac',
-      name: audioPath.split('/').pop(),
-    });
-
-    return formData;
-  };
-
-
+  // Fonction corrigée pour l'upload audio
   const uploadAudio = async (audioUri, progressCallback) => {
     try {
-      // Récupérer l'instance axios configurée
       const instance = getAxiosInstance();
       if (!instance) {
         throw new Error('Axios n\'est pas initialisé');
@@ -471,8 +425,7 @@ const stopRecording = async () => {
         throw new Error('URI audio non défini');
       }
       
-      console.log('Type de audioUri:', typeof audioUri);
-      console.log('Valeur de audioUri:', audioUri);
+      console.log('Upload audio - URI:', audioUri);
       
       // Vérifier si le fichier existe
       const fileExists = await RNFS.exists(audioUri);
@@ -482,28 +435,28 @@ const stopRecording = async () => {
         throw new Error('Le fichier audio n\'existe pas');
       }
       
-      let fileName;
-      try {
-        fileName = audioUri.split('/').pop();
-      } catch (error) {
-        fileName = `audio_${Date.now()}.aac`;
-      }
-      
+      // Préparer le FormData correctement
       const formData = new FormData();
+      
+      // Générer un nom de fichier unique
+      const fileName = `audio_${Date.now()}.aac`;
+      
+      // Ajouter le fichier au FormData
       formData.append('audio', {
-        uri: Platform.OS === 'ios' ? `file://${audioUri}` : audioUri,
+        uri: Platform.OS === 'ios' ? audioUri : `file://${audioUri}`,
         type: 'audio/aac',
         name: fileName,
       });
       
-      // Utiliser votre instance axios configurée
+      console.log('FormData préparé pour upload audio');
+      
+      // Effectuer l'upload
       const response = await instance.post(
-        `/api/upload/audio`,  // Notez l'URL relative, car la base est déjà configurée
+        '/api/upload/audio',
         formData,
         {
           headers: {
             'Content-Type': 'multipart/form-data'
-            // Pas besoin d'ajouter Authorization car c'est déjà configuré
           },
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round(
@@ -514,21 +467,24 @@ const stopRecording = async () => {
         }
       );
       
+      console.log('Réponse upload audio:', response.data);
       return response.data;
     } catch (error) {
       console.error('Erreur détaillée lors de l\'upload audio:', error);
+      console.error('Détails de l\'erreur:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw error;
     }
   };
 
   const handleReplyToMessage = useCallback((message) => {
-    // Création d'une référence visuelle à l'animation
     const animateMessage = (messageId) => {
-      // Trouver le message dans la liste
       const messageIndex = messages.findIndex(msg => msg.id === messageId);
       if (messageIndex === -1) return;
 
-      // Créer une animation temporaire dans l'état
       setMessages(prevMessages => {
         const newMessages = [...prevMessages];
         if (newMessages[messageIndex]) {
@@ -540,7 +496,6 @@ const stopRecording = async () => {
         return newMessages;
       });
 
-      // Effacer l'animation après quelques secondes
       setTimeout(() => {
         setMessages(prevMessages => {
           const newMessages = [...prevMessages];
@@ -555,15 +510,10 @@ const stopRecording = async () => {
       }, 500);
     };
 
-    // Animer le message avant de le sélectionner
     animateMessage(message.id);
-
-    // Définir le message à répondre
     setReplyToMessage(message);
 
-    // Mettre le focus sur le champ de texte
     if (inputRef.current) {
-      // Ajouter un court délai pour laisser le temps à l'animation de se faire remarquer
       setTimeout(() => {
         inputRef.current.focus();
       }, 300);
@@ -574,9 +524,7 @@ const stopRecording = async () => {
     setReplyToMessage(null);
   }, []);
 
-
   const inputRef = useRef(null);
-
 
   const handleShare = async () => {
     try {
@@ -585,7 +533,6 @@ const stopRecording = async () => {
         return;
       }
 
-      // Animation du bouton
       setIsSharing(true);
       Animated.sequence([
         Animated.timing(shareButtonScale, {
@@ -600,7 +547,6 @@ const stopRecording = async () => {
         })
       ]).start();
 
-      // Préparer l'objet secret
       const secretToShare = {
         _id: secretData._id || conversation?.secret?._id,
         label: secretData?.label,
@@ -608,58 +554,48 @@ const stopRecording = async () => {
         shareLink: secretData?.shareLink || `hushy://secret/${secretData?._id || conversation?.secret?._id}`
       };
 
-      // Partager le secret
       const result = await handleShareSecret(secretToShare);
 
       if (result && result.action === Share.sharedAction) {
         setShareSuccess(true);
         setTimeout(() => {
           setShareSuccess(false);
-        }, 2000);  // Durée plus courte pour permettre de partager à nouveau rapidement
+        }, 2000);
       }
     } catch (error) {
       console.error("Erreur lors du partage:", error);
       Alert.alert(t('cardHome.errors.title'), t('cardHome.errors.unableToShare'));
     } finally {
-      // Important: Toujours réinitialiser isSharing pour permettre de nouveaux partages
       setTimeout(() => {
         setIsSharing(false);
-      }, 500);  // Petit délai pour éviter les clics accidentels multiples
+      }, 500);
     }
   };
 
   useEffect(() => {
     if (showModalOnMount) {
-      // Trigger confetti when the modal is first mounted
       triggerConfetti(ConfettiPresets.amazing);
-
-      // Optional: You might want to set the modal to visible
       setModalVisible(true);
     }
   }, [showModalOnMount]);
 
-  // État unifié pour les messages non lus
   const [unreadState, setUnreadState] = useState({
     count: 0,
     hasScrolledToBottom: false,
     showButton: false
   });
 
-  // Références
   const flatListRef = useRef(null);
   const isManualScrolling = useRef(false);
   const scrollPosition = useRef(0);
   const scrollSaveTimeout = useRef(null);
   const isRefreshingCountsRef = useRef(false);
 
-
   const prepareImageForUpload = async (imageUri) => {
-    // Définir la taille maximale
     const MAX_WIDTH = 1200;
     const MAX_HEIGHT = 1200;
 
     try {
-      // Redimensionner l'image
       const manipResult = await ImageManipulator.manipulate(
         imageUri,
         [
@@ -676,24 +612,19 @@ const stopRecording = async () => {
       return manipResult.uri;
     } catch (error) {
       console.error(t('chat.errors.resizing'), error);
-      // En cas d'erreur, retourner l'URI originale
       return imageUri;
     }
   };
 
-  // Analyse des données de conversation pour les messages non lus
   useEffect(() => {
     if (!conversation || !userData) return;
 
-    // Récupérer le nombre de messages non lus
     let currentUnreadCount = 0;
     let userIdStr = userData?._id?.toString() || '';
 
-    // Si unreadCount est un nombre, utilisez-le directement
     if (typeof conversation.unreadCount === 'number') {
       currentUnreadCount = conversation.unreadCount;
     }
-    // Sinon, essayez de l'accéder comme un objet/map
     else if (conversation.unreadCount && userData?._id) {
       if (conversation.unreadCount instanceof Map) {
         currentUnreadCount = conversation.unreadCount.get(userIdStr) || 0;
@@ -709,7 +640,6 @@ const stopRecording = async () => {
     }));
   }, [conversation, userData?._id]);
 
-  // Fonction pour sauvegarder la position de défilement dans AsyncStorage
   const saveScrollPosition = async (position) => {
     if (position > 0 && conversationId) {
       try {
@@ -720,7 +650,6 @@ const stopRecording = async () => {
     }
   };
 
-  // Fonction pour charger la position de défilement depuis AsyncStorage
   const loadScrollPosition = async () => {
     if (!conversationId) return 0;
 
@@ -735,7 +664,6 @@ const stopRecording = async () => {
     return 0;
   };
 
-  // Gestionnaire de défilement optimisé
   const handleScrollOptimized = useCallback((event) => {
     if (!event?.nativeEvent) return;
 
@@ -753,13 +681,11 @@ const stopRecording = async () => {
       scrollSaveTimeout.current = setTimeout(() => {
         saveScrollPosition(currentPosition);
 
-        // Calculate if the bottom of the visible area reaches the bottom of the content
         const isBottomReached = (layoutMeasurement.height + currentPosition) >= (contentSize.height - 20);
 
-        // Check if unread messages are visible
         const areUnreadMessagesVisible = (
           unreadState.count > 0 &&
-          layoutMeasurement.height + contentOffset.y >= contentSize.height - (unreadState.count * 50) // Adjust 50 based on average message height
+          layoutMeasurement.height + contentOffset.y >= contentSize.height - (unreadState.count * 50)
         );
 
         if (isBottomReached || areUnreadMessagesVisible) {
@@ -775,7 +701,6 @@ const stopRecording = async () => {
     }
   }, [unreadState.count, conversationId, userToken]);
 
-  // Restaurer la position de défilement
   const restoreScrollPosition = async () => {
     try {
       const position = await loadScrollPosition();
@@ -795,21 +720,18 @@ const stopRecording = async () => {
     }
   };
 
-  // Gestion de la mise en page de la liste
   const onFlatListLayout = useCallback(() => {
     if (messages.length > 0) {
       setTimeout(() => restoreScrollPosition(), 300);
     }
   }, [messages.length]);
 
-  // Navigation - focus/blur events
   useEffect(() => {
     const unsubscribeFocus = navigation.addListener('focus', async () => {
       if (messages.length > 0) {
         setTimeout(() => restoreScrollPosition(), 500);
       }
 
-      // Récupérer les données de conversation à jour
       if (conversationId && conversation?.secret?._id) {
         try {
           const instance = getAxiosInstance();
@@ -846,7 +768,6 @@ const stopRecording = async () => {
     };
   }, [navigation, conversationId, conversation?.secret?._id, messages.length, t]);
 
-  // Nettoyage des timeouts
   useEffect(() => {
     return () => {
       if (scrollSaveTimeout.current) {
@@ -855,7 +776,6 @@ const stopRecording = async () => {
     };
   }, []);
 
-  // Gestion du clavier
   useEffect(() => {
     const keyboardDidShowListener = Platform.OS === 'ios'
       ? RN.Keyboard.addListener('keyboardWillShow', (e) => {
@@ -880,7 +800,7 @@ const stopRecording = async () => {
     };
   }, []);
 
-  // Formatage des messages
+  // Formatage des messages CORRIGÉ
   useEffect(() => {
     if (!conversation?.messages || !userData) return;
   
@@ -906,33 +826,30 @@ const stopRecording = async () => {
       }
   
       const currentMessageDate = new Date(msg.createdAt);
-  
-      // Détecter si le message provient de l'utilisateur actuel
       const isCurrentUser =
         (msg.sender && typeof msg.sender === 'object' ? msg.sender._id : msg.sender) === userData._id;
   
-      // Séparateur de date si nécessaire
       if (!lastMessageDate ||
         currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
         formattedMessages.push({
           id: `separator-${index}`,
           type: 'separator',
           timestamp: msg.createdAt,
-          // Ajoutez la date formatée pour l'affichage
           formattedDate: dateFormatter.formatDateOnly(msg.createdAt)
         });
       }
   
-      // Message avec le nom de l'expéditeur
       const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
   
-      // Création du message formaté avec TOUTES les propriétés importantes
+      // CORRECTION: Ne pas assigner de texte vide pour les images/audio seuls
       const formattedMessage = {
         id: msg._id || `msg-${index}`,
-        text: msg.content,
+        // Correction principale: ne pas assigner de texte vide
+        text: (msg.messageType === 'image' || msg.messageType === 'audio') && !msg.content?.trim() 
+          ? undefined 
+          : msg.content,
         sender: isCurrentUser ? 'user' : 'other',
         timestamp: msg.createdAt,
-        // Ajoutez la date et l'heure formatées pour l'affichage
         formattedTime: dateFormatter.formatTimeOnly(msg.createdAt),
         formattedDate: dateFormatter.formatDate(msg.createdAt),
         messageType: msg.messageType,
@@ -944,7 +861,6 @@ const stopRecording = async () => {
         }
       };
   
-      // AJOUT IMPORTANT: inclure les propriétés audio si le message est de type audio
       if (msg.messageType === 'audio') {
         formattedMessage.audio = msg.audio;
         formattedMessage.audioDuration = msg.audioDuration || '00:00';
@@ -963,7 +879,6 @@ const stopRecording = async () => {
     setMessages(formattedMessages);
   }, [conversation, userData?._id, t]);
 
-  // Calcul du temps restant
   useEffect(() => {
     if (!conversation?.expiresAt) return;
 
@@ -991,7 +906,6 @@ const stopRecording = async () => {
     return () => clearInterval(timer);
   }, [conversation?.expiresAt, t]);
 
-  // Gestion de l'image sélectionnée
   useEffect(() => {
     updateInputAreaHeight(!!selectedImage);
 
@@ -1002,7 +916,6 @@ const stopRecording = async () => {
     }
   }, [selectedImage]);
 
-  // Rafraichissement des compteurs de messages non lus
   useEffect(() => {
     let timer = null;
     if (unreadState.count === 0 && unreadState.hasScrolledToBottom) {
@@ -1015,7 +928,6 @@ const stopRecording = async () => {
     };
   }, [unreadState.count, unreadState.hasScrolledToBottom]);
 
-  // Fonction pour rafraîchir les compteurs de messages non lus de façon contrôlée
   const safeRefreshUnreadCounts = useCallback(() => {
     if (isRefreshingCountsRef.current) return;
 
@@ -1028,273 +940,270 @@ const stopRecording = async () => {
     });
   }, [refreshUnreadCounts]);
 
-  // Mise à jour de la hauteur de la zone d'input
   const updateInputAreaHeight = (imageVisible) => {
     const newHeight = imageVisible ? 280 : 60;
     setInputContainerHeight(newHeight);
   };
 
-  // Envoi de message
-  // Envoi de message
-const sendMessage = async () => {
-  try {
-    if (!conversationId) {
-      throw new Error(t('chat.errors.missingConversationId'));
-    }
+  // Fonction sendMessage CORRIGÉE
+  const sendMessage = async () => {
+    try {
+      if (!conversationId) {
+        throw new Error(t('chat.errors.missingConversationId'));
+      }
 
-    // Vérifier s'il y a du contenu à envoyer
-    if (!message.trim() && !selectedImage && !audioPath) return;
+      if (!message.trim() && !selectedImage && !audioPath) return;
 
-    if (!userData?.name) {
-      throw new Error(t('chat.errors.missingUserInfo'));
-    }
+      if (!userData?.name) {
+        throw new Error(t('chat.errors.missingUserInfo'));
+      }
 
-    // Déterminer le type de message
-    let messageType = 'text';
-    if (audioPath) {
-      messageType = 'audio';
-    } else if (selectedImage && message.trim()) {
-      messageType = 'mixed';
-    } else if (selectedImage) {
-      messageType = 'image';
-    }
+      let messageType = 'text';
+      if (audioPath) {
+        messageType = 'audio';
+      } else if (selectedImage && message.trim()) {
+        messageType = 'mixed';
+      } else if (selectedImage) {
+        messageType = 'image';
+      }
 
-    // Créer un ID temporaire pour afficher immédiatement le message
-    const tempId = `temp-${Date.now()}`;
-    const messageText = message.trim() || "";
+      const tempId = `temp-${Date.now()}`;
+      const messageText = message.trim();
 
-    // Préparer l'objet message pour la modération
-    const messageToCheck = {
-      id: tempId,
-      content: messageText,
-      image: selectedImage ? selectedImage.uri : null,
-      audio: audioPath || null,
-      messageType: messageType,
-      onModerationComplete: (result) => {
-        // Callback à appeler quand une modération en attente (vidéo) est terminée
-        console.log('Modération terminée pour message:', result);
-        
-        // Si le contenu est inapproprié, supprimer le message
-        if (result.status === 'flagged') {
-          setMessages(prev => prev.filter(msg => msg.id !== result.messageId));
+      const messageToCheck = {
+        id: tempId,
+        content: messageText || null,
+        image: selectedImage ? selectedImage.uri : null,
+        audio: audioPath || null,
+        messageType: messageType,
+        onModerationComplete: (result) => {
+          console.log('Modération terminée pour message:', result);
           
-          // Afficher une notification
-          Alert.alert(
-            "Message supprimé",
-            "Votre message a été supprimé car il a été identifié comme contenu inapproprié suite à une analyse complète."
-          );
+          if (result.status === 'flagged') {
+            setMessages(prev => prev.filter(msg => msg.id !== result.messageId));
+            
+            Alert.alert(
+              "Message supprimé",
+              "Votre message a été supprimé car il a été identifié comme contenu inapproprié suite à une analyse complète."
+            );
+          }
         }
-      }
-    };
-
-    // Vérifier le contenu pour modération
-    const moderationResult = await checkMessage(messageToCheck);
-    
-    if (!moderationResult.isValid) {
-      // Le contenu a été bloqué immédiatement
-      console.log('Message bloqué par la modération:', moderationResult.reason);
-      return;
-    }
-
-    // Ajouter immédiatement le message à l'interface avec état "en cours d'envoi"
-    setMessages(prev => [...prev, {
-      id: tempId,
-      text: messageText,
-      messageType: messageType,
-      image: selectedImage ? selectedImage.uri : "",
-      audio: audioPath || "",
-      audioDuration: audioLength || "00:00",
-      sender: 'user',
-      timestamp: new Date().toISOString(),
-      isSending: true,
-      isPendingModeration: moderationResult.status === 'pending',
-      replyToMessage: replyToMessage,
-      senderInfo: {
-        id: userData?._id || "",
-        name: userData?.name || t('chat.defaultUser')
-      }
-    }]);
-
-    // Réinitialiser l'interface immédiatement pour une meilleure réactivité
-    setMessage('');
-    const imageToUpload = selectedImage;
-    const audioToUpload = audioPath;
-    setSelectedImage(null);
-    setAudioPath('');
-    setAudioLength('');
-    setReplyToMessage(null);
-    updateInputAreaHeight(false);
-
-    // Défiler vers le bas
-    requestAnimationFrame(() => {
-      if (flatListRef.current) {
-        flatListRef.current.scrollToEnd({ animated: true });
-      }
-    });
-
-    // Créer l'objet du message pour l'API
-    let messageContent = {
-      content: messageText || " ",
-      senderName: userData.name,
-      messageType: messageType
-    };
-
-    // Ajouter les informations de réponse si nécessaire
-    if (replyToMessage) {
-      messageContent.replyTo = replyToMessage.id;
-      messageContent.replyToSender = replyToMessage.senderInfo?.id;
-
-      // Si vous avez besoin de stocker plus d'informations sur le message répondu
-      messageContent.replyData = {
-        text: replyToMessage.text,
-        sender: replyToMessage.senderInfo?.name || t('chat.defaultUser'),
-        hasImage: !!replyToMessage.image,
-        hasAudio: !!replyToMessage.audio
       };
-    }
 
-    // Si une image est sélectionnée, l'uploader
-    if (imageToUpload) {
-      setIsUploading(true);
-      setUploadProgress(0);
-
-      try {
-        // Utiliser directement la donnée base64
-        let imageData;
-        if (imageToUpload.base64) {
-          // Utiliser directement base64 au lieu de redimensionner
-          imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
-
-          // Uploader l'image
-          const uploadResult = await uploadImage(
-            imageData,
-            (progress) => setUploadProgress(progress)
-          );
-
-          messageContent.image = uploadResult.url;
-        } else {
-          throw new Error(t('chat.errors.unsupportedImageFormat'));
-        }
-      } catch (uploadError) {
-        console.error(t('chat.errors.imageUpload'), uploadError);
-
-        // Marquer le message comme échoué
-        setMessages(prev => prev.map(msg =>
-          msg.id === tempId
-            ? { ...msg, sendFailed: true, isSending: false }
-            : msg
-        ));
-
-        throw new Error(t('chat.errors.imageUploadFailed'));
-      } finally {
-        setIsUploading(false);
-        setUploadProgress(0);
+      const moderationResult = await checkMessage(messageToCheck);
+      
+      if (!moderationResult.isValid) {
+        console.log('Message bloqué par la modération:', moderationResult.reason);
+        return;
       }
-    }
 
-    // Si un audio est sélectionné, l'uploader
-    if (audioPath) {
-      setIsUploading(true);
-      
-      // Vérifiez que audioPath est correctement défini
-      console.log('Audio path avant envoi:', audioPath);
-      
-      if (!audioPath) {
-        throw new Error('Chemin audio non défini');
-      }
-      
-      // Format correct pour l'URI
-      const audioUri = Platform.OS === 'ios' 
-        ? audioPath.replace('file://', '') 
-        : audioPath;
-      
-      console.log('Audio URI formaté:', audioUri);
-      
-      // Upload de l'audio d'abord
-      const audioResult = await uploadAudio(audioUri, setUploadProgress);
-      
-      console.log('Résultat upload audio:', audioResult);
-      
-      // Puis ajout du message avec l'URL audio retournée
-      await handleAddMessage(
-        conversationId, 
-        {
-          messageType: 'audio',
-          audio: audioResult.url,
-          audioDuration: audioResult.duration,
-          content: '',
+      // Ajouter le message temporaire à l'interface
+      setMessages(prev => [...prev, {
+        id: tempId,
+        text: messageText || undefined, // CORRECTION: undefined au lieu d'une chaîne vide
+        messageType: messageType,
+        image: selectedImage ? selectedImage.uri : undefined,
+        audio: audioPath || undefined,
+        audioDuration: audioLength || "00:00",
+        sender: 'user',
+        timestamp: new Date().toISOString(),
+        isSending: true,
+        isPendingModeration: moderationResult.status === 'pending',
+        replyToMessage: replyToMessage,
+        senderInfo: {
+          id: userData?._id || "",
+          name: userData?.name || t('chat.defaultUser')
         }
-      );
-      
-      // Réinitialiser les états
+      }]);
+
+      // Réinitialiser l'interface
+      setMessage('');
+      const imageToUpload = selectedImage;
+      const audioToUpload = audioPath;
+      setSelectedImage(null);
       setAudioPath('');
       setAudioLength('');
-      setIsUploading(false);
-      setUploadProgress(0);
-      
-      // Si un message est aussi entré, l'envoyer séparément
-      if (message.trim()) {
-        await handleAddMessage(conversationId, message);
-        setMessage('');
+      setReplyToMessage(null);
+      updateInputAreaHeight(false);
+
+      requestAnimationFrame(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({ animated: true });
+        }
+      });
+
+      // CORRECTION: Créer l'objet message SANS contenu vide
+      let messageContent = {
+        senderName: userData.name,
+        messageType: messageType
+      };
+
+      // Ajouter le contenu seulement s'il existe vraiment
+      if (messageText && messageText.length > 0) {
+        messageContent.content = messageText;
       }
-      
-      if (replyToMessage) setReplyToMessage(null);
-      return;
-    }
 
-    // Envoyer le message
-    try {
-      const newMessage = await handleAddMessage(conversationId, messageContent);
+      if (replyToMessage) {
+        messageContent.replyTo = replyToMessage.id;
+        messageContent.replyToSender = replyToMessage.senderInfo?.id;
 
-      // Si la modération vidéo est en attente, enregistrer l'ID du message réel
-      if (moderationResult.status === 'pending' && moderationResult.workflowId) {
-        setMessagesAwaitingModeration(prev => ({
-          ...prev,
-          [tempId]: {
-            realId: newMessage._id,
-            workflowId: moderationResult.workflowId
+        messageContent.replyData = {
+          text: replyToMessage.text,
+          sender: replyToMessage.senderInfo?.name || t('chat.defaultUser'),
+          hasImage: !!replyToMessage.image,
+          hasAudio: !!replyToMessage.audio
+        };
+      }
+
+      // Upload d'image
+      if (imageToUpload) {
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+          let imageData;
+          if (imageToUpload.base64) {
+            imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
+
+            const uploadResult = await uploadImage(
+              imageData,
+              (progress) => setUploadProgress(progress)
+            );
+
+            messageContent.image = uploadResult.url;
+          } else {
+            throw new Error(t('chat.errors.unsupportedImageFormat'));
           }
-        }));
+        } catch (uploadError) {
+          console.error(t('chat.errors.imageUpload'), uploadError);
+
+          setMessages(prev => prev.map(msg =>
+            msg.id === tempId
+              ? { ...msg, sendFailed: true, isSending: false }
+              : msg
+          ));
+
+          throw new Error(t('chat.errors.imageUploadFailed'));
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }
       }
 
-      // Remplacer le message temporaire par le message réel
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === tempId
-            ? {
-              ...msg,
-              id: newMessage._id,
-              image: messageContent.image || "",
-              audio: messageContent.audio || "",
-              isSending: false,
-              isPendingModeration: moderationResult.status === 'pending'
+      // Upload d'audio CORRIGÉ
+      if (audioToUpload) {
+        setIsUploading(true);
+        setUploadProgress(0);
+        
+        console.log('Audio path avant envoi:', audioToUpload);
+        
+        if (!audioToUpload) {
+          throw new Error('Chemin audio non défini');
+        }
+        
+        try {
+          const audioResult = await uploadAudio(audioToUpload, setUploadProgress);
+          
+          console.log('Résultat upload audio:', audioResult);
+          
+          // Créer le message audio SANS contenu vide
+          const audioMessageContent = {
+            messageType: 'audio',
+            audio: audioResult.url,
+            audioDuration: audioResult.duration,
+            senderName: userData.name
+            // PAS de content vide pour l'audio
+          };
+          
+          const newMessage = await handleAddMessage(conversationId, audioMessageContent);
+          
+          // Remplacer le message temporaire
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempId
+                ? {
+                  ...msg,
+                  id: newMessage._id,
+                  audio: audioResult.url,
+                  audioDuration: audioResult.duration,
+                  isSending: false,
+                  isPendingModeration: moderationResult.status === 'pending'
+                }
+                : msg
+            )
+          );
+          
+          setIsUploading(false);
+          setUploadProgress(0);
+          
+          // Si un message texte est aussi entré, l'envoyer séparément
+          if (messageText && messageText.length > 0) {
+            await handleAddMessage(conversationId, { content: messageText, senderName: userData.name });
+          }
+          
+          return; // Sortir de la fonction pour l'audio
+        } catch (error) {
+          console.error('Erreur upload audio:', error);
+          setMessages(prev => prev.map(msg =>
+            msg.id === tempId
+              ? { ...msg, sendFailed: true, isSending: false }
+              : msg
+          ));
+          throw error;
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }
+      }
+
+      // Envoyer le message (pour texte et image)
+      try {
+        const newMessage = await handleAddMessage(conversationId, messageContent);
+
+        if (moderationResult.status === 'pending' && moderationResult.workflowId) {
+          setMessagesAwaitingModeration(prev => ({
+            ...prev,
+            [tempId]: {
+              realId: newMessage._id,
+              workflowId: moderationResult.workflowId
             }
-            : msg
-        )
-      );
+          }));
+        }
+
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === tempId
+              ? {
+                ...msg,
+                id: newMessage._id,
+                image: messageContent.image || undefined,
+                isSending: false,
+                isPendingModeration: moderationResult.status === 'pending'
+              }
+              : msg
+          )
+        );
+      } catch (error) {
+        console.error(t('chat.errors.sendMessage'), error);
+
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === tempId
+              ? { ...msg, sendFailed: true, isSending: false }
+              : msg
+          )
+        );
+
+        throw error;
+      }
     } catch (error) {
-      console.error(t('chat.errors.sendMessage'), error);
-
-      // Marquer le message comme échoué
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === tempId
-            ? { ...msg, sendFailed: true, isSending: false }
-            : msg
-        )
+      console.error('Erreur lors de l\'envoi du message:', error);
+      Alert.alert(
+        "Erreur",
+        "Une erreur s'est produite lors de l'envoi du message. Veuillez réessayer."
       );
-
-      throw error;
     }
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi du message:', error);
-    Alert.alert(
-      "Erreur",
-      "Une erreur s'est produite lors de l'envoi du message. Veuillez réessayer."
-    );
-  }
-};
-
+  };
 
   const handleImagePick = async () => {
     try {
@@ -1307,9 +1216,9 @@ const sendMessage = async () => {
 
       const actionSheetOptions = {
         options: [
-          t('chat.documentOptions.takePhoto'),        // Index 0 - Take Photo
-          t('chat.documentOptions.chooseFromGallery'), // Index 1 - Choose from Gallery
-          t('chat.documentOptions.cancel')             // Index 2 - Cancel
+          t('chat.documentOptions.takePhoto'),
+          t('chat.documentOptions.chooseFromGallery'),
+          t('chat.documentOptions.cancel')
         ],
         cancelButtonIndex: 2,
       };
@@ -1322,11 +1231,11 @@ const sendMessage = async () => {
           },
           async (buttonIndex) => {
             switch (buttonIndex) {
-              case 0: // Take Photo
+              case 0:
                 const cameraResult = await launchCamera(options);
                 handleImageResult(cameraResult);
                 break;
-              case 1: // Choose from Gallery
+              case 1:
                 const galleryResult = await launchImageLibrary(options);
                 handleImageResult(galleryResult);
                 break;
@@ -1334,7 +1243,6 @@ const sendMessage = async () => {
           }
         );
       } else {
-        // Android handling
         const result = await launchCamera(options);
         handleImageResult(result);
       }
@@ -1343,7 +1251,6 @@ const sendMessage = async () => {
     }
   };
 
-  // Helper function to handle image selection result
   const handleImageResult = (result) => {
     if (result.assets && result.assets[0]) {
       setSelectedImage(result.assets[0]);
@@ -1357,14 +1264,12 @@ const sendMessage = async () => {
     }
   };
 
-  // Calcul du border radius en fonction de la hauteur
   const calculateBorderRadius = (height) => {
     if (height <= 40) return 18;
     if (height <= 60) return 15;
     return 10;
   };
 
-  // Fonction pour défiler vers les messages non lus
   const scrollToUnreadMessages = useCallback(() => {
     if (flatListRef.current) {
       flatListRef.current.scrollToEnd({ animated: true });
@@ -1381,7 +1286,6 @@ const sendMessage = async () => {
     }
   }, [conversationId, userToken]);
 
-  // Configuration du détecteur de geste pour les timestamps
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -1423,8 +1327,6 @@ const sendMessage = async () => {
   });
 
   const renderMessage = useCallback(({ item, index }) => {
-
-  
     return (
       <MemoizedMessageItem
         key={item.id}
@@ -1523,8 +1425,6 @@ const sendMessage = async () => {
               onLayout={onFlatListLayout}
             />
           </Box>
-
-
 
           {/* Zone d'input avec hauteur fixe */}
           <View
@@ -1694,13 +1594,11 @@ const sendMessage = async () => {
                         backgroundColor: '#FF0000',
                         marginRight: 5
                       }} />
-                    
                     </View>
                   </View>
                 ) : (
-                  // État normal avec ou sans lecteur audio
                   <View style={{ width: '100%', height: '100%', position: 'relative' }}>
-                    {/* Input texte (toujours présent mais parfois invisible) */}
+                    {/* Input texte */}
                     <RN.TextInput
                       ref={inputRef}
                       value={message}
@@ -1717,7 +1615,7 @@ const sendMessage = async () => {
                       }}
                     />
 
-                    {/* Lecteur audio (conditionnel) */}
+                    {/* Lecteur audio */}
                     {!isRecording && audioPath && !message.trim() && (
                       <View style={{
                         position: 'absolute',
@@ -1749,12 +1647,11 @@ const sendMessage = async () => {
                           onPress={() => setAudioPath('')}
                           style={{
                             position: 'absolute',
-                            right: 40, // Positionne le bouton à 40px du bord droit
-                            top: '50%', // Centre verticalement
-                            transform: [{ translateY: -8 }] // Ajustement pour un centrage parfait (moitié de la hauteur de l'icône)
+                            right: 40,
+                            top: '50%',
+                            transform: [{ translateY: -8 }]
                           }}
                         >
-
                           <FontAwesomeIcon
                             icon={faTimes}
                             size={16}
@@ -1860,6 +1757,7 @@ const sendMessage = async () => {
         </TouchableOpacity>
       )}
 
+      {/* Modal participants */}
       <Modal
         isOpen={isParticipantsModalVisible}
         onClose={() => setParticipantsModalVisible(false)}
@@ -2005,7 +1903,6 @@ const sendMessage = async () => {
                 <HStack alignContent='center' alignItems='center' justifyContent='space-between' mt={4}>
                   <Text style={styles.caption}>{secretData?.label}</Text>
 
-
                   {/* Bouton de partage */}
                   <Animated.View style={{ transform: [{ scale: shareButtonScale }] }}>
                     <TouchableOpacity
@@ -2020,8 +1917,8 @@ const sendMessage = async () => {
                         alignItems: 'center',
                         overflow: 'hidden',
                         marginTop: 8,
-                        paddingHorizontal: 20, // Padding horizontal
-                        paddingVertical: 2,   // Padding vertical
+                        paddingHorizontal: 20,
+                        paddingVertical: 2,
                       }}
                     >
                       <LinearGradient
@@ -2037,13 +1934,9 @@ const sendMessage = async () => {
                         }}
                       />
                       <HStack space={3} alignItems="center">
-
-                        <Text color='white' style={
-                          styles.ctalittle
-                        }>
+                        <Text color='white' style={styles.ctalittle}>
                           {shareSuccess ? t('chat.shared') : t('chat.share')}
                         </Text>
-
                         <FontAwesomeIcon
                           icon={shareSuccess ? faCheck : faPaperPlane}
                           size={16}

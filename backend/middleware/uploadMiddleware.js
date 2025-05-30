@@ -1,4 +1,4 @@
-// middleware/uploadMiddleware.js
+// middleware/uploadMiddleware.js - Version corrigée
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadDir);
   },
-  filename: function (req, file, cb) {
+  filename: function (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const extension = file.mimetype.split('/')[1];
     cb(null, `${file.fieldname}-${uniqueSuffix}.${extension}`);
@@ -29,16 +29,12 @@ const uploadMiddleware = multer({
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
-      // Pour les images
       cb(null, true);
     } else if (file.mimetype.startsWith('video/')) {
-      // Pour les vidéos
       cb(null, true);
     } else if (file.mimetype.startsWith('audio/')) {
-      // Pour l'audio
       cb(null, true);
     } else {
-      // Rejeter les autres types
       cb(new Error('Type de fichier non supporté'), false);
     }
   }
@@ -59,16 +55,38 @@ const imageUploadMiddleware = multer({
   }
 });
 
-// Configuration spécifique pour l'audio
+// Configuration spécifique pour l'audio - CORRECTION: Types MIME plus permissifs
 const audioUploadMiddleware = multer({
   storage: storage,
   limits: {
     fileSize: 25 * 1024 * 1024 // 25MB max pour l'audio
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('audio/')) {
+    console.log('🎵 Audio fileFilter - mimetype:', file.mimetype);
+    console.log('🎵 Audio fileFilter - originalname:', file.originalname);
+    
+    // Types MIME acceptés pour l'audio
+    const acceptedAudioTypes = [
+      'audio/aac',
+      'audio/mp4',
+      'audio/mpeg',
+      'audio/mp3',
+      'audio/wav',
+      'audio/x-wav',
+      'audio/webm',
+      'audio/ogg',
+      'application/octet-stream' // Parfois React Native envoie ce type
+    ];
+    
+    // Vérifier le type MIME ou l'extension
+    const isAudioMime = file.mimetype.startsWith('audio/') || acceptedAudioTypes.includes(file.mimetype);
+    const hasAudioExtension = /\.(aac|mp3|wav|mp4|m4a|ogg|webm)$/i.test(file.originalname);
+    
+    if (isAudioMime || hasAudioExtension) {
+      console.log('✅ Fichier audio accepté');
       cb(null, true);
     } else {
+      console.log('❌ Fichier audio rejeté:', file.mimetype);
       cb(new Error('Seuls les fichiers audio sont autorisés'), false);
     }
   }
@@ -91,59 +109,91 @@ const videoUploadMiddleware = multer({
 
 // Middleware pour gérer les images en Base64
 const handleBase64Upload = (req, res, next) => {
-  // Si la requête contient une image en Base64
   if (req.body && req.body.image && typeof req.body.image === 'string' && req.body.image.startsWith('data:image/')) {
-    // On laisse passer, car ce n'est pas traité par multer
     next();
   } else if (req.body && req.body.image) {
-    // Si c'est un autre format d'image, on le traite avec multer
     imageUploadMiddleware.single('image')(req, res, next);
   } else {
-    // Pas d'image, on passe au middleware suivant
     next();
   }
 };
 
-// Middleware pour gérer l'audio en Base64
+// CORRECTION PRINCIPALE: Middleware pour gérer l'audio - Version simplifiée
 const handleBase64AudioUpload = (req, res, next) => {
-  // Si la requête contient un audio en Base64
+  console.log('🎵 handleBase64AudioUpload - début');
+  console.log('Content-Type:', req.headers['content-type']);
+  console.log('Body keys:', Object.keys(req.body || {}));
+  
+  // Si c'est du FormData avec un fichier, utiliser multer directement
+  if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+    console.log('📁 Détecté: FormData - utilisation de multer');
+    return audioUploadMiddleware.single('audio')(req, res, (err) => {
+      if (err) {
+        console.error('❌ Erreur multer audio:', err);
+        return res.status(400).json({
+          message: 'Erreur lors du traitement du fichier audio',
+          error: err.message
+        });
+      }
+      console.log('✅ Multer audio - traitement réussi');
+      next();
+    });
+  }
+  
+  // Si c'est du base64 dans le body
   if (req.body && req.body.audio && typeof req.body.audio === 'string' && req.body.audio.startsWith('data:audio/')) {
-    // On laisse passer, car ce n'est pas traité par multer
+    console.log('📊 Détecté: Audio en base64');
     next();
-  } else if (req.body && req.body.audio) {
-    // Si c'est un autre format d'audio, on le traite avec multer
-    audioUploadMiddleware.single('audio')(req, res, next);
-  } else {
-    // Pas d'audio, on passe au middleware suivant
+  } 
+  // Si pas d'audio du tout
+  else {
+    console.log('⚠️ Pas d\'audio détecté - passage au suivant');
     next();
   }
 };
 
 // Middleware pour gérer les vidéos en Base64
 const handleBase64VideoUpload = (req, res, next) => {
-  // Si la requête contient une vidéo en Base64
   if (req.body && req.body.video && typeof req.body.video === 'string' && req.body.video.startsWith('data:video/')) {
-    // On laisse passer, car ce n'est pas traité par multer
     next();
   } else if (req.body && req.body.video) {
-    // Si c'est un autre format de vidéo, on le traite avec multer
     videoUploadMiddleware.single('video')(req, res, next);
   } else {
-    // Pas de vidéo, on passe au middleware suivant
     next();
   }
 };
 
-// Middleware de gestion d'erreur pour Multer
+// Middleware de gestion d'erreur pour Multer - AMÉLIORÉ
 const handleMulterError = (error, req, res, next) => {
   if (error) {
-    console.error('Multer error:', error);
+    console.error('❌ Multer error:', error);
+    console.error('Error type:', error.constructor.name);
+    
     if (error instanceof multer.MulterError) {
+      let message = 'Erreur lors du téléchargement';
+      
+      switch (error.code) {
+        case 'LIMIT_FILE_SIZE':
+          message = 'Fichier trop volumineux';
+          break;
+        case 'LIMIT_FILE_COUNT':
+          message = 'Trop de fichiers';
+          break;
+        case 'LIMIT_UNEXPECTED_FILE':
+          message = 'Champ de fichier inattendu';
+          break;
+        default:
+          message = error.message;
+      }
+      
       return res.status(400).json({
-        message: 'Erreur lors du téléchargement',
-        error: error.message
+        message,
+        error: error.message,
+        code: error.code
       });
     }
+    
+    // Autres erreurs
     return res.status(500).json({
       message: 'Erreur serveur lors du téléchargement',
       error: error.message
@@ -152,16 +202,39 @@ const handleMulterError = (error, req, res, next) => {
   next();
 };
 
-// Nettoyer les fichiers temporaires après utilisation
+// Nettoyer les fichiers temporaires après utilisation - AMÉLIORÉ
 const cleanupTempFiles = (req, res, next) => {
-  // Si un fichier a été uploadé via multer
   if (req.file && req.file.path) {
+    console.log('🗑️ Programmation suppression fichier temp:', req.file.path);
+    
     // Supprimer le fichier après le traitement de la requête
-    res.on('finish', () => {
+    const originalSend = res.send;
+    const originalJson = res.json;
+    
+    const cleanup = () => {
       fs.unlink(req.file.path, (err) => {
-        if (err) console.error('Erreur lors de la suppression du fichier temporaire:', err);
+        if (err) {
+          console.error('⚠️ Erreur lors de la suppression du fichier temporaire:', err);
+        } else {
+          console.log('✅ Fichier temporaire supprimé:', req.file.path);
+        }
       });
-    });
+    };
+    
+    // Override des méthodes de réponse pour déclencher le nettoyage
+    res.send = function(...args) {
+      cleanup();
+      return originalSend.apply(this, args);
+    };
+    
+    res.json = function(...args) {
+      cleanup();
+      return originalJson.apply(this, args);
+    };
+    
+    // Fallback avec event listener
+    res.on('finish', cleanup);
+    res.on('close', cleanup);
   }
   next();
 };
