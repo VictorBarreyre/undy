@@ -119,13 +119,24 @@ const handleBase64Upload = (req, res, next) => {
 };
 
 // CORRECTION PRINCIPALE: Middleware pour gérer l'audio - Version simplifiée
+// Dans uploadMiddleware.js - Middleware simplifié pour base64
 const handleBase64AudioUpload = (req, res, next) => {
   console.log('🎵 handleBase64AudioUpload - début');
   console.log('Content-Type:', req.headers['content-type']);
   console.log('Body keys:', Object.keys(req.body || {}));
   
-  // Si c'est du FormData avec un fichier, utiliser multer directement
-  if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+  // Si c'est du JSON avec audio base64
+  if (req.headers['content-type']?.includes('application/json') && 
+      req.body && 
+      req.body.audio && 
+      typeof req.body.audio === 'string' && 
+      req.body.audio.startsWith('data:audio/')) {
+    console.log('📊 Détecté: Audio en base64');
+    console.log('📊 Taille du base64:', req.body.audio.length);
+    next();
+  } 
+  // Si c'est du FormData (fallback)
+  else if (req.headers['content-type']?.includes('multipart/form-data')) {
     console.log('📁 Détecté: FormData - utilisation de multer');
     return audioUploadMiddleware.single('audio')(req, res, (err) => {
       if (err) {
@@ -139,18 +150,20 @@ const handleBase64AudioUpload = (req, res, next) => {
       next();
     });
   }
-  
-  // Si c'est du base64 dans le body
-  if (req.body && req.body.audio && typeof req.body.audio === 'string' && req.body.audio.startsWith('data:audio/')) {
-    console.log('📊 Détecté: Audio en base64');
-    next();
-  } 
-  // Si pas d'audio du tout
+  // Pas d'audio
   else {
-    console.log('⚠️ Pas d\'audio détecté - passage au suivant');
-    next();
+    console.log('⚠️ Pas d\'audio détecté');
+    return res.status(400).json({
+      message: 'Aucun fichier audio fourni',
+      details: {
+        contentType: req.headers['content-type'],
+        hasBody: !!req.body,
+        bodyKeys: Object.keys(req.body || {})
+      }
+    });
   }
 };
+
 
 // Middleware pour gérer les vidéos en Base64
 const handleBase64VideoUpload = (req, res, next) => {

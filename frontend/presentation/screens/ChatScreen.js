@@ -63,13 +63,13 @@ const ChatScreen = ({ route }) => {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const soundRef = useRef(null);
 
-  const { 
-    checkText, 
-    checkImage, 
-    submitVideo, 
+  const {
+    checkText,
+    checkImage,
+    submitVideo,
     checkMessage,
-    isChecking, 
-    pendingModeration 
+    isChecking,
+    pendingModeration
   } = useContentModeration({
     showAlerts: true,
     onViolation: (result) => {
@@ -87,7 +87,7 @@ const ChatScreen = ({ route }) => {
       if (!instance) {
         throw new Error('Axios non initialisé');
       }
-      
+
       const response = await instance.get(`/api/secrets/conversations/${conversationId}`);
       return response.data;
     } catch (error) {
@@ -119,7 +119,7 @@ const ChatScreen = ({ route }) => {
 
       console.log('[ChatScreen] 🔄 Chargement des messages nécessaire...');
       setIsLoadingMessages(true);
-      
+
       try {
         console.log('[ChatScreen] 📞 Appel getConversationMessages...');
         const messagesData = await getConversationMessages(conversationId);
@@ -129,12 +129,12 @@ const ChatScreen = ({ route }) => {
         });
 
         let fullConversation = conversation;
-        
+
         if (!fullConversation || !fullConversation.secret) {
           console.log('[ChatScreen] 🔄 Récupération des détails de la conversation...');
           try {
             const instance = getAxiosInstance();
-            
+
             if (instance) {
               const response = await instance.get(`/api/secrets/conversations/${conversationId}`);
               if (response.data) {
@@ -165,7 +165,7 @@ const ChatScreen = ({ route }) => {
         });
 
         console.log('[ChatScreen] ✅ Messages chargés avec succès:', messagesData?.messages?.length || 0);
-        
+
       } catch (error) {
         console.error('[ChatScreen] ❌ Erreur chargement messages:', error);
         Alert.alert(
@@ -333,15 +333,15 @@ const ChatScreen = ({ route }) => {
 
   const stopRecording = async () => {
     if (!isRecording) return;
-    
+
     try {
       const filePath = await AudioRecorder.stopRecording();
       console.log('Enregistrement terminé à:', filePath);
-      
+
       setIsRecording(false);
       setAudioPath(filePath);
       setAudioLength(formatTime(recordingDuration * 1000));
-      
+
     } catch (error) {
       console.error('Erreur lors de l\'arrêt de l\'enregistrement:', error);
       setIsRecording(false);
@@ -413,69 +413,118 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-  // Fonction corrigée pour l'upload audio
+  // Fonction corrigée pour l'upload audio en base64
   const uploadAudio = async (audioUri, progressCallback) => {
     try {
       const instance = getAxiosInstance();
       if (!instance) {
         throw new Error('Axios n\'est pas initialisé');
       }
-      
+
       if (!audioUri) {
         throw new Error('URI audio non défini');
       }
-      
-      console.log('Upload audio - URI:', audioUri);
-      
+
+      console.log('Upload audio base64 - URI:', audioUri);
+
       // Vérifier si le fichier existe
       const fileExists = await RNFS.exists(audioUri);
       console.log('Le fichier audio existe:', fileExists);
-      
+
       if (!fileExists) {
         throw new Error('Le fichier audio n\'existe pas');
       }
-      
-      // Préparer le FormData correctement
-      const formData = new FormData();
-      
-      // Générer un nom de fichier unique
-      const fileName = `audio_${Date.now()}.aac`;
-      
-      // Ajouter le fichier au FormData
-      formData.append('audio', {
-        uri: Platform.OS === 'ios' ? audioUri : `file://${audioUri}`,
-        type: 'audio/aac',
-        name: fileName,
+
+      // Lire les informations du fichier
+      const fileInfo = await RNFS.stat(audioUri);
+      console.log('Informations du fichier:', {
+        size: fileInfo.size,
+        path: fileInfo.path,
+        isFile: fileInfo.isFile()
       });
-      
-      console.log('FormData préparé pour upload audio');
-      
+
+      // Lire le fichier en base64
+      console.log('Lecture du fichier audio en base64...');
+      const base64Audio = await RNFS.readFile(audioUri, 'base64');
+      console.log('Fichier audio converti en base64, longueur:', base64Audio.length);
+
+      // Créer le data URI
+      const audioDataUri = `data:audio/aac;base64,${base64Audio}`;
+
+      // Calculer la taille approximative pour le progress
+      const totalSize = audioDataUri.length;
+      let uploadedSize = 0;
+
+      // Préparer les données à envoyer
+      const requestData = {
+        audio: audioDataUri,
+        duration: audioLength || "00:00" // Inclure la durée si disponible
+      };
+
+      console.log('Envoi de la requête upload audio base64...');
+
       // Effectuer l'upload
-      const response = await instance.post(
-        '/api/upload/audio',
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          onUploadProgress: (progressEvent) => {
+      const response = await instance.post('/api/upload/audio', requestData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
             const percentCompleted = Math.round(
               (progressEvent.loaded * 100) / progressEvent.total
             );
+            console.log(`Upload progress: ${percentCompleted}%`);
             if (progressCallback) progressCallback(percentCompleted);
+          } else {
+            // Estimation du progress si total n'est pas disponible
+            uploadedSize = progressEvent.loaded;
+            const estimatedPercent = Math.min(
+              Math.round((uploadedSize / totalSize) * 100),
+              99
+            );
+            if (progressCallback) progressCallback(estimatedPercent);
           }
-        }
-      );
-      
+        },
+        // Augmenter le timeout pour les gros fichiers
+        timeout: 60000 // 60 secondes
+      });
+
       console.log('Réponse upload audio:', response.data);
+
+      // Nettoyer le fichier temporaire après upload réussi
+      try {
+        await RNFS.unlink(audioUri);
+        console.log('Fichier audio temporaire supprimé');
+      } catch (cleanupError) {
+        console.warn('Impossible de supprimer le fichier temporaire:', cleanupError);
+      }
+
       return response.data;
     } catch (error) {
       console.error('Erreur détaillée lors de l\'upload audio:', error);
-      console.error('Détails de l\'erreur:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+
+      if (error.response) {
+        console.error('Réponse d\'erreur du serveur:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      } else if (error.request) {
+        console.error('Pas de réponse du serveur:', error.request);
+      } else {
+        console.error('Erreur de configuration:', error.message);
+      }
+
+      // Si c'est une erreur de taille, informer l'utilisateur
+      if (error.message.includes('413') || error.response?.status === 413) {
+        Alert.alert(
+          "Fichier trop volumineux",
+          "L'enregistrement audio est trop long. Veuillez essayer avec un enregistrement plus court.",
+          [{ text: "OK" }]
+        );
+      }
+
       throw error;
     }
   };
@@ -803,7 +852,7 @@ const ChatScreen = ({ route }) => {
   // Formatage des messages CORRIGÉ
   useEffect(() => {
     if (!conversation?.messages || !userData) return;
-  
+
     const userMapping = {};
     conversation.participants?.forEach(participant => {
       userMapping[participant._id] = {
@@ -811,24 +860,24 @@ const ChatScreen = ({ route }) => {
         profilePicture: participant.profilePicture
       };
     });
-  
+
     const formattedMessages = [];
     let lastMessageDate = null;
-  
+
     const sortedMessages = [...conversation.messages].sort((a, b) =>
       new Date(a.createdAt) - new Date(b.createdAt)
     );
-  
+
     sortedMessages.forEach((msg, index) => {
       if (!msg.createdAt) {
         console.warn(t('chat.errors.missingCreatedAt'), msg);
         return;
       }
-  
+
       const currentMessageDate = new Date(msg.createdAt);
       const isCurrentUser =
         (msg.sender && typeof msg.sender === 'object' ? msg.sender._id : msg.sender) === userData._id;
-  
+
       if (!lastMessageDate ||
         currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
         formattedMessages.push({
@@ -838,15 +887,15 @@ const ChatScreen = ({ route }) => {
           formattedDate: dateFormatter.formatDateOnly(msg.createdAt)
         });
       }
-  
+
       const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
-  
+
       // CORRECTION: Ne pas assigner de texte vide pour les images/audio seuls
       const formattedMessage = {
         id: msg._id || `msg-${index}`,
         // Correction principale: ne pas assigner de texte vide
-        text: (msg.messageType === 'image' || msg.messageType === 'audio') && !msg.content?.trim() 
-          ? undefined 
+        text: (msg.messageType === 'image' || msg.messageType === 'audio') && !msg.content?.trim()
+          ? undefined
           : msg.content,
         sender: isCurrentUser ? 'user' : 'other',
         timestamp: msg.createdAt,
@@ -860,22 +909,22 @@ const ChatScreen = ({ route }) => {
           profilePicture: userMapping[messageSenderId]?.profilePicture || null
         }
       };
-  
+
       if (msg.messageType === 'audio') {
         formattedMessage.audio = msg.audio;
         formattedMessage.audioDuration = msg.audioDuration || '00:00';
-        
+
         console.log("Message audio formaté:", {
           id: formattedMessage.id,
           audio: formattedMessage.audio,
           audioDuration: formattedMessage.audioDuration
         });
       }
-  
+
       formattedMessages.push(formattedMessage);
       lastMessageDate = currentMessageDate;
     });
-  
+
     setMessages(formattedMessages);
   }, [conversation, userData?._id, t]);
 
@@ -978,10 +1027,10 @@ const ChatScreen = ({ route }) => {
         messageType: messageType,
         onModerationComplete: (result) => {
           console.log('Modération terminée pour message:', result);
-          
+
           if (result.status === 'flagged') {
             setMessages(prev => prev.filter(msg => msg.id !== result.messageId));
-            
+
             Alert.alert(
               "Message supprimé",
               "Votre message a été supprimé car il a été identifié comme contenu inapproprié suite à une analyse complète."
@@ -991,7 +1040,7 @@ const ChatScreen = ({ route }) => {
       };
 
       const moderationResult = await checkMessage(messageToCheck);
-      
+
       if (!moderationResult.isValid) {
         console.log('Message bloqué par la modération:', moderationResult.reason);
         return;
@@ -1094,29 +1143,31 @@ const ChatScreen = ({ route }) => {
       if (audioToUpload) {
         setIsUploading(true);
         setUploadProgress(0);
-        
-        console.log('Audio path avant envoi:', audioToUpload);
-        
-        if (!audioToUpload) {
-          throw new Error('Chemin audio non défini');
-        }
-        
+
         try {
-          const audioResult = await uploadAudio(audioToUpload, setUploadProgress);
-          
-          console.log('Résultat upload audio:', audioResult);
-          
-          // Créer le message audio SANS contenu vide
+          console.log('🎤 Début upload audio...');
+          const audioResult = await uploadAudio(audioToUpload, (progress) => {
+            setUploadProgress(progress);
+            console.log('Progress:', progress + '%');
+          });
+
+          console.log('✅ Upload audio réussi:', audioResult);
+
+          // Créer le message audio
           const audioMessageContent = {
             messageType: 'audio',
             audio: audioResult.url,
-            audioDuration: audioResult.duration,
+            audioDuration: audioResult.duration || audioLength || "00:00",
             senderName: userData.name
-            // PAS de content vide pour l'audio
           };
-          
+
+          // Si un message texte accompagne l'audio
+          if (messageText && messageText.length > 0) {
+            audioMessageContent.content = messageText;
+          }
+
           const newMessage = await handleAddMessage(conversationId, audioMessageContent);
-          
+
           // Remplacer le message temporaire
           setMessages(prev =>
             prev.map(msg =>
@@ -1125,35 +1176,41 @@ const ChatScreen = ({ route }) => {
                   ...msg,
                   id: newMessage._id,
                   audio: audioResult.url,
-                  audioDuration: audioResult.duration,
+                  audioDuration: audioResult.duration || audioLength,
                   isSending: false,
-                  isPendingModeration: moderationResult.status === 'pending'
+                  isPendingModeration: false
                 }
                 : msg
             )
           );
-          
-          setIsUploading(false);
-          setUploadProgress(0);
-          
-          // Si un message texte est aussi entré, l'envoyer séparément
-          if (messageText && messageText.length > 0) {
-            await handleAddMessage(conversationId, { content: messageText, senderName: userData.name });
-          }
-          
-          return; // Sortir de la fonction pour l'audio
+
         } catch (error) {
-          console.error('Erreur upload audio:', error);
+          console.error('❌ Erreur upload audio:', error);
+
+          // Message d'erreur plus précis
+          let errorMessage = "Impossible d'envoyer le message audio.";
+          if (error.message.includes('trop volumineux')) {
+            errorMessage = "L'enregistrement est trop long. Essayez un message plus court.";
+          } else if (error.message.includes('network')) {
+            errorMessage = "Problème de connexion. Vérifiez votre réseau.";
+          }
+
+          Alert.alert("Erreur", errorMessage);
+
+          // Marquer le message comme échoué
           setMessages(prev => prev.map(msg =>
             msg.id === tempId
               ? { ...msg, sendFailed: true, isSending: false }
               : msg
           ));
+
           throw error;
         } finally {
           setIsUploading(false);
           setUploadProgress(0);
         }
+
+        return; // Sortir après l'upload audio
       }
 
       // Envoyer le message (pour texte et image)

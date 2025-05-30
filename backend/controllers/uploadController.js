@@ -90,72 +90,98 @@ const formatTime = (seconds) => {
  * @param {Object} req - Requête Express
  * @param {Object} res - Réponse Express
  */
+// Dans uploadController.js - Support amélioré du base64
 exports.uploadAudio = async (req, res) => {
   try {
     console.log('🎵 Upload d\'audio - AUCUNE modération');
     
-    // Extraction de l'audio (fichier ou base64)
+    // Extraction de l'audio
     let audioData;
     let audioPath;
+    let audioDuration = "00:00";
     
-    if (req.file) {
+    // Priorité au base64
+    if (req.body && req.body.audio && typeof req.body.audio === 'string' && req.body.audio.startsWith('data:audio/')) {
+      // Audio en Base64
+      audioData = req.body.audio;
+      audioDuration = req.body.duration || "00:00";
+      console.log('📊 Audio base64 détecté, taille:', audioData.length);
+      console.log('📊 Durée fournie:', audioDuration);
+    } else if (req.file) {
       // Audio uploadé via multer
       audioPath = req.file.path;
       audioData = req.file;
-    } else if (req.body && req.body.audio && typeof req.body.audio === 'string' && req.body.audio.startsWith('data:audio/')) {
-      // Audio en Base64
-      audioData = req.body.audio;
+      console.log('📁 Fichier audio détecté:', audioPath);
     } else {
-      return res.status(400).json({ message: 'Aucun fichier audio fourni' });
+      return res.status(400).json({ 
+        message: 'Aucun fichier audio fourni',
+        details: {
+          hasBody: !!req.body,
+          bodyKeys: Object.keys(req.body || {}),
+          hasFile: !!req.file
+        }
+      });
     }
     
-    // Upload DIRECT vers Cloudinary - AUCUNE modération
+    // Upload vers Cloudinary
     let uploadResult;
     
-    if (audioPath) {
-      // Upload depuis le fichier
-      uploadResult = await cloudinary.uploader.upload(audioPath, {
-        folder: 'chat_audio',
-        resource_type: 'auto',
-        tags: ['audio', 'hushy', 'unmoderated']
-      });
-    } else {
-      // Upload depuis base64
-      uploadResult = await cloudinary.uploader.upload(audioData, {
-        folder: 'chat_audio',
-        resource_type: 'auto',
-        tags: ['audio', 'hushy', 'unmoderated']
-      });
+    try {
+      if (audioPath) {
+        // Upload depuis le fichier
+        console.log('📤 Upload depuis fichier...');
+        uploadResult = await cloudinary.uploader.upload(audioPath, {
+          folder: 'chat_audio',
+          resource_type: 'auto',
+          tags: ['audio', 'hushy', 'unmoderated']
+        });
+      } else {
+        // Upload depuis base64
+        console.log('📤 Upload depuis base64...');
+        uploadResult = await cloudinary.uploader.upload(audioData, {
+          folder: 'chat_audio',
+          resource_type: 'auto',
+          tags: ['audio', 'hushy', 'unmoderated', 'base64']
+        });
+      }
+    } catch (cloudinaryError) {
+      console.error('❌ Erreur Cloudinary:', cloudinaryError);
+      throw new Error(`Erreur upload Cloudinary: ${cloudinaryError.message}`);
     }
     
-    // Nettoyer le fichier temporaire
+    // Nettoyer le fichier temporaire si nécessaire
     if (audioPath) {
-      await unlinkAsync(audioPath).catch(err => console.error('Erreur suppression fichier temporaire:', err));
+      await unlinkAsync(audioPath).catch(err => 
+        console.error('Erreur suppression fichier temporaire:', err)
+      );
     }
     
-    // Formater la durée si disponible
-    const duration = uploadResult.duration || 0;
-    const formattedDuration = formatTime(duration);
+    // Utiliser la durée fournie ou celle de Cloudinary
+    const finalDuration = audioDuration !== "00:00" 
+      ? audioDuration 
+      : formatTime(uploadResult.duration || 0);
     
     console.log('✅ Audio uploadé sans modération:', uploadResult.secure_url);
+    console.log('✅ Durée finale:', finalDuration);
     
     // Retourner le résultat
     res.status(200).json({
       url: uploadResult.secure_url,
       public_id: uploadResult.public_id,
-      duration: formattedDuration,
+      duration: finalDuration,
       format: uploadResult.format,
-      message: 'Audio téléchargé sans modération'
+      size: uploadResult.bytes,
+      message: 'Audio téléchargé avec succès'
     });
   } catch (error) {
-    console.error('Erreur lors du téléchargement de l\'audio:', error);
+    console.error('❌ Erreur lors du téléchargement de l\'audio:', error);
     res.status(500).json({ 
       message: 'Erreur serveur lors de l\'upload audio', 
-      error: error.message 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
-
 /**
  * Upload un fichier vidéo SANS AUCUNE modération
  * @param {Object} req - Requête Express
