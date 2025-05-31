@@ -23,7 +23,8 @@ const {
     handleStripeReturn,
     verifyIdentity,
     updateBankAccount,
-    getConversationMessages
+    getConversationMessages,
+    getConversation
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
