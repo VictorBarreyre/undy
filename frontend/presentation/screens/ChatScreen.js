@@ -25,16 +25,24 @@ import RNFS from 'react-native-fs';
 import { AudioRecorder, AudioUtils } from 'react-native-audio';
 import Sound from 'react-native-sound';
 import useContentModeration from '../../infrastructure/hook/useContentModeration';
+import TypewriterSpinner from '../components/TypewriterSpinner';
 
 const ChatScreen = ({ route }) => {
+  // ====== 1. TOUS LES HOOKS D'ABORD ======
   const { t } = useTranslation();
   const dateFormatter = useDateFormatter();
+  const navigation = useNavigation();
+  
+  // Props from navigation
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
-  const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([]);
+  
+  // Context hooks
   const { handleAddMessage, markConversationAsRead, uploadImage, refreshUnreadCounts, handleShareSecret, triggerConfetti } = useCardData();
   const { userData, userToken } = useContext(AuthContext);
-  const navigation = useNavigation();
+  
+  // State hooks
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([]);
   const [showTimestamps, setShowTimestamps] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   const [isModalVisible, setModalVisible] = useState(showModalOnMount || false);
@@ -51,18 +59,31 @@ const ChatScreen = ({ route }) => {
   const [playTime, setPlayTime] = useState('00:00');
   const [audioPath, setAudioPath] = useState('');
   const [audioLength, setAudioLength] = useState('');
-
   const [isSharing, setIsSharing] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
-  const shareButtonScale = useRef(new Animated.Value(1)).current;
   const [isParticipantsModalVisible, setParticipantsModalVisible] = useState(false);
-
   const [replyToMessage, setReplyToMessage] = useState(null);
-
   const [isRecordingPermitted, setIsRecordingPermitted] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [messagesAwaitingModeration, setMessagesAwaitingModeration] = useState({});
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [unreadState, setUnreadState] = useState({
+    count: 0,
+    hasScrolledToBottom: false,
+    showButton: false
+  });
+  
+  // Ref hooks
+  const shareButtonScale = useRef(new Animated.Value(1)).current;
   const soundRef = useRef(null);
-
+  const flatListRef = useRef(null);
+  const isManualScrolling = useRef(false);
+  const scrollPosition = useRef(0);
+  const scrollSaveTimeout = useRef(null);
+  const isRefreshingCountsRef = useRef(false);
+  const inputRef = useRef(null);
+  
+  // Custom hooks
   const {
     checkText,
     checkImage,
@@ -77,10 +98,8 @@ const ChatScreen = ({ route }) => {
     }
   });
 
-  const [messagesAwaitingModeration, setMessagesAwaitingModeration] = useState({});
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-
-  // Fonction pour récupérer les messages de conversation
+  // ====== 2. TOUTES LES FONCTIONS ======
+  
   const getConversationMessages = async (conversationId) => {
     try {
       const instance = getAxiosInstance();
@@ -88,167 +107,13 @@ const ChatScreen = ({ route }) => {
         throw new Error('Axios non initialisé');
       }
 
-      const response = await instance.get(`/api/secrets/conversations/${conversationId}`);
+      const response = await instance.get(`/api/secrets/conversations/${conversationId}/messages`);
       return response.data;
     } catch (error) {
       console.error('Erreur récupération messages:', error);
       throw error;
     }
   };
-
-  useEffect(() => {
-    const loadMessagesIfNeeded = async () => {
-      console.log('[ChatScreen] 🔍 Vérification du chargement des messages...');
-      console.log('[ChatScreen] 📊 État actuel:', {
-        hasConversationId: !!conversationId,
-        hasConversation: !!conversation,
-        hasMessages: !!conversation?.messages,
-        messageCount: conversation?.messages?.length || 0,
-        conversationFromParams: !!route.params?.conversation
-      });
-
-      if (!conversationId) {
-        console.error('[ChatScreen] ❌ Pas de conversationId fourni');
-        return;
-      }
-
-      if (conversation?.messages && conversation.messages.length > 0) {
-        console.log('[ChatScreen] ✅ Messages déjà présents:', conversation.messages.length);
-        return;
-      }
-
-      console.log('[ChatScreen] 🔄 Chargement des messages nécessaire...');
-      setIsLoadingMessages(true);
-
-      try {
-        console.log('[ChatScreen] 📞 Appel getConversationMessages...');
-        const messagesData = await getConversationMessages(conversationId);
-        console.log('[ChatScreen] 📦 Messages récupérés:', {
-          count: messagesData?.messages?.length || 0,
-          conversationId: messagesData?.conversationId
-        });
-
-        let fullConversation = conversation;
-
-        if (!fullConversation || !fullConversation.secret) {
-          console.log('[ChatScreen] 🔄 Récupération des détails de la conversation...');
-          try {
-            const instance = getAxiosInstance();
-
-            if (instance) {
-              const response = await instance.get(`/api/secrets/conversations/${conversationId}`);
-              if (response.data) {
-                fullConversation = response.data;
-                console.log('[ChatScreen] ✅ Conversation complète récupérée');
-              }
-            }
-          } catch (error) {
-            console.error('[ChatScreen] ⚠️ Erreur récupération conversation complète:', error);
-          }
-        }
-
-        const updatedConversation = {
-          ...fullConversation,
-          messages: messagesData?.messages || []
-        };
-
-        console.log('[ChatScreen] 📋 Mise à jour des paramètres de navigation...');
-        navigation.setParams({
-          conversation: updatedConversation,
-          secretData: secretData || (fullConversation?.secret ? {
-            _id: fullConversation.secret._id,
-            content: fullConversation.secret.content,
-            label: fullConversation.secret.label,
-            user: fullConversation.secret.user || fullConversation.secret.createdBy,
-            shareLink: fullConversation.secret.shareLink
-          } : null)
-        });
-
-        console.log('[ChatScreen] ✅ Messages chargés avec succès:', messagesData?.messages?.length || 0);
-
-      } catch (error) {
-        console.error('[ChatScreen] ❌ Erreur chargement messages:', error);
-        Alert.alert(
-          "Erreur",
-          "Impossible de charger les messages de cette conversation. Veuillez réessayer.",
-          [
-            { text: "Retour", onPress: () => navigation.goBack() },
-            { text: "Réessayer", onPress: () => loadMessagesIfNeeded() }
-          ]
-        );
-      } finally {
-        setIsLoadingMessages(false);
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      loadMessagesIfNeeded();
-    }, 100);
-
-    return () => clearTimeout(timeoutId);
-  }, [conversationId, conversation?.messages?.length, navigation]);
-
-  useEffect(() => {
-    console.log('[ChatScreen] 🔄 Paramètres de navigation mis à jour');
-    console.log('[ChatScreen] 📊 Nouvelles données:', {
-      conversationId: route.params?.conversationId,
-      hasConversation: !!route.params?.conversation,
-      hasSecretData: !!route.params?.secretData,
-      messageCount: route.params?.conversation?.messages?.length || 0
-    });
-  }, [route.params]);
-
-  if (isLoadingMessages) {
-    return (
-      <Background>
-        <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ alignItems: 'center' }}>
-            <ActivityIndicator size="large" color="#FF587E" />
-            <Text style={{ marginTop: 20, textAlign: 'center', paddingHorizontal: 20 }}>
-              Chargement des messages...
-            </Text>
-            <Text style={{ marginTop: 10, fontSize: 12, color: '#888', textAlign: 'center' }}>
-              Conversation ID: {conversationId}
-            </Text>
-          </View>
-        </SafeAreaView>
-      </Background>
-    );
-  }
-
-  useEffect(() => {
-    setTimeout(() => {
-      if (Platform.OS === 'ios') {
-        try {
-          AudioRecorder.requestAuthorization().then((isAuthorized) => {
-            console.log('Autorisation audio:', isAuthorized);
-            setIsRecordingPermitted(isAuthorized);
-          });
-        } catch (error) {
-          console.error('Erreur lors de l\'initialisation de l\'AudioRecorder:', error);
-        }
-      }
-    }, 500);
-
-    Sound.setCategory('Playback', true);
-
-    if (Platform.OS === 'ios') {
-      AudioRecorder.requestAuthorization().then((isAuthorized) => {
-        setIsRecordingPermitted(isAuthorized);
-      });
-    }
-
-    return () => {
-      if (isRecording) {
-        AudioRecorder.stopRecording();
-      }
-
-      if (isPlaying && soundRef.current) {
-        soundRef.current.stop();
-        soundRef.current.release();
-      }
-    };
-  }, []);
 
   const checkPermission = async () => {
     if (Platform.OS === 'android') {
@@ -413,7 +278,6 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-  // Fonction corrigée pour l'upload audio en base64
   const uploadAudio = async (audioUri, progressCallback) => {
     try {
       const instance = getAxiosInstance();
@@ -427,7 +291,6 @@ const ChatScreen = ({ route }) => {
 
       console.log('Upload audio base64 - URI:', audioUri);
 
-      // Vérifier si le fichier existe
       const fileExists = await RNFS.exists(audioUri);
       console.log('Le fichier audio existe:', fileExists);
 
@@ -435,7 +298,6 @@ const ChatScreen = ({ route }) => {
         throw new Error('Le fichier audio n\'existe pas');
       }
 
-      // Lire les informations du fichier
       const fileInfo = await RNFS.stat(audioUri);
       console.log('Informations du fichier:', {
         size: fileInfo.size,
@@ -443,27 +305,22 @@ const ChatScreen = ({ route }) => {
         isFile: fileInfo.isFile()
       });
 
-      // Lire le fichier en base64
       console.log('Lecture du fichier audio en base64...');
       const base64Audio = await RNFS.readFile(audioUri, 'base64');
       console.log('Fichier audio converti en base64, longueur:', base64Audio.length);
 
-      // Créer le data URI
       const audioDataUri = `data:audio/aac;base64,${base64Audio}`;
 
-      // Calculer la taille approximative pour le progress
       const totalSize = audioDataUri.length;
       let uploadedSize = 0;
 
-      // Préparer les données à envoyer
       const requestData = {
         audio: audioDataUri,
-        duration: audioLength || "00:00" // Inclure la durée si disponible
+        duration: audioLength || "00:00"
       };
 
       console.log('Envoi de la requête upload audio base64...');
 
-      // Effectuer l'upload
       const response = await instance.post('/api/upload/audio', requestData, {
         headers: {
           'Content-Type': 'application/json',
@@ -477,7 +334,6 @@ const ChatScreen = ({ route }) => {
             console.log(`Upload progress: ${percentCompleted}%`);
             if (progressCallback) progressCallback(percentCompleted);
           } else {
-            // Estimation du progress si total n'est pas disponible
             uploadedSize = progressEvent.loaded;
             const estimatedPercent = Math.min(
               Math.round((uploadedSize / totalSize) * 100),
@@ -486,13 +342,11 @@ const ChatScreen = ({ route }) => {
             if (progressCallback) progressCallback(estimatedPercent);
           }
         },
-        // Augmenter le timeout pour les gros fichiers
-        timeout: 60000 // 60 secondes
+        timeout: 60000
       });
 
       console.log('Réponse upload audio:', response.data);
 
-      // Nettoyer le fichier temporaire après upload réussi
       try {
         await RNFS.unlink(audioUri);
         console.log('Fichier audio temporaire supprimé');
@@ -516,7 +370,6 @@ const ChatScreen = ({ route }) => {
         console.error('Erreur de configuration:', error.message);
       }
 
-      // Si c'est une erreur de taille, informer l'utilisateur
       if (error.message.includes('413') || error.response?.status === 413) {
         Alert.alert(
           "Fichier trop volumineux",
@@ -573,8 +426,6 @@ const ChatScreen = ({ route }) => {
     setReplyToMessage(null);
   }, []);
 
-  const inputRef = useRef(null);
-
   const handleShare = async () => {
     try {
       if (!secretData) {
@@ -621,25 +472,6 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-  useEffect(() => {
-    if (showModalOnMount) {
-      triggerConfetti(ConfettiPresets.amazing);
-      setModalVisible(true);
-    }
-  }, [showModalOnMount]);
-
-  const [unreadState, setUnreadState] = useState({
-    count: 0,
-    hasScrolledToBottom: false,
-    showButton: false
-  });
-
-  const flatListRef = useRef(null);
-  const isManualScrolling = useRef(false);
-  const scrollPosition = useRef(0);
-  const scrollSaveTimeout = useRef(null);
-  const isRefreshingCountsRef = useRef(false);
-
   const prepareImageForUpload = async (imageUri) => {
     const MAX_WIDTH = 1200;
     const MAX_HEIGHT = 1200;
@@ -664,30 +496,6 @@ const ChatScreen = ({ route }) => {
       return imageUri;
     }
   };
-
-  useEffect(() => {
-    if (!conversation || !userData) return;
-
-    let currentUnreadCount = 0;
-    let userIdStr = userData?._id?.toString() || '';
-
-    if (typeof conversation.unreadCount === 'number') {
-      currentUnreadCount = conversation.unreadCount;
-    }
-    else if (conversation.unreadCount && userData?._id) {
-      if (conversation.unreadCount instanceof Map) {
-        currentUnreadCount = conversation.unreadCount.get(userIdStr) || 0;
-      } else if (typeof conversation.unreadCount === 'object') {
-        currentUnreadCount = conversation.unreadCount[userIdStr] || 0;
-      }
-    }
-
-    setUnreadState(prev => ({
-      count: currentUnreadCount,
-      hasScrolledToBottom: currentUnreadCount === 0,
-      showButton: currentUnreadCount > 0
-    }));
-  }, [conversation, userData?._id]);
 
   const saveScrollPosition = async (position) => {
     if (position > 0 && conversationId) {
@@ -775,208 +583,6 @@ const ChatScreen = ({ route }) => {
     }
   }, [messages.length]);
 
-  useEffect(() => {
-    const unsubscribeFocus = navigation.addListener('focus', async () => {
-      if (messages.length > 0) {
-        setTimeout(() => restoreScrollPosition(), 500);
-      }
-
-      if (conversationId && conversation?.secret?._id) {
-        try {
-          const instance = getAxiosInstance();
-          if (!instance) return;
-
-          const response = await instance.get(`/api/secrets/conversations/secret/${conversation.secret._id}`);
-
-          if (response.data) {
-            const updatedConversation = {
-              ...response.data,
-              unreadCount: response.data.unreadCount || (conversation && conversation.unreadCount) || 0
-            };
-
-            navigation.setParams({
-              conversation: updatedConversation,
-              doNotMarkAsRead: true
-            });
-          }
-        } catch (error) {
-          console.error(t('chat.errors.reloadConversation'), error);
-        }
-      }
-    });
-
-    const unsubscribeBlur = navigation.addListener('blur', () => {
-      if (scrollPosition.current > 0) {
-        saveScrollPosition(scrollPosition.current);
-      }
-    });
-
-    return () => {
-      unsubscribeFocus();
-      unsubscribeBlur();
-    };
-  }, [navigation, conversationId, conversation?.secret?._id, messages.length, t]);
-
-  useEffect(() => {
-    return () => {
-      if (scrollSaveTimeout.current) {
-        clearTimeout(scrollSaveTimeout.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const keyboardDidShowListener = Platform.OS === 'ios'
-      ? RN.Keyboard.addListener('keyboardWillShow', (e) => {
-        const offset = e.endCoordinates.height;
-        setKeyboardOffset(offset);
-      })
-      : null;
-
-    const keyboardDidHideListener = Platform.OS === 'ios'
-      ? RN.Keyboard.addListener('keyboardWillHide', () => {
-        setKeyboardOffset(95);
-      })
-      : null;
-
-    return () => {
-      if (keyboardDidShowListener) {
-        keyboardDidShowListener.remove();
-      }
-      if (keyboardDidHideListener) {
-        keyboardDidHideListener.remove();
-      }
-    };
-  }, []);
-
-  // Formatage des messages CORRIGÉ
-  useEffect(() => {
-    if (!conversation?.messages || !userData) return;
-
-    const userMapping = {};
-    conversation.participants?.forEach(participant => {
-      userMapping[participant._id] = {
-        name: participant.name,
-        profilePicture: participant.profilePicture
-      };
-    });
-
-    const formattedMessages = [];
-    let lastMessageDate = null;
-
-    const sortedMessages = [...conversation.messages].sort((a, b) =>
-      new Date(a.createdAt) - new Date(b.createdAt)
-    );
-
-    sortedMessages.forEach((msg, index) => {
-      if (!msg.createdAt) {
-        console.warn(t('chat.errors.missingCreatedAt'), msg);
-        return;
-      }
-
-      const currentMessageDate = new Date(msg.createdAt);
-      const isCurrentUser =
-        (msg.sender && typeof msg.sender === 'object' ? msg.sender._id : msg.sender) === userData._id;
-
-      if (!lastMessageDate ||
-        currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
-        formattedMessages.push({
-          id: `separator-${index}`,
-          type: 'separator',
-          timestamp: msg.createdAt,
-          formattedDate: dateFormatter.formatDateOnly(msg.createdAt)
-        });
-      }
-
-      const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
-
-      // CORRECTION: Ne pas assigner de texte vide pour les images/audio seuls
-      const formattedMessage = {
-        id: msg._id || `msg-${index}`,
-        // Correction principale: ne pas assigner de texte vide
-        text: (msg.messageType === 'image' || msg.messageType === 'audio') && !msg.content?.trim()
-          ? undefined
-          : msg.content,
-        sender: isCurrentUser ? 'user' : 'other',
-        timestamp: msg.createdAt,
-        formattedTime: dateFormatter.formatTimeOnly(msg.createdAt),
-        formattedDate: dateFormatter.formatDate(msg.createdAt),
-        messageType: msg.messageType,
-        image: msg.image,
-        senderInfo: {
-          id: messageSenderId,
-          name: userMapping[messageSenderId]?.name || msg.senderName || t('chat.defaultUser'),
-          profilePicture: userMapping[messageSenderId]?.profilePicture || null
-        }
-      };
-
-      if (msg.messageType === 'audio') {
-        formattedMessage.audio = msg.audio;
-        formattedMessage.audioDuration = msg.audioDuration || '00:00';
-
-        console.log("Message audio formaté:", {
-          id: formattedMessage.id,
-          audio: formattedMessage.audio,
-          audioDuration: formattedMessage.audioDuration
-        });
-      }
-
-      formattedMessages.push(formattedMessage);
-      lastMessageDate = currentMessageDate;
-    });
-
-    setMessages(formattedMessages);
-  }, [conversation, userData?._id, t]);
-
-  useEffect(() => {
-    if (!conversation?.expiresAt) return;
-
-    const calculateTimeLeft = () => {
-      const expirationDate = new Date(conversation.expiresAt);
-      const now = new Date();
-      const difference = expirationDate - now;
-
-      if (difference <= 0) {
-        return t('chat.expired');
-      }
-
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((difference / 1000 / 60) % 60);
-
-      return t('chat.timeLeft', { days, hours, minutes });
-    };
-
-    setTimeLeft(dateFormatter.formatTimeLeft(conversation.expiresAt));
-    const timer = setInterval(() => {
-      setTimeLeft(dateFormatter.formatTimeLeft(conversation.expiresAt));
-    }, 60000);
-
-    return () => clearInterval(timer);
-  }, [conversation?.expiresAt, t]);
-
-  useEffect(() => {
-    updateInputAreaHeight(!!selectedImage);
-
-    if (selectedImage && flatListRef.current) {
-      requestAnimationFrame(() => {
-        flatListRef.current.scrollToEnd({ animated: true });
-      });
-    }
-  }, [selectedImage]);
-
-  useEffect(() => {
-    let timer = null;
-    if (unreadState.count === 0 && unreadState.hasScrolledToBottom) {
-      timer = setTimeout(() => {
-        safeRefreshUnreadCounts();
-      }, 1000);
-    }
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [unreadState.count, unreadState.hasScrolledToBottom]);
-
   const safeRefreshUnreadCounts = useCallback(() => {
     if (isRefreshingCountsRef.current) return;
 
@@ -994,7 +600,6 @@ const ChatScreen = ({ route }) => {
     setInputContainerHeight(newHeight);
   };
 
-  // Fonction sendMessage CORRIGÉE
   const sendMessage = async () => {
     try {
       if (!conversationId) {
@@ -1046,10 +651,9 @@ const ChatScreen = ({ route }) => {
         return;
       }
 
-      // Ajouter le message temporaire à l'interface
       setMessages(prev => [...prev, {
         id: tempId,
-        text: messageText || undefined, // CORRECTION: undefined au lieu d'une chaîne vide
+        text: messageText || undefined,
         messageType: messageType,
         image: selectedImage ? selectedImage.uri : undefined,
         audio: audioPath || undefined,
@@ -1065,7 +669,6 @@ const ChatScreen = ({ route }) => {
         }
       }]);
 
-      // Réinitialiser l'interface
       setMessage('');
       const imageToUpload = selectedImage;
       const audioToUpload = audioPath;
@@ -1081,13 +684,11 @@ const ChatScreen = ({ route }) => {
         }
       });
 
-      // CORRECTION: Créer l'objet message SANS contenu vide
       let messageContent = {
         senderName: userData.name,
         messageType: messageType
       };
 
-      // Ajouter le contenu seulement s'il existe vraiment
       if (messageText && messageText.length > 0) {
         messageContent.content = messageText;
       }
@@ -1104,7 +705,6 @@ const ChatScreen = ({ route }) => {
         };
       }
 
-      // Upload d'image
       if (imageToUpload) {
         setIsUploading(true);
         setUploadProgress(0);
@@ -1139,7 +739,6 @@ const ChatScreen = ({ route }) => {
         }
       }
 
-      // Upload d'audio CORRIGÉ
       if (audioToUpload) {
         setIsUploading(true);
         setUploadProgress(0);
@@ -1153,7 +752,6 @@ const ChatScreen = ({ route }) => {
 
           console.log('✅ Upload audio réussi:', audioResult);
 
-          // Créer le message audio
           const audioMessageContent = {
             messageType: 'audio',
             audio: audioResult.url,
@@ -1161,14 +759,12 @@ const ChatScreen = ({ route }) => {
             senderName: userData.name
           };
 
-          // Si un message texte accompagne l'audio
           if (messageText && messageText.length > 0) {
             audioMessageContent.content = messageText;
           }
 
           const newMessage = await handleAddMessage(conversationId, audioMessageContent);
 
-          // Remplacer le message temporaire
           setMessages(prev =>
             prev.map(msg =>
               msg.id === tempId
@@ -1187,7 +783,6 @@ const ChatScreen = ({ route }) => {
         } catch (error) {
           console.error('❌ Erreur upload audio:', error);
 
-          // Message d'erreur plus précis
           let errorMessage = "Impossible d'envoyer le message audio.";
           if (error.message.includes('trop volumineux')) {
             errorMessage = "L'enregistrement est trop long. Essayez un message plus court.";
@@ -1197,7 +792,6 @@ const ChatScreen = ({ route }) => {
 
           Alert.alert("Erreur", errorMessage);
 
-          // Marquer le message comme échoué
           setMessages(prev => prev.map(msg =>
             msg.id === tempId
               ? { ...msg, sendFailed: true, isSending: false }
@@ -1210,10 +804,9 @@ const ChatScreen = ({ route }) => {
           setUploadProgress(0);
         }
 
-        return; // Sortir après l'upload audio
+        return;
       }
 
-      // Envoyer le message (pour texte et image)
       try {
         const newMessage = await handleAddMessage(conversationId, messageContent);
 
@@ -1397,6 +990,369 @@ const ChatScreen = ({ route }) => {
     );
   }, [messages, userData, showTimestamps]);
 
+  // ====== 3. TOUS LES useEffect ======
+
+  // useEffect pour l'audio
+  useEffect(() => {
+    setTimeout(() => {
+      if (Platform.OS === 'ios') {
+        try {
+          AudioRecorder.requestAuthorization().then((isAuthorized) => {
+            console.log('Autorisation audio:', isAuthorized);
+            setIsRecordingPermitted(isAuthorized);
+          });
+        } catch (error) {
+          console.error('Erreur lors de l\'initialisation de l\'AudioRecorder:', error);
+        }
+      }
+    }, 500);
+
+    Sound.setCategory('Playback', true);
+
+    if (Platform.OS === 'ios') {
+      AudioRecorder.requestAuthorization().then((isAuthorized) => {
+        setIsRecordingPermitted(isAuthorized);
+      });
+    }
+
+    return () => {
+      if (isRecording) {
+        AudioRecorder.stopRecording();
+      }
+
+      if (isPlaying && soundRef.current) {
+        soundRef.current.stop();
+        soundRef.current.release();
+      }
+    };
+  }, []);
+
+  // useEffect pour charger les messages
+  useEffect(() => {
+    const loadMessagesIfNeeded = async () => {
+      console.log('[ChatScreen] 🔍 Vérification du chargement des messages...');
+      console.log('[ChatScreen] 📊 État actuel:', {
+        hasConversationId: !!conversationId,
+        hasConversation: !!conversation,
+        hasMessages: !!conversation?.messages,
+        messageCount: conversation?.messages?.length || 0,
+        conversationFromParams: !!route.params?.conversation
+      });
+
+      if (!conversationId) {
+        console.error('[ChatScreen] ❌ Pas de conversationId fourni');
+        return;
+      }
+
+      if (conversation?.messages && conversation.messages.length > 0) {
+        console.log('[ChatScreen] ✅ Messages déjà présents:', conversation.messages.length);
+        return;
+      }
+
+      console.log('[ChatScreen] 🔄 Chargement des messages nécessaire...');
+      setIsLoadingMessages(true);
+
+      try {
+        console.log('[ChatScreen] 📞 Appel getConversationMessages...');
+        const messagesData = await getConversationMessages(conversationId);
+        console.log('[ChatScreen] 📦 Messages récupérés:', {
+          count: messagesData?.messages?.length || 0,
+          conversationId: messagesData?.conversationId
+        });
+
+        let fullConversation = conversation;
+
+        if (!fullConversation || !fullConversation.secret) {
+          console.log('[ChatScreen] 🔄 Récupération des détails de la conversation...');
+          try {
+            const instance = getAxiosInstance();
+
+            if (instance) {
+              const response = await instance.get(`/api/secrets/conversations/${conversationId}`);
+              if (response.data) {
+                fullConversation = response.data;
+                console.log('[ChatScreen] ✅ Conversation complète récupérée');
+              }
+            }
+          } catch (error) {
+            console.error('[ChatScreen] ⚠️ Erreur récupération conversation complète:', error);
+          }
+        }
+
+        const updatedConversation = {
+          ...fullConversation,
+          messages: messagesData?.messages || []
+        };
+
+        console.log('[ChatScreen] 📋 Mise à jour des paramètres de navigation...');
+        navigation.setParams({
+          conversation: updatedConversation,
+          secretData: secretData || (fullConversation?.secret ? {
+            _id: fullConversation.secret._id,
+            content: fullConversation.secret.content,
+            label: fullConversation.secret.label,
+            user: fullConversation.secret.user || fullConversation.secret.createdBy,
+            shareLink: fullConversation.secret.shareLink
+          } : null)
+        });
+
+        console.log('[ChatScreen] ✅ Messages chargés avec succès:', messagesData?.messages?.length || 0);
+
+      } catch (error) {
+        console.error('[ChatScreen] ❌ Erreur chargement messages:', error);
+        Alert.alert(
+          "Erreur",
+          "Impossible de charger les messages de cette conversation. Veuillez réessayer.",
+          [
+            { text: "Retour", onPress: () => navigation.goBack() },
+            { text: "Réessayer", onPress: () => loadMessagesIfNeeded() }
+          ]
+        );
+      } finally {
+        setIsLoadingMessages(false);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      loadMessagesIfNeeded();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [conversationId, conversation?.messages?.length, navigation]);
+
+  useEffect(() => {
+    console.log('[ChatScreen] 🔄 Paramètres de navigation mis à jour');
+    console.log('[ChatScreen] 📊 Nouvelles données:', {
+      conversationId: route.params?.conversationId,
+      hasConversation: !!route.params?.conversation,
+      hasSecretData: !!route.params?.secretData,
+      messageCount: route.params?.conversation?.messages?.length || 0
+    });
+  }, [route.params]);
+
+  useEffect(() => {
+    if (showModalOnMount) {
+      triggerConfetti(ConfettiPresets.amazing);
+      setModalVisible(true);
+    }
+  }, [showModalOnMount]);
+
+  useEffect(() => {
+    if (!conversation || !userData) return;
+
+    let currentUnreadCount = 0;
+    let userIdStr = userData?._id?.toString() || '';
+
+    if (typeof conversation.unreadCount === 'number') {
+      currentUnreadCount = conversation.unreadCount;
+    }
+    else if (conversation.unreadCount && userData?._id) {
+      if (conversation.unreadCount instanceof Map) {
+        currentUnreadCount = conversation.unreadCount.get(userIdStr) || 0;
+      } else if (typeof conversation.unreadCount === 'object') {
+        currentUnreadCount = conversation.unreadCount[userIdStr] || 0;
+      }
+    }
+
+    setUnreadState(prev => ({
+      count: currentUnreadCount,
+      hasScrolledToBottom: currentUnreadCount === 0,
+      showButton: currentUnreadCount > 0
+    }));
+  }, [conversation, userData?._id]);
+
+  useEffect(() => {
+    const unsubscribeFocus = navigation.addListener('focus', async () => {
+      if (messages.length > 0) {
+        setTimeout(() => restoreScrollPosition(), 500);
+      }
+
+      if (conversationId && conversation?.secret?._id) {
+        try {
+          const instance = getAxiosInstance();
+          if (!instance) return;
+
+          const response = await instance.get(`/api/secrets/conversations/secret/${conversation.secret._id}`);
+
+          if (response.data) {
+            const updatedConversation = {
+              ...response.data,
+              unreadCount: response.data.unreadCount || (conversation && conversation.unreadCount) || 0
+            };
+
+            navigation.setParams({
+              conversation: updatedConversation,
+              doNotMarkAsRead: true
+            });
+          }
+        } catch (error) {
+          console.error(t('chat.errors.reloadConversation'), error);
+        }
+      }
+    });
+
+    const unsubscribeBlur = navigation.addListener('blur', () => {
+      if (scrollPosition.current > 0) {
+        saveScrollPosition(scrollPosition.current);
+      }
+    });
+
+    return () => {
+      unsubscribeFocus();
+      unsubscribeBlur();
+    };
+  }, [navigation, conversationId, conversation?.secret?._id, messages.length, t]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollSaveTimeout.current) {
+        clearTimeout(scrollSaveTimeout.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Platform.OS === 'ios'
+      ? RN.Keyboard.addListener('keyboardWillShow', (e) => {
+        const offset = e.endCoordinates.height;
+        setKeyboardOffset(offset);
+      })
+      : null;
+
+    const keyboardDidHideListener = Platform.OS === 'ios'
+      ? RN.Keyboard.addListener('keyboardWillHide', () => {
+        setKeyboardOffset(95);
+      })
+      : null;
+
+    return () => {
+      if (keyboardDidShowListener) {
+        keyboardDidShowListener.remove();
+      }
+      if (keyboardDidHideListener) {
+        keyboardDidHideListener.remove();
+      }
+    };
+  }, []);
+
+  // Formatage des messages
+  useEffect(() => {
+    if (!conversation?.messages || !userData) return;
+
+    const userMapping = {};
+    conversation.participants?.forEach(participant => {
+      userMapping[participant._id] = {
+        name: participant.name,
+        profilePicture: participant.profilePicture
+      };
+    });
+
+    const formattedMessages = [];
+    let lastMessageDate = null;
+
+    const sortedMessages = [...conversation.messages].sort((a, b) =>
+      new Date(a.createdAt) - new Date(b.createdAt)
+    );
+
+    sortedMessages.forEach((msg, index) => {
+      if (!msg.createdAt) {
+        console.warn(t('chat.errors.missingCreatedAt'), msg);
+        return;
+      }
+
+      const currentMessageDate = new Date(msg.createdAt);
+      const isCurrentUser =
+        (msg.sender && typeof msg.sender === 'object' ? msg.sender._id : msg.sender) === userData._id;
+
+      if (!lastMessageDate ||
+        currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
+        formattedMessages.push({
+          id: `separator-${index}`,
+          type: 'separator',
+          timestamp: msg.createdAt,
+          formattedDate: dateFormatter.formatDateOnly(msg.createdAt)
+        });
+      }
+
+      const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
+
+      const formattedMessage = {
+        id: msg._id || `msg-${index}`,
+        text: (msg.messageType === 'image' || msg.messageType === 'audio') && !msg.content?.trim()
+          ? undefined
+          : msg.content,
+        sender: isCurrentUser ? 'user' : 'other',
+        timestamp: msg.createdAt,
+        formattedTime: dateFormatter.formatTimeOnly(msg.createdAt),
+        formattedDate: dateFormatter.formatDate(msg.createdAt),
+        messageType: msg.messageType,
+        image: msg.image,
+        senderInfo: {
+          id: messageSenderId,
+          name: userMapping[messageSenderId]?.name || msg.senderName || t('chat.defaultUser'),
+          profilePicture: userMapping[messageSenderId]?.profilePicture || null
+        }
+      };
+
+      if (msg.messageType === 'audio') {
+        formattedMessage.audio = msg.audio;
+        formattedMessage.audioDuration = msg.audioDuration || '00:00';
+
+        console.log("Message audio formaté:", {
+          id: formattedMessage.id,
+          audio: formattedMessage.audio,
+          audioDuration: formattedMessage.audioDuration
+        });
+      }
+
+      formattedMessages.push(formattedMessage);
+      lastMessageDate = currentMessageDate;
+    });
+
+    setMessages(formattedMessages);
+  }, [conversation, userData?._id, t]);
+
+  useEffect(() => {
+    if (!conversation?.expiresAt) return;
+
+    setTimeLeft(dateFormatter.formatTimeLeft(conversation.expiresAt));
+    const timer = setInterval(() => {
+      setTimeLeft(dateFormatter.formatTimeLeft(conversation.expiresAt));
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, [conversation?.expiresAt, t]);
+
+  useEffect(() => {
+    updateInputAreaHeight(!!selectedImage);
+
+    if (selectedImage && flatListRef.current) {
+      requestAnimationFrame(() => {
+        flatListRef.current.scrollToEnd({ animated: true });
+      });
+    }
+  }, [selectedImage]);
+
+  useEffect(() => {
+    let timer = null;
+    if (unreadState.count === 0 && unreadState.hasScrolledToBottom) {
+      timer = setTimeout(() => {
+        safeRefreshUnreadCounts();
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [unreadState.count, unreadState.hasScrolledToBottom]);
+
+  // ====== 4. RETURNS CONDITIONNELS ======
+  
+  if (isLoadingMessages) {
+     return <TypewriterSpinner text="hushy..." />;
+  }
+
+  // ====== 5. RETURN PRINCIPAL ======
+  
   return (
     <Background>
       <SafeAreaView style={{ flex: 1 }} {...panResponder.panHandlers}>
