@@ -22,7 +22,8 @@ const {
     checkIdentityVerificationStatus, 
     handleStripeReturn,
     verifyIdentity,
-    updateBankAccount
+    updateBankAccount,
+    getConversationMessages
 } = require('../controllers/secretController');
 const protect  = require('../middleware/authMiddleware');
 const Secret = require('../models/Secret');
@@ -65,7 +66,9 @@ router.delete('/:id', protect, deleteSecret);
 // Routes des conversations
 router.get('/conversations', protect, getUserConversations);
 router.get('/conversations/secret/:secretId', protect, getSecretConversation);
-router.post('/conversations/:conversationId/messages', protect, moderationMiddleware, addMessageToConversation); // Ajout du middleware de modération
+router.get('/conversations/:conversationId', protect, getConversation);
+router.get('/conversations/:conversationId/messages', protect, getConversationMessages);
+router.post('/conversations/:conversationId/messages', protect, moderationMiddleware, addMessageToConversation);
 router.delete('/conversations/:conversationId', protect, deleteConversation);
 router.patch('/conversations/:conversationId/read', protect, markConversationAsRead);
 

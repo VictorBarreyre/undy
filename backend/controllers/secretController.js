@@ -1328,6 +1328,28 @@ exports.getConversation = async (req, res) => {
   }
 };
 
+exports.getConversationMessages = async (req, res) => {
+  try {
+    const conversation = await Conversation.findOne({
+      _id: req.params.conversationId,
+      participants: req.user.id
+    })
+    .populate('messages.sender', '_id name profilePicture')
+    .select('messages');
+
+    if (!conversation) {
+      return res.status(404).json({ message: 'Conversation introuvable.' });
+    }
+
+    res.status(200).json({
+      messages: conversation.messages,
+      conversationId: req.params.conversationId
+    });
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
 
 // Mise à jour de la fonction addMessageToConversation dans secretController.js
 exports.addMessageToConversation = async (req, res) => {

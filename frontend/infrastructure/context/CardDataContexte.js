@@ -1180,56 +1180,9 @@ const getConversationMessages = async (conversationId) => {
       conversationId: response.data?.conversationId
     });
 
-    // Vérifier que la réponse contient les données attendues
-    if (!response.data || !response.data.messages) {
-      console.warn('[CardDataContexte] ⚠️ Réponse API inattendue:', response.data);
-      return {
-        messages: [],
-        conversationId: conversationId
-      };
-    }
-
-    // Traiter et nettoyer les messages
-    const messages = response.data.messages.map((msg, index) => {
-      console.log(`[CardDataContexte] 🔧 Traitement message ${index + 1}:`, {
-        id: msg._id,
-        type: msg.messageType,
-        hasContent: !!msg.content,
-        hasSender: !!msg.sender,
-        createdAt: msg.createdAt
-      });
-
-      // S'assurer que chaque message a une structure cohérente
-      return {
-        ...msg,
-        _id: msg._id || `temp-${index}-${Date.now()}`,
-        content: msg.content || '',
-        messageType: msg.messageType || 'text',
-        createdAt: msg.createdAt || new Date().toISOString(),
-        sender: msg.sender ? {
-          _id: typeof msg.sender === 'object' ? msg.sender._id : msg.sender,
-          name: typeof msg.sender === 'object' ? msg.sender.name : msg.senderName || 'Utilisateur'
-        } : null,
-        // Préserver les données audio/image si présentes
-        audio: msg.audio || null,
-        audioDuration: msg.audioDuration || null,
-        image: msg.image || null
-      };
-    });
-
-    console.log('[CardDataContexte] ✅ Messages traités:', {
-      totalMessages: messages.length,
-      messageTypes: [...new Set(messages.map(m => m.messageType))],
-      dateRange: messages.length > 0 ? {
-        first: messages[0]?.createdAt,
-        last: messages[messages.length - 1]?.createdAt
-      } : null
-    });
-
-    return {
-      messages,
-      conversationId: response.data.conversationId || conversationId
-    };
+    // Retourner directement la réponse de l'API
+    return response.data;
+    
   } catch (error) {
     console.error('[CardDataContexte] ❌ Erreur getConversationMessages:', {
       conversationId,
@@ -1245,7 +1198,6 @@ const getConversationMessages = async (conversationId) => {
     };
   }
 };
-
 
 const getUserConversations = async () => {
   console.log('[CardDataContexte] 🔄 Début getUserConversations');
