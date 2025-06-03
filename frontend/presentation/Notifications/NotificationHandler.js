@@ -12,7 +12,8 @@ const NotificationHandler = () => {
   const { userData } = useContext(AuthContext);
   const appStateRef = useRef(AppState.currentState);
   const removeNotificationListener = useRef(null);
-  const { getUserConversations } = useCardData(); // ✅ Hook correctement placé ici
+  // ✅ Importer getConversationMessages depuis useCardData
+  const { getUserConversations, getConversationMessages } = useCardData();
 
   useEffect(() => {
     let isSubscribed = true;
@@ -83,7 +84,7 @@ const NotificationHandler = () => {
         removeNotificationListener.current();
       }
     };
-  }, [userData, navigation, getUserConversations]); // ✅ Ajouter getUserConversations aux dépendances
+  }, [userData, navigation, getUserConversations, getConversationMessages]); // ✅ Ajouter getConversationMessages aux dépendances
 
   const handleAppStateChange = (nextAppState) => {
     console.log('[NotificationHandler] 📱 App state change:', appStateRef.current, '→', nextAppState);
@@ -124,8 +125,7 @@ const NotificationHandler = () => {
             try {
               console.log('[NotificationHandler] 📋 Chargement de la conversation complète...');
 
-              // ✅ CORRECTION: Utiliser getUserConversations déjà déclaré en haut
-              // ❌ SUPPRIMER: const { getUserConversations } = useCardData();
+              // Utiliser getUserConversations déjà importé
               const conversations = await getUserConversations();
               console.log('[NotificationHandler] 📋 Conversations récupérées:', conversations.length);
 
@@ -139,18 +139,32 @@ const NotificationHandler = () => {
 
                 let conversationWithMessages = targetConversation;
 
-                if (!targetConversation.messages || targetConversation.messages.length === 0) {
-                  console.log('[NotificationHandler] 📨 Chargement des messages...');
-                  try {
-                    const messagesData = await getConversationMessages(targetConversation._id);
+                // ✅ CORRECTION: Charger les messages en utilisant getConversationMessages
+                console.log('[NotificationHandler] 📨 Chargement des messages...');
+                try {
+                  const messagesData = await getConversationMessages(targetConversation._id);
+                  
+                  // Vérifier la structure de la réponse
+                  if (messagesData && messagesData.messages) {
                     conversationWithMessages = {
                       ...targetConversation,
                       messages: messagesData.messages
                     };
                     console.log('[NotificationHandler] 📨 Messages chargés:', messagesData.messages.length);
-                  } catch (error) {
-                    console.error('[NotificationHandler] ❌ Erreur chargement messages:', error);
+                  } else {
+                    console.log('[NotificationHandler] ⚠️ Structure de messages inattendue:', messagesData);
+                    conversationWithMessages = {
+                      ...targetConversation,
+                      messages: []
+                    };
                   }
+                } catch (error) {
+                  console.error('[NotificationHandler] ❌ Erreur chargement messages:', error);
+                  // Continuer avec une conversation sans messages plutôt que de bloquer
+                  conversationWithMessages = {
+                    ...targetConversation,
+                    messages: []
+                  };
                 }
 
                 // Préparer les données secretData selon ce que ChatScreen attend
@@ -163,8 +177,13 @@ const NotificationHandler = () => {
                 };
 
                 console.log('[NotificationHandler] 📦 SecretData préparé:', JSON.stringify(secretData, null, 2));
+                console.log('[NotificationHandler] 💬 Conversation avec messages:', {
+                  id: conversationWithMessages._id,
+                  messageCount: conversationWithMessages.messages?.length || 0,
+                  hasSecret: !!conversationWithMessages.secret
+                });
 
-                // Navigation structurée
+                // Navigation structurée avec la conversation complète incluant les messages
                 navigation.navigate('MainApp', {
                   screen: 'Tabs',
                   params: {
@@ -172,32 +191,39 @@ const NotificationHandler = () => {
                     params: {
                       screen: 'Chat',
                       params: {
-                        conversationId: targetConversation._id,
-                        conversation: targetConversation,
+                        conversationId: conversationWithMessages._id,
+                        conversation: conversationWithMessages, // ✅ Conversation avec messages
                         secretData: secretData,
-                        showModalOnMount: false
+                        showModalOnMount: false,
+                        fromNotification: true,
                       },
                     },
                   },
                 });
 
-                console.log('[NotificationHandler] ✅ Navigation réussie avec données complètes');
+                console.log('[NotificationHandler] ✅ Navigation réussie avec données complètes et messages');
 
               } else {
                 console.error('[NotificationHandler] ❌ Conversation non trouvée:', data.conversationId);
                 console.log('[NotificationHandler] 📋 IDs disponibles:', conversations.map(c => c._id));
 
-                // Fallback: navigation simple
+                // Fallback: navigation simple avec juste l'ID
                 try {
-                  navigation.navigate('ChatTab');
-
-                  setTimeout(() => {
-                    navigation.navigate('Chat', {
-                      conversationId: data.conversationId,
-                      senderId: data.senderId || '',
-                      senderName: data.senderName || ''
-                    });
-                  }, 300);
+                  navigation.navigate('MainApp', {
+                    screen: 'Tabs',
+                    params: {
+                      screen: 'ChatTab',
+                      params: {
+                        screen: 'Chat',
+                        params: {
+                          conversationId: data.conversationId,
+                          conversation: null, // ChatScreen devra charger les données
+                          secretData: null,
+                          fromNotification: true,
+                        },
+                      },
+                    },
+                  });
 
                   console.log('[NotificationHandler] ⚠️ Navigation fallback sans données complètes');
                 } catch (fallbackError) {
@@ -226,17 +252,23 @@ const NotificationHandler = () => {
             } catch (error) {
               console.error('[NotificationHandler] ❌ Erreur lors du chargement de la conversation:', error);
 
-              // Navigation alternative en cas d'erreur
+              // Navigation alternative en cas d'erreur avec juste l'ID
               try {
-                navigation.navigate('ChatTab');
-
-                setTimeout(() => {
-                  navigation.navigate('Chat', {
-                    conversationId: data.conversationId,
-                    senderId: data.senderId || '',
-                    senderName: data.senderName || ''
-                  });
-                }, 300);
+                navigation.navigate('MainApp', {
+                  screen: 'Tabs',
+                  params: {
+                    screen: 'ChatTab',
+                    params: {
+                      screen: 'Chat',
+                      params: {
+                        conversationId: data.conversationId,
+                        conversation: null,
+                        secretData: null,
+                        fromNotification: true,
+                      },
+                    },
+                  },
+                });
 
                 console.log('[NotificationHandler] ✅ Navigation alternative réussie');
               } catch (altError) {
