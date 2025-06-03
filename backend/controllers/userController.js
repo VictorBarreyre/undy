@@ -362,25 +362,54 @@ exports.refreshToken = async (req, res) => {
         const { refreshToken } = req.body;
         
         if (!refreshToken) {
-            return res.status(400).json({ message: 'Refresh token manquant' });
+            return res.status(400).json({ 
+                message: 'Refresh token manquant',
+                code: 'MISSING_REFRESH_TOKEN'
+            });
         }
         
         // Vérifier si le token existe dans la base de données
         const tokenDoc = await RefreshToken.findOne({ token: refreshToken });
         
         if (!tokenDoc) {
-            return res.status(401).json({ message: 'Refresh token invalide' });
+            return res.status(401).json({ 
+                message: 'Refresh token invalide',
+                code: 'INVALID_REFRESH_TOKEN'
+            });
         }
         
-        // Vérifier si le token n'est pas expiré
-        if (new Date() > new Date(tokenDoc.expiresAt)) {
+        // Vérifier si le token n'est pas expiré (utiliser la méthode du modèle)
+        if (tokenDoc.isExpired()) {
+            // Supprimer le token expiré
             await RefreshToken.deleteOne({ _id: tokenDoc._id });
-            return res.status(401).json({ message: 'Refresh token expiré' });
+            return res.status(401).json({ 
+                message: 'Refresh token expiré',
+                code: 'EXPIRED_REFRESH_TOKEN'
+            });
         }
         
-        // Vérifier et décoder le token
+        // Vérifier et décoder le token JWT
         try {
             const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+            
+            // Vérifier que l'userId du token correspond à celui de la DB
+            if (decoded.id !== tokenDoc.userId.toString()) {
+                return res.status(401).json({ 
+                    message: 'Token invalide',
+                    code: 'TOKEN_USER_MISMATCH'
+                });
+            }
+            
+            // Vérifier que l'utilisateur existe toujours
+            const user = await User.findById(decoded.id);
+            if (!user) {
+                // Supprimer le refresh token si l'utilisateur n'existe plus
+                await RefreshToken.deleteOne({ _id: tokenDoc._id });
+                return res.status(401).json({ 
+                    message: 'Utilisateur non trouvé',
+                    code: 'USER_NOT_FOUND'
+                });
+            }
             
             // Générer de nouveaux tokens
             const { accessToken, refreshToken: newRefreshToken } = generateTokens(decoded.id);
@@ -388,29 +417,61 @@ exports.refreshToken = async (req, res) => {
             // Supprimer l'ancien refresh token
             await RefreshToken.deleteOne({ _id: tokenDoc._id });
             
-            // Créer le nouveau
+            // Créer le nouveau refresh token avec la bonne date d'expiration
             await RefreshToken.create({
                 userId: decoded.id,
                 token: newRefreshToken,
-                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
             });
             
-            // IMPORTANT: Utiliser les bons noms de propriétés
+            // Nettoyer les anciens tokens de cet utilisateur (garder max 5)
+            const userTokens = await RefreshToken.find({ userId: decoded.id })
+                .sort({ createdAt: -1 });
+            
+            if (userTokens.length > 5) {
+                const tokensToDelete = userTokens.slice(5).map(t => t._id);
+                await RefreshToken.deleteMany({ _id: { $in: tokensToDelete } });
+            }
+            
+            // Log pour debug
+            console.log(`[RefreshToken] Nouveau token généré pour l'utilisateur ${decoded.id}`);
+            
+            // Retourner les nouveaux tokens
             return res.json({ 
                 accessToken, 
-                refreshToken: newRefreshToken // Pas "newRefreshToken"
+                refreshToken: newRefreshToken,
+                expiresIn: '24h' // Informer le client de la durée de vie
             });
             
-        } catch (error) {
-            console.error('Erreur de vérification du refresh token:', error);
-            return res.status(401).json({ message: 'Refresh token invalide ou expiré' });
+        } catch (jwtError) {
+            console.error('Erreur de vérification JWT:', jwtError);
+            
+            // Si le JWT est expiré ou invalide, supprimer de la DB
+            await RefreshToken.deleteOne({ _id: tokenDoc._id });
+            
+            return res.status(401).json({ 
+                message: 'Refresh token invalide ou expiré',
+                code: 'JWT_VERIFICATION_FAILED',
+                details: jwtError.message
+            });
         }
     } catch (error) {
         console.error('Erreur lors du rafraîchissement du token:', error);
-        res.status(500).json({ message: 'Erreur interne du serveur' });
+        return res.status(500).json({ 
+            message: 'Erreur interne du serveur',
+            code: 'INTERNAL_SERVER_ERROR'
+        });
     }
 };
 
+// Fonction utilitaire pour nettoyer les tokens expirés (à appeler périodiquement)
+exports.cleanupExpiredTokens = async () => {
+    try {
+        const result = await RefreshToken.cleanupExpired();
+        console.log(`[Cleanup] ${result.deletedCount} refresh tokens expirés supprimés`);
+    } catch (error) {
+        console.error('[Cleanup] Erreur lors du nettoyage des tokens:', error);
+    }
+};
 
 
 exports.loginUser = async (req, res) => {

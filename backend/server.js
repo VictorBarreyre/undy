@@ -13,7 +13,7 @@ const helmet = require('helmet');
 const User = require('./models/User'); // Assurez-vous d'ajouter cette importation
 const fileUpload = require('express-fileupload');
 const webhookRoutes = require('./routes/webHookRoutes');
-
+const { cleanupExpiredTokens } = require('./controllers/userController');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -42,7 +42,6 @@ app.use(
 );
 
 app.use('/webhooks', webhookRoutes);
-
 
 // Maintenant les middlewares de parsing body pour le reste de l'application
 app.use(express.json({ limit: '50mb' }));
@@ -108,8 +107,6 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/moderation', moderationRoutes); 
 app.use('/api/notifications', notificationRoutes);
 
-
-
 // Route de vérification du serveur
 app.get('/', (req, res) => {
     const baseUrl = process.env.NODE_ENV === 'production'
@@ -129,10 +126,53 @@ mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
-.then(() => console.log('MongoDB connecté'))
+.then(() => {
+    console.log('MongoDB connecté');
+    
+    // Nettoyer les tokens expirés au démarrage
+    cleanupExpiredTokens()
+        .then(() => console.log('[Token Cleanup] Nettoyage initial des tokens effectué'))
+        .catch(err => console.error('[Token Cleanup] Erreur lors du nettoyage initial:', err));
+    
+    // Configurer le nettoyage périodique des tokens expirés
+    // Exécuter toutes les 24 heures
+    const cleanupInterval = setInterval(async () => {
+        try {
+            await cleanupExpiredTokens();
+            console.log('[Token Cleanup] Nettoyage périodique des tokens effectué');
+        } catch (error) {
+            console.error('[Token Cleanup] Erreur lors du nettoyage périodique:', error);
+        }
+    }, 24 * 60 * 60 * 1000); // 24 heures en millisecondes
+    
+    // Nettoyer l'intervalle si le processus se termine
+    process.on('SIGTERM', () => {
+        clearInterval(cleanupInterval);
+        console.log('[Token Cleanup] Arrêt du nettoyage périodique');
+    });
+})
 .catch(err => console.error('Erreur de connexion MongoDB:', err));
 
 // Démarrer le serveur
 app.listen(PORT, () => {
     console.log(`Serveur démarré sur le port ${PORT}`);
+    console.log(`Environnement: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Nettoyage automatique des tokens: activé (toutes les 24h)`);
+});
+
+// Gestion propre de l'arrêt du serveur
+process.on('SIGTERM', () => {
+    console.log('SIGTERM reçu, fermeture du serveur...');
+    mongoose.connection.close(() => {
+        console.log('Connexion MongoDB fermée');
+        process.exit(0);
+    });
+});
+
+process.on('SIGINT', () => {
+    console.log('SIGINT reçu, fermeture du serveur...');
+    mongoose.connection.close(() => {
+        console.log('Connexion MongoDB fermée');
+        process.exit(0);
+    });
 });
