@@ -539,6 +539,14 @@ const sendPurchaseNotification = async (req, res) => {
   try {
     const { secretId, buyerId, buyerName, price, currency } = req.body;
 
+    console.log('[PURCHASE_NOTIFICATION] Début avec données:', {
+      secretId,
+      buyerId,
+      buyerName,
+      price,
+      currency
+    });
+
     // Vérifier les paramètres requis
     if (!secretId || !buyerId) {
       return res.status(400).json({
@@ -557,49 +565,130 @@ const sendPurchaseNotification = async (req, res) => {
       });
     }
 
+    console.log('[PURCHASE_NOTIFICATION] Vendeur trouvé:', {
+      sellerId: secret.user._id,
+      sellerName: secret.user.name,
+      sellerLanguage: secret.user.language,
+      hasApnsToken: !!secret.user.apnsToken
+    });
+
     // Ne pas notifier si l'acheteur est aussi le vendeur ou si pas de token APNs
     if (buyerId === secret.user._id.toString() || !secret.user.apnsToken) {
+      console.log('[PURCHASE_NOTIFICATION] Pas de notification nécessaire:', {
+        isSamePerson: buyerId === secret.user._id.toString(),
+        hasToken: !!secret.user.apnsToken
+      });
       return res.status(200).json({
         success: true,
         message: 'Pas de notification nécessaire'
       });
     }
 
+    // Récupérer la conversation liée à cet achat
+    console.log('[PURCHASE_NOTIFICATION] Recherche de conversation pour:', {
+      secretId,
+      participants: [secret.user._id, buyerId]
+    });
+
+    const conversation = await Conversation.findOne({
+      secret: secretId,
+      participants: { $all: [secret.user._id, buyerId] }
+    });
+
+    if (!conversation) {
+      console.error('[PURCHASE_NOTIFICATION] Conversation non trouvée pour:', {
+        secretId,
+        sellerId: secret.user._id.toString(),
+        buyerId
+      });
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation non trouvée'
+      });
+    }
+
+    console.log('[PURCHASE_NOTIFICATION] Conversation trouvée:', {
+      conversationId: conversation._id,
+      participantsCount: conversation.participants.length
+    });
+
     // Formater le prix
     const formattedPrice = `${price} ${currency}`;
 
-    // Envoyer la notification au vendeur seulement
+    // Test des traductions avant l'envoi
+    const sellerLanguage = secret.user.language || 'fr';
+    const testTitle = translate('secretSold', { lng: sellerLanguage });
+    const testBody = translate('secretPurchased', { 
+      lng: sellerLanguage, 
+      buyerName, 
+      price: formattedPrice 
+    });
+
+    console.log('[PURCHASE_NOTIFICATION] Aperçu des traductions:', {
+      sellerLanguage,
+      title: testTitle,
+      body: testBody
+    });
+
+    // Envoyer la notification avec toutes les données nécessaires
     const notificationResult = await sendPushNotifications(
       [secret.user._id.toString()],
-      'secretSold',
+      'secretSold', // Titre: "Secret vendu!" / "Secret sold!"
       {},
-      'KEY_secretPurchased',
+      'secretPurchased', // Corps: "{{buyerName}} a acheté votre secret pour {{price}}"
       {
         buyerName,
         price: formattedPrice
       },
       {
-        type: 'purchase',
+        type: 'new_message', // Type pour navigation automatique
         secretId,
         buyerId,
         price,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        // Données essentielles pour la navigation vers la conversation
+        conversationId: conversation._id.toString(),
+        senderId: buyerId,
+        senderName: buyerName,
+        messagePreview: `Votre secret a été acheté pour ${formattedPrice}`,
+        messageType: 'purchase', // Pour différencier du message normal
+        // Données de navigation
+        navigationTarget: 'Chat',
+        navigationScreen: 'ChatTab',
+        navigationParams: { 
+          conversationId: conversation._id.toString(),
+          fromPurchaseNotification: true 
+        }
       }
     );
+
+    console.log('[PURCHASE_NOTIFICATION] Résultat d\'envoi:', {
+      success: notificationResult.success,
+      sentCount: notificationResult.results?.sent?.length || 0,
+      failedCount: notificationResult.results?.failed?.length || 0
+    });
 
     res.status(200).json({
       success: true,
       message: 'Notification d\'achat envoyée',
-      details: notificationResult
+      details: notificationResult,
+      conversationId: conversation._id.toString(),
+      debug: {
+        sellerLanguage,
+        translatedTitle: testTitle,
+        translatedBody: testBody
+      }
     });
   } catch (error) {
-    console.error('Erreur lors de l\'envoi de la notification d\'achat:', error);
+    console.error('[PURCHASE_NOTIFICATION] Erreur:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur'
+      message: 'Erreur serveur',
+      error: error.message
     });
   }
 };
+
 
 /**
  * Notification de rappel Stripe avec support multilingue

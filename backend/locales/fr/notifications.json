@@ -26,5 +26,9 @@
   "serverErrorDuringTest": "Erreur serveur lors du test de notification",
   "apnsProviderNotInitialized": "Le service de notifications APNs n'est pas initialisé",
   "invalidPushToken": "Token de notification invalide",
-  "tokenRegisteredSuccess": "Token enregistré avec succès"
+  "tokenRegisteredSuccess": "Token enregistré avec succès",
+  "missingPushToken": "Token de notification manquant",
+  "userNotFound": "Utilisateur introuvable",
+  "tokenAlreadyRegistered": "Token déjà enregistré",
+  "serverError": "Erreur serveur"
 }
