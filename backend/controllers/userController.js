@@ -15,11 +15,11 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 // Fonction pour générer les tokens
 const generateTokens = (userId) => {
     const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-        expiresIn: '1h', // Access token expire après 1 heure
+        expiresIn: '24h', // Augmenter à 24 heures
     });
 
     const refreshToken = jwt.sign({ id: userId }, process.env.REFRESH_TOKEN_SECRET, {
-        expiresIn: '30d', // Refresh token expire après 30 jours
+        expiresIn: '30d', // 30 jours pour le refresh token
     });
 
     return { accessToken, refreshToken };
@@ -382,20 +382,27 @@ exports.refreshToken = async (req, res) => {
         try {
             const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
             
-            // Générer un nouveau access token et refresh token
+            // Générer de nouveaux tokens
             const { accessToken, refreshToken: newRefreshToken } = generateTokens(decoded.id);
             
-            // Mettre à jour ou créer un nouveau document de refresh token
+            // Supprimer l'ancien refresh token
             await RefreshToken.deleteOne({ _id: tokenDoc._id });
+            
+            // Créer le nouveau
             await RefreshToken.create({
                 userId: decoded.id,
                 token: newRefreshToken,
-                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 jours
+                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
             });
             
-            return res.json({ accessToken, refreshToken: newRefreshToken });
+            // IMPORTANT: Utiliser les bons noms de propriétés
+            return res.json({ 
+                accessToken, 
+                refreshToken: newRefreshToken // Pas "newRefreshToken"
+            });
             
         } catch (error) {
+            console.error('Erreur de vérification du refresh token:', error);
             return res.status(401).json({ message: 'Refresh token invalide ou expiré' });
         }
     } catch (error) {
@@ -403,6 +410,8 @@ exports.refreshToken = async (req, res) => {
         res.status(500).json({ message: 'Erreur interne du serveur' });
     }
 };
+
+
 
 exports.loginUser = async (req, res) => {
     let { email, password } = req.body;

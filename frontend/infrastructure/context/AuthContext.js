@@ -218,6 +218,44 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  useEffect(() => {
+    if (!isLoggedIn || !userToken) return;
+
+    // Vérifier le token toutes les 30 minutes
+    const checkTokenValidity = async () => {
+        try {
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) return;
+
+            // Décoder le token pour vérifier l'expiration
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const expiresAt = payload.exp * 1000; // Convertir en millisecondes
+            const now = Date.now();
+            const timeUntilExpiry = expiresAt - now;
+
+            // Si le token expire dans moins de 5 minutes, le rafraîchir
+            if (timeUntilExpiry < 5 * 60 * 1000) {
+                console.log('[AuthContext] Token proche de l\'expiration, rafraîchissement...');
+                const instance = getAxiosInstance();
+                if (instance) {
+                    // Forcer un appel API pour déclencher le refresh
+                    await instance.get('/api/users/profile');
+                }
+            }
+        } catch (error) {
+            console.error('[AuthContext] Erreur lors de la vérification du token:', error);
+        }
+    };
+
+    // Vérifier immédiatement
+    checkTokenValidity();
+
+    // Puis toutes les 30 minutes
+    const interval = setInterval(checkTokenValidity, 30 * 60 * 1000);
+
+    return () => clearInterval(interval);
+}, [isLoggedIn, userToken]);
+
   const fetchUserData = async () => {
     console.log('[AuthProvider] Début fetchUserData');
     const instance = getAxiosInstance();

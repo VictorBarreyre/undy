@@ -14,8 +14,8 @@ const refreshTokenSchema = new mongoose.Schema({
     expiresAt: {
         type: Date,
         default: Date.now,
-        expires: 7 * 24 * 60 * 60 // Le document expire après 7 jours
+        expires: 30 * 24 * 60 * 60 * 1000 // Le document expire après 7 jours
     }
 });
 
-module.exports = mongoose.model('RefreshToken', refreshTokenSchema);
+module.exports = mongoose.model('RefreshToken', refreshTokenSchema);refreshToken
