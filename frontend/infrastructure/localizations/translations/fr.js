@@ -520,7 +520,7 @@ export default {
     }
   },
 
-  "earnings": {
+ "earnings": {
     "title": "Détails des revenus",
     "noEarningsYet": "Vous n'avez pas encore généré de revenus. Commencez à vendre vos hushys pour gagner de l'argent.",
     "publishSecret": "Publier un hushy",
@@ -529,40 +529,35 @@ export default {
     "sale": "Vente",
     "succeeded": "Réussi",
     "pending": "En attente",
+    "failed": "Échoué",
     "totalEarned": "Total gagné",
     "available": "Disponible",
     "availableEarnings": "Revenus disponibles",
     "noAvailableFunds": "Aucun fonds disponible",
     "retrieveFunds": "Récupérer les fonds",
-    "logs": {
-      "allData": "tout les data ",
-      "totalMoney": "tout le fric ",
-      "transferSuccess": "Virement effectué avec succès !"
-    },
-    "errors": {
-      "generic": "Erreur:",
-      "paymentSheetInit": "Erreur lors de l'initialisation du formulaire de paiement :",
-      "paymentSheetPresent": "Erreur lors de la présentation du formulaire de paiement :",
-      "transferFunds": "Erreur lors du virement des fonds :"
-    },
-    "error": "Error",
-    "confirmTransfer": "Confirm Transfer",
-    "confirmTransferMessage": "Do you want to transfer {{amount}}€ to your bank account?",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "success": "Success",
-    "transferSuccessMessage": "Transfer of {{amount}}€ completed successfully. Expected arrival on {{arrivalDate}}.",
+    "error": "Erreur",
+    "confirmTransfer": "Confirmer le transfert",
+    "confirmTransferMessage": "Voulez-vous transférer {{amount}}€ vers votre compte bancaire ?",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "success": "Succès",
+    "transferSuccessMessage": "Transfert de {{amount}}€ effectué avec succès. Arrivée prévue le {{arrivalDate}}.",
     "ok": "OK",
+    "transferInProgress": "Transfert en cours",
+    "beingProcessed": "en cours de traitement",
+    "processingTransfer": "Traitement en cours...",
+    "allFundsTransferred": "Tous vos fonds ont été transférés vers votre compte bancaire",
+    "logs": {
+      "allData": "Toutes les données de transactions",
+      "totalMoney": "Montant total des gains"
+    },
     "errors": {
-      "generic": "Error:",
-      "paymentSheetInit": "Error initializing payment sheet:",
-      "paymentSheetPresent": "Error presenting payment sheet:",
-      "transferFunds": "Error transferring funds:",
-      "insufficientFunds": "Insufficient funds",
-      "noBankAccount": "No bank account configured"
+      "generic": "Une erreur est survenue",
+      "insufficientFunds": "Fonds insuffisants",
+      "noBankAccount": "Aucun compte bancaire configuré",
+      "transferFunds": "Erreur lors du transfert des fonds"
     }
   },
-
   "inviteContacts": {
     "title": "Inviter des contacts",
     "noContactsUsingApp": "Aucun de vos contacts n'utilise encore hushy. Invitez-les à rejoindre l'application !",

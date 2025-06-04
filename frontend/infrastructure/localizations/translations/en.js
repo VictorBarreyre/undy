@@ -545,8 +545,7 @@ export default {
       "returnToPost": "Return to posting",
     },
   },
-
-  "earnings": {
+"earnings": {
     "title": "Earnings Details",
     "noEarningsYet": "You haven't generated any earnings yet. Start selling your hushys to earn money.",
     "publishSecret": "Publish a hushy",
@@ -555,22 +554,12 @@ export default {
     "sale": "Sale",
     "succeeded": "Succeeded",
     "pending": "Pending",
+    "failed": "Failed",
     "totalEarned": "Total earned",
     "available": "Available",
     "availableEarnings": "Available earnings",
     "noAvailableFunds": "No funds available",
     "retrieveFunds": "Retrieve funds",
-    "logs": {
-      "allData": "all data ",
-      "totalMoney": "all money ",
-      "transferSuccess": "Transfer completed successfully!"
-    },
-    "errors": {
-      "generic": "Error:",
-      "paymentSheetInit": "Error initializing payment sheet:",
-      "paymentSheetPresent": "Error presenting payment sheet:",
-      "transferFunds": "Error transferring funds:"
-    },
     "error": "Error",
     "confirmTransfer": "Confirm Transfer",
     "confirmTransferMessage": "Do you want to transfer {{amount}}€ to your bank account?",
@@ -579,13 +568,19 @@ export default {
     "success": "Success",
     "transferSuccessMessage": "Transfer of {{amount}}€ completed successfully. Expected arrival on {{arrivalDate}}.",
     "ok": "OK",
+    "transferInProgress": "Transfer in progress",
+    "beingProcessed": "being processed",
+    "processingTransfer": "Processing...",
+    "allFundsTransferred": "All your funds have been transferred to your bank account",
+    "logs": {
+      "allData": "All transaction data",
+      "totalMoney": "Total earnings amount"
+    },
     "errors": {
-      "generic": "Error:",
-      "paymentSheetInit": "Error initializing payment sheet:",
-      "paymentSheetPresent": "Error presenting payment sheet:",
-      "transferFunds": "Error transferring funds:",
+      "generic": "An error occurred",
       "insufficientFunds": "Insufficient funds",
-      "noBankAccount": "No bank account configured"
+      "noBankAccount": "No bank account configured",
+      "transferFunds": "Error transferring funds"
     }
   },
 
