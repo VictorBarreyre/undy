@@ -59,44 +59,88 @@ const EarningsActionSheet = ({
         }
     }, [isOpen, isConfigured]);
 
-    const handleTransferFunds = async () => {
-        const instance = getAxiosInstance();
-        try {
-            const totalEarnings = transactions.reduce((total, transaction) => total + transaction.amount, 0);
-
-            const response = await instance.post('/api/users/create-transfer-intent', {
-                amount: totalEarnings,
-                stripeAccountId: userData.stripeAccountId
-            }, {
-                headers: {
-                    Authorization: `Bearer ${userData.token}`,
-                },
-            });
-
-            const { clientSecret } = response.data;
-
-            const { error } = await initPaymentSheet({
-                paymentIntentClientSecret: clientSecret,
-            });
-
-            if (error) {
-                console.error(t('earnings.errors.paymentSheetInit'), error);
-                return;
-            }
-
-            const { error: presentError } = await presentPaymentSheet();
-
-            if (presentError) {
-                console.error(t('earnings.errors.paymentSheetPresent'), presentError);
-                return;
-            }
-
-            console.log(t('earnings.logs.transferSuccess'));
-            onClose();
-        } catch (error) {
-            console.error(t('earnings.errors.transferFunds'), error);
+const handleTransferFunds = async () => {
+    const instance = getAxiosInstance();
+    
+    try {
+        // Vérifier qu'il y a un montant disponible
+        if (!transactionStats.availableBalance || transactionStats.availableBalance <= 0) {
+            Alert.alert(
+                t('earnings.error'),
+                t('earnings.noAvailableFunds'),
+                [{ text: t('earnings.ok') }]
+            );
+            return;
         }
-    };
+
+        // Afficher une confirmation avant le transfert
+        Alert.alert(
+            t('earnings.confirmTransfer'),
+            t('earnings.confirmTransferMessage', { amount: transactionStats.availableBalance.toFixed(2) }),
+            [
+                {
+                    text: t('earnings.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: t('earnings.confirm'),
+                    onPress: async () => {
+                        try {
+                            // Créer le payout
+                            const response = await instance.post('/api/users/create-transfer-intent', {
+                                amount: transactionStats.availableBalance
+                            });
+
+                            if (response.data.success) {
+                                Alert.alert(
+                                    t('earnings.success'),
+                                    t('earnings.transferSuccessMessage', { 
+                                        amount: response.data.amount,
+                                        arrivalDate: new Date(response.data.arrivalDate * 1000).toLocaleDateString()
+                                    }),
+                                    [{ 
+                                        text: t('earnings.ok'),
+                                        onPress: () => {
+                                            onClose();
+                                            // Optionnel : rafraîchir les données
+                                            fetchTransactions();
+                                        }
+                                    }]
+                                );
+                            }
+                        } catch (error) {
+                            console.error(t('earnings.errors.transferFunds'), error);
+                            
+                            // Gestion des erreurs spécifiques
+                            let errorMessage = t('earnings.errors.generic');
+                            
+                            if (error.response?.data?.code === 'INSUFFICIENT_FUNDS') {
+                                errorMessage = t('earnings.errors.insufficientFunds');
+                            } else if (error.response?.data?.code === 'INVALID_BANK_ACCOUNT') {
+                                errorMessage = t('earnings.errors.noBankAccount');
+                            } else if (error.response?.data?.message) {
+                                errorMessage = error.response.data.message;
+                            }
+                            
+                            Alert.alert(
+                                t('earnings.error'),
+                                errorMessage,
+                                [{ text: t('earnings.ok') }]
+                            );
+                        }
+                    }
+                }
+            ]
+        );
+    } catch (error) {
+        console.error(t('earnings.errors.transferFunds'), error);
+        Alert.alert(
+            t('earnings.error'),
+            t('earnings.errors.generic'),
+            [{ text: t('earnings.ok') }]
+        );
+    }
+};
 
     return (
         <Actionsheet isOpen={isOpen} onClose={onClose}>

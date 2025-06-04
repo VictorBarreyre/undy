@@ -131,12 +131,81 @@ const handleVerificationSessionRequiresInput = async (session) => {
   }
 };
 
-// Mapping des événements à leurs gestionnaires
+const handlePayoutCreated = async (payout) => {
+    console.log('Payout créé:', {
+        payoutId: payout.id,
+        amount: payout.amount / 100,
+        status: payout.status,
+        stripeAccount: payout.stripe_account
+    });
+    
+    try {
+        const user = await User.findOne({ stripeAccountId: payout.stripe_account });
+        if (user) {
+            console.log(`Payout créé pour l'utilisateur ${user._id}`);
+            // Optionnel : Envoyer une notification push
+        }
+    } catch (error) {
+        console.error('Erreur lors de la recherche de l\'utilisateur:', error);
+    }
+};
+
+const handlePayoutPaid = async (payout) => {
+    console.log('Payout payé:', {
+        payoutId: payout.id,
+        amount: payout.amount / 100,
+        arrivalDate: new Date(payout.arrival_date * 1000)
+    });
+    
+    try {
+        const user = await User.findOne({ stripeAccountId: payout.stripe_account });
+        if (user) {
+            console.log(`Payout complété pour l'utilisateur ${user._id}`);
+            // Marquer le transfert comme complété
+        }
+    } catch (error) {
+        console.error('Erreur lors du traitement du payout payé:', error);
+    }
+};
+
+const handlePayoutFailed = async (payout) => {
+    console.error('Payout échoué:', {
+        payoutId: payout.id,
+        failureCode: payout.failure_code,
+        failureMessage: payout.failure_message,
+        stripeAccount: payout.stripe_account
+    });
+    
+    try {
+        const user = await User.findOne({ stripeAccountId: payout.stripe_account });
+        if (user) {
+            console.error(`Payout échoué pour l'utilisateur ${user._id}: ${payout.failure_message}`);
+            // Envoyer une notification d'échec
+        }
+    } catch (error) {
+        console.error('Erreur lors du traitement de l\'échec du payout:', error);
+    }
+};
+
+const handlePayoutUpdated = async (payout) => {
+    console.log('Payout mis à jour:', {
+        payoutId: payout.id,
+        status: payout.status
+    });
+};
+
+// 2. Mettre à jour le mapping des événements dans stripeWebhookController.js
 const eventHandlers = {
-  'identity.verification_session.updated': (event) => handleVerificationSessionUpdated(event.data.object),
-  'identity.verification_session.verified': (event) => handleVerificationSessionVerified(event.data.object),
-  'identity.verification_session.requires_input': (event) => handleVerificationSessionRequiresInput(event.data.object),
-  // Vous pouvez ajouter d'autres gestionnaires ici
+    // ... événements existants ...
+    'identity.verification_session.updated': (event) => handleVerificationSessionUpdated(event.data.object),
+    'identity.verification_session.verified': (event) => handleVerificationSessionVerified(event.data.object),
+    'identity.verification_session.requires_input': (event) => handleVerificationSessionRequiresInput(event.data.object),
+    
+    // Ajouter les événements de payout
+    'payout.created': (event) => handlePayoutCreated(event.data.object),
+    'payout.paid': (event) => handlePayoutPaid(event.data.object),
+    'payout.failed': (event) => handlePayoutFailed(event.data.object),
+    'payout.updated': (event) => handlePayoutUpdated(event.data.object),
 };
 
 // Fonction principale

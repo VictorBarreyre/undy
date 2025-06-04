@@ -570,6 +570,22 @@ export default {
       "paymentSheetInit": "Error initializing payment sheet:",
       "paymentSheetPresent": "Error presenting payment sheet:",
       "transferFunds": "Error transferring funds:"
+    },
+    "error": "Error",
+    "confirmTransfer": "Confirm Transfer",
+    "confirmTransferMessage": "Do you want to transfer {{amount}}€ to your bank account?",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "success": "Success",
+    "transferSuccessMessage": "Transfer of {{amount}}€ completed successfully. Expected arrival on {{arrivalDate}}.",
+    "ok": "OK",
+    "errors": {
+      "generic": "Error:",
+      "paymentSheetInit": "Error initializing payment sheet:",
+      "paymentSheetPresent": "Error presenting payment sheet:",
+      "transferFunds": "Error transferring funds:",
+      "insufficientFunds": "Insufficient funds",
+      "noBankAccount": "No bank account configured"
     }
   },
 
@@ -767,83 +783,83 @@ export default {
       "default": "Current status: {{status}}. Contact support if you need assistance."
     }
   },
-"notifications": {
-  "alerts": {
-    "simulatorWarning": "Notifications don't work on simulator",
-    "disabled": {
-      "title": "Notifications disabled",
-      "message": "Do you want to enable notifications in settings?",
-      "no": "No",
-      "openSettings": "Open settings"
+  "notifications": {
+    "alerts": {
+      "simulatorWarning": "Notifications don't work on simulator",
+      "disabled": {
+        "title": "Notifications disabled",
+        "message": "Do you want to enable notifications in settings?",
+        "no": "No",
+        "openSettings": "Open settings"
+      }
+    },
+    "test": {
+      "title": "Notifications enabled",
+      "body": "You will now receive notifications from the app"
+    },
+    "message": {
+      "title": "Message from {{sender}}",
+      "body": "{{text}}"
+    },
+    "purchase": {
+      "title": "Secret sold!",
+      "body": "{{buyer}} purchased your secret for {{price}}"
+    },
+    "nearby": {
+      "title": "Nearby secrets",
+      "body": "There are {{count}} secrets within {{distance}} meters of you"
+    },
+    "stripeSetup": {
+      "title": "Banking setup incomplete",
+      "body": "Don't forget to complete your banking setup to receive payments"
+    },
+    "event": {
+      "title": "Limited time event",
+      "body": "{{event}} ends in {{days}} days"
+    },
+    "stats": {
+      "title": "Stats update",
+      "body": "You have {{secrets}} secrets and {{purchases}} purchases"
+    },
+    "welcomeBack": {
+      "title": "Welcome back!",
+      "body": "We missed you! It's been {{days}} days since your last visit"
+    },
+    "audio": {
+      "title": "Audio message",
+      "body": "Someone sent you an audio message"
+    },
+    "image": {
+      "title": "Image shared",
+      "body": "Someone shared an image with you"
+    },
+    "mixed": {
+      "title": "Multimedia message",
+      "body": "Someone sent you a multimedia message"
+    },
+    "errors": {
+      "permissionCheck": "Error checking permissions:",
+      "tokenRetrieval": "Error retrieving token:",
+      "sending": "Error sending notification:",
+      "activation": "Activation error:",
+      "messageNotification": "Error sending message notification",
+      "purchaseNotification": "Error sending purchase notification",
+      "nearbyNotification": "Error sending nearby notification",
+      "stripeReminderNotification": "Error sending banking reminder",
+      "eventNotification": "Error sending event notification",
+      "statsNotification": "Error sending stats notification",
+      "welcomeBackNotification": "Error sending welcome back notification",
+      "tokenRegistration": "Error registering token",
+      "axiosNotInitialized": "HTTP client is not initialized"
+    },
+    "logs": {
+      "devModePermission": "Development mode: simulator permission granted",
+      "existingStatus": "Existing status:",
+      "newStatus": "New status:",
+      "testSent": "Test notification sent:",
+      "tokenRegistered": "Device token registered successfully"
     }
   },
-  "test": {
-    "title": "Notifications enabled",
-    "body": "You will now receive notifications from the app"
-  },
-  "message": {
-    "title": "Message from {{sender}}",
-    "body": "{{text}}"
-  },
-  "purchase": {
-    "title": "Secret sold!",
-    "body": "{{buyer}} purchased your secret for {{price}}"
-  },
-  "nearby": {
-    "title": "Nearby secrets",
-    "body": "There are {{count}} secrets within {{distance}} meters of you"
-  },
-  "stripeSetup": {
-    "title": "Banking setup incomplete",
-    "body": "Don't forget to complete your banking setup to receive payments"
-  },
-  "event": {
-    "title": "Limited time event",
-    "body": "{{event}} ends in {{days}} days"
-  },
-  "stats": {
-    "title": "Stats update",
-    "body": "You have {{secrets}} secrets and {{purchases}} purchases"
-  },
-  "welcomeBack": {
-    "title": "Welcome back!",
-    "body": "We missed you! It's been {{days}} days since your last visit"
-  },
-  "audio": {
-    "title": "Audio message",
-    "body": "Someone sent you an audio message"
-  },
-  "image": {
-    "title": "Image shared",
-    "body": "Someone shared an image with you"
-  },
-  "mixed": {
-    "title": "Multimedia message",
-    "body": "Someone sent you a multimedia message"
-  },
-  "errors": {
-    "permissionCheck": "Error checking permissions:",
-    "tokenRetrieval": "Error retrieving token:",
-    "sending": "Error sending notification:",
-    "activation": "Activation error:",
-    "messageNotification": "Error sending message notification",
-    "purchaseNotification": "Error sending purchase notification",
-    "nearbyNotification": "Error sending nearby notification",
-    "stripeReminderNotification": "Error sending banking reminder",
-    "eventNotification": "Error sending event notification",
-    "statsNotification": "Error sending stats notification",
-    "welcomeBackNotification": "Error sending welcome back notification",
-    "tokenRegistration": "Error registering token",
-    "axiosNotInitialized": "HTTP client is not initialized"
-  },
-  "logs": {
-    "devModePermission": "Development mode: simulator permission granted",
-    "existingStatus": "Existing status:",
-    "newStatus": "New status:",
-    "testSent": "Test notification sent:",
-    "tokenRegistered": "Device token registered successfully"
-  }
-},
   "cardData": {
     "errors": {
       "axiosInitError": "Axios initialization error:",

@@ -1104,25 +1104,193 @@ exports.getUserTransactions = async (req, res) => {
     }
 };
 
+
+const verifyAccountBeforeTransfer = async (stripeAccountId) => {
+    try {
+        const account = await stripe.accounts.retrieve(stripeAccountId);
+        
+        if (!account.payouts_enabled) {
+            return {
+                success: false,
+                error: 'Les virements ne sont pas activés pour ce compte',
+                code: 'PAYOUTS_NOT_ENABLED'
+            };
+        }
+        
+        if (!account.external_accounts || account.external_accounts.data.length === 0) {
+            return {
+                success: false,
+                error: 'Aucun compte bancaire configuré',
+                code: 'NO_BANK_ACCOUNT'
+            };
+        }
+        
+        return { success: true };
+    } catch (error) {
+        return {
+            success: false,
+            error: 'Erreur lors de la vérification du compte',
+            code: 'VERIFICATION_ERROR'
+        };
+    }
+};
+
+// 5. Améliorer createTransferIntent avec plus de vérifications
 exports.createTransferIntent = async (req, res) => {
     try {
         const user = req.user;
         const { amount } = req.body;
 
         if (!user.stripeAccountId) {
+            return res.status(400).json({ 
+                message: 'Compte Stripe non configuré',
+                code: 'NO_STRIPE_ACCOUNT'
+            });
+        }
+
+        // Vérifier le montant minimum (1€)
+        if (!amount || amount < 1) {
+            return res.status(400).json({ 
+                message: 'Le montant minimum est de 1€',
+                code: 'INVALID_AMOUNT'
+            });
+        }
+
+        // Vérifier le compte avant le transfert
+        const accountCheck = await verifyAccountBeforeTransfer(user.stripeAccountId);
+        if (!accountCheck.success) {
+            return res.status(400).json({
+                message: accountCheck.error,
+                code: accountCheck.code
+            });
+        }
+
+        // Vérifier le solde disponible
+        const balance = await stripe.balance.retrieve({
+            stripeAccount: user.stripeAccountId,
+        });
+
+        const availableBalance = balance.available.find(b => b.currency === 'eur');
+        const availableAmount = availableBalance ? availableBalance.amount / 100 : 0;
+
+        if (availableAmount < amount) {
+            return res.status(400).json({ 
+                message: 'Solde insuffisant',
+                code: 'INSUFFICIENT_BALANCE',
+                availableAmount: availableAmount,
+                requestedAmount: amount
+            });
+        }
+
+        // Créer le payout avec métadonnées
+        const payout = await stripe.payouts.create({
+            amount: Math.round(amount * 100),
+            currency: 'eur',
+            method: 'standard',
+            description: `Retrait Hushy - ${new Date().toLocaleDateString('fr-FR')}`,
+            metadata: {
+                userId: user._id.toString(),
+                userName: user.name,
+                userEmail: user.email
+            }
+        }, {
+            stripeAccount: user.stripeAccountId
+        });
+
+        console.log('Payout créé avec succès:', payout.id);
+
+        // Réponse améliorée
+        res.json({ 
+            success: true,
+            payoutId: payout.id,
+            amount: payout.amount / 100,
+            currency: payout.currency,
+            arrivalDate: payout.arrival_date,
+            status: payout.status,
+            method: payout.method,
+            estimatedArrival: new Date(payout.arrival_date * 1000).toLocaleDateString('fr-FR')
+        });
+
+    } catch (error) {
+        console.error('Erreur lors de la création du virement:', error);
+        
+        // Gestion d'erreurs améliorée
+        const errorResponses = {
+            'insufficient_funds': {
+                message: 'Fonds insuffisants sur votre compte',
+                code: 'INSUFFICIENT_FUNDS'
+            },
+            'account_invalid': {
+                message: 'Compte bancaire invalide ou non configuré',
+                code: 'INVALID_BANK_ACCOUNT'
+            },
+            'payout_limit_exceeded': {
+                message: 'Limite de virement dépassée',
+                code: 'LIMIT_EXCEEDED'
+            },
+            'bank_account_restricted': {
+                message: 'Compte bancaire restreint',
+                code: 'BANK_RESTRICTED'
+            },
+            'balance_insufficient': {
+                message: 'Solde insuffisant pour effectuer ce virement',
+                code: 'BALANCE_INSUFFICIENT'
+            }
+        };
+
+        const errorResponse = errorResponses[error.code] || {
+            message: 'Erreur lors de la création du virement',
+            code: 'INTERNAL_ERROR'
+        };
+
+        res.status(400).json({ 
+            ...errorResponse,
+            details: error.message 
+        });
+    }
+};
+// Fonction optionnelle pour récupérer l'historique des payouts
+exports.getPayoutHistory = async (req, res) => {
+    try {
+        const user = req.user;
+        
+        if (!user.stripeAccountId) {
             return res.status(400).json({ message: 'Compte Stripe non configuré' });
         }
 
-        const transferIntent = await stripe.transfers.create({
-            amount: Math.round(amount * 100), // Montant en centimes
-            currency: 'eur',
-            destination: user.stripeAccountId,
+        // Récupérer la liste des payouts
+        const payouts = await stripe.payouts.list({
+            limit: 20,
+        }, {
+            stripeAccount: user.stripeAccountId
         });
 
-        res.json({ clientSecret: transferIntent.client_secret });
+        // Formater les payouts
+        const formattedPayouts = payouts.data.map(payout => ({
+            id: payout.id,
+            amount: payout.amount / 100,
+            currency: payout.currency,
+            status: payout.status,
+            type: payout.type,
+            method: payout.method,
+            arrivalDate: new Date(payout.arrival_date * 1000).toLocaleDateString('fr-FR'),
+            created: new Date(payout.created * 1000).toLocaleDateString('fr-FR'),
+            description: payout.description,
+            failureCode: payout.failure_code,
+            failureMessage: payout.failure_message
+        }));
+
+        res.json({
+            payouts: formattedPayouts,
+            hasMore: payouts.has_more
+        });
+
     } catch (error) {
-        console.error('Erreur lors de la création de l\'intention de virement :', error);
-        res.status(500).json({ message: 'Erreur lors de la création de l\'intention de virement' });
+        console.error('Erreur lors de la récupération des payouts:', error);
+        res.status(500).json({ 
+            message: 'Erreur lors de la récupération de l\'historique',
+            details: error.message 
+        });
     }
 };
 

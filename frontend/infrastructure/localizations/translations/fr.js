@@ -544,6 +544,22 @@ export default {
       "paymentSheetInit": "Erreur lors de l'initialisation du formulaire de paiement :",
       "paymentSheetPresent": "Erreur lors de la présentation du formulaire de paiement :",
       "transferFunds": "Erreur lors du virement des fonds :"
+    },
+    "error": "Error",
+    "confirmTransfer": "Confirm Transfer",
+    "confirmTransferMessage": "Do you want to transfer {{amount}}€ to your bank account?",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "success": "Success",
+    "transferSuccessMessage": "Transfer of {{amount}}€ completed successfully. Expected arrival on {{arrivalDate}}.",
+    "ok": "OK",
+    "errors": {
+      "generic": "Error:",
+      "paymentSheetInit": "Error initializing payment sheet:",
+      "paymentSheetPresent": "Error presenting payment sheet:",
+      "transferFunds": "Error transferring funds:",
+      "insufficientFunds": "Insufficient funds",
+      "noBankAccount": "No bank account configured"
     }
   },
 
@@ -947,7 +963,5 @@ export default {
       "title": "Compte bancaire mis à jour",
       "message": "Votre compte bancaire a été mis à jour avec succès!"
     }
-  }
-
-
+  },
 }
