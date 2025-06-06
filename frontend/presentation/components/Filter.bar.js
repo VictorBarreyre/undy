@@ -18,7 +18,6 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
   const { t } = useTranslation();
   const { data, fetchUnpurchasedSecrets, fetchSecretsByLocation } = useCardData();
   const { getContacts, userData } = useContext(AuthContext);
-  // Utiliser activeButton passé par le parent au lieu d'un état local
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredResults, setFilteredResults] = useState([]);
@@ -27,6 +26,15 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
   const [showInviteModal, setShowInviteModal] = useState(false);
 
   const navigation = useNavigation();
+
+  // Style d'ombre pour les boutons inactifs
+  const inactiveShadowStyle = {
+    shadowColor: '#94A3B8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  };
 
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
   const labels = [...new Set(data.map((card) => card.label?.trim()).filter(Boolean))];
@@ -108,18 +116,15 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
   const handleContactsPermissionSuccess = async () => {
     try {
       console.log("Permission de contacts accordée, chargement...");
-      // Charger les contacts
       const contacts = await getContacts();
       setContactsData(contacts);
       
-      // Vérifier si des contacts utilisent l'application
       const hasAppUsers = contacts.some(contact => contact.usesApp === true);
       
       if (!hasAppUsers && contacts.length > 0) {
         setShowInviteModal(true);
       }
       
-      // Notifier le parent du changement de type (pas besoin de manipuler activeButton ici)
       onTypeChange(t('filter.contacts'));
       console.log("Notification de changement vers contacts envoyée au parent");
     } catch (error) {
@@ -136,7 +141,6 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
   const handleLocationPermissionSuccess = async () => {
     try {
       console.log("Permission de localisation accordée");
-      // Notifier le parent du changement de type
       onTypeChange(t('filter.aroundMe'));
       console.log("Notification de changement vers aroundMe envoyée au parent");
     } catch (error) {
@@ -191,33 +195,28 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
     
     if (buttonName === activeButton) {
       console.log("Ce filtre est déjà actif, aucune action");
-      return; // Éviter les actions répétées si le bouton est déjà actif
+      return;
     }
     
     if (buttonName === t('filter.contacts')) {
-      // Vérifier si la permission est déjà accordée
       const hasPermission = await checkContactsPermission();
       
       if (hasPermission) {
         handleContactsPermissionSuccess();
       } else {
-        // Demander la permission
         requestContactsPermission();
       }
     } 
     else if (buttonName === t('filter.aroundMe')) {
-      // Vérifier si la permission est déjà accordée
       const hasPermission = await checkLocationPermission();
       
       if (hasPermission) {
         handleLocationPermissionSuccess();
       } else {
-        // Demander la permission
         requestLocationPermission();
       }
     } 
     else {
-      // Pour les autres boutons, simplement notifier le parent
       onTypeChange(buttonName);
       console.log(`Notification de changement vers ${buttonName} envoyée au parent`);
     }
@@ -249,7 +248,10 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
     <Box width="100%" paddingTop={1} paddingBottom={2} >
       <View style={{ flexDirection: 'row', width: '100%'}}>
         <View style={styles.containerFilter}>
-          <ScrollView paddingLeft={6} horizontal showsHorizontalScrollIndicator={false} style={styles.scrollContainer}>
+          <ScrollView paddingLeft={6} horizontal showsHorizontalScrollIndicator={false} style={styles.scrollContainer}   contentContainerStyle={{
+    paddingBottom: 4, // Ajouter de l'espace pour l'ombre
+       // Un peu d'espace en haut aussi
+  }}>
             {buttonTypes.map((type) => {
               if (type === t('filter.categories')) {
                 return (
@@ -267,6 +269,8 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
                         paddingHorizontal: 26,
                         paddingVertical: 8,
                         borderRadius: 999,
+                        // Ombre seulement si le bouton est inactif
+                        ...(activeButton !== type && inactiveShadowStyle)
                       }
                     ]}
                     onPress={() => setOverlayVisible(true)}
@@ -314,6 +318,7 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
                           paddingHorizontal: 26,
                           paddingVertical: 8,
                           borderRadius: 999,
+                          ...inactiveShadowStyle // Ombre appliquée ici
                         }
                       ]}
                     >

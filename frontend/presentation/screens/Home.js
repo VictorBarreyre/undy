@@ -208,7 +208,7 @@ const Home = ({ navigation }) => {
 
   return (
     <Background>
-      <Box alignItems='center' alignContent='center' paddingTop={2} width="100%">
+      <Box alignItems='center' alignContent='center' paddingTop={2} width="100%"  style={{ overflow: 'visible' }} >
         <FilterBar 
           onTypeChange={handleTypeChange} 
           onFilterChange={handleFilterChange}
