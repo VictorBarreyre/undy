@@ -10,7 +10,7 @@
  * sans faire aucun appel API.
  */
 
-console.log('🚫 SightengineService: SERVICE COMPLÈTEMENT DÉSACTIVÉ');
+
 
 /**
  * Modération d'image DÉSACTIVÉE
@@ -18,8 +18,8 @@ console.log('🚫 SightengineService: SERVICE COMPLÈTEMENT DÉSACTIVÉ');
  * @returns {Promise<Object>} - Toujours autorisé
  */
 export const moderateImage = async (imageUri) => {
-  console.log('🖼️ SightengineService: Modération d\'image DÉSACTIVÉE - autorisation automatique');
-  
+
+
   return {
     isFlagged: false,
     reason: null,
@@ -35,8 +35,8 @@ export const moderateImage = async (imageUri) => {
  * @returns {Promise<Object>} - Toujours autorisé
  */
 export const submitVideoForModeration = async (videoUri) => {
-  console.log('🎥 SightengineService: Soumission de vidéo DÉSACTIVÉE - autorisation automatique');
-  
+
+
   return {
     success: true,
     workflowId: null,
@@ -53,8 +53,8 @@ export const submitVideoForModeration = async (videoUri) => {
  * @returns {Promise<Object>} - Toujours autorisé
  */
 export const checkVideoModerationStatus = async (workflowId) => {
-  console.log('🎥 SightengineService: Vérification de statut DÉSACTIVÉE - autorisation automatique');
-  
+
+
   return {
     success: true,
     status: 'disabled',
@@ -73,8 +73,8 @@ export const checkVideoModerationStatus = async (workflowId) => {
  * @returns {Promise<Object>} - Toujours autorisé
  */
 export const moderateAudio = async (audioUri) => {
-  console.log('🎵 SightengineService: Modération d\'audio DÉSACTIVÉE - autorisation automatique');
-  
+
+
   return {
     isFlagged: false,
     reason: null,
@@ -103,7 +103,7 @@ export const getModerationStatus = () => {
  * @returns {Promise<boolean>} - Toujours false (service désactivé)
  */
 export const testConnection = async () => {
-  console.log('🚫 SightengineService: Test de connexion DÉSACTIVÉ');
+
   return false;
 };
 
@@ -115,7 +115,7 @@ export default {
   moderateAudio,
   getModerationStatus,
   testConnection,
-  
+
   // Métadonnées du service
   serviceStatus: {
     enabled: false,

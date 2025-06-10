@@ -10,7 +10,7 @@ import BlurredTextComponent from './SelectiveBlurText';
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
 import { useTranslation } from 'react-i18next';
 import { useDateFormatter } from '../../utils/dateFormatters';
-import LinearGradient from 'react-native-linear-gradient';// Ajustez le chemin selon votre structure
+import LinearGradient from 'react-native-linear-gradient'; // Ajustez le chemin selon votre structure
 import * as Location from 'expo-location';
 
 
@@ -35,7 +35,7 @@ export default function CardHome({ cardData }) {
     content: cardData.content || '',
     label: cardData.label || '',
     expiresAt: cardData.expiresAt,
-    location: cardData.location || null  // Ajoutez cette ligne
+    location: cardData.location || null // Ajoutez cette ligne
   };
 
 
@@ -55,9 +55,9 @@ export default function CardHome({ cardData }) {
 
             // Construire le nom de localisation
             const locationParts = [
-              city || region || t('cardHome.unknownLocation'),
-              country
-            ].filter(Boolean);
+            city || region || t('cardHome.unknownLocation'),
+            country].
+            filter(Boolean);
 
             setLocationName(locationParts.join(', '));
           }
@@ -104,7 +104,7 @@ export default function CardHome({ cardData }) {
   }
 
   const handleRevealSecret = () => {
-    console.log(t('cardHome.logs.secretRevealed'));
+
   };
 
   const handleShare = async () => {
@@ -114,17 +114,17 @@ export default function CardHome({ cardData }) {
 
       // Effet de pression (scale)
       Animated.sequence([
-        Animated.timing(shareButtonScale, {
-          toValue: 0.9,
-          duration: 100,
-          useNativeDriver: true
-        }),
-        Animated.timing(shareButtonScale, {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: true
-        })
-      ]).start();
+      Animated.timing(shareButtonScale, {
+        toValue: 0.9,
+        duration: 100,
+        useNativeDriver: true
+      }),
+      Animated.timing(shareButtonScale, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true
+      })]
+      ).start();
 
       // Feedback haptique
       ReactNativeHapticFeedback.trigger("impactLight", {
@@ -139,7 +139,7 @@ export default function CardHome({ cardData }) {
         shareLink: cardData.shareLink || `hushy://secret/${cardData._id}`
       };
 
-      console.log("Secret à partager:", secretToShare); // Vérifier l'objet
+      // Vérifier l'objet
 
       // Ensuite seulement, appeler handleShareSecret
       const result = await handleShareSecret(secretToShare);
@@ -149,7 +149,7 @@ export default function CardHome({ cardData }) {
         setShareSuccess(true);
         setTimeout(() => {
           setShareSuccess(false);
-        }, 2000);  // Durée plus courte pour permettre de partager à nouveau rapidement
+        }, 2000); // Durée plus courte pour permettre de partager à nouveau rapidement
       }
     } catch (error) {
       console.error("Erreur lors du partage:", error);
@@ -158,7 +158,7 @@ export default function CardHome({ cardData }) {
       // Important: Toujours réinitialiser isSharing pour permettre de nouveaux partages
       setTimeout(() => {
         setIsSharing(false);
-      }, 500);  // Petit délai pour éviter les clics accidentels multiples
+      }, 500); // Petit délai pour éviter les clics accidentels multiples
     }
   };
 
@@ -178,23 +178,23 @@ export default function CardHome({ cardData }) {
       shadow={10}
       paddingTop={1}
       paddingBottom={4}
-      justifyContent="space-between"
-    >
+      justifyContent="space-between">
+
       {/* Contenu texte */}
-      <VStack height={'100%'} justifyContent="space-between" padding={3} space={2} flex={1} >
+      <VStack height={'100%'} justifyContent="space-between" padding={3} space={2} flex={1}>
 
         <HStack alignItems="center" justifyContent="space-between" width="95%">
           {/* Texte aligné à gauche */}
-          <VStack flex={1} mr={2} ml={2} >
+          <VStack flex={1} mr={2} ml={2}>
             <Text left={2} style={styles.caption}>
               {t('cardHome.postedBy', { name: safeCardData.user.name || t('cardHome.anonymous') })}
             </Text>
 
-            {cardData.location?.coordinates && (
-              <Text color='#94A3B8' left={2} mt={1} style={styles.littleCaption}>
+            {cardData.location?.coordinates &&
+            <Text color='#94A3B8' left={2} mt={1} style={styles.littleCaption}>
                 {t('cardHome.postedFrom')} {locationName}
               </Text>
-            )}
+            }
 
             <Text color='#FF78B2' left={2} mt={1} style={styles.littleCaption}>
               {t('cardHome.expiresIn')} {timeLeft}
@@ -209,8 +209,8 @@ export default function CardHome({ cardData }) {
             alt={t('cardHome.profilePicture', { name: safeCardData.user.name || t('cardHome.anonymous') })}
             width={35}
             height={35}
-            borderRadius="full"
-          />
+            borderRadius="full" />
+
         </HStack>
 
 
@@ -221,21 +221,21 @@ export default function CardHome({ cardData }) {
           overflow="hidden"
           mt={5}
           mb={2}
-          marginLeft={4}
-        >
+          marginLeft={4}>
+
           <BlurredTextComponent
             content={safeCardData.content || t('cardHome.noDescriptionAvailable')}
             style={{
               width: '90%',
               minHeight: 100,
-              maxHeight: 220,
+              maxHeight: 220
             }}
             textStyle={{
               fontSize: 24,
               lineHeight: 30,
               fontFamily: 'SF-Pro-Display-Bold',
               fontWeight: '400',
-              color: '#333',
+              color: '#333'
             }}
             maxWords={30}
             gradientHeight={0.75} // 25% de la hauteur totale
@@ -251,9 +251,9 @@ export default function CardHome({ cardData }) {
             justifyContent: 'space-between',
             alignItems: 'center'
           }}
-          mt="auto"
-        >
-          <Text ml={4} style={[styles.caption, styles.ctalittle]} >
+          mt="auto">
+
+          <Text ml={4} style={[styles.caption, styles.ctalittle]}>
             {cardData.label || t('cardHome.labelUnavailable')}
           </Text>
           {/* Bouton de partage amélioré */}
@@ -274,14 +274,14 @@ export default function CardHome({ cardData }) {
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.2,
-                    shadowRadius: 3,
+                    shadowRadius: 3
                   },
                   android: {
-                    elevation: 3,
+                    elevation: 3
                   }
                 })
-              }}
-            >
+              }}>
+
               <LinearGradient
                 colors={shareSuccess ? ['#4CAF50', '#2E7D32'] : ['#FF587E', '#CC4B8D']}
                 start={{ x: 0, y: 0 }}
@@ -292,26 +292,26 @@ export default function CardHome({ cardData }) {
                   right: 0,
                   top: 0,
                   bottom: 0
-                }}
-              />
+                }} />
+
               <View style={{
                 width: '100%',
                 height: '100%',
                 justifyContent: 'center',
                 alignItems: 'center',
                 paddingBottom: 1, // Parfois un petit ajustement aide au centrage visuel
-                paddingRight: 2   // Ajustement horizontal si nécessaire
+                paddingRight: 2 // Ajustement horizontal si nécessaire
               }}>
                 <FontAwesomeIcon
                   icon={shareSuccess ? faCheck : faPaperPlane}
                   color="white"
-                  size={16}
-                />
+                  size={16} />
+
               </View>
             </TouchableOpacity>
           </Animated.View>
         </HStack>
       </VStack>
-    </Box>
-  );
+    </Box>);
+
 }

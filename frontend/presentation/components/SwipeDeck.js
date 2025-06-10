@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
 const SWIPE_OUT_DURATION = 300;
 
@@ -34,19 +34,19 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
 
   const navigateToChat = async () => {
     try {
-      console.log("🚀 Début de la navigation vers le chat...");
+
 
       // Récupérer toutes les conversations
       const conversations = await getUserConversations();
-      console.log("📋 Conversations récupérées:", conversations.length);
+
 
       // Trouver la conversation spécifique
       const targetConversation = conversations.find(
-        conv => conv._id === '6834506cf3c68470b83a18c3'
+        (conv) => conv._id === '6834506cf3c68470b83a18c3'
       );
 
       if (targetConversation) {
-        console.log("✅ Conversation trouvée, préparation des données...");
+
 
         // Préparer les données secretData selon ce que ChatScreen attend
         const secretData = {
@@ -57,21 +57,21 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
           shareLink: targetConversation.secret.shareLink || `hushy://secret/${targetConversation.secret._id}`
         };
 
-        console.log("📦 SecretData préparé:", JSON.stringify(secretData, null, 2));
+
 
         // Navigation avec tous les paramètres requis
-        console.log("🧭 Navigation vers ChatTab...");
+
         navigation.navigate('ChatTab');
 
         setTimeout(() => {
-          console.log("🧭 Navigation vers Chat avec paramètres complets...");
+
           navigation.navigate('Chat', {
             conversationId: targetConversation._id,
             conversation: targetConversation,
             secretData: secretData,
             showModalOnMount: false
           });
-          console.log("✅ Navigation terminée !");
+
         }, 300);
 
       } else {
@@ -99,7 +99,7 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
         try {
           setIsLoading(true);
           await fetchUnpurchasedSecrets();
-          console.log("Chargement initial des données effectué");
+
         } catch (error) {
           console.error(t('swipeDeck.errors.initialLoading'), error);
         } finally {
@@ -117,8 +117,8 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
     const hasSelectedFiltersChanged = JSON.stringify(prevSelectedFilters.current) !== JSON.stringify(selectedFilters);
 
     if (hasActiveTypeChanged || hasSelectedFiltersChanged) {
-      console.log(`Filtres changés - activeType: ${activeType}, selectedFilters: ${selectedFilters.join(', ')}`);
-      console.log(`Réinitialisation de l'index (était: ${currentIndex})`);
+
+
       setCurrentIndex(0); // Réinitialiser l'index lorsque les filtres changent
       position.setValue({ x: 0, y: 0 }); // Réinitialiser la position
 
@@ -131,7 +131,7 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
   // Effet pour filtrer les données en fonction des filtres et des types
   useEffect(() => {
     const processData = () => {
-      console.log(`Traitement des données: ${data.length} éléments, activeType: ${activeType}`);
+
 
       let filtered = [...data]; // Créer une copie pour éviter de modifier l'original
 
@@ -140,7 +140,7 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
         filtered = filtered.filter((card) => {
           return card.label && selectedFilters.includes(card.label);
         });
-        console.log(`Après filtre par catégorie: ${filtered.length} éléments`);
+
       }
 
       // Puis appliquer les filtres par type
@@ -151,10 +151,10 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
           const cardPhoneNumber = card.user.phoneNumber.replace(/\D/g, '');
           return userContacts.includes(cardPhoneNumber);
         });
-        console.log(`Après filtre contacts: ${filtered.length} éléments`);
+
       } else if (activeType === t('filter.aroundMe') && userLocation) {
-        // Les données devraient déjà être filtrées par localisation via l'API
-        console.log(`Données de localisation: ${filtered.length} éléments proches`);
+
+
       }
 
       setFilteredData(filtered);
@@ -162,10 +162,10 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
         // Utiliser 0 comme index après un changement de filtre
         const actualIndex = currentIndex % filtered.length;
         setCurrentItem(filtered[actualIndex]);
-        console.log(`Élément courant défini: ${filtered[actualIndex]?.label || 'Sans étiquette'}`);
+
       } else {
         setCurrentItem(null);
-        console.log("Aucun élément disponible après filtrage");
+
       }
       setIsLoading(false);
     };
@@ -177,17 +177,17 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
       setFilteredData([]);
       setCurrentItem(null);
       setIsLoading(false);
-      console.log("Aucune donnée disponible");
+
     }
   }, [selectedFilters, data, currentIndex, isLoadingData, activeType, userContacts, userLocation, t]);
 
   const getCardHeight = () => {
     switch (true) {
-      case filteredData.length === 1: return SCREEN_HEIGHT * 0.51;
-      case filteredData.length === 2: return SCREEN_HEIGHT * 0.50;
-      case filteredData.length === 3: return SCREEN_HEIGHT * 0.48;
-      case filteredData.length === 4: return SCREEN_HEIGHT * 0.47;
-      default: return SCREEN_HEIGHT * 0.45;
+      case filteredData.length === 1:return SCREEN_HEIGHT * 0.51;
+      case filteredData.length === 2:return SCREEN_HEIGHT * 0.50;
+      case filteredData.length === 3:return SCREEN_HEIGHT * 0.48;
+      case filteredData.length === 4:return SCREEN_HEIGHT * 0.47;
+      default:return SCREEN_HEIGHT * 0.45;
     }
   };
 
@@ -205,7 +205,7 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
         } else {
           resetPosition();
         }
-      },
+      }
     })
   ).current;
 
@@ -214,19 +214,19 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
     Animated.timing(position, {
       toValue: { x, y: 0 },
       duration: SWIPE_OUT_DURATION,
-      useNativeDriver: false,
+      useNativeDriver: false
     }).start(() => onSwipeComplete(direction));
   };
 
   const onSwipeComplete = (direction) => {
-    setCurrentIndex(prevIndex => {
+    setCurrentIndex((prevIndex) => {
       const newIndex = prevIndex + 1;
 
       // Mise à jour du currentItem
       if (filteredData.length > 0) {
         const nextItemIndex = newIndex % filteredData.length;
         setCurrentItem(filteredData[nextItemIndex]);
-        console.log(`Passage à l'élément suivant, index: ${nextItemIndex}`);
+
       }
 
       return newIndex;
@@ -239,24 +239,24 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
       toValue: { x: 0, y: 0 },
       friction: 8,
       tension: 50,
-      useNativeDriver: false,
+      useNativeDriver: false
     }).start();
   };
 
   const getCardStyle = () => {
     const rotate = position.x.interpolate({
       inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
-      outputRange: ['-10deg', '0deg', '10deg'],
+      outputRange: ['-10deg', '0deg', '10deg']
     });
     return {
       ...position.getLayout(),
-      transform: [{ rotate }],
+      transform: [{ rotate }]
     };
   };
 
   const renderCards = () => {
     if (filteredData.length === 0) {
-      return null;  // Ceci sera géré par la condition qui suit plus bas
+      return null; // Ceci sera géré par la condition qui suit plus bas
     }
 
     const cardsToRender = Math.min(5, filteredData.length);
@@ -271,28 +271,28 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
 
       const cardHeight = getCardHeight();
 
-      const cardStyle = isCurrentCard
-        ? [getCardStyle(), styles.cardStyle]
-        : [
-          styles.cardStyle,
-          {
-            marginTop: 0, // Annule la marge par défaut
-            position: 'absolute',
-            height: cardHeight,
-            top: 25 * i, // Utiliser i directement pour l'échelonnage
-            transform: [{ scale: 1 - (0.05 * i) }],
-          }
-        ];
+      const cardStyle = isCurrentCard ?
+      [getCardStyle(), styles.cardStyle] :
+      [
+      styles.cardStyle,
+      {
+        marginTop: 0, // Annule la marge par défaut
+        position: 'absolute',
+        height: cardHeight,
+        top: 25 * i, // Utiliser i directement pour l'échelonnage
+        transform: [{ scale: 1 - 0.05 * i }]
+      }];
+
 
       return (
         <Animated.View
           key={`${card._id}-${cardIndex}`}
           style={cardStyle}
-          {...(isCurrentCard ? panResponder.panHandlers : {})}
-        >
+          {...isCurrentCard ? panResponder.panHandlers : {}}>
+
           <CardHome cardData={card} />
-        </Animated.View>
-      );
+        </Animated.View>);
+
     }).reverse();
   };
 
@@ -304,16 +304,16 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
           {t('swipeDeck.noSecrets')}
         </Text>
         <Text style={styles.caption} textAlign="center" color="#94A3B8" mt={2}>
-          {selectedFilters.length > 0
-            ? t('swipeDeck.tryChangingFilters')
-            : activeType === t('filter.contacts')
-              ? t('swipeDeck.noContactsUsingApp')
-              : activeType === t('filter.aroundMe')
-                ? t('swipeDeck.noSecretsNearby')
-                : t('swipeDeck.checkBackLater')}
+          {selectedFilters.length > 0 ?
+          t('swipeDeck.tryChangingFilters') :
+          activeType === t('filter.contacts') ?
+          t('swipeDeck.noContactsUsingApp') :
+          activeType === t('filter.aroundMe') ?
+          t('swipeDeck.noSecretsNearby') :
+          t('swipeDeck.checkBackLater')}
         </Text>
-      </VStack>
-    );
+      </VStack>);
+
   }
 
   // Afficher un indicateur de chargement pendant le chargement des données
@@ -334,7 +334,7 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: true
       }).start(async () => {
         setIsLoading(true);
 
@@ -371,21 +371,21 @@ const SwipeDeck = ({ selectedFilters = [], activeType, userContacts, userLocatio
         <Box style={styles.cardContainer}>
           {renderCards()}
         </Box>
-        {currentItem && (
-          <PaymentSheet
-            secret={currentItem}
-            onPaymentSuccess={handlePaymentSuccess}
-            onPaymentError={(error) => {
-              console.error(t('swipeDeck.errors.payment'), error);
-              setIsLoading(false);
-              setIsTransitioning(false);
-              fadeAnim.setValue(1);
-            }}
-          />
-        )}
+        {currentItem &&
+        <PaymentSheet
+          secret={currentItem}
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentError={(error) => {
+            console.error(t('swipeDeck.errors.payment'), error);
+            setIsLoading(false);
+            setIsTransitioning(false);
+            fadeAnim.setValue(1);
+          }} />
+
+        }
       </VStack>
-    </Animated.View>
-  );
+    </Animated.View>);
+
 };
 
 const styles = StyleSheet.create({
@@ -395,13 +395,13 @@ const styles = StyleSheet.create({
     height: '100%',
     width: '100%',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'center'
   },
 
   cardContainer: {
     position: 'relative',
     width: '100%',
-    height: '92%',
+    height: '92%'
   },
 
   cardStyle: {
@@ -415,22 +415,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
-    elevation: 5,
+    elevation: 5
   },
 
   h3: {
     fontSize: 24,
     lineHeight: 30,
     fontWeight: '700',
-    fontFamily: 'SF-Pro-Display-Bold',
+    fontFamily: 'SF-Pro-Display-Bold'
   },
 
   caption: {
     fontSize: 14,
     lineHeight: 18,
     fontWeight: '500',
-    fontFamily: 'SF-Pro-Display-Medium',
-  },
+    fontFamily: 'SF-Pro-Display-Medium'
+  }
 });
 
 export default SwipeDeck;

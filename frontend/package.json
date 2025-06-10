@@ -85,7 +85,10 @@
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
+    "@babel/generator": "^7.27.5",
+    "@babel/parser": "^7.27.5",
     "@babel/plugin-transform-private-methods": "^7.25.9",
+    "@babel/traverse": "^7.27.4",
     "metro-react-native-babel-preset": "^0.77.0"
   },
   "private": true

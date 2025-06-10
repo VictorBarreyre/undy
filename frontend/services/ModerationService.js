@@ -9,25 +9,25 @@ const CACHE_PREFIX = 'moderation_';
 
 // Liste de mots à filtrer localement (SEULE modération active)
 const OFFENSIVE_WORDS = [
-  // Insultes et mots vulgaires en français
-  "putain", "merde", "connard", "salope", "enculé", "pédé",
-  // Termes haineux ou discriminatoires
-  "nègre", "youpin", "bougnoule", "pute", "tapette",
-  // Insultes en anglais
-  "fuck", "shit", "asshole", "bitch", "cunt", "faggot", "nigger",
-];
+// Insultes et mots vulgaires en français
+"putain", "merde", "connard", "salope", "enculé", "pédé",
+// Termes haineux ou discriminatoires
+"nègre", "youpin", "bougnoule", "pute", "tapette",
+// Insultes en anglais
+"fuck", "shit", "asshole", "bitch", "cunt", "faggot", "nigger"];
+
 
 // Configuration de modération - SEUL LE TEXTE EST ACTIF
 const MODERATION_CONFIG = {
-  useLocalFilter: true,       // Filtrage local des mots offensants SEUL ACTIF
-  useCache: true,             // Cache pour le texte uniquement
-  logViolations: true,        // Journalisation des violations de texte
-  threshold: 0.7,             // Seuil par défaut pour le texte
+  useLocalFilter: true, // Filtrage local des mots offensants SEUL ACTIF
+  useCache: true, // Cache pour le texte uniquement
+  logViolations: true, // Journalisation des violations de texte
+  threshold: 0.7, // Seuil par défaut pour le texte
   // TOUT LE RESTE EST DÉSACTIVÉ
   enableImageModeration: false,
   enableVideoModeration: false,
   enableAudioModeration: false,
-  enableMediaModeration: false,
+  enableMediaModeration: false
 };
 
 /**
@@ -41,10 +41,10 @@ export const checkContentLocally = (content) => {
   }
 
   const lowerContent = content.toLowerCase();
-  
+
   // Recherche des mots offensants
-  const foundWords = OFFENSIVE_WORDS.filter(word => 
-    lowerContent.includes(word.toLowerCase())
+  const foundWords = OFFENSIVE_WORDS.filter((word) =>
+  lowerContent.includes(word.toLowerCase())
   );
 
   if (foundWords.length > 0) {
@@ -52,14 +52,14 @@ export const checkContentLocally = (content) => {
       isFlagged: true,
       reason: 'offensive_language',
       details: {
-        flaggedWords: foundWords,
+        flaggedWords: foundWords
       }
     };
-    
+
     if (MODERATION_CONFIG.logViolations) {
-      console.log('Violation de modération détectée localement:', result);
+
     }
-    
+
     return result;
   }
 
@@ -75,10 +75,10 @@ export const checkContentLocally = (content) => {
 const getCacheKey = (content, type = 'text') => {
   let hash = 0;
   const contentStr = type === 'text' ? content : `${type}_${content}`;
-  
+
   for (let i = 0; i < contentStr.length; i++) {
     const char = contentStr.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
   return `${CACHE_PREFIX}${type}_${hash}`;
@@ -92,17 +92,17 @@ const getCacheKey = (content, type = 'text') => {
  */
 const checkCache = async (content, type = 'text') => {
   if (!MODERATION_CONFIG.useCache || type !== 'text') return null;
-  
+
   try {
     const cacheKey = getCacheKey(content, type);
     const cachedData = await AsyncStorage.getItem(cacheKey);
-    
+
     if (cachedData) {
       const cached = JSON.parse(cachedData);
-      
+
       if (cached.timestamp && Date.now() - cached.timestamp < CACHE_EXPIRY) {
         if (MODERATION_CONFIG.logViolations && cached.result.isFlagged) {
-          console.log('Violation trouvée en cache:', cached.result);
+
         }
         return cached.result;
       }
@@ -110,7 +110,7 @@ const checkCache = async (content, type = 'text') => {
   } catch (error) {
     console.error('Erreur lors de la vérification du cache de modération:', error);
   }
-  
+
   return null;
 };
 
@@ -122,14 +122,14 @@ const checkCache = async (content, type = 'text') => {
  */
 const storeInCache = async (content, result, type = 'text') => {
   if (!MODERATION_CONFIG.useCache || type !== 'text') return;
-  
+
   try {
     const cacheKey = getCacheKey(content, type);
     const cacheData = {
       result,
       timestamp: Date.now()
     };
-    
+
     await AsyncStorage.setItem(cacheKey, JSON.stringify(cacheData));
   } catch (error) {
     console.error('Erreur lors du stockage du résultat de modération dans le cache:', error);
@@ -151,27 +151,27 @@ export const checkContentViaAPI = async (content) => {
     if (cachedResult) {
       return cachedResult;
     }
-    
+
     // Appel à l'API de modération (si disponible)
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error('Erreur: instance axios non disponible');
     }
-    
+
     const response = await instance.post('/api/moderation', { content });
-    
+
     if (!response.data) {
       throw new Error('Réponse de modération invalide');
     }
-    
+
     const moderationResult = response.data;
-    
+
     await storeInCache(content, moderationResult, 'text');
-    
+
     if (MODERATION_CONFIG.logViolations && moderationResult.isFlagged) {
-      console.log('API: Violation de modération détectée:', moderationResult);
+
     }
-    
+
     return moderationResult;
   } catch (error) {
     console.error('Erreur lors de la vérification via API:', error);
@@ -185,10 +185,10 @@ export const checkContentViaAPI = async (content) => {
  * @returns {Promise<Object>} - Résultat toujours autorisé
  */
 export const moderateImage = async (imageUri) => {
-  console.log('🖼️ MODÉRATION D\'IMAGE COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
-  
-  return { 
-    isFlagged: false, 
+
+
+  return {
+    isFlagged: false,
     reason: null,
     disabled: true,
     message: 'Modération d\'image complètement désactivée'
@@ -201,11 +201,11 @@ export const moderateImage = async (imageUri) => {
  * @returns {Promise<Object>} - Résultat toujours autorisé
  */
 export const submitVideoForModeration = async (videoUri) => {
-  console.log('🎥 MODÉRATION DE VIDÉO COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
-  
-  return { 
-    isFlagged: false, 
-    reason: null, 
+
+
+  return {
+    isFlagged: false,
+    reason: null,
     status: 'disabled',
     disabled: true,
     message: 'Modération de vidéo complètement désactivée'
@@ -219,11 +219,11 @@ export const submitVideoForModeration = async (videoUri) => {
  * @returns {Promise<Object>} - Résultat toujours autorisé
  */
 export const checkVideoModerationStatus = async (videoUri, workflowId = null) => {
-  console.log('🎥 VÉRIFICATION DE STATUT VIDÉO COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
-  
-  return { 
-    isFlagged: false, 
-    reason: null, 
+
+
+  return {
+    isFlagged: false,
+    reason: null,
     status: 'disabled',
     disabled: true,
     message: 'Vérification de statut vidéo complètement désactivée'
@@ -243,7 +243,7 @@ export const moderateContent = async (content) => {
       return localResult;
     }
   }
-  
+
   // API si disponible, sinon local uniquement
   return await checkContentViaAPI(content);
 };
@@ -261,7 +261,7 @@ export const moderateMessage = async (message) => {
       details: {},
       status: 'completed'
     };
-    
+
     // 1. SEULE VÉRIFICATION ACTIVE : LE TEXTE
     if (message.content) {
       const textResult = await moderateContent(message.content);
@@ -273,39 +273,39 @@ export const moderateMessage = async (message) => {
       }
       results.details.text = textResult;
     }
-    
+
     // 2. TOUTES LES AUTRES VÉRIFICATIONS DÉSACTIVÉES
     if (message.image) {
-      console.log('🖼️ Modération d\'image IGNORÉE - autorisation automatique');
-      results.details.image = { 
-        isFlagged: false, 
-        reason: null, 
+
+      results.details.image = {
+        isFlagged: false,
+        reason: null,
         disabled: true,
-        message: 'Modération d\'image désactivée' 
+        message: 'Modération d\'image désactivée'
       };
     }
-    
+
     if (message.video) {
-      console.log('🎥 Modération de vidéo IGNORÉE - autorisation automatique');
-      results.details.video = { 
-        isFlagged: false, 
-        reason: null, 
+
+      results.details.video = {
+        isFlagged: false,
+        reason: null,
         status: 'disabled',
         disabled: true,
-        message: 'Modération de vidéo désactivée' 
+        message: 'Modération de vidéo désactivée'
       };
     }
-    
+
     if (message.audio) {
-      console.log('🎵 Modération d\'audio IGNORÉE - autorisation automatique');
-      results.details.audio = { 
-        isFlagged: false, 
-        reason: null, 
+
+      results.details.audio = {
+        isFlagged: false,
+        reason: null,
         disabled: true,
-        message: 'Modération d\'audio désactivée' 
+        message: 'Modération d\'audio désactivée'
       };
     }
-    
+
     return results;
   } catch (error) {
     console.error('Erreur lors de la modération du message:', error);
@@ -319,11 +319,11 @@ export const moderateMessage = async (message) => {
 export const clearModerationCache = async () => {
   try {
     const keys = await AsyncStorage.getAllKeys();
-    const moderationKeys = keys.filter(key => key.startsWith(CACHE_PREFIX));
-    
+    const moderationKeys = keys.filter((key) => key.startsWith(CACHE_PREFIX));
+
     if (moderationKeys.length > 0) {
       await AsyncStorage.multiRemove(moderationKeys);
-      console.log(`Cache de modération nettoyé: ${moderationKeys.length} entrées supprimées`);
+
     }
   } catch (error) {
     console.error('Erreur lors du nettoyage du cache de modération:', error);
@@ -342,6 +342,6 @@ export const getViolationMessage = (reason) => {
     'harassment': "Ce message contient du contenu considéré comme du harcèlement.",
     'default': "Ce message a été bloqué car il enfreint nos directives communautaires."
   };
-  
+
   return messages[reason] || messages.default;
 };

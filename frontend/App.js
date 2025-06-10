@@ -34,13 +34,13 @@ const App = () => {
         SharedSecret: {
           path: 'secret/:secretId',
           parse: {
-            secretId: (secretId) => secretId,
-          },
-        },
+            secretId: (secretId) => secretId
+          }
+        }
         // Vous pouvez ajouter d'autres deep links ici si nécessaire
         // mais PAS pour les notifications - elles sont gérées par NotificationHandler
-      },
-    },
+      }
+    }
   };
 
   const loadFonts = async () => {
@@ -48,7 +48,7 @@ const App = () => {
       "SF-Pro-Display-Regular": require("./assets/fonts/SF-Pro-Display-Regular.otf"),
       "SF-Pro-Display-Medium": require("./assets/fonts/SF-Pro-Display-Medium.otf"),
       "SF-Pro-Display-Semibold": require("./assets/fonts/SF-Pro-Display-Semibold.otf"),
-      "SF-Pro-Display-Bold": require("./assets/fonts/SF-Pro-Display-Bold.otf"),
+      "SF-Pro-Display-Bold": require("./assets/fonts/SF-Pro-Display-Bold.otf")
     });
   };
 
@@ -72,8 +72,8 @@ const App = () => {
     <StripeProvider
       publishableKey={STRIPE_PUBLISHABLE_KEY}
       merchantIdentifier="merchant.com.hushy.payments"
-      urlScheme="hushy"
-    >
+      urlScheme="hushy">
+
       <AuthProvider>
         <CardDataProvider>
           <NativeBaseProvider theme={lightTheme}>
@@ -85,31 +85,31 @@ const App = () => {
                   colors: {
                     background: 'transparent',
                     card: 'transparent',
-                    border: 'transparent',
-                  },
+                    border: 'transparent'
+                  }
                 }}
                 onReady={() => {
-                  console.log('[APP] ✅ Navigation prête');
+
                   setNavigationReady(true);
-                }}
-              >
+                }}>
+
                 <StackNavigator />
                 
                 {/* Gestionnaires de notifications et deep links */}
                 {/* Ne les monter que quand la navigation est prête */}
-                {isNavigationReady && (
-                  <>
+                {isNavigationReady &&
+                <>
                     <NotificationHandler />
                     <DeepLinkHandler />
                   </>
-                )}
+                }
               </NavigationContainer>
             </SafeAreaProvider>
           </NativeBaseProvider>
         </CardDataProvider>
       </AuthProvider>
-    </StripeProvider>
-  );
+    </StripeProvider>);
+
 };
 
 export default App;

@@ -23,26 +23,26 @@ const GradientIcon = ({ icon, size, focused }) => {
   return (
     <MaskedView
       maskElement={
-        <View style={{ 
-          backgroundColor: 'transparent',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}>
+      <View style={{
+        backgroundColor: 'transparent',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
           <FontAwesomeIcon icon={icon} size={size} color="black" />
         </View>
-      }
-    >
+      }>
+
       <LinearGradient
         colors={['#FF587E', '#CC4B8D']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ 
-          width: size, 
-          height: size,
-        }}
-      />
-    </MaskedView>
-  );
+        style={{
+          width: size,
+          height: size
+        }} />
+
+    </MaskedView>);
+
 };
 
 const TabNavigator = () => {
@@ -52,10 +52,10 @@ const TabNavigator = () => {
 
   useEffect(() => {
     refreshUnreadCounts();
-    console.log("TabNavigator - totalUnreadCount:", totalUnreadCount);
+
     // Rafraîchir toutes les 30 secondes
     const interval = setInterval(refreshUnreadCounts, 30000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -68,93 +68,93 @@ const TabNavigator = () => {
             case 'HomeTab':
               return <GradientIcon icon={faHome} size={size} focused={focused} />;
             case 'Profile':
-              return userData?.profilePicture ? (
-                <Image
-                  alt="Profile"
-                  source={{ uri: userData.profilePicture }}
-                  style={{
-                    width: size,
-                    height: size,
-                    borderRadius: size / 2,
-                    borderWidth: focused ? 2 : 0,
-                    borderColor: focused ? 'white' : 'transparent'
-                  }}
-                />
-              ) : (
-                <GradientIcon icon={faUser} size={size} focused={focused} />
-              );
+              return userData?.profilePicture ?
+              <Image
+                alt="Profile"
+                source={{ uri: userData.profilePicture }}
+                style={{
+                  width: size,
+                  height: size,
+                  borderRadius: size / 2,
+                  borderWidth: focused ? 2 : 0,
+                  borderColor: focused ? 'white' : 'transparent'
+                }} /> :
+
+
+              <GradientIcon icon={faUser} size={size} focused={focused} />;
+
             case 'AddSecret':
               return <GradientIcon icon={faPlus} size={size} focused={focused} />;
-              case 'ChatTab':
-                return (
-                 <View style={{ position: 'relative' }}>
+            case 'ChatTab':
+              return (
+                <View style={{ position: 'relative' }}>
                   <GradientIcon icon={faComments} size={size} focused={focused} />
-                  {totalUnreadCount > 0 && (
-                    <View style={{
-                      position: 'absolute',
-                      top: -5,
-                      right: -5,
-                      overflow: 'hidden',
-                      borderRadius: 10
-                    }}>
+                  {totalUnreadCount > 0 &&
+                  <View style={{
+                    position: 'absolute',
+                    top: -5,
+                    right: -5,
+                    overflow: 'hidden',
+                    borderRadius: 10
+                  }}>
                       <LinearGradient
-                        colors={['#FF587E', '#CC4B8D']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={{
-                          width: 20,
-                          height: 20,
-                          borderRadius: 10,
-                          justifyContent: 'center',
-                          alignItems: 'center'
-                        }}
-                      >
-                        <Text style={{ 
-                          color: 'white', 
-                          fontSize: 10, 
-                          fontWeight: 'bold' 
-                        }}>
+                      colors={['#FF587E', '#CC4B8D']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                      }}>
+
+                        <Text style={{
+                        color: 'white',
+                        fontSize: 10,
+                        fontWeight: 'bold'
+                      }}>
                           {totalUnreadCount}
                         </Text>
                       </LinearGradient>
                     </View>
-                  )}
-                </View>
-                );
-            }
-          },
-          tabBarShowLabel: false,
-          tabBarActiveTintColor: '#94A3B8',
-          tabBarInactiveTintColor: '#94A3B8',
-          tabBarStyle: {
-            backgroundColor: 'white',
-            elevation: 0,
-            borderTopWidth: 0,
-          },
-        })}
-      >
+                  }
+                </View>);
+
+          }
+        },
+        tabBarShowLabel: false,
+        tabBarActiveTintColor: '#94A3B8',
+        tabBarInactiveTintColor: '#94A3B8',
+        tabBarStyle: {
+          backgroundColor: 'white',
+          elevation: 0,
+          borderTopWidth: 0
+        }
+      })}>
+
       <Tab.Screen
         name="HomeTab"
         component={HomeStackNavigator}
-        options={{ headerShown: false }}
-      />
+        options={{ headerShown: false }} />
+
       <Tab.Screen
         name="AddSecret"
         component={AddSecret}
-        options={{ headerShown: false }}
-      />
+        options={{ headerShown: false }} />
+
       <Tab.Screen
         name="ChatTab"
         component={ConversationStackNavigator}
-        options={{ headerShown: false }}
-      />
+        options={{ headerShown: false }} />
+
       <Tab.Screen
         name="Profile"
         component={ProfileStackNavigator}
-        options={{ headerShown: false }}
-      />
-    </Tab.Navigator>
-  );
+        options={{ headerShown: false }} />
+
+    </Tab.Navigator>);
+
 };
 
 export default TabNavigator;

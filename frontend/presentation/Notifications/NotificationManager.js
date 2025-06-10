@@ -13,21 +13,21 @@ class NotificationManager {
     if (this.initialized) return true;
 
     try {
-      console.log('[NotificationManager] Initialisation...');
-      
+
+
       // Initialiser le service
       await this.notificationService.initialize();
-      
+
       // Demander les permissions et obtenir le token
       const { granted, token } = await this.notificationService.requestPermissions();
-      
+
       if (granted && token && userData?._id) {
         // Enregistrer le token sur le serveur
         await this.registerTokenWithServer(userData._id, token);
       }
-      
+
       this.initialized = true;
-      console.log('[NotificationManager] Initialisation terminée');
+
       return true;
     } catch (error) {
       console.error('[NotificationManager] Erreur initialisation:', error);
@@ -38,7 +38,7 @@ class NotificationManager {
   // Enregistrer le token sur le serveur
   async registerTokenWithServer(userId, token) {
     if (!token || token === 'SIMULATOR_TOKEN' || token === 'SIMULATOR_MOCK_TOKEN') {
-      console.log('[NotificationManager] Token simulateur, pas d\'envoi au serveur');
+
       return true;
     }
 
@@ -49,13 +49,13 @@ class NotificationManager {
         return false;
       }
 
-      console.log('[NotificationManager] Enregistrement du token:', token);
-      
+
+
       const response = await instance.post('/api/notifications/register', {
         apnsToken: token
       });
-      
-      console.log('[NotificationManager] Token enregistré:', response.data);
+
+
       return true;
     } catch (error) {
       console.error('[NotificationManager] Erreur enregistrement token:', error);
@@ -85,12 +85,12 @@ class NotificationManager {
         }
       }
 
-      console.log('[NotificationManager] Envoi notification message:', {
-        conversationId,
-        senderId,
-        senderName: messageSender,
-        preview: messagePreview.substring(0, 50)
-      });
+
+
+
+
+
+
 
       // Appeler l'API serveur pour envoyer la notification push
       const response = await instance.post('/api/notifications/message', {
@@ -101,7 +101,7 @@ class NotificationManager {
         messageType
       });
 
-      console.log('[NotificationManager] Réponse serveur:', response.data);
+
       return response.data.success;
     } catch (error) {
       console.error('[NotificationManager] Erreur envoi notification:', error);
