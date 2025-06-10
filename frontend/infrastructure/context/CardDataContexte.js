@@ -799,7 +799,7 @@ export const CardDataProvider = ({ children }) => {
         mixpanel.track("Purchase Attempt", {
           product_id: secretId,
           price,
-          currency: "EUR",
+          currency: userCurrency || '€',
           quantity: 1,
           user_id: userData?._id,
           payment_id: paymentId
