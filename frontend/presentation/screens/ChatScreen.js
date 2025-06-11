@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef, memo, useCallback } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Share, ActionSheetIOS, Alert, Linking, PermissionsAndroid, ActivityIndicator } from 'react-native';
-import { Box, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
+import { Box, Text, FlatList, HStack, Image, VStack, View, Modal, Spinner } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown, faPaperPlane, faCheck, faMicrophone, faStop, faPlay, faPause } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
@@ -25,7 +25,7 @@ import RNFS from 'react-native-fs';
 import { AudioRecorder, AudioUtils } from 'react-native-audio';
 import Sound from 'react-native-sound';
 import useContentModeration from '../../infrastructure/hook/useContentModeration';
-import TypewriterSpinner from '../components/TypewriterSpinner';
+
 
 const ChatScreen = ({ route }) => {
   // ====== 1. TOUS LES HOOKS D'ABORD ======
@@ -755,7 +755,108 @@ const ChatScreen = ({ route }) => {
         }
       }
 
-      // ... reste du code pour image et audio ...
+     if (imageToUpload) {
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+          let imageData;
+          if (imageToUpload.base64) {
+            imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
+
+            const uploadResult = await uploadImage(
+              imageData,
+              (progress) => setUploadProgress(progress)
+            );
+
+            messageContent.image = uploadResult.url;
+          } else {
+            throw new Error(t('chat.errors.unsupportedImageFormat'));
+          }
+        } catch (uploadError) {
+          console.error(t('chat.errors.imageUpload'), uploadError);
+
+          setMessages(prev => prev.map(msg =>
+            msg.id === tempId
+              ? { ...msg, sendFailed: true, isSending: false }
+              : msg
+          ));
+
+          throw new Error(t('chat.errors.imageUploadFailed'));
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }
+      }
+
+      // Gestion de l'upload audio
+      if (audioToUpload) {
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+          console.log('🎤 Début upload audio...');
+          const audioResult = await uploadAudio(audioToUpload, (progress) => {
+            setUploadProgress(progress);
+            console.log('Progress:', progress + '%');
+          });
+
+          console.log('✅ Upload audio réussi:', audioResult);
+
+          const audioMessageContent = {
+            messageType: 'audio',
+            audio: audioResult.url,
+            audioDuration: audioResult.duration || audioLength || "00:00",
+            senderName: userData.name
+          };
+
+          if (messageText && messageText.length > 0) {
+            audioMessageContent.content = messageText;
+          }
+
+          const newMessage = await handleAddMessage(conversationId, audioMessageContent);
+
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempId
+                ? {
+                  ...msg,
+                  id: newMessage._id,
+                  audio: audioResult.url,
+                  audioDuration: audioResult.duration || audioLength,
+                  isSending: false,
+                  isPendingModeration: false
+                }
+                : msg
+            )
+          );
+
+        } catch (error) {
+          console.error('❌ Erreur upload audio:', error);
+
+          let errorMessage = "Impossible d'envoyer le message audio.";
+          if (error.message.includes('trop volumineux')) {
+            errorMessage = "L'enregistrement est trop long. Essayez un message plus court.";
+          } else if (error.message.includes('network')) {
+            errorMessage = "Problème de connexion. Vérifiez votre réseau.";
+          }
+
+          Alert.alert("Erreur", errorMessage);
+
+          setMessages(prev => prev.map(msg =>
+            msg.id === tempId
+              ? { ...msg, sendFailed: true, isSending: false }
+              : msg
+          ));
+
+          throw error;
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }
+
+        return;
+      }
 
       try {
         const newMessage = await handleAddMessage(conversationId, messageContent);
@@ -877,14 +978,18 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-  const handleMediaResult = (result) => {
+const handleMediaResult = (result) => {
     if (result.assets && result.assets[0]) {
       const asset = result.assets[0];
 
       // Vérifier si c'est une vidéo
       if (asset.type && asset.type.startsWith('video/')) {
         // C'est une vidéo
-        setSelectedVideo(asset);
+        console.log('Vidéo sélectionnée:', asset);
+        setSelectedVideo({
+          ...asset,
+          duration: asset.duration || 0 // S'assurer que la durée est présente
+        });
         updateInputAreaHeight(true);
 
         requestAnimationFrame(() => {
@@ -906,28 +1011,34 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-  const uploadVideo = async (videoUri, progressCallback) => {
-    try {
-      const instance = getAxiosInstance();
-      if (!instance) {
-        throw new Error('Axios n\'est pas initialisé');
-      }
+const uploadVideo = async (videoUri, progressCallback) => {
+  try {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios n\'est pas initialisé');
+    }
 
-      console.log('Upload vidéo - URI:', videoUri);
+    console.log('🎥 Upload vidéo - URI:', videoUri);
+    console.log('🎥 Sélection vidéo:', selectedVideo);
 
-      // Utiliser submitVideo du hook useContentModeration
-      const moderationResult = await submitVideo(videoUri, progressCallback);
+    // Vérifier la taille du fichier si possible
+    if (selectedVideo?.fileSize && selectedVideo.fileSize > 100 * 1024 * 1024) { // 100MB
+      throw new Error('La vidéo est trop volumineuse (max 100MB)');
+    }
 
-      if (!moderationResult.isValid) {
-        throw new Error(t('chat.errors.videoContentFlagged'));
-      }
-
-      // Si la vidéo passe la modération, procéder à l'upload
-      // Vous devrez implémenter cette route sur votre backend
+    // Option 1: Upload avec base64 (pour les petites vidéos)
+    if (selectedVideo?.base64 && selectedVideo.fileSize < 10 * 1024 * 1024) { // < 10MB
+      const videoData = `data:${selectedVideo.type || 'video/mp4'};base64,${selectedVideo.base64}`;
+      
       const response = await instance.post('/api/upload/video', {
-        video: moderationResult.url || videoUri,
-        duration: selectedVideo?.duration || 0
+        video: videoData,
+        duration: selectedVideo?.duration || 0,
+        fileName: `video_${Date.now()}.mp4`
       }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const percentCompleted = Math.round(
@@ -936,15 +1047,60 @@ const ChatScreen = ({ route }) => {
             if (progressCallback) progressCallback(percentCompleted);
           }
         },
-        timeout: 120000 // 2 minutes pour les vidéos
+        timeout: 300000 // 5 minutes pour les vidéos
       });
 
+      console.log('✅ Réponse upload vidéo (base64):', response.data);
       return response.data;
-    } catch (error) {
-      console.error('Erreur upload vidéo:', error);
-      throw error;
     }
-  };
+    
+    // Option 2: Upload avec FormData (recommandé pour les grandes vidéos)
+    const formData = new FormData();
+    formData.append('video', {
+      uri: Platform.OS === 'ios' ? videoUri.replace('file://', '') : videoUri,
+      type: selectedVideo?.type || 'video/mp4',
+      name: selectedVideo?.fileName || `video_${Date.now()}.mp4`
+    });
+    
+    if (selectedVideo?.duration) {
+      formData.append('duration', String(selectedVideo.duration));
+    }
+
+    const response = await instance.post('/api/upload/video', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Accept': 'application/json'
+      },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          if (progressCallback) progressCallback(percentCompleted);
+        }
+      },
+      timeout: 300000 // 5 minutes pour les vidéos
+    });
+
+    console.log('✅ Réponse upload vidéo (FormData):', response.data);
+    return response.data;
+    
+  } catch (error) {
+    console.error('❌ Erreur upload vidéo:', error);
+    
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+      
+      if (error.response.status === 413) {
+        throw new Error('La vidéo est trop volumineuse');
+      }
+    }
+    
+    throw error;
+  }
+};
+
 
   const calculateBorderRadius = (height) => {
     if (height <= 40) return 18;
@@ -994,7 +1150,7 @@ const ChatScreen = ({ route }) => {
     })
   ).current;
 
-  const MemoizedMessageItem = memo(MessageItem, (prevProps, nextProps) => {
+ const MemoizedMessageItem = memo(MessageItem, (prevProps, nextProps) => {
     return (
       prevProps.item.id === nextProps.item.id &&
       prevProps.showTimestamps === nextProps.showTimestamps &&
@@ -1003,6 +1159,8 @@ const ChatScreen = ({ route }) => {
       prevProps.item.text === nextProps.item.text &&
       prevProps.item.image === nextProps.item.image &&
       prevProps.item.audio === nextProps.item.audio &&
+      prevProps.item.video === nextProps.item.video &&
+      prevProps.item.videoDuration === nextProps.item.videoDuration &&
       prevProps.item.audioDuration === nextProps.item.audioDuration &&
       prevProps.item.messageType === nextProps.item.messageType
     );
@@ -1308,9 +1466,9 @@ const ChatScreen = ({ route }) => {
 
       const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
 
-      const formattedMessage = {
+   const formattedMessage = {
         id: msg._id || `msg-${index}`,
-        text: (msg.messageType === 'image' || msg.messageType === 'audio') && !msg.content?.trim()
+        text: (msg.messageType === 'image' || msg.messageType === 'audio' || msg.messageType === 'video') && !msg.content?.trim()
           ? undefined
           : msg.content,
         sender: isCurrentUser ? 'user' : 'other',
@@ -1319,6 +1477,8 @@ const ChatScreen = ({ route }) => {
         formattedDate: dateFormatter.formatDate(msg.createdAt),
         messageType: msg.messageType,
         image: msg.image,
+        video: msg.video,
+        videoDuration: msg.videoDuration,
         senderInfo: {
           id: messageSenderId,
           name: userMapping[messageSenderId]?.name || msg.senderName || t('chat.defaultUser'),
@@ -1377,12 +1537,8 @@ const ChatScreen = ({ route }) => {
     };
   }, [unreadState.count, unreadState.hasScrolledToBottom]);
 
-  // ====== 4. RETURNS CONDITIONNELS ======
 
-  if (isLoadingMessages) {
-    return <TypewriterSpinner text="hushy..." />;
-  }
-
+ 
   // ====== 5. RETURN PRINCIPAL ======
 
   return (
@@ -1557,7 +1713,7 @@ const ChatScreen = ({ route }) => {
                     marginTop: 10,
                     fontSize: 14,
                   }}>
-                    {t('chat.videoSelected') || 'Vidéo'} ({Math.round(selectedVideo.duration || 0)}s)
+                     ({Math.round(selectedVideo.duration || 0)}s)
                   </Text>
                 </View>
                 <TouchableOpacity

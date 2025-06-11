@@ -1008,37 +1008,37 @@ export const CardDataProvider = ({ children }) => {
     if (!instance) {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
-  
+
     // Log des données d'entrée
     console.log("handleAddMessage - DONNÉES D'ENTRÉE:", {
       conversationId,
       contentType: typeof content,
-      contentPreview: typeof content === 'string' 
-        ? content.substring(0, 30) 
+      contentPreview: typeof content === 'string'
+        ? content.substring(0, 30)
         : JSON.stringify(content).substring(0, 30)
     });
-  
+
     // Gérer les différents types de contenu
     const messageData = typeof content === 'string'
       ? { content, messageType: 'text' }
       : content;
-  
+
     // Si c'est un message audio, assurez-vous que les données nécessaires sont incluses
     if (messageData.messageType === 'audio' && !messageData.audio) {
       throw new Error(i18n.t('cardData.errors.missingAudioData'));
     }
-  
+
     // MODÉRATION: Vérifier le contenu textuel des messages
     if ((messageData.messageType === 'text' || messageData.messageType === 'mixed') && messageData.content) {
       const moderationResult = await moderateMessageBeforeSend(messageData.content);
-  
+
       if (moderationResult.isFlagged) {
         throw new Error(i18n.t('cardData.errors.contentFlagged', {
           reason: moderationResult.reason
         }));
       }
     }
-  
+
     try {
       console.log("Envoi du message à l'API:", {
         url: `/api/secrets/conversations/${conversationId}/messages`,
@@ -1047,59 +1047,59 @@ export const CardDataProvider = ({ children }) => {
         hasImage: !!messageData.image,
         hasAudio: !!messageData.audio
       });
-  
+
       const response = await instance.post(
         `/api/secrets/conversations/${conversationId}/messages`,
         messageData
       );
-  
+
       console.log("Réponse complète de l'API:", JSON.stringify(response.data));
-  
+
       // La réponse contient soit directement le message, soit un objet contenant une propriété message
       // Adaptons notre code pour gérer les deux cas
       const messageObject = response.data.message || response.data;
       const messageId = messageObject._id;
-  
+
       console.log("Message ID extrait:", messageId);
       console.log("Contenu du message extrait:", messageObject.content);
       console.log("Type de message extrait:", messageObject.messageType);
-  
+
       if (messageId && userData && userData._id) {
         // S'assurer que l'ID utilisateur est une chaîne
         const userIdStr = typeof userData._id === 'string' ? userData._id : userData._id.toString();
-        
+
         // Envoyer la notification aux autres participants
         try {
           console.log("NOTIFICATION: Préparation de la notification");
-          
+
           // Déterminer l'aperçu du message selon le type
-    let messagePreview = "";
-if (typeof content === 'string') {
-  messagePreview = content.substring(0, 100) + (content.length > 100 ? '...' : '');
-} else if (content.content) {
-  messagePreview = content.content.substring(0, 100) + (content.content.length > 100 ? '...' : '');
-} else {
-  // Aperçu selon le type
-  switch (messageData.messageType) {
-    case 'audio':
-      messagePreview = "🎵 Message audio";
-      break;
-    case 'image':
-      messagePreview = "📷 Image";
-      break;
-    case 'video':  // AJOUT du cas vidéo
-      messagePreview = "📹 Vidéo";
-      break;
-    case 'mixed':
-      messagePreview = content.content 
-        ? content.content.substring(0, 100) 
-        : "📎 Message avec pièce jointe";
-      break;
-    default:
-      messagePreview = "Nouveau message";
-  }
-}
-          
+          let messagePreview = "";
+          if (typeof content === 'string') {
+            messagePreview = content.substring(0, 100) + (content.length > 100 ? '...' : '');
+          } else if (content.content) {
+            messagePreview = content.content.substring(0, 100) + (content.content.length > 100 ? '...' : '');
+          } else {
+            // Aperçu selon le type
+            switch (messageData.messageType) {
+              case 'audio':
+                messagePreview = "🎵 Message audio";
+                break;
+              case 'image':
+                messagePreview = "📷 Image";
+                break;
+              case 'video':  // AJOUT du cas vidéo
+                messagePreview = "📹 Vidéo";
+                break;
+              case 'mixed':
+                messagePreview = content.content
+                  ? content.content.substring(0, 100)
+                  : "📎 Message avec pièce jointe";
+                break;
+              default:
+                messagePreview = "Nouveau message";
+            }
+          }
+
           const notificationData = {
             conversationId,
             messageId,
@@ -1107,11 +1107,11 @@ if (typeof content === 'string') {
             senderName: userData?.name || 'Utilisateur',
             messagePreview
           };
-          
+
           console.log("NOTIFICATION DATA:", JSON.stringify(notificationData));
-          
+
           console.log("NOTIFICATION: Envoi de la notification");
-          
+
           try {
             const notifResponse = await instance.post('/api/notifications/message', notificationData);
             console.log("NOTIFICATION: Réponse reçue", {
@@ -1123,12 +1123,12 @@ if (typeof content === 'string') {
             console.error("NOTIFICATION API ERROR:", apiError.message);
             console.error("STATUS:", apiError.response?.status);
             console.error("RESPONSE DATA:", apiError.response?.data);
-            
+
             // Si l'API renvoie une erreur 404, la route n'est peut-être pas correcte
             if (apiError.response?.status === 404) {
               console.error("ROUTE NOT FOUND: Vérifiez que la route '/api/notifications/message' existe sur votre API");
             }
-            
+
             // Si l'API renvoie une erreur 401, il y a peut-être un problème d'authentification
             if (apiError.response?.status === 401) {
               console.error("AUTHENTICATION ERROR: Le token d'authentification est peut-être invalide ou expiré");
@@ -1144,7 +1144,7 @@ if (typeof content === 'string') {
           userId: userData?._id
         });
       }
-  
+
       return response.data;
     } catch (error) {
       console.error(i18n.t('cardData.errors.sendingMessage'), error.response?.data || error.message);
@@ -1156,151 +1156,151 @@ if (typeof content === 'string') {
     }
   };
 
-const getConversationMessages = async (conversationId) => {
-  console.log('[CardDataContexte] 📞 getConversationMessages pour:', conversationId);
-  
-  if (!conversationId) {
-    console.error('[CardDataContexte] ❌ Pas de conversationId fourni');
-    throw new Error('ID de conversation requis');
-  }
+  const getConversationMessages = async (conversationId) => {
+    console.log('[CardDataContexte] 📞 getConversationMessages pour:', conversationId);
 
-  const instance = getAxiosInstance();
-  if (!instance) {
-    console.error('[CardDataContexte] ❌ Instance Axios non disponible');
-    throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
-  }
-  
-  try {
-    console.log('[CardDataContexte] 🔄 Appel API pour les messages...');
-    const response = await instance.get(
-      `/api/secrets/conversations/${conversationId}/messages`
-    );
-
-    console.log('[CardDataContexte] 📦 Réponse messages reçue:', {
-      status: response.status,
-      hasMessages: !!response.data?.messages,
-      messageCount: response.data?.messages?.length || 0,
-      conversationId: response.data?.conversationId
-    });
-
-    // Retourner directement la réponse de l'API
-    return response.data;
-    
-  } catch (error) {
-    console.error('[CardDataContexte] ❌ Erreur getConversationMessages:', {
-      conversationId,
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data
-    });
-    
-    // En cas d'erreur, retourner une structure vide plutôt que de planter
-    return {
-      messages: [],
-      conversationId: conversationId
-    };
-  }
-};
-
-const getUserConversations = async () => {
-  console.log('[CardDataContexte] 🔄 Début getUserConversations');
-  
-  const instance = getAxiosInstance();
-  if (!instance) {
-    console.error('[CardDataContexte] ❌ Instance Axios non disponible');
-    throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
-  }
-  
-  try {
-    console.log('[CardDataContexte] 📞 Appel API /api/secrets/conversations');
-    const response = await instance.get('/api/secrets/conversations');
-    
-    console.log('[CardDataContexte] 📦 Réponse reçue:', {
-      status: response.status,
-      dataType: typeof response.data,
-      isArray: Array.isArray(response.data),
-      count: response.data?.length || 0
-    });
-
-    if (!userData) {
-      console.log('[CardDataContexte] ⚠️ Pas de données utilisateur');
-      return [];
+    if (!conversationId) {
+      console.error('[CardDataContexte] ❌ Pas de conversationId fourni');
+      throw new Error('ID de conversation requis');
     }
 
-    const userIdStr = userData?._id?.toString() || '';
-    console.log('[CardDataContexte] 👤 ID utilisateur:', userIdStr);
+    const instance = getAxiosInstance();
+    if (!instance) {
+      console.error('[CardDataContexte] ❌ Instance Axios non disponible');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
+    }
 
-    // Normaliser la structure des conversations
-    const normalizedConversations = (response.data || []).map((conv, index) => {
-      console.log(`[CardDataContexte] 🔧 Normalisation conversation ${index + 1}:`, {
-        id: conv._id,
-        hasMessages: !!conv.messages,
-        messageCount: conv.messages?.length || 0,
-        hasSecret: !!conv.secret,
-        unreadCountType: typeof conv.unreadCount
+    try {
+      console.log('[CardDataContexte] 🔄 Appel API pour les messages...');
+      const response = await instance.get(
+        `/api/secrets/conversations/${conversationId}/messages`
+      );
+
+      console.log('[CardDataContexte] 📦 Réponse messages reçue:', {
+        status: response.status,
+        hasMessages: !!response.data?.messages,
+        messageCount: response.data?.messages?.length || 0,
+        conversationId: response.data?.conversationId
       });
 
-      // Création d'un objet conversation normalisé
-      const normalizedConv = { 
-        ...conv,
-        // S'assurer que les messages sont toujours un tableau
-        messages: Array.isArray(conv.messages) ? conv.messages : [],
-        // S'assurer que les participants sont toujours un tableau  
-        participants: Array.isArray(conv.participants) ? conv.participants : []
+      // Retourner directement la réponse de l'API
+      return response.data;
+
+    } catch (error) {
+      console.error('[CardDataContexte] ❌ Erreur getConversationMessages:', {
+        conversationId,
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+
+      // En cas d'erreur, retourner une structure vide plutôt que de planter
+      return {
+        messages: [],
+        conversationId: conversationId
       };
+    }
+  };
 
-      // Déterminer unreadCount selon le format retourné par l'API
-      if (typeof conv.unreadCount === 'number') {
-        normalizedConv.unreadCount = conv.unreadCount;
-      } else if (conv.unreadCount instanceof Map || typeof conv.unreadCount === 'object') {
-        normalizedConv.unreadCount = (conv.unreadCount instanceof Map)
-          ? (conv.unreadCount.get(userIdStr) || 0)
-          : (conv.unreadCount?.[userIdStr] || 0);
-      } else {
-        normalizedConv.unreadCount = 0;
-      }
+  const getUserConversations = async () => {
+    console.log('[CardDataContexte] 🔄 Début getUserConversations');
 
-      // Vérifier et compléter les données du secret si nécessaire
-      if (conv.secret) {
-        normalizedConv.secret = {
-          _id: conv.secret._id,
-          content: conv.secret.content,
-          label: conv.secret.label,
-          user: conv.secret.user || conv.secret.createdBy,
-          shareLink: conv.secret.shareLink,
-          price: conv.secret.price,
-          currency: conv.secret.currency,
-          expiresAt: conv.secret.expiresAt,
-          ...conv.secret
-        };
-      }
+    const instance = getAxiosInstance();
+    if (!instance) {
+      console.error('[CardDataContexte] ❌ Instance Axios non disponible');
+      throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
+    }
 
-      console.log(`[CardDataContexte] ✅ Conversation ${index + 1} normalisée:`, {
-        id: normalizedConv._id,
-        messageCount: normalizedConv.messages.length,
-        unreadCount: normalizedConv.unreadCount,
-        hasSecret: !!normalizedConv.secret
+    try {
+      console.log('[CardDataContexte] 📞 Appel API /api/secrets/conversations');
+      const response = await instance.get('/api/secrets/conversations');
+
+      console.log('[CardDataContexte] 📦 Réponse reçue:', {
+        status: response.status,
+        dataType: typeof response.data,
+        isArray: Array.isArray(response.data),
+        count: response.data?.length || 0
       });
 
-      return normalizedConv;
-    });
+      if (!userData) {
+        console.log('[CardDataContexte] ⚠️ Pas de données utilisateur');
+        return [];
+      }
 
-    console.log('[CardDataContexte] 🎯 Résultat final:', {
-      totalConversations: normalizedConversations.length,
-      conversationsWithMessages: normalizedConversations.filter(c => c.messages.length > 0).length,
-      conversationsWithSecrets: normalizedConversations.filter(c => c.secret).length
-    });
+      const userIdStr = userData?._id?.toString() || '';
+      console.log('[CardDataContexte] 👤 ID utilisateur:', userIdStr);
 
-    return normalizedConversations;
-  } catch (error) {
-    console.error('[CardDataContexte] ❌ Erreur getUserConversations:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data
-    });
-    return [];
-  }
-};
+      // Normaliser la structure des conversations
+      const normalizedConversations = (response.data || []).map((conv, index) => {
+        console.log(`[CardDataContexte] 🔧 Normalisation conversation ${index + 1}:`, {
+          id: conv._id,
+          hasMessages: !!conv.messages,
+          messageCount: conv.messages?.length || 0,
+          hasSecret: !!conv.secret,
+          unreadCountType: typeof conv.unreadCount
+        });
+
+        // Création d'un objet conversation normalisé
+        const normalizedConv = {
+          ...conv,
+          // S'assurer que les messages sont toujours un tableau
+          messages: Array.isArray(conv.messages) ? conv.messages : [],
+          // S'assurer que les participants sont toujours un tableau  
+          participants: Array.isArray(conv.participants) ? conv.participants : []
+        };
+
+        // Déterminer unreadCount selon le format retourné par l'API
+        if (typeof conv.unreadCount === 'number') {
+          normalizedConv.unreadCount = conv.unreadCount;
+        } else if (conv.unreadCount instanceof Map || typeof conv.unreadCount === 'object') {
+          normalizedConv.unreadCount = (conv.unreadCount instanceof Map)
+            ? (conv.unreadCount.get(userIdStr) || 0)
+            : (conv.unreadCount?.[userIdStr] || 0);
+        } else {
+          normalizedConv.unreadCount = 0;
+        }
+
+        // Vérifier et compléter les données du secret si nécessaire
+        if (conv.secret) {
+          normalizedConv.secret = {
+            _id: conv.secret._id,
+            content: conv.secret.content,
+            label: conv.secret.label,
+            user: conv.secret.user || conv.secret.createdBy,
+            shareLink: conv.secret.shareLink,
+            price: conv.secret.price,
+            currency: conv.secret.currency,
+            expiresAt: conv.secret.expiresAt,
+            ...conv.secret
+          };
+        }
+
+        console.log(`[CardDataContexte] ✅ Conversation ${index + 1} normalisée:`, {
+          id: normalizedConv._id,
+          messageCount: normalizedConv.messages.length,
+          unreadCount: normalizedConv.unreadCount,
+          hasSecret: !!normalizedConv.secret
+        });
+
+        return normalizedConv;
+      });
+
+      console.log('[CardDataContexte] 🎯 Résultat final:', {
+        totalConversations: normalizedConversations.length,
+        conversationsWithMessages: normalizedConversations.filter(c => c.messages.length > 0).length,
+        conversationsWithSecrets: normalizedConversations.filter(c => c.secret).length
+      });
+
+      return normalizedConversations;
+    } catch (error) {
+      console.error('[CardDataContexte] ❌ Erreur getUserConversations:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      return [];
+    }
+  };
 
   const handleShareSecret = async (secret) => {
     try {
