@@ -25,7 +25,7 @@ import RNFS from 'react-native-fs';
 import { AudioRecorder, AudioUtils } from 'react-native-audio';
 import Sound from 'react-native-sound';
 import useContentModeration from '../../infrastructure/hook/useContentModeration';
-import TypewriterSpinner from '../components/TypewriterSpinner';
+
 
 const ChatScreen = ({ route }) => {
   // ====== 1. TOUS LES HOOKS D'ABORD ======
@@ -1517,11 +1517,6 @@ const ChatScreen = ({ route }) => {
     };
   }, [unreadState.count, unreadState.hasScrolledToBottom]);
 
-  // ====== 4. RETURNS CONDITIONNELS ======
-  
-  if (isLoadingMessages) {
-     return <TypewriterSpinner text="hushy..." />;
-  }
 
   // ====== 5. RETURN PRINCIPAL ======
   

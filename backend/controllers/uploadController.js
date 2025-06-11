@@ -230,11 +230,12 @@ exports.uploadVideo = async (req, res) => {
     
     console.log('✅ Vidéo uploadée sans modération:', uploadResult.secure_url);
     
-    // Retourner le résultat sans aucune mention de modération
+    // IMPORTANT: Retourner la durée en NOMBRE (secondes) et non en string
     return res.status(200).json({
       url: uploadResult.secure_url,
       public_id: uploadResult.public_id,
-      duration: formatTime(uploadResult.duration || 0),
+      duration: uploadResult.duration || 0,  // ← NOMBRE, pas STRING
+      durationFormatted: formatTime(uploadResult.duration || 0), // ← Pour l'affichage uniquement
       format: uploadResult.format,
       message: 'Vidéo téléchargée sans modération'
     });

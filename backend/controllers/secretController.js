@@ -323,19 +323,19 @@ exports.handleStripeReturn = async (req, res) => {
 
 exports.verifyIdentity = async (req, res) => {
   try {
-    const { 
-      stripeAccountId, 
-      skipImageUpload, 
-      documentImage, 
-      selfieImage, 
-      documentType, 
+    const {
+      stripeAccountId,
+      skipImageUpload,
+      documentImage,
+      selfieImage,
+      documentType,
       documentSide,
       country // Paramètre de pays
     } = req.body;
-    
+
     const userId = req.user.id;
     const userCountry = country || 'FR'; // France par défaut si non spécifié
-    
+
     console.log("Pays sélectionné pour la vérification:", userCountry);
 
     // Vérifier que l'utilisateur demande une vérification pour son propre compte
@@ -1334,8 +1334,8 @@ exports.getConversationMessages = async (req, res) => {
       _id: req.params.conversationId,
       participants: req.user.id
     })
-    .populate('messages.sender', '_id name profilePicture')
-    .select('messages');
+      .populate('messages.sender', '_id name profilePicture')
+      .select('messages');
 
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation introuvable.' });
@@ -1417,15 +1417,34 @@ exports.addMessageToConversation = async (req, res) => {
 
     // NOUVEAU: Gestion des vidéos
     if (messageType === 'video') {
-      messageData.video = video || videoUrl; // Support des deux noms de champ
+      messageData.video = video || videoUrl;
       messageData.thumbnailUrl = thumbnailUrl;
-      messageData.duration = duration || 0;
 
-      // Log pour débogage des vidéos
+      // Gérer la durée - convertir en nombre si c'est une string
+      if (duration !== null && duration !== undefined) {
+        // Si c'est déjà un nombre, l'utiliser directement
+        if (typeof duration === 'number') {
+          messageData.duration = duration;
+        }
+        // Si c'est une string au format "MM:SS", la convertir en secondes
+        else if (typeof duration === 'string' && duration.includes(':')) {
+          const parts = duration.split(':');
+          const minutes = parseInt(parts[0], 10) || 0;
+          const seconds = parseInt(parts[1], 10) || 0;
+          messageData.duration = minutes * 60 + seconds;
+        }
+        // Si c'est une string numérique, la parser
+        else {
+          messageData.duration = parseInt(duration, 10) || 0;
+        }
+      } else {
+        messageData.duration = 0; // Valeur par défaut
+      }
+
       console.log("Ajout de message vidéo:", {
         video: messageData.video,
         thumbnailUrl: messageData.thumbnailUrl,
-        duration: messageData.duration
+        duration: messageData.duration // Maintenant c'est un nombre
       });
     }
 
