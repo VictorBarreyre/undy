@@ -601,275 +601,221 @@ const ChatScreen = ({ route }) => {
     setInputContainerHeight(newHeight);
   };
 
-  const sendMessage = async () => {
-    try {
-      if (!conversationId) {
-        throw new Error(t('chat.errors.missingConversationId'));
-      }
+const sendMessage = async () => {
+  try {
+    if (!conversationId) {
+      throw new Error(t('chat.errors.missingConversationId'));
+    }
 
-      // Ajouter selectedVideo dans la condition
-      if (!message.trim() && !selectedImage && !audioPath && !selectedVideo) return;
+    // Ajouter selectedVideo dans la condition
+    if (!message.trim() && !selectedImage && !audioPath && !selectedVideo) return;
 
-      if (!userData?.name) {
-        throw new Error(t('chat.errors.missingUserInfo'));
-      }
+    if (!userData?.name) {
+      throw new Error(t('chat.errors.missingUserInfo'));
+    }
 
-      let messageType = 'text';
-      if (audioPath) {
-        messageType = 'audio';
-      } else if (selectedVideo) {
-        messageType = 'video';
-      } else if (selectedImage && message.trim()) {
-        messageType = 'mixed';
-      } else if (selectedImage) {
-        messageType = 'image';
-      }
+    let messageType = 'text';
+    if (audioPath) {
+      messageType = 'audio';
+    } else if (selectedVideo) {
+      messageType = 'video';
+    } else if (selectedImage && message.trim()) {
+      messageType = 'mixed';
+    } else if (selectedImage) {
+      messageType = 'image';
+    }
 
-      const tempId = `temp-${Date.now()}`;
-      const messageText = message.trim();
+    const tempId = `temp-${Date.now()}`;
+    const messageText = message.trim();
 
-      const messageToCheck = {
-        id: tempId,
-        content: messageText || null,
-        image: selectedImage ? selectedImage.uri : null,
-        audio: audioPath || null,
-        video: selectedVideo ? selectedVideo.uri : null,
-        messageType: messageType,
-        onModerationComplete: (result) => {
-          console.log('Modération terminée pour message:', result);
+    const messageToCheck = {
+      id: tempId,
+      content: messageText || null,
+      image: selectedImage ? selectedImage.uri : null,
+      audio: audioPath || null,
+      video: selectedVideo ? selectedVideo.uri : null,
+      messageType: messageType,
+      onModerationComplete: (result) => {
+        console.log('Modération terminée pour message:', result);
 
-          if (result.status === 'flagged') {
-            setMessages(prev => prev.filter(msg => msg.id !== result.messageId));
+        if (result.status === 'flagged') {
+          setMessages(prev => prev.filter(msg => msg.id !== result.messageId));
 
-            Alert.alert(
-              "Message supprimé",
-              "Votre message a été supprimé car il a été identifié comme contenu inapproprié suite à une analyse complète."
-            );
-          }
-        }
-      };
-
-      const moderationResult = await checkMessage(messageToCheck);
-
-      if (!moderationResult.isValid) {
-        console.log('Message bloqué par la modération:', moderationResult.reason);
-        return;
-      }
-
-      // Ajouter le message temporaire avec vidéo si applicable
-      setMessages(prev => [...prev, {
-        id: tempId,
-        text: messageText || undefined,
-        messageType: messageType,
-        image: selectedImage ? selectedImage.uri : undefined,
-        audio: audioPath || undefined,
-        video: selectedVideo ? selectedVideo.uri : undefined,
-        videoDuration: selectedVideo?.duration || 0,
-        audioDuration: audioLength || "00:00",
-        sender: 'user',
-        timestamp: new Date().toISOString(),
-        isSending: true,
-        isPendingModeration: moderationResult.status === 'pending',
-        replyToMessage: replyToMessage,
-        senderInfo: {
-          id: userData?._id || "",
-          name: userData?.name || t('chat.defaultUser')
-        }
-      }]);
-
-      setMessage('');
-      const imageToUpload = selectedImage;
-      const audioToUpload = audioPath;
-      const videoToUpload = selectedVideo;
-      setSelectedImage(null);
-      setSelectedVideo(null);
-      setAudioPath('');
-      setAudioLength('');
-      setReplyToMessage(null);
-      updateInputAreaHeight(false);
-
-      requestAnimationFrame(() => {
-        if (flatListRef.current) {
-          flatListRef.current.scrollToEnd({ animated: true });
-        }
-      });
-
-      let messageContent = {
-        senderName: userData.name,
-        messageType: messageType
-      };
-
-      if (messageText && messageText.length > 0) {
-        messageContent.content = messageText;
-      }
-
-      if (replyToMessage) {
-        messageContent.replyTo = replyToMessage.id;
-        messageContent.replyToSender = replyToMessage.senderInfo?.id;
-
-        messageContent.replyData = {
-          text: replyToMessage.text,
-          sender: replyToMessage.senderInfo?.name || t('chat.defaultUser'),
-          hasImage: !!replyToMessage.image,
-          hasAudio: !!replyToMessage.audio,
-          hasVideo: !!replyToMessage.video
-        };
-      }
-
-      // Gérer l'upload de vidéo
-      if (videoToUpload) {
-        setIsUploading(true);
-        setUploadProgress(0);
-
-        try {
-          console.log('🎥 Début upload vidéo...');
-          const videoResult = await uploadVideo(videoToUpload.uri, (progress) => {
-            setUploadProgress(progress);
-            console.log('Progress:', progress + '%');
-          });
-
-          console.log('✅ Upload vidéo réussi:', videoResult);
-
-          messageContent.video = videoResult.url;
-          messageContent.videoDuration = videoResult.duration || selectedVideo?.duration || 0;
-
-        } catch (uploadError) {
-          console.error('❌ Erreur upload vidéo:', uploadError);
-
-          setMessages(prev => prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, sendFailed: true, isSending: false }
-              : msg
-          ));
-
-          let errorMessage = "Impossible d'envoyer la vidéo.";
-          if (uploadError.message.includes('trop volumineux')) {
-            errorMessage = "La vidéo est trop volumineuse. Essayez avec une vidéo plus courte.";
-          }
-
-          Alert.alert("Erreur", errorMessage);
-          throw uploadError;
-        } finally {
-          setIsUploading(false);
-          setUploadProgress(0);
-        }
-      }
-
-     if (imageToUpload) {
-        setIsUploading(true);
-        setUploadProgress(0);
-
-        try {
-          let imageData;
-          if (imageToUpload.base64) {
-            imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
-
-            const uploadResult = await uploadImage(
-              imageData,
-              (progress) => setUploadProgress(progress)
-            );
-
-            messageContent.image = uploadResult.url;
-          } else {
-            throw new Error(t('chat.errors.unsupportedImageFormat'));
-          }
-        } catch (uploadError) {
-          console.error(t('chat.errors.imageUpload'), uploadError);
-
-          setMessages(prev => prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, sendFailed: true, isSending: false }
-              : msg
-          ));
-
-          throw new Error(t('chat.errors.imageUploadFailed'));
-        } finally {
-          setIsUploading(false);
-          setUploadProgress(0);
-        }
-      }
-
-      // Gestion de l'upload audio
-      if (audioToUpload) {
-        setIsUploading(true);
-        setUploadProgress(0);
-
-        try {
-          console.log('🎤 Début upload audio...');
-          const audioResult = await uploadAudio(audioToUpload, (progress) => {
-            setUploadProgress(progress);
-            console.log('Progress:', progress + '%');
-          });
-
-          console.log('✅ Upload audio réussi:', audioResult);
-
-          const audioMessageContent = {
-            messageType: 'audio',
-            audio: audioResult.url,
-            audioDuration: audioResult.duration || audioLength || "00:00",
-            senderName: userData.name
-          };
-
-          if (messageText && messageText.length > 0) {
-            audioMessageContent.content = messageText;
-          }
-
-          const newMessage = await handleAddMessage(conversationId, audioMessageContent);
-
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id === tempId
-                ? {
-                  ...msg,
-                  id: newMessage._id,
-                  audio: audioResult.url,
-                  audioDuration: audioResult.duration || audioLength,
-                  isSending: false,
-                  isPendingModeration: false
-                }
-                : msg
-            )
+          Alert.alert(
+            "Message supprimé",
+            "Votre message a été supprimé car il a été identifié comme contenu inapproprié suite à une analyse complète."
           );
-
-        } catch (error) {
-          console.error('❌ Erreur upload audio:', error);
-
-          let errorMessage = "Impossible d'envoyer le message audio.";
-          if (error.message.includes('trop volumineux')) {
-            errorMessage = "L'enregistrement est trop long. Essayez un message plus court.";
-          } else if (error.message.includes('network')) {
-            errorMessage = "Problème de connexion. Vérifiez votre réseau.";
-          }
-
-          Alert.alert("Erreur", errorMessage);
-
-          setMessages(prev => prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, sendFailed: true, isSending: false }
-              : msg
-          ));
-
-          throw error;
-        } finally {
-          setIsUploading(false);
-          setUploadProgress(0);
         }
-
-        return;
       }
+    };
+
+    const moderationResult = await checkMessage(messageToCheck);
+
+    if (!moderationResult.isValid) {
+      console.log('Message bloqué par la modération:', moderationResult.reason);
+      return;
+    }
+
+    // Ajouter le message temporaire avec vidéo si applicable
+    setMessages(prev => [...prev, {
+      id: tempId,
+      text: messageText || undefined,
+      messageType: messageType,
+      image: selectedImage ? selectedImage.uri : undefined,
+      audio: audioPath || undefined,
+      video: selectedVideo ? selectedVideo.uri : undefined,
+      videoDuration: selectedVideo?.duration || 0,
+      audioDuration: audioLength || "00:00",
+      sender: 'user',
+      timestamp: new Date().toISOString(),
+      isSending: true,
+      isPendingModeration: moderationResult.status === 'pending',
+      replyToMessage: replyToMessage,
+      senderInfo: {
+        id: userData?._id || "",
+        name: userData?.name || t('chat.defaultUser')
+      }
+    }]);
+
+    setMessage('');
+    const imageToUpload = selectedImage;
+    const audioToUpload = audioPath;
+    const videoToUpload = selectedVideo;
+    setSelectedImage(null);
+    setSelectedVideo(null);
+    setAudioPath('');
+    setAudioLength('');
+    setReplyToMessage(null);
+    updateInputAreaHeight(false);
+
+    requestAnimationFrame(() => {
+      if (flatListRef.current) {
+        flatListRef.current.scrollToEnd({ animated: true });
+      }
+    });
+
+    let messageContent = {
+      senderName: userData.name,
+      messageType: messageType
+    };
+
+    if (messageText && messageText.length > 0) {
+      messageContent.content = messageText;
+    }
+
+    if (replyToMessage) {
+      messageContent.replyTo = replyToMessage.id;
+      messageContent.replyToSender = replyToMessage.senderInfo?.id;
+
+      messageContent.replyData = {
+        text: replyToMessage.text,
+        sender: replyToMessage.senderInfo?.name || t('chat.defaultUser'),
+        hasImage: !!replyToMessage.image,
+        hasAudio: !!replyToMessage.audio,
+        hasVideo: !!replyToMessage.video
+      };
+    }
+
+    // Gérer l'upload de vidéo
+    if (videoToUpload) {
+      setIsUploading(true);
+      setUploadProgress(0);
 
       try {
-        const newMessage = await handleAddMessage(conversationId, messageContent);
+        console.log('🎥 Début upload vidéo...');
+        // CHANGEMENT ICI : Passer l'objet vidéo complet au lieu de juste l'URI
+        const videoResult = await uploadVideo(videoToUpload, (progress) => {
+          setUploadProgress(progress);
+          console.log('Progress:', progress + '%');
+        });
 
-        if (moderationResult.status === 'pending' && moderationResult.workflowId) {
-          setMessagesAwaitingModeration(prev => ({
-            ...prev,
-            [tempId]: {
-              realId: newMessage._id,
-              workflowId: moderationResult.workflowId
-            }
-          }));
+        console.log('✅ Upload vidéo réussi:', videoResult);
+
+        messageContent.video = videoResult.url;
+        messageContent.videoDuration = videoResult.duration || videoToUpload?.duration || 0;
+
+      } catch (uploadError) {
+        console.error('❌ Erreur upload vidéo:', uploadError);
+
+        setMessages(prev => prev.map(msg =>
+          msg.id === tempId
+            ? { ...msg, sendFailed: true, isSending: false }
+            : msg
+        ));
+
+        let errorMessage = "Impossible d'envoyer la vidéo.";
+        if (uploadError.message.includes('trop volumineux')) {
+          errorMessage = "La vidéo est trop volumineuse. Essayez avec une vidéo plus courte.";
         }
+
+        Alert.alert("Erreur", errorMessage);
+        throw uploadError;
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
+    }
+
+    if (imageToUpload) {
+      setIsUploading(true);
+      setUploadProgress(0);
+
+      try {
+        let imageData;
+        if (imageToUpload.base64) {
+          imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
+
+          const uploadResult = await uploadImage(
+            imageData,
+            (progress) => setUploadProgress(progress)
+          );
+
+          messageContent.image = uploadResult.url;
+        } else {
+          throw new Error(t('chat.errors.unsupportedImageFormat'));
+        }
+      } catch (uploadError) {
+        console.error(t('chat.errors.imageUpload'), uploadError);
+
+        setMessages(prev => prev.map(msg =>
+          msg.id === tempId
+            ? { ...msg, sendFailed: true, isSending: false }
+            : msg
+        ));
+
+        throw new Error(t('chat.errors.imageUploadFailed'));
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
+    }
+
+    // Gestion de l'upload audio
+    if (audioToUpload) {
+      setIsUploading(true);
+      setUploadProgress(0);
+
+      try {
+        console.log('🎤 Début upload audio...');
+        const audioResult = await uploadAudio(audioToUpload, (progress) => {
+          setUploadProgress(progress);
+          console.log('Progress:', progress + '%');
+        });
+
+        console.log('✅ Upload audio réussi:', audioResult);
+
+        const audioMessageContent = {
+          messageType: 'audio',
+          audio: audioResult.url,
+          audioDuration: audioResult.duration || audioLength || "00:00",
+          senderName: userData.name
+        };
+
+        if (messageText && messageText.length > 0) {
+          audioMessageContent.content = messageText;
+        }
+
+        const newMessage = await handleAddMessage(conversationId, audioMessageContent);
 
         setMessages(prev =>
           prev.map(msg =>
@@ -877,36 +823,91 @@ const ChatScreen = ({ route }) => {
               ? {
                 ...msg,
                 id: newMessage._id,
-                image: messageContent.image || undefined,
-                video: messageContent.video || undefined,
+                audio: audioResult.url,
+                audioDuration: audioResult.duration || audioLength,
                 isSending: false,
-                isPendingModeration: moderationResult.status === 'pending'
+                isPendingModeration: false
               }
               : msg
           )
         );
-         return; } catch (error) {
-        console.error(t('chat.errors.sendMessage'), error);
 
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, sendFailed: true, isSending: false }
-              : msg
-          )
-        );
+      } catch (error) {
+        console.error('❌ Erreur upload audio:', error);
+
+        let errorMessage = "Impossible d'envoyer le message audio.";
+        if (error.message.includes('trop volumineux')) {
+          errorMessage = "L'enregistrement est trop long. Essayez un message plus court.";
+        } else if (error.message.includes('network')) {
+          errorMessage = "Problème de connexion. Vérifiez votre réseau.";
+        }
+
+        Alert.alert("Erreur", errorMessage);
+
+        setMessages(prev => prev.map(msg =>
+          msg.id === tempId
+            ? { ...msg, sendFailed: true, isSending: false }
+            : msg
+        ));
 
         throw error;
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
       }
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi du message:', error);
-      Alert.alert(
-        "Erreur",
-        "Une erreur s'est produite lors de l'envoi du message. Veuillez réessayer."
-      );
-    }
-  };
 
+      return;
+    }
+
+    try {
+      const newMessage = await handleAddMessage(conversationId, messageContent);
+
+      if (moderationResult.status === 'pending' && moderationResult.workflowId) {
+        setMessagesAwaitingModeration(prev => ({
+          ...prev,
+          [tempId]: {
+            realId: newMessage._id,
+            workflowId: moderationResult.workflowId
+          }
+        }));
+      }
+
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === tempId
+            ? {
+              ...msg,
+              id: newMessage._id,
+              image: messageContent.image || undefined,
+              video: messageContent.video || undefined,
+              isSending: false,
+              isPendingModeration: moderationResult.status === 'pending'
+            }
+            : msg
+        )
+      );
+      return; 
+    } catch (error) {
+      console.error(t('chat.errors.sendMessage'), error);
+
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === tempId
+            ? { ...msg, sendFailed: true, isSending: false }
+            : msg
+        )
+      );
+
+      throw error;
+    }
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi du message:', error);
+    Alert.alert(
+      "Erreur",
+      "Une erreur s'est produite lors de l'envoi du message. Veuillez réessayer."
+    );
+  }
+};
   const handleImagePick = async () => {
     try {
       const options = {

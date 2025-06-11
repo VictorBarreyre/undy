@@ -1384,28 +1384,28 @@ export const CardDataProvider = ({ children }) => {
   };
 
 
-const uploadVideo = async (videoUri, progressCallback) => {
+const uploadVideo = async (videoData, progressCallback) => {
   try {
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error('Axios n\'est pas initialisé');
     }
 
-    console.log('🎥 Upload vidéo - URI:', videoUri);
-    console.log('🎥 Sélection vidéo:', selectedVideo);
+    console.log('🎥 Upload vidéo - URI:', videoData.uri);
+    console.log('🎥 Données vidéo:', videoData);
 
     // Vérifier la taille du fichier si possible
-    if (selectedVideo?.fileSize && selectedVideo.fileSize > 100 * 1024 * 1024) { // 100MB
+    if (videoData?.fileSize && videoData.fileSize > 100 * 1024 * 1024) { // 100MB
       throw new Error('La vidéo est trop volumineuse (max 100MB)');
     }
 
     // Option 1: Upload avec base64 (pour les petites vidéos)
-    if (selectedVideo?.base64 && selectedVideo.fileSize < 10 * 1024 * 1024) { // < 10MB
-      const videoData = `data:${selectedVideo.type || 'video/mp4'};base64,${selectedVideo.base64}`;
+    if (videoData?.base64 && videoData.fileSize < 10 * 1024 * 1024) { // < 10MB
+      const videoDataBase64 = `data:${videoData.type || 'video/mp4'};base64,${videoData.base64}`;
       
       const response = await instance.post('/api/upload/video', {
-        video: videoData,
-        duration: selectedVideo?.duration || 0,
+        video: videoDataBase64,
+        duration: videoData?.duration || 0,
         fileName: `video_${Date.now()}.mp4`
       }, {
         headers: {
@@ -1430,13 +1430,13 @@ const uploadVideo = async (videoUri, progressCallback) => {
     // Option 2: Upload avec FormData (recommandé pour les grandes vidéos)
     const formData = new FormData();
     formData.append('video', {
-      uri: Platform.OS === 'ios' ? videoUri.replace('file://', '') : videoUri,
-      type: selectedVideo?.type || 'video/mp4',
-      name: selectedVideo?.fileName || `video_${Date.now()}.mp4`
+      uri: Platform.OS === 'ios' ? videoData.uri.replace('file://', '') : videoData.uri,
+      type: videoData?.type || 'video/mp4',
+      name: videoData?.fileName || `video_${Date.now()}.mp4`
     });
     
-    if (selectedVideo?.duration) {
-      formData.append('duration', String(selectedVideo.duration));
+    if (videoData?.duration) {
+      formData.append('duration', String(videoData.duration));
     }
 
     const response = await instance.post('/api/upload/video', formData, {
