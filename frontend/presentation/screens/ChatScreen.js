@@ -32,14 +32,14 @@ const ChatScreen = ({ route }) => {
   const { t } = useTranslation();
   const dateFormatter = useDateFormatter();
   const navigation = useNavigation();
-  
+
   // Props from navigation
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
-  
+
   // Context hooks
   const { handleAddMessage, markConversationAsRead, uploadImage, refreshUnreadCounts, handleShareSecret, triggerConfetti } = useCardData();
   const { userData, userToken } = useContext(AuthContext);
-  
+
   // State hooks
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
@@ -47,6 +47,7 @@ const ChatScreen = ({ route }) => {
   const [timeLeft, setTimeLeft] = useState('');
   const [isModalVisible, setModalVisible] = useState(showModalOnMount || false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedVideo, setSelectedVideo] = useState(null);
   const [inputContainerHeight, setInputContainerHeight] = useState(60);
   const [inputHeight, setInputHeight] = useState(36);
   const [borderRadius, setBorderRadius] = useState(18);
@@ -72,7 +73,7 @@ const ChatScreen = ({ route }) => {
     hasScrolledToBottom: false,
     showButton: false
   });
-  
+
   // Ref hooks
   const shareButtonScale = useRef(new Animated.Value(1)).current;
   const soundRef = useRef(null);
@@ -82,7 +83,7 @@ const ChatScreen = ({ route }) => {
   const scrollSaveTimeout = useRef(null);
   const isRefreshingCountsRef = useRef(false);
   const inputRef = useRef(null);
-  
+
   // Custom hooks
   const {
     checkText,
@@ -99,7 +100,7 @@ const ChatScreen = ({ route }) => {
   });
 
   // ====== 2. TOUTES LES FONCTIONS ======
-  
+
   const getConversationMessages = async (conversationId) => {
     try {
       const instance = getAxiosInstance();
@@ -606,7 +607,8 @@ const ChatScreen = ({ route }) => {
         throw new Error(t('chat.errors.missingConversationId'));
       }
 
-      if (!message.trim() && !selectedImage && !audioPath) return;
+      // Ajouter selectedVideo dans la condition
+      if (!message.trim() && !selectedImage && !audioPath && !selectedVideo) return;
 
       if (!userData?.name) {
         throw new Error(t('chat.errors.missingUserInfo'));
@@ -615,6 +617,8 @@ const ChatScreen = ({ route }) => {
       let messageType = 'text';
       if (audioPath) {
         messageType = 'audio';
+      } else if (selectedVideo) {
+        messageType = 'video';
       } else if (selectedImage && message.trim()) {
         messageType = 'mixed';
       } else if (selectedImage) {
@@ -629,6 +633,7 @@ const ChatScreen = ({ route }) => {
         content: messageText || null,
         image: selectedImage ? selectedImage.uri : null,
         audio: audioPath || null,
+        video: selectedVideo ? selectedVideo.uri : null,
         messageType: messageType,
         onModerationComplete: (result) => {
           console.log('Modération terminée pour message:', result);
@@ -651,12 +656,15 @@ const ChatScreen = ({ route }) => {
         return;
       }
 
+      // Ajouter le message temporaire avec vidéo si applicable
       setMessages(prev => [...prev, {
         id: tempId,
         text: messageText || undefined,
         messageType: messageType,
         image: selectedImage ? selectedImage.uri : undefined,
         audio: audioPath || undefined,
+        video: selectedVideo ? selectedVideo.uri : undefined,
+        videoDuration: selectedVideo?.duration || 0,
         audioDuration: audioLength || "00:00",
         sender: 'user',
         timestamp: new Date().toISOString(),
@@ -672,7 +680,9 @@ const ChatScreen = ({ route }) => {
       setMessage('');
       const imageToUpload = selectedImage;
       const audioToUpload = audioPath;
+      const videoToUpload = selectedVideo;
       setSelectedImage(null);
+      setSelectedVideo(null);
       setAudioPath('');
       setAudioLength('');
       setReplyToMessage(null);
@@ -701,96 +711,30 @@ const ChatScreen = ({ route }) => {
           text: replyToMessage.text,
           sender: replyToMessage.senderInfo?.name || t('chat.defaultUser'),
           hasImage: !!replyToMessage.image,
-          hasAudio: !!replyToMessage.audio
+          hasAudio: !!replyToMessage.audio,
+          hasVideo: !!replyToMessage.video
         };
       }
 
-      if (imageToUpload) {
+      // Gérer l'upload de vidéo
+      if (videoToUpload) {
         setIsUploading(true);
         setUploadProgress(0);
 
         try {
-          let imageData;
-          if (imageToUpload.base64) {
-            imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
-
-            const uploadResult = await uploadImage(
-              imageData,
-              (progress) => setUploadProgress(progress)
-            );
-
-            messageContent.image = uploadResult.url;
-          } else {
-            throw new Error(t('chat.errors.unsupportedImageFormat'));
-          }
-        } catch (uploadError) {
-          console.error(t('chat.errors.imageUpload'), uploadError);
-
-          setMessages(prev => prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, sendFailed: true, isSending: false }
-              : msg
-          ));
-
-          throw new Error(t('chat.errors.imageUploadFailed'));
-        } finally {
-          setIsUploading(false);
-          setUploadProgress(0);
-        }
-      }
-
-      if (audioToUpload) {
-        setIsUploading(true);
-        setUploadProgress(0);
-
-        try {
-          console.log('🎤 Début upload audio...');
-          const audioResult = await uploadAudio(audioToUpload, (progress) => {
+          console.log('🎥 Début upload vidéo...');
+          const videoResult = await uploadVideo(videoToUpload.uri, (progress) => {
             setUploadProgress(progress);
             console.log('Progress:', progress + '%');
           });
 
-          console.log('✅ Upload audio réussi:', audioResult);
+          console.log('✅ Upload vidéo réussi:', videoResult);
 
-          const audioMessageContent = {
-            messageType: 'audio',
-            audio: audioResult.url,
-            audioDuration: audioResult.duration || audioLength || "00:00",
-            senderName: userData.name
-          };
+          messageContent.video = videoResult.url;
+          messageContent.videoDuration = videoResult.duration || selectedVideo?.duration || 0;
 
-          if (messageText && messageText.length > 0) {
-            audioMessageContent.content = messageText;
-          }
-
-          const newMessage = await handleAddMessage(conversationId, audioMessageContent);
-
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id === tempId
-                ? {
-                  ...msg,
-                  id: newMessage._id,
-                  audio: audioResult.url,
-                  audioDuration: audioResult.duration || audioLength,
-                  isSending: false,
-                  isPendingModeration: false
-                }
-                : msg
-            )
-          );
-
-        } catch (error) {
-          console.error('❌ Erreur upload audio:', error);
-
-          let errorMessage = "Impossible d'envoyer le message audio.";
-          if (error.message.includes('trop volumineux')) {
-            errorMessage = "L'enregistrement est trop long. Essayez un message plus court.";
-          } else if (error.message.includes('network')) {
-            errorMessage = "Problème de connexion. Vérifiez votre réseau.";
-          }
-
-          Alert.alert("Erreur", errorMessage);
+        } catch (uploadError) {
+          console.error('❌ Erreur upload vidéo:', uploadError);
 
           setMessages(prev => prev.map(msg =>
             msg.id === tempId
@@ -798,14 +742,20 @@ const ChatScreen = ({ route }) => {
               : msg
           ));
 
-          throw error;
+          let errorMessage = "Impossible d'envoyer la vidéo.";
+          if (uploadError.message.includes('trop volumineux')) {
+            errorMessage = "La vidéo est trop volumineuse. Essayez avec une vidéo plus courte.";
+          }
+
+          Alert.alert("Erreur", errorMessage);
+          throw uploadError;
         } finally {
           setIsUploading(false);
           setUploadProgress(0);
         }
-
-        return;
       }
+
+      // ... reste du code pour image et audio ...
 
       try {
         const newMessage = await handleAddMessage(conversationId, messageContent);
@@ -827,6 +777,7 @@ const ChatScreen = ({ route }) => {
                 ...msg,
                 id: newMessage._id,
                 image: messageContent.image || undefined,
+                video: messageContent.video || undefined,
                 isSending: false,
                 isPendingModeration: moderationResult.status === 'pending'
               }
@@ -858,17 +809,19 @@ const ChatScreen = ({ route }) => {
   const handleImagePick = async () => {
     try {
       const options = {
-        mediaType: 'photo',
+        mediaType: 'mixed', // Changé de 'photo' à 'mixed' pour permettre photos ET vidéos
         quality: 0.8,
         includeBase64: true,
         saveToPhotos: true,
+        videoQuality: 'medium', // Qualité vidéo
+        durationLimit: 60, // Limite de 60 secondes pour les vidéos
       };
 
       const actionSheetOptions = {
         options: [
-          t('chat.documentOptions.takePhoto'),
-          t('chat.documentOptions.chooseFromGallery'),
-          t('chat.documentOptions.cancel')
+          t('chat.documentOptions.takePhoto') || 'Prendre une photo/vidéo',
+          t('chat.documentOptions.chooseFromGallery') || 'Choisir depuis la galerie',
+          t('chat.documentOptions.cancel') || 'Annuler'
         ],
         cancelButtonIndex: 2,
       };
@@ -883,34 +836,113 @@ const ChatScreen = ({ route }) => {
             switch (buttonIndex) {
               case 0:
                 const cameraResult = await launchCamera(options);
-                handleImageResult(cameraResult);
+                handleMediaResult(cameraResult); // Changé de handleImageResult
                 break;
               case 1:
                 const galleryResult = await launchImageLibrary(options);
-                handleImageResult(galleryResult);
+                handleMediaResult(galleryResult); // Changé de handleImageResult
                 break;
             }
           }
         );
       } else {
-        const result = await launchCamera(options);
-        handleImageResult(result);
+        // Pour Android
+        Alert.alert(
+          t('chat.documentOptions.selectMedia') || 'Sélectionner un média',
+          '',
+          [
+            {
+              text: actionSheetOptions.options[0],
+              onPress: async () => {
+                const result = await launchCamera(options);
+                handleMediaResult(result);
+              }
+            },
+            {
+              text: actionSheetOptions.options[1],
+              onPress: async () => {
+                const result = await launchImageLibrary(options);
+                handleMediaResult(result);
+              }
+            },
+            {
+              text: actionSheetOptions.options[2],
+              style: 'cancel'
+            }
+          ]
+        );
       }
     } catch (error) {
-      console.error(t('chat.errors.imageSelection'), error);
+      console.error(t('chat.errors.mediaSelection'), error);
     }
   };
 
-  const handleImageResult = (result) => {
+  const handleMediaResult = (result) => {
     if (result.assets && result.assets[0]) {
-      setSelectedImage(result.assets[0]);
-      updateInputAreaHeight(true);
+      const asset = result.assets[0];
 
-      requestAnimationFrame(() => {
-        if (flatListRef.current) {
-          flatListRef.current.scrollToEnd({ animated: true });
-        }
+      // Vérifier si c'est une vidéo
+      if (asset.type && asset.type.startsWith('video/')) {
+        // C'est une vidéo
+        setSelectedVideo(asset);
+        updateInputAreaHeight(true);
+
+        requestAnimationFrame(() => {
+          if (flatListRef.current) {
+            flatListRef.current.scrollToEnd({ animated: true });
+          }
+        });
+      } else {
+        // C'est une image
+        setSelectedImage(asset);
+        updateInputAreaHeight(true);
+
+        requestAnimationFrame(() => {
+          if (flatListRef.current) {
+            flatListRef.current.scrollToEnd({ animated: true });
+          }
+        });
+      }
+    }
+  };
+
+  const uploadVideo = async (videoUri, progressCallback) => {
+    try {
+      const instance = getAxiosInstance();
+      if (!instance) {
+        throw new Error('Axios n\'est pas initialisé');
+      }
+
+      console.log('Upload vidéo - URI:', videoUri);
+
+      // Utiliser submitVideo du hook useContentModeration
+      const moderationResult = await submitVideo(videoUri, progressCallback);
+
+      if (!moderationResult.isValid) {
+        throw new Error(t('chat.errors.videoContentFlagged'));
+      }
+
+      // Si la vidéo passe la modération, procéder à l'upload
+      // Vous devrez implémenter cette route sur votre backend
+      const response = await instance.post('/api/upload/video', {
+        video: moderationResult.url || videoUri,
+        duration: selectedVideo?.duration || 0
+      }, {
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            if (progressCallback) progressCallback(percentCompleted);
+          }
+        },
+        timeout: 120000 // 2 minutes pour les vidéos
       });
+
+      return response.data;
+    } catch (error) {
+      console.error('Erreur upload vidéo:', error);
+      throw error;
     }
   };
 
@@ -1346,13 +1378,13 @@ const ChatScreen = ({ route }) => {
   }, [unreadState.count, unreadState.hasScrolledToBottom]);
 
   // ====== 4. RETURNS CONDITIONNELS ======
-  
+
   if (isLoadingMessages) {
-     return <TypewriterSpinner text="hushy..." />;
+    return <TypewriterSpinner text="hushy..." />;
   }
 
   // ====== 5. RETURN PRINCIPAL ======
-  
+
   return (
     <Background>
       <SafeAreaView style={{ flex: 1 }} {...panResponder.panHandlers}>
@@ -1444,8 +1476,8 @@ const ChatScreen = ({ route }) => {
             style={{
               padding: 10,
               backgroundColor: 'white',
-              borderTopLeftRadius: selectedImage ? 25 : 0,
-              borderTopRightRadius: selectedImage ? 25 : 0,
+              borderTopLeftRadius: selectedImage || selectedVideo ? 25 : 0,
+              borderTopRightRadius: selectedImage || selectedVideo ? 25 : 0,
             }}
           >
             {replyToMessage && (
@@ -1478,6 +1510,59 @@ const ChatScreen = ({ route }) => {
                 <TouchableOpacity
                   onPress={() => {
                     setSelectedImage(null);
+                    updateInputAreaHeight(false);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    backgroundColor: '#94A3B833',
+                    borderRadius: 15,
+                    width: 30,
+                    height: 30,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <FontAwesomeIcon icon={faTimes} size={16} color="white" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Affichage de la vidéo sélectionnée */}
+            {selectedVideo && (
+              <View
+                style={{
+                  marginBottom: 10,
+                  borderRadius: 15,
+                  overflow: 'hidden',
+                  position: 'relative',
+                  backgroundColor: '#000',
+                  height: 200,
+                }}
+              >
+                <View style={{
+                  flex: 1,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <FontAwesomeIcon
+                    icon={faPlay}
+                    size={40}
+                    color="white"
+                    style={{ opacity: 0.8 }}
+                  />
+                  <Text style={{
+                    color: 'white',
+                    marginTop: 10,
+                    fontSize: 14,
+                  }}>
+                    {t('chat.videoSelected') || 'Vidéo'} ({Math.round(selectedVideo.duration || 0)}s)
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedVideo(null);
                     updateInputAreaHeight(false);
                   }}
                   style={{
@@ -1616,7 +1701,7 @@ const ChatScreen = ({ route }) => {
                       ref={inputRef}
                       value={message}
                       onChangeText={setMessage}
-                      placeholder={selectedImage ? t('chat.send') : (audioPath ? '' : t('chat.message'))}
+                      placeholder={selectedImage || selectedVideo ? t('chat.send') : (audioPath ? '' : t('chat.message'))}
                       placeholderTextColor="#8E8E93"
                       style={{
                         width: '100%',
@@ -1679,7 +1764,7 @@ const ChatScreen = ({ route }) => {
                 {/* Bouton d'envoi */}
                 <TouchableOpacity
                   onPress={sendMessage}
-                  disabled={!message.trim() && !selectedImage && !audioPath}
+                  disabled={!message.trim() && !selectedImage && !audioPath && !selectedVideo}
                   style={{
                     position: 'absolute',
                     right: 4,
@@ -1694,7 +1779,7 @@ const ChatScreen = ({ route }) => {
                   <View style={{
                     width: '100%',
                     height: '100%',
-                    opacity: (!message.trim() && !selectedImage && !audioPath) ? 0.5 : 1
+                    opacity: (!message.trim() && !selectedImage && !audioPath && !selectedVideo) ? 0.5 : 1
                   }}>
                     <LinearGradient
                       colors={['#FF587E', '#CC4B8D']}

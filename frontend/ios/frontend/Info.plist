@@ -65,15 +65,17 @@
 		<true/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Hushy a besoin d'accéder à votre caméra pour prendre des photos de documents d'identité pour la vérification Stripe</string>
+	<string>Hushy a besoin d'accéder à votre caméra pour prendre des photos et des vidéos à partager dans vos conversations, ainsi que pour la vérification d'identité</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Cette application a besoin d'accéder à vos contacts pour fonctionner correctement</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Hushy a besoin de votre position pour afficher les secrets autour de vous</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Cette application a besoin d'accéder au microphone pour enregistrer des messages vocaux</string>
+	<string>Hushy a besoin d'accéder au microphone pour enregistrer des messages vocaux et des vidéos avec son</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Hushy a besoin d'accéder à votre photothèque pour sélectionner des documents d'identité pour la vérification Stripe</string>
+	<string>Hushy a besoin d'accéder à votre photothèque pour sélectionner des photos et vidéos à partager dans vos conversations</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Hushy souhaite sauvegarder les photos et vidéos capturées dans votre photothèque</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Hushy souhaite vous envoyer des notifications pour vous informer des nouveaux messages et activités</string>
 	<key>UIBackgroundModes</key>
