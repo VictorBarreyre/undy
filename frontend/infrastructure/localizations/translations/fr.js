@@ -282,7 +282,7 @@ export default {
       "title": "Partager ma localisation"
     },
     "documentOptions": {
-      "takePhoto": "Prendre une photo",
+      "takePhoto": "Prendre une photo ou une vidéo",
       "chooseFromGallery": "Choisir depuis la galerie",
       "cancel": "Annuler"
     },

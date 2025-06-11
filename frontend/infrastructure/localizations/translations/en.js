@@ -321,7 +321,7 @@ export default {
       "cancel": "Cancel"
     },
     "documentOptions": {
-      "takePhoto": "Take a photo",
+      "takePhoto": "Take a photo or a video",
       "chooseFromGallery": "Choose from gallery",
       "cancel": "Cancel"
     },
