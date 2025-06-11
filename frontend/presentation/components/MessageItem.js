@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { Animated, Easing, TouchableOpacity, Pressable, Linking } from 'react-native';
+import { Animated, Easing, TouchableOpacity, Pressable, Linking, View, ActivityIndicator } from 'react-native';
 import { Box, Text, HStack, VStack } from 'native-base';
 import LinearGradient from 'react-native-linear-gradient';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faReply, faCopy, faPlay, faPause, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faReply, faCopy, faPlay, faPause, faTimes, faVideoCamera } from '@fortawesome/free-solid-svg-icons';
 import { styles, bubbleStyles } from '../../infrastructure/theme/styles';
 import ImageView from 'react-native-image-viewing';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,164 @@ import ReplyPreview from './chatcomponents/ReplyPreview';
 import MessageImage from './chatcomponents/MessageImage';
 import MessageText from './chatcomponents/MessageText';
 import Avatar from './chatcomponents/Avatar';
+import Video from 'react-native-video';
 
+// Composant VideoPlayer intégré
+const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [videoDimensions, setVideoDimensions] = useState({
+    width: 200,
+    height: 150
+  });
+  const videoRef = useRef(null);
+
+  const handlePlayPause = () => {
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleLoad = (data) => {
+    setIsLoading(false);
+    
+    // Calculer les dimensions appropriées
+    if (data.naturalSize) {
+      const { width, height } = data.naturalSize;
+      const aspectRatio = width / height;
+      
+      let finalWidth = 200;
+      let finalHeight = 200 / aspectRatio;
+      
+      if (finalHeight > 250) {
+        finalHeight = 250;
+        finalWidth = 250 * aspectRatio;
+      }
+      
+      setVideoDimensions({
+        width: finalWidth,
+        height: finalHeight
+      });
+    }
+  };
+
+  const handleError = () => {
+    setError(true);
+    setIsLoading(false);
+  };
+
+  const formatDuration = (seconds) => {
+    if (!seconds) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  if (error) {
+    return (
+      <Box 
+        style={[videoDimensions, {
+          backgroundColor: 'rgba(0,0,0,0.1)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          borderRadius: 10
+        }]}
+      >
+        <FontAwesomeIcon icon={faVideoCamera} size={30} color="#999" />
+        <Text style={{ color: '#999', marginTop: 8, fontSize: 12 }}>
+          Vidéo non disponible
+        </Text>
+      </Box>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={handlePlayPause}
+      style={{ position: 'relative' }}
+    >
+      <Box style={[videoDimensions, { borderRadius: 10, overflow: 'hidden' }]}>
+        <Video
+          ref={videoRef}
+          source={{ uri }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            right: 0,
+          }}
+          paused={!isPlaying}
+          resizeMode="cover"
+          onLoad={handleLoad}
+          onError={handleError}
+          onEnd={() => setIsPlaying(false)}
+          repeat={false}
+          poster={thumbnailUri}
+          posterResizeMode="cover"
+        />
+        
+        {/* Overlay de contrôle */}
+        {!isPlaying && !isLoading && (
+          <View style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+            <View style={{
+              width: 50,
+              height: 50,
+              borderRadius: 25,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <FontAwesomeIcon icon={faPlay} size={20} color="#FFF" />
+            </View>
+          </View>
+        )}
+        
+        {/* Indicateur de chargement */}
+        {isLoading && (
+          <View style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+            <ActivityIndicator size="large" color="#FFF" />
+          </View>
+        )}
+        
+        {/* Durée de la vidéo */}
+        {duration && !isPlaying && !isLoading && (
+          <View style={{
+            position: 'absolute',
+            bottom: 8,
+            right: 8,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 4,
+          }}>
+            <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '600' }}>
+              {formatDuration(duration)}
+            </Text>
+          </View>
+        )}
+      </Box>
+    </TouchableOpacity>
+  );
+});
 
 const getMessagePosition = (index, messages) => {
   const safeIndex = (idx) => idx >= 0 && idx < messages.length ? idx : -1;
@@ -171,6 +328,7 @@ const MessageItem = memo(({
               onRetryMessage && onRetryMessage({
                 text: item.text,
                 image: item.image,
+                video: item.video,
                 messageType: item.messageType,
                 replyToMessage: item.replyToMessage
               });
@@ -216,6 +374,7 @@ const MessageItem = memo(({
 
   const hasRealText = item.text && typeof item.text === 'string' && item.text.trim().length > 0 && item.text.trim() !== " ";
   const hasImage = item.image && typeof item.image === 'string' && item.image.length > 0;
+  const hasVideo = (item.messageType === 'video' && item.video) || (item.video && typeof item.video === 'string' && item.video.length > 0);
 
   const isUser = item.sender === 'user';
   const getBubbleStyle = useCallback((isTextMessage = true, isReplyBubble = false) => {
@@ -383,13 +542,10 @@ const MessageItem = memo(({
     }
 
     const hasCleanText = cleanText.length > 0;
-
     const hasAudio = item.messageType === 'audio' && item.audio;
 
     const renderEmbeds = () => {
-   
       return embedUrls.map((url, index) => {
-
         return (
           <Box
             key={`${url}-${index}`}
@@ -409,7 +565,7 @@ const MessageItem = memo(({
       const [playbackPosition, setPlaybackPosition] = useState(0);
       const [playbackDuration, setPlaybackDuration] = useState(duration);
       const soundRef = useRef(null);
-      const intervalRef = useRef(null); // Pour stocker la référence à l'intervalle
+      const intervalRef = useRef(null);
 
       const formatTime = (seconds) => {
         const minutes = Math.floor(seconds / 60);
@@ -424,7 +580,6 @@ const MessageItem = memo(({
               const response = await fetch(uri, { method: 'HEAD' });
               if (!response.ok) {
                 console.warn(`L'URL audio n'est pas accessible: ${uri}`);
-                // Logique pour gérer l'URL non accessible
               }
             } catch (error) {
               console.error('Erreur lors de la vérification de l\'URL audio:', error);
@@ -435,7 +590,6 @@ const MessageItem = memo(({
         checkAudioURL();
       }, [uri]);
 
-      // Nettoyage lorsque le composant est démonté
       useEffect(() => {
         return () => {
           if (intervalRef.current) {
@@ -449,7 +603,6 @@ const MessageItem = memo(({
 
       const handlePlayPause = async () => {
         if (!soundRef.current) {
-          // Initialiser le son
           const Sound = require('react-native-sound');
           Sound.setCategory('Playback');
 
@@ -465,7 +618,6 @@ const MessageItem = memo(({
             const totalDuration = sound.getDuration();
             setPlaybackDuration(formatTime(totalDuration));
 
-            // Démarrer la lecture
             sound.play((success) => {
               if (success) {
                 console.log('Lecture terminée avec succès');
@@ -481,7 +633,6 @@ const MessageItem = memo(({
 
             setIsPlaying(true);
 
-            // Mettre à jour la position de lecture toutes les 100ms
             intervalRef.current = setInterval(() => {
               if (soundRef.current) {
                 soundRef.current.getCurrentTime((seconds) => {
@@ -496,7 +647,6 @@ const MessageItem = memo(({
             }, 100);
           });
         } else {
-          // Jouer/Pauser le son existant
           if (isPlaying) {
             soundRef.current.pause();
             setIsPlaying(false);
@@ -548,7 +698,26 @@ const MessageItem = memo(({
           <ReplyPreview replyToMessage={item.replyToMessage} isUser={isUser} />
         )}
 
-        {hasAudio ? (
+        {hasVideo ? (
+          <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
+            <Box style={getBubbleStyle(false, isReply)}>
+              <VideoPlayer 
+                uri={item.video || item.videoUrl} 
+                thumbnailUri={item.thumbnailUrl}
+                duration={item.duration || item.videoDuration}
+                isUser={isUser}
+              />
+            </Box>
+            
+            {hasCleanText && (
+              <Box p={3} style={getBubbleStyle(true, isReply)} mt={1}>
+                <MessageText text={cleanText} isUser={isUser} />
+              </Box>
+            )}
+            
+            {hasEmbeds && renderEmbeds()}
+          </VStack>
+        ) : hasAudio ? (
           <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             <Box
               p={3}
@@ -732,6 +901,7 @@ const MessageItem = memo(({
     prevProps.showTimestamps === nextProps.showTimestamps &&
     prevProps.item.text === nextProps.item.text &&
     prevProps.item.image === nextProps.item.image &&
+    prevProps.item.video === nextProps.item.video &&
     prevProps.userData?._id === nextProps.userData?._id &&
     prevProps.item.isHighlighted === nextProps.item.isHighlighted &&
     !prevProps.item.isSending === !nextProps.item.isSending &&
