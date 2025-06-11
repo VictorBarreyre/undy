@@ -1391,22 +1391,31 @@ const uploadVideo = async (videoData, progressCallback) => {
       throw new Error('Axios n\'est pas initialisé');
     }
 
-    console.log('🎥 Upload vidéo - URI:', videoData.uri);
-    console.log('🎥 Données vidéo:', videoData);
+    console.log('🎥 Upload vidéo - Données reçues:', {
+      hasUri: !!videoData?.uri,
+      hasBase64: !!videoData?.base64,
+      fileSize: videoData?.fileSize,
+      type: videoData?.type
+    });
 
-    // Vérifier la taille du fichier si possible
-    if (videoData?.fileSize && videoData.fileSize > 100 * 1024 * 1024) { // 100MB
+    // Vérifier la taille du fichier
+    if (videoData?.fileSize && videoData.fileSize > 100 * 1024 * 1024) {
       throw new Error('La vidéo est trop volumineuse (max 100MB)');
     }
 
-    // Option 1: Upload avec base64 (pour les petites vidéos)
-    if (videoData?.base64 && videoData.fileSize < 10 * 1024 * 1024) { // < 10MB
+    // Déterminer la méthode d'upload
+    let response;
+
+    // Option 1: Si on a du base64 ET que le fichier est petit (<10MB)
+    if (videoData?.base64 && (!videoData.fileSize || videoData.fileSize < 10 * 1024 * 1024)) {
+      console.log('📤 Upload avec base64...');
+      
       const videoDataBase64 = `data:${videoData.type || 'video/mp4'};base64,${videoData.base64}`;
       
-      const response = await instance.post('/api/upload/video', {
+      response = await instance.post('/api/upload/video', {
         video: videoDataBase64,
         duration: videoData?.duration || 0,
-        fileName: `video_${Date.now()}.mp4`
+        fileName: videoData?.fileName || `video_${Date.now()}.mp4`
       }, {
         headers: {
           'Content-Type': 'application/json',
@@ -1420,53 +1429,62 @@ const uploadVideo = async (videoData, progressCallback) => {
             if (progressCallback) progressCallback(percentCompleted);
           }
         },
-        timeout: 300000 // 5 minutes pour les vidéos
+        timeout: 300000 // 5 minutes
       });
-
-      console.log('✅ Réponse upload vidéo (base64):', response.data);
-      return response.data;
     }
-    
-    // Option 2: Upload avec FormData (recommandé pour les grandes vidéos)
-    const formData = new FormData();
-    formData.append('video', {
-      uri: Platform.OS === 'ios' ? videoData.uri.replace('file://', '') : videoData.uri,
-      type: videoData?.type || 'video/mp4',
-      name: videoData?.fileName || `video_${Date.now()}.mp4`
-    });
-    
-    if (videoData?.duration) {
-      formData.append('duration', String(videoData.duration));
+    // Option 2: Upload avec FormData (pour les fichiers plus gros)
+    else if (videoData?.uri) {
+      console.log('📤 Upload avec FormData...');
+      
+      const formData = new FormData();
+      
+      // Créer l'objet fichier pour FormData
+      const videoFile = {
+        uri: Platform.OS === 'ios' ? videoData.uri.replace('file://', '') : videoData.uri,
+        type: videoData?.type || 'video/mp4',
+        name: videoData?.fileName || `video_${Date.now()}.mp4`
+      };
+      
+      formData.append('video', videoFile);
+      
+      if (videoData?.duration) {
+        formData.append('duration', String(videoData.duration));
+      }
+
+      response = await instance.post('/api/upload/video', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json'
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            if (progressCallback) progressCallback(percentCompleted);
+          }
+        },
+        timeout: 300000 // 5 minutes
+      });
+    } else {
+      throw new Error('Format de vidéo non supporté - ni base64 ni URI fourni');
     }
 
-    const response = await instance.post('/api/upload/video', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'Accept': 'application/json'
-      },
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total) {
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          if (progressCallback) progressCallback(percentCompleted);
-        }
-      },
-      timeout: 300000 // 5 minutes pour les vidéos
-    });
-
-    console.log('✅ Réponse upload vidéo (FormData):', response.data);
+    console.log('✅ Réponse upload vidéo:', response.data);
     return response.data;
     
   } catch (error) {
-    console.error('❌ Erreur upload vidéo:', error);
+    console.error('❌ Erreur upload vidéo détaillée:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
     
     if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-      
       if (error.response.status === 413) {
         throw new Error('La vidéo est trop volumineuse');
+      } else if (error.response.status === 400) {
+        throw new Error(error.response.data?.message || 'Format de vidéo invalide');
       }
     }
     

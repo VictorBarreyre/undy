@@ -137,7 +137,6 @@ const handleBase64Upload = (req, res, next) => {
   }
 };
 
-// CORRECTION PRINCIPALE: Middleware pour gérer l'audio - Version simplifiée
 // Dans uploadMiddleware.js - Middleware simplifié pour base64
 const handleBase64AudioUpload = (req, res, next) => {
   console.log('🎵 handleBase64AudioUpload - début');
@@ -186,15 +185,58 @@ const handleBase64AudioUpload = (req, res, next) => {
 
 // Middleware pour gérer les vidéos en Base64
 const handleBase64VideoUpload = (req, res, next) => {
-  if (req.body && req.body.video && typeof req.body.video === 'string' && req.body.video.startsWith('data:video/')) {
+  console.log('🎥 handleBase64VideoUpload - début');
+  console.log('Content-Type:', req.headers['content-type']);
+  console.log('Body keys:', Object.keys(req.body || {}));
+  
+  // Si c'est du JSON avec vidéo base64
+  if (req.headers['content-type']?.includes('application/json') && 
+      req.body && 
+      req.body.video && 
+      typeof req.body.video === 'string' && 
+      req.body.video.startsWith('data:video/')) {
+    console.log('📊 Détecté: Vidéo en base64');
+    console.log('📊 Taille du base64:', req.body.video.length);
     next();
-  } else if (req.body && req.body.video) {
-    videoUploadMiddleware.single('video')(req, res, next);
-  } else {
-    next();
+  } 
+  // Si c'est du FormData
+  else if (req.headers['content-type']?.includes('multipart/form-data')) {
+    console.log('📁 Détecté: FormData - utilisation de multer');
+    return videoUploadMiddleware.single('video')(req, res, (err) => {
+      if (err) {
+        console.error('❌ Erreur multer vidéo:', err);
+        return res.status(400).json({
+          message: 'Erreur lors du traitement du fichier vidéo',
+          error: err.message
+        });
+      }
+      console.log('✅ Multer vidéo - traitement réussi');
+      if (req.file) {
+        console.log('📁 Fichier vidéo reçu:', {
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size
+        });
+      }
+      next();
+    });
+  }
+  // Pas de vidéo
+  else {
+    console.log('⚠️ Pas de vidéo détectée');
+    console.log('Debug - req.body:', JSON.stringify(req.body).substring(0, 200));
+    return res.status(400).json({
+      message: 'Aucun fichier vidéo fourni',
+      details: {
+        contentType: req.headers['content-type'],
+        hasBody: !!req.body,
+        bodyKeys: Object.keys(req.body || {}),
+        hasVideo: !!req.body?.video,
+        videoType: req.body?.video ? typeof req.body.video : 'undefined'
+      }
+    });
   }
 };
-
 // Middleware de gestion d'erreur pour Multer - AMÉLIORÉ
 const handleMulterError = (error, req, res, next) => {
   if (error) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef, memo, useCallback } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Share, ActionSheetIOS, Alert, Linking, PermissionsAndroid, ActivityIndicator } from 'react-native';
-import { Box, Text, FlatList, HStack, Image, VStack, View, Modal, Spinner } from 'native-base';
+import { Box, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown, faPaperPlane, faCheck, faMicrophone, faStop, faPlay, faPause } from '@fortawesome/free-solid-svg-icons';
 import { Background } from '../../navigation/Background';
@@ -25,21 +25,29 @@ import RNFS from 'react-native-fs';
 import { AudioRecorder, AudioUtils } from 'react-native-audio';
 import Sound from 'react-native-sound';
 import useContentModeration from '../../infrastructure/hook/useContentModeration';
-
+import TypewriterSpinner from '../components/TypewriterSpinner';
 
 const ChatScreen = ({ route }) => {
   // ====== 1. TOUS LES HOOKS D'ABORD ======
   const { t } = useTranslation();
   const dateFormatter = useDateFormatter();
   const navigation = useNavigation();
-
+  
   // Props from navigation
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
-
-  // Context hooks
-  const { handleAddMessage, markConversationAsRead, uploadImage,uploadVideo, refreshUnreadCounts, handleShareSecret, triggerConfetti } = useCardData();
+  
+  // Context hooks - AJOUT de uploadVideo
+  const { 
+    handleAddMessage, 
+    markConversationAsRead, 
+    uploadImage, 
+    uploadVideo, // AJOUT
+    refreshUnreadCounts, 
+    handleShareSecret, 
+    triggerConfetti 
+  } = useCardData();
   const { userData, userToken } = useContext(AuthContext);
-
+  
   // State hooks
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
@@ -47,7 +55,7 @@ const ChatScreen = ({ route }) => {
   const [timeLeft, setTimeLeft] = useState('');
   const [isModalVisible, setModalVisible] = useState(showModalOnMount || false);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [selectedVideo, setSelectedVideo] = useState(null); // AJOUT
   const [inputContainerHeight, setInputContainerHeight] = useState(60);
   const [inputHeight, setInputHeight] = useState(36);
   const [borderRadius, setBorderRadius] = useState(18);
@@ -73,7 +81,7 @@ const ChatScreen = ({ route }) => {
     hasScrolledToBottom: false,
     showButton: false
   });
-
+  
   // Ref hooks
   const shareButtonScale = useRef(new Animated.Value(1)).current;
   const soundRef = useRef(null);
@@ -83,7 +91,7 @@ const ChatScreen = ({ route }) => {
   const scrollSaveTimeout = useRef(null);
   const isRefreshingCountsRef = useRef(false);
   const inputRef = useRef(null);
-
+  
   // Custom hooks
   const {
     checkText,
@@ -100,7 +108,7 @@ const ChatScreen = ({ route }) => {
   });
 
   // ====== 2. TOUTES LES FONCTIONS ======
-
+  
   const getConversationMessages = async (conversationId) => {
     try {
       const instance = getAxiosInstance();
@@ -596,226 +604,311 @@ const ChatScreen = ({ route }) => {
     });
   }, [refreshUnreadCounts]);
 
-  const updateInputAreaHeight = (imageVisible) => {
-    const newHeight = imageVisible ? 280 : 60;
+  const updateInputAreaHeight = (mediaVisible) => {
+    const newHeight = mediaVisible ? 280 : 60;
     setInputContainerHeight(newHeight);
   };
 
-const sendMessage = async () => {
-  try {
-    if (!conversationId) {
-      throw new Error(t('chat.errors.missingConversationId'));
-    }
+  const sendMessage = async () => {
+    try {
+      if (!conversationId) {
+        throw new Error(t('chat.errors.missingConversationId'));
+      }
 
-    // Ajouter selectedVideo dans la condition
-    if (!message.trim() && !selectedImage && !audioPath && !selectedVideo) return;
+      if (!message.trim() && !selectedImage && !audioPath && !selectedVideo) return;
 
-    if (!userData?.name) {
-      throw new Error(t('chat.errors.missingUserInfo'));
-    }
+      if (!userData?.name) {
+        throw new Error(t('chat.errors.missingUserInfo'));
+      }
 
-    let messageType = 'text';
-    if (audioPath) {
-      messageType = 'audio';
-    } else if (selectedVideo) {
-      messageType = 'video';
-    } else if (selectedImage && message.trim()) {
-      messageType = 'mixed';
-    } else if (selectedImage) {
-      messageType = 'image';
-    }
+      let messageType = 'text';
+      if (audioPath) {
+        messageType = 'audio';
+      } else if (selectedVideo) {
+        messageType = 'video';
+      } else if (selectedImage && message.trim()) {
+        messageType = 'mixed';
+      } else if (selectedImage) {
+        messageType = 'image';
+      }
 
-    const tempId = `temp-${Date.now()}`;
-    const messageText = message.trim();
+      const tempId = `temp-${Date.now()}`;
+      const messageText = message.trim();
 
-    const messageToCheck = {
-      id: tempId,
-      content: messageText || null,
-      image: selectedImage ? selectedImage.uri : null,
-      audio: audioPath || null,
-      video: selectedVideo ? selectedVideo.uri : null,
-      messageType: messageType,
-      onModerationComplete: (result) => {
-        console.log('Modération terminée pour message:', result);
+      const messageToCheck = {
+        id: tempId,
+        content: messageText || null,
+        image: selectedImage ? selectedImage.uri : null,
+        audio: audioPath || null,
+        video: selectedVideo ? selectedVideo.uri : null,
+        messageType: messageType,
+        onModerationComplete: (result) => {
+          console.log('Modération terminée pour message:', result);
 
-        if (result.status === 'flagged') {
-          setMessages(prev => prev.filter(msg => msg.id !== result.messageId));
+          if (result.status === 'flagged') {
+            setMessages(prev => prev.filter(msg => msg.id !== result.messageId));
 
-          Alert.alert(
-            "Message supprimé",
-            "Votre message a été supprimé car il a été identifié comme contenu inapproprié suite à une analyse complète."
-          );
+            Alert.alert(
+              "Message supprimé",
+              "Votre message a été supprimé car il a été identifié comme contenu inapproprié suite à une analyse complète."
+            );
+          }
         }
-      }
-    };
-
-    const moderationResult = await checkMessage(messageToCheck);
-
-    if (!moderationResult.isValid) {
-      console.log('Message bloqué par la modération:', moderationResult.reason);
-      return;
-    }
-
-    // Ajouter le message temporaire avec vidéo si applicable
-    setMessages(prev => [...prev, {
-      id: tempId,
-      text: messageText || undefined,
-      messageType: messageType,
-      image: selectedImage ? selectedImage.uri : undefined,
-      audio: audioPath || undefined,
-      video: selectedVideo ? selectedVideo.uri : undefined,
-      videoDuration: selectedVideo?.duration || 0,
-      audioDuration: audioLength || "00:00",
-      sender: 'user',
-      timestamp: new Date().toISOString(),
-      isSending: true,
-      isPendingModeration: moderationResult.status === 'pending',
-      replyToMessage: replyToMessage,
-      senderInfo: {
-        id: userData?._id || "",
-        name: userData?.name || t('chat.defaultUser')
-      }
-    }]);
-
-    setMessage('');
-    const imageToUpload = selectedImage;
-    const audioToUpload = audioPath;
-    const videoToUpload = selectedVideo;
-    setSelectedImage(null);
-    setSelectedVideo(null);
-    setAudioPath('');
-    setAudioLength('');
-    setReplyToMessage(null);
-    updateInputAreaHeight(false);
-
-    requestAnimationFrame(() => {
-      if (flatListRef.current) {
-        flatListRef.current.scrollToEnd({ animated: true });
-      }
-    });
-
-    let messageContent = {
-      senderName: userData.name,
-      messageType: messageType
-    };
-
-    if (messageText && messageText.length > 0) {
-      messageContent.content = messageText;
-    }
-
-    if (replyToMessage) {
-      messageContent.replyTo = replyToMessage.id;
-      messageContent.replyToSender = replyToMessage.senderInfo?.id;
-
-      messageContent.replyData = {
-        text: replyToMessage.text,
-        sender: replyToMessage.senderInfo?.name || t('chat.defaultUser'),
-        hasImage: !!replyToMessage.image,
-        hasAudio: !!replyToMessage.audio,
-        hasVideo: !!replyToMessage.video
       };
-    }
 
-    // Gérer l'upload de vidéo
-    if (videoToUpload) {
-      setIsUploading(true);
-      setUploadProgress(0);
+      const moderationResult = await checkMessage(messageToCheck);
 
-      try {
-        console.log('🎥 Début upload vidéo...');
-        // CHANGEMENT ICI : Passer l'objet vidéo complet au lieu de juste l'URI
-        const videoResult = await uploadVideo(videoToUpload, (progress) => {
-          setUploadProgress(progress);
-          console.log('Progress:', progress + '%');
-        });
-
-        console.log('✅ Upload vidéo réussi:', videoResult);
-
-        messageContent.video = videoResult.url;
-        messageContent.videoDuration = videoResult.duration || videoToUpload?.duration || 0;
-
-      } catch (uploadError) {
-        console.error('❌ Erreur upload vidéo:', uploadError);
-
-        setMessages(prev => prev.map(msg =>
-          msg.id === tempId
-            ? { ...msg, sendFailed: true, isSending: false }
-            : msg
-        ));
-
-        let errorMessage = "Impossible d'envoyer la vidéo.";
-        if (uploadError.message.includes('trop volumineux')) {
-          errorMessage = "La vidéo est trop volumineuse. Essayez avec une vidéo plus courte.";
-        }
-
-        Alert.alert("Erreur", errorMessage);
-        throw uploadError;
-      } finally {
-        setIsUploading(false);
-        setUploadProgress(0);
+      if (!moderationResult.isValid) {
+        console.log('Message bloqué par la modération:', moderationResult.reason);
+        return;
       }
-    }
 
-    if (imageToUpload) {
-      setIsUploading(true);
-      setUploadProgress(0);
+      setMessages(prev => [...prev, {
+        id: tempId,
+        text: messageText || undefined,
+        messageType: messageType,
+        image: selectedImage ? selectedImage.uri : undefined,
+        audio: audioPath || undefined,
+        video: selectedVideo ? selectedVideo.uri : undefined,
+        audioDuration: audioLength || "00:00",
+        sender: 'user',
+        timestamp: new Date().toISOString(),
+        isSending: true,
+        isPendingModeration: moderationResult.status === 'pending',
+        replyToMessage: replyToMessage,
+        senderInfo: {
+          id: userData?._id || "",
+          name: userData?.name || t('chat.defaultUser')
+        }
+      }]);
 
-      try {
-        let imageData;
-        if (imageToUpload.base64) {
-          imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
+      setMessage('');
+      const imageToUpload = selectedImage;
+      const audioToUpload = audioPath;
+      const videoToUpload = selectedVideo;
+      setSelectedImage(null);
+      setSelectedVideo(null);
+      setAudioPath('');
+      setAudioLength('');
+      setReplyToMessage(null);
+      updateInputAreaHeight(false);
 
-          const uploadResult = await uploadImage(
-            imageData,
-            (progress) => setUploadProgress(progress)
+      requestAnimationFrame(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({ animated: true });
+        }
+      });
+
+      let messageContent = {
+        senderName: userData.name,
+        messageType: messageType
+      };
+
+      if (messageText && messageText.length > 0) {
+        messageContent.content = messageText;
+      }
+
+      if (replyToMessage) {
+        messageContent.replyTo = replyToMessage.id;
+        messageContent.replyToSender = replyToMessage.senderInfo?.id;
+
+        messageContent.replyData = {
+          text: replyToMessage.text,
+          sender: replyToMessage.senderInfo?.name || t('chat.defaultUser'),
+          hasImage: !!replyToMessage.image,
+          hasAudio: !!replyToMessage.audio,
+          hasVideo: !!replyToMessage.video
+        };
+      }
+
+      if (imageToUpload) {
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+          let imageData;
+          if (imageToUpload.base64) {
+            imageData = `data:${imageToUpload.type};base64,${imageToUpload.base64}`;
+
+            const uploadResult = await uploadImage(
+              imageData,
+              (progress) => setUploadProgress(progress)
+            );
+
+            messageContent.image = uploadResult.url;
+          } else {
+            throw new Error(t('chat.errors.unsupportedImageFormat'));
+          }
+        } catch (uploadError) {
+          console.error(t('chat.errors.imageUpload'), uploadError);
+
+          setMessages(prev => prev.map(msg =>
+            msg.id === tempId
+              ? { ...msg, sendFailed: true, isSending: false }
+              : msg
+          ));
+
+          throw new Error(t('chat.errors.imageUploadFailed'));
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }
+      }
+
+      if (audioToUpload) {
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+          console.log('🎤 Début upload audio...');
+          const audioResult = await uploadAudio(audioToUpload, (progress) => {
+            setUploadProgress(progress);
+            console.log('Progress:', progress + '%');
+          });
+
+          console.log('✅ Upload audio réussi:', audioResult);
+
+          const audioMessageContent = {
+            messageType: 'audio',
+            audio: audioResult.url,
+            audioDuration: audioResult.duration || audioLength || "00:00",
+            senderName: userData.name
+          };
+
+          if (messageText && messageText.length > 0) {
+            audioMessageContent.content = messageText;
+          }
+
+          const newMessage = await handleAddMessage(conversationId, audioMessageContent);
+
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempId
+                ? {
+                  ...msg,
+                  id: newMessage._id,
+                  audio: audioResult.url,
+                  audioDuration: audioResult.duration || audioLength,
+                  isSending: false,
+                  isPendingModeration: false
+                }
+                : msg
+            )
           );
 
-          messageContent.image = uploadResult.url;
-        } else {
-          throw new Error(t('chat.errors.unsupportedImageFormat'));
+        } catch (error) {
+          console.error('❌ Erreur upload audio:', error);
+
+          let errorMessage = "Impossible d'envoyer le message audio.";
+          if (error.message.includes('trop volumineux')) {
+            errorMessage = "L'enregistrement est trop long. Essayez un message plus court.";
+          } else if (error.message.includes('network')) {
+            errorMessage = "Problème de connexion. Vérifiez votre réseau.";
+          }
+
+          Alert.alert("Erreur", errorMessage);
+
+          setMessages(prev => prev.map(msg =>
+            msg.id === tempId
+              ? { ...msg, sendFailed: true, isSending: false }
+              : msg
+          ));
+
+          throw error;
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(0);
         }
-      } catch (uploadError) {
-        console.error(t('chat.errors.imageUpload'), uploadError);
 
-        setMessages(prev => prev.map(msg =>
-          msg.id === tempId
-            ? { ...msg, sendFailed: true, isSending: false }
-            : msg
-        ));
-
-        throw new Error(t('chat.errors.imageUploadFailed'));
-      } finally {
-        setIsUploading(false);
-        setUploadProgress(0);
+        return;
       }
-    }
 
-    // Gestion de l'upload audio
-    if (audioToUpload) {
-      setIsUploading(true);
-      setUploadProgress(0);
+      // AJOUT: Gestion de l'upload vidéo
+      if (videoToUpload) {
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+          console.log('📹 Début upload vidéo...');
+          
+          const videoResult = await uploadVideo(videoToUpload, (progress) => {
+            setUploadProgress(progress);
+            console.log('Progress vidéo:', progress + '%');
+          });
+
+          console.log('✅ Upload vidéo réussi:', videoResult);
+
+          const videoMessageContent = {
+            messageType: 'video',
+            video: videoResult.url,
+            videoUrl: videoResult.url, // Alias pour compatibilité
+            thumbnailUrl: videoResult.thumbnailUrl || null,
+            duration: videoResult.duration || 0,
+            senderName: userData.name
+          };
+
+          if (messageText && messageText.length > 0) {
+            videoMessageContent.content = messageText;
+          }
+
+          const newMessage = await handleAddMessage(conversationId, videoMessageContent);
+
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempId
+                ? {
+                    ...msg,
+                    id: newMessage._id,
+                    video: videoResult.url,
+                    videoUrl: videoResult.url,
+                    thumbnailUrl: videoResult.thumbnailUrl,
+                    duration: videoResult.duration,
+                    isSending: false,
+                    isPendingModeration: false
+                  }
+                : msg
+            )
+          );
+
+        } catch (error) {
+          console.error('❌ Erreur upload vidéo:', error);
+
+          let errorMessage = "Impossible d'envoyer la vidéo.";
+          if (error.message.includes('trop volumineux')) {
+            errorMessage = "La vidéo est trop volumineuse. Maximum 100MB.";
+          } else if (error.message.includes('network')) {
+            errorMessage = "Problème de connexion. Vérifiez votre réseau.";
+          }
+
+          Alert.alert("Erreur", errorMessage);
+
+          setMessages(prev => prev.map(msg =>
+            msg.id === tempId
+              ? { ...msg, sendFailed: true, isSending: false }
+              : msg
+          ));
+
+          throw error;
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }
+
+        return;
+      }
 
       try {
-        console.log('🎤 Début upload audio...');
-        const audioResult = await uploadAudio(audioToUpload, (progress) => {
-          setUploadProgress(progress);
-          console.log('Progress:', progress + '%');
-        });
+        const newMessage = await handleAddMessage(conversationId, messageContent);
 
-        console.log('✅ Upload audio réussi:', audioResult);
-
-        const audioMessageContent = {
-          messageType: 'audio',
-          audio: audioResult.url,
-          audioDuration: audioResult.duration || audioLength || "00:00",
-          senderName: userData.name
-        };
-
-        if (messageText && messageText.length > 0) {
-          audioMessageContent.content = messageText;
+        if (moderationResult.status === 'pending' && moderationResult.workflowId) {
+          setMessagesAwaitingModeration(prev => ({
+            ...prev,
+            [tempId]: {
+              realId: newMessage._id,
+              workflowId: moderationResult.workflowId
+            }
+          }));
         }
-
-        const newMessage = await handleAddMessage(conversationId, audioMessageContent);
 
         setMessages(prev =>
           prev.map(msg =>
@@ -823,109 +916,55 @@ const sendMessage = async () => {
               ? {
                 ...msg,
                 id: newMessage._id,
-                audio: audioResult.url,
-                audioDuration: audioResult.duration || audioLength,
+                image: messageContent.image || undefined,
                 isSending: false,
-                isPendingModeration: false
+                isPendingModeration: moderationResult.status === 'pending'
               }
               : msg
           )
         );
-
       } catch (error) {
-        console.error('❌ Erreur upload audio:', error);
+        console.error(t('chat.errors.sendMessage'), error);
 
-        let errorMessage = "Impossible d'envoyer le message audio.";
-        if (error.message.includes('trop volumineux')) {
-          errorMessage = "L'enregistrement est trop long. Essayez un message plus court.";
-        } else if (error.message.includes('network')) {
-          errorMessage = "Problème de connexion. Vérifiez votre réseau.";
-        }
-
-        Alert.alert("Erreur", errorMessage);
-
-        setMessages(prev => prev.map(msg =>
-          msg.id === tempId
-            ? { ...msg, sendFailed: true, isSending: false }
-            : msg
-        ));
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === tempId
+              ? { ...msg, sendFailed: true, isSending: false }
+              : msg
+          )
+        );
 
         throw error;
-      } finally {
-        setIsUploading(false);
-        setUploadProgress(0);
       }
-
-      return;
-    }
-
-    try {
-      const newMessage = await handleAddMessage(conversationId, messageContent);
-
-      if (moderationResult.status === 'pending' && moderationResult.workflowId) {
-        setMessagesAwaitingModeration(prev => ({
-          ...prev,
-          [tempId]: {
-            realId: newMessage._id,
-            workflowId: moderationResult.workflowId
-          }
-        }));
-      }
-
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === tempId
-            ? {
-              ...msg,
-              id: newMessage._id,
-              image: messageContent.image || undefined,
-              video: messageContent.video || undefined,
-              isSending: false,
-              isPendingModeration: moderationResult.status === 'pending'
-            }
-            : msg
-        )
-      );
-      return; 
     } catch (error) {
-      console.error(t('chat.errors.sendMessage'), error);
-
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === tempId
-            ? { ...msg, sendFailed: true, isSending: false }
-            : msg
-        )
+      console.error('Erreur lors de l\'envoi du message:', error);
+      Alert.alert(
+        "Erreur",
+        "Une erreur s'est produite lors de l'envoi du message. Veuillez réessayer."
       );
-
-      throw error;
     }
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi du message:', error);
-    Alert.alert(
-      "Erreur",
-      "Une erreur s'est produite lors de l'envoi du message. Veuillez réessayer."
-    );
-  }
-};
-  const handleImagePick = async () => {
+  };
+
+  // REMPLACEMENT de handleImagePick par handleMediaPick
+  const handleMediaPick = async () => {
     try {
       const options = {
-        mediaType: 'mixed', // Changé de 'photo' à 'mixed' pour permettre photos ET vidéos
+        mediaType: 'mixed', // Permet photo ET vidéo
         quality: 0.8,
         includeBase64: true,
         saveToPhotos: true,
-        videoQuality: 'medium', // Qualité vidéo
-        durationLimit: 60, // Limite de 60 secondes pour les vidéos
+        videoQuality: 'high',
+        durationLimit: 300 // 5 minutes max
       };
 
       const actionSheetOptions = {
         options: [
-          t('chat.documentOptions.takePhoto') || 'Prendre une photo/vidéo',
-          t('chat.documentOptions.chooseFromGallery') || 'Choisir depuis la galerie',
-          t('chat.documentOptions.cancel') || 'Annuler'
+          t('chat.documentOptions.takePhoto'),
+          t('chat.documentOptions.recordVideo'),
+          t('chat.documentOptions.chooseFromGallery'),
+          t('chat.documentOptions.cancel')
         ],
-        cancelButtonIndex: 2,
+        cancelButtonIndex: 3,
       };
 
       if (Platform.OS === 'ios') {
@@ -936,41 +975,56 @@ const sendMessage = async () => {
           },
           async (buttonIndex) => {
             switch (buttonIndex) {
-              case 0:
-                const cameraResult = await launchCamera(options);
-                handleMediaResult(cameraResult); // Changé de handleImageResult
+              case 0: // Photo
+                const cameraPhotoOptions = { ...options, mediaType: 'photo' };
+                const photoResult = await launchCamera(cameraPhotoOptions);
+                handleImageResult(photoResult);
                 break;
-              case 1:
+              case 1: // Vidéo
+                const cameraVideoOptions = { ...options, mediaType: 'video' };
+                const videoResult = await launchCamera(cameraVideoOptions);
+                handleVideoResult(videoResult);
+                break;
+              case 2: // Galerie
                 const galleryResult = await launchImageLibrary(options);
-                handleMediaResult(galleryResult); // Changé de handleImageResult
+                if (galleryResult.assets && galleryResult.assets[0]) {
+                  const asset = galleryResult.assets[0];
+                  if (asset.type?.startsWith('video')) {
+                    handleVideoResult(galleryResult);
+                  } else {
+                    handleImageResult(galleryResult);
+                  }
+                }
                 break;
             }
           }
         );
       } else {
-        // Pour Android
+        // Android
         Alert.alert(
-          t('chat.documentOptions.selectMedia') || 'Sélectionner un média',
+          t('chat.selectMediaType'),
           '',
           [
-            {
-              text: actionSheetOptions.options[0],
-              onPress: async () => {
-                const result = await launchCamera(options);
-                handleMediaResult(result);
+            { text: t('chat.photo'), onPress: async () => {
+              const result = await launchCamera({ ...options, mediaType: 'photo' });
+              handleImageResult(result);
+            }},
+            { text: t('chat.video'), onPress: async () => {
+              const result = await launchCamera({ ...options, mediaType: 'video' });
+              handleVideoResult(result);
+            }},
+            { text: t('chat.gallery'), onPress: async () => {
+              const result = await launchImageLibrary(options);
+              if (result.assets && result.assets[0]) {
+                const asset = result.assets[0];
+                if (asset.type?.startsWith('video')) {
+                  handleVideoResult(result);
+                } else {
+                  handleImageResult(result);
+                }
               }
-            },
-            {
-              text: actionSheetOptions.options[1],
-              onPress: async () => {
-                const result = await launchImageLibrary(options);
-                handleMediaResult(result);
-              }
-            },
-            {
-              text: actionSheetOptions.options[2],
-              style: 'cancel'
-            }
+            }},
+            { text: t('chat.cancel'), style: 'cancel' }
           ]
         );
       }
@@ -979,39 +1033,44 @@ const sendMessage = async () => {
     }
   };
 
-const handleMediaResult = (result) => {
+  const handleImageResult = (result) => {
     if (result.assets && result.assets[0]) {
-      const asset = result.assets[0];
+      setSelectedImage(result.assets[0]);
+      updateInputAreaHeight(true);
 
-      // Vérifier si c'est une vidéo
-      if (asset.type && asset.type.startsWith('video/')) {
-        // C'est une vidéo
-        console.log('Vidéo sélectionnée:', asset);
-        setSelectedVideo({
-          ...asset,
-          duration: asset.duration || 0 // S'assurer que la durée est présente
-        });
-        updateInputAreaHeight(true);
-
-        requestAnimationFrame(() => {
-          if (flatListRef.current) {
-            flatListRef.current.scrollToEnd({ animated: true });
-          }
-        });
-      } else {
-        // C'est une image
-        setSelectedImage(asset);
-        updateInputAreaHeight(true);
-
-        requestAnimationFrame(() => {
-          if (flatListRef.current) {
-            flatListRef.current.scrollToEnd({ animated: true });
-          }
-        });
-      }
+      requestAnimationFrame(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({ animated: true });
+        }
+      });
     }
   };
 
+  // AJOUT de handleVideoResult
+  const handleVideoResult = (result) => {
+    if (result.assets && result.assets[0]) {
+      const video = result.assets[0];
+      
+      // Vérifier la taille
+      if (video.fileSize && video.fileSize > 100 * 1024 * 1024) {
+        Alert.alert(
+          t('chat.errors.videoTooLarge'),
+          t('chat.errors.videoSizeLimit'),
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      setSelectedVideo(video);
+      updateInputAreaHeight(true);
+
+      requestAnimationFrame(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({ animated: true });
+        }
+      });
+    }
+  };
 
   const calculateBorderRadius = (height) => {
     if (height <= 40) return 18;
@@ -1061,7 +1120,7 @@ const handleMediaResult = (result) => {
     })
   ).current;
 
- const MemoizedMessageItem = memo(MessageItem, (prevProps, nextProps) => {
+  const MemoizedMessageItem = memo(MessageItem, (prevProps, nextProps) => {
     return (
       prevProps.item.id === nextProps.item.id &&
       prevProps.showTimestamps === nextProps.showTimestamps &&
@@ -1071,7 +1130,6 @@ const handleMediaResult = (result) => {
       prevProps.item.image === nextProps.item.image &&
       prevProps.item.audio === nextProps.item.audio &&
       prevProps.item.video === nextProps.item.video &&
-      prevProps.item.videoDuration === nextProps.item.videoDuration &&
       prevProps.item.audioDuration === nextProps.item.audioDuration &&
       prevProps.item.messageType === nextProps.item.messageType
     );
@@ -1377,7 +1435,7 @@ const handleMediaResult = (result) => {
 
       const messageSenderId = typeof msg.sender === 'object' ? msg.sender._id : msg.sender;
 
-   const formattedMessage = {
+      const formattedMessage = {
         id: msg._id || `msg-${index}`,
         text: (msg.messageType === 'image' || msg.messageType === 'audio' || msg.messageType === 'video') && !msg.content?.trim()
           ? undefined
@@ -1388,8 +1446,6 @@ const handleMediaResult = (result) => {
         formattedDate: dateFormatter.formatDate(msg.createdAt),
         messageType: msg.messageType,
         image: msg.image,
-        video: msg.video,
-        videoDuration: msg.videoDuration,
         senderInfo: {
           id: messageSenderId,
           name: userMapping[messageSenderId]?.name || msg.senderName || t('chat.defaultUser'),
@@ -1405,6 +1461,19 @@ const handleMediaResult = (result) => {
           id: formattedMessage.id,
           audio: formattedMessage.audio,
           audioDuration: formattedMessage.audioDuration
+        });
+      }
+
+      if (msg.messageType === 'video') {
+        formattedMessage.video = msg.video || msg.videoUrl;
+        formattedMessage.videoUrl = msg.videoUrl || msg.video;
+        formattedMessage.thumbnailUrl = msg.thumbnailUrl;
+        formattedMessage.duration = msg.duration || 0;
+
+        console.log("Message vidéo formaté:", {
+          id: formattedMessage.id,
+          video: formattedMessage.video,
+          duration: formattedMessage.duration
         });
       }
 
@@ -1427,14 +1496,14 @@ const handleMediaResult = (result) => {
   }, [conversation?.expiresAt, t]);
 
   useEffect(() => {
-    updateInputAreaHeight(!!selectedImage);
+    updateInputAreaHeight(!!selectedImage || !!selectedVideo);
 
-    if (selectedImage && flatListRef.current) {
+    if ((selectedImage || selectedVideo) && flatListRef.current) {
       requestAnimationFrame(() => {
         flatListRef.current.scrollToEnd({ animated: true });
       });
     }
-  }, [selectedImage]);
+  }, [selectedImage, selectedVideo]);
 
   useEffect(() => {
     let timer = null;
@@ -1448,10 +1517,14 @@ const handleMediaResult = (result) => {
     };
   }, [unreadState.count, unreadState.hasScrolledToBottom]);
 
+  // ====== 4. RETURNS CONDITIONNELS ======
+  
+  if (isLoadingMessages) {
+     return <TypewriterSpinner text="hushy..." />;
+  }
 
- 
   // ====== 5. RETURN PRINCIPAL ======
-
+  
   return (
     <Background>
       <SafeAreaView style={{ flex: 1 }} {...panResponder.panHandlers}>
@@ -1543,8 +1616,8 @@ const handleMediaResult = (result) => {
             style={{
               padding: 10,
               backgroundColor: 'white',
-              borderTopLeftRadius: selectedImage || selectedVideo ? 25 : 0,
-              borderTopRightRadius: selectedImage || selectedVideo ? 25 : 0,
+              borderTopLeftRadius: (selectedImage || selectedVideo) ? 25 : 0,
+              borderTopRightRadius: (selectedImage || selectedVideo) ? 25 : 0,
             }}
           >
             {replyToMessage && (
@@ -1596,7 +1669,7 @@ const handleMediaResult = (result) => {
               </View>
             )}
 
-            {/* Affichage de la vidéo sélectionnée */}
+            {/* AJOUT: Affichage de la vidéo sélectionnée */}
             {selectedVideo && (
               <View
                 style={{
@@ -1606,27 +1679,31 @@ const handleMediaResult = (result) => {
                   position: 'relative',
                   backgroundColor: '#000',
                   height: 200,
+                  justifyContent: 'center',
+                  alignItems: 'center'
                 }}
               >
+                {/* Placeholder pour la vidéo */}
                 <View style={{
-                  flex: 1,
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#000',
                   justifyContent: 'center',
-                  alignItems: 'center',
+                  alignItems: 'center'
                 }}>
-                  <FontAwesomeIcon
-                    icon={faPlay}
-                    size={40}
-                    color="white"
-                    style={{ opacity: 0.8 }}
-                  />
-                  <Text style={{
-                    color: 'white',
-                    marginTop: 10,
-                    fontSize: 14,
-                  }}>
-                     ({Math.round(selectedVideo.duration || 0)}s)
+                  <FontAwesomeIcon icon={faPlay} size={50} color="white" style={{ opacity: 0.7 }} />
+                  <Text style={{ color: 'white', marginTop: 10 }}>
+                    {selectedVideo.fileName || 'video.mp4'}
                   </Text>
+                  {selectedVideo.duration && (
+                    <Text style={{ color: 'white', fontSize: 12, marginTop: 5 }}>
+                      {Math.floor(selectedVideo.duration)}s
+                    </Text>
+                  )}
                 </View>
+                
+                {/* Bouton de suppression */}
                 <TouchableOpacity
                   onPress={() => {
                     setSelectedVideo(null);
@@ -1653,7 +1730,7 @@ const handleMediaResult = (result) => {
             <HStack space={2} alignItems="center">
               {/* Bouton d'ajout */}
               <TouchableOpacity
-                onPress={handleImagePick}
+                onPress={handleMediaPick}
                 style={{
                   width: 36,
                   height: 36,
@@ -1768,7 +1845,7 @@ const handleMediaResult = (result) => {
                       ref={inputRef}
                       value={message}
                       onChangeText={setMessage}
-                      placeholder={selectedImage || selectedVideo ? t('chat.send') : (audioPath ? '' : t('chat.message'))}
+                      placeholder={(selectedImage || selectedVideo) ? t('chat.send') : (audioPath ? '' : t('chat.message'))}
                       placeholderTextColor="#8E8E93"
                       style={{
                         width: '100%',
