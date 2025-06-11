@@ -1395,7 +1395,8 @@ const uploadVideo = async (videoData, progressCallback) => {
       hasUri: !!videoData?.uri,
       hasBase64: !!videoData?.base64,
       fileSize: videoData?.fileSize,
-      type: videoData?.type
+      type: videoData?.type,
+      fileName: videoData?.fileName
     });
 
     // Vérifier la taille du fichier
@@ -1403,7 +1404,6 @@ const uploadVideo = async (videoData, progressCallback) => {
       throw new Error('La vidéo est trop volumineuse (max 100MB)');
     }
 
-    // Déterminer la méthode d'upload
     let response;
 
     // Option 1: Si on a du base64 ET que le fichier est petit (<10MB)
@@ -1438,18 +1438,28 @@ const uploadVideo = async (videoData, progressCallback) => {
       
       const formData = new FormData();
       
-      // Créer l'objet fichier pour FormData
+      // IMPORTANT: Structure correcte pour React Native FormData
       const videoFile = {
-        uri: Platform.OS === 'ios' ? videoData.uri.replace('file://', '') : videoData.uri,
+        uri: videoData.uri,
         type: videoData?.type || 'video/mp4',
         name: videoData?.fileName || `video_${Date.now()}.mp4`
       };
       
+      // Ajouter le fichier vidéo
       formData.append('video', videoFile);
       
+      // Ajouter la durée si disponible
       if (videoData?.duration) {
         formData.append('duration', String(videoData.duration));
       }
+
+      // Log pour debug
+      console.log('📋 FormData préparé:', {
+        uri: videoFile.uri,
+        type: videoFile.type,
+        name: videoFile.name,
+        duration: videoData?.duration
+      });
 
       response = await instance.post('/api/upload/video', formData, {
         headers: {
@@ -1461,10 +1471,13 @@ const uploadVideo = async (videoData, progressCallback) => {
             const percentCompleted = Math.round(
               (progressEvent.loaded * 100) / progressEvent.total
             );
+            console.log(`Upload progress: ${percentCompleted}%`);
             if (progressCallback) progressCallback(percentCompleted);
           }
         },
-        timeout: 300000 // 5 minutes
+        timeout: 300000, // 5 minutes
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity
       });
     } else {
       throw new Error('Format de vidéo non supporté - ni base64 ni URI fourni');
@@ -1477,7 +1490,8 @@ const uploadVideo = async (videoData, progressCallback) => {
     console.error('❌ Erreur upload vidéo détaillée:', {
       message: error.message,
       response: error.response?.data,
-      status: error.response?.status
+      status: error.response?.status,
+      headers: error.response?.headers
     });
     
     if (error.response) {
@@ -1491,8 +1505,6 @@ const uploadVideo = async (videoData, progressCallback) => {
     throw error;
   }
 };
-
-
   const refreshUnreadCounts = async () => {
     if (!userData) {
       console.log(i18n.t('cardData.logs.userDataNullSkippingUpdate'));
