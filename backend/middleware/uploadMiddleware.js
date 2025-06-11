@@ -96,12 +96,31 @@ const audioUploadMiddleware = multer({
 const videoUploadMiddleware = multer({
   storage: storage,
   limits: {
-    fileSize: 50 * 1024 * 1024 // 50MB max pour les vidéos
+    fileSize: 100 * 1024 * 1024 // Augmenter à 100MB pour les vidéos
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('video/')) {
+    console.log('🎥 Video fileFilter - mimetype:', file.mimetype);
+    console.log('🎥 Video fileFilter - originalname:', file.originalname);
+    
+    // Types MIME acceptés pour les vidéos
+    const acceptedVideoTypes = [
+      'video/mp4',
+      'video/quicktime', // Pour les vidéos iPhone (.mov)
+      'video/x-msvideo',
+      'video/x-ms-wmv',
+      'video/mpeg',
+      'video/webm',
+      'application/octet-stream' // Parfois React Native envoie ce type
+    ];
+    
+    const isVideoMime = file.mimetype.startsWith('video/') || acceptedVideoTypes.includes(file.mimetype);
+    const hasVideoExtension = /\.(mp4|mov|avi|wmv|mpg|mpeg|webm|m4v)$/i.test(file.originalname);
+    
+    if (isVideoMime || hasVideoExtension) {
+      console.log('✅ Fichier vidéo accepté');
       cb(null, true);
     } else {
+      console.log('❌ Fichier vidéo rejeté:', file.mimetype);
       cb(new Error('Seuls les fichiers vidéo sont autorisés'), false);
     }
   }

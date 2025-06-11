@@ -1383,6 +1383,98 @@ export const CardDataProvider = ({ children }) => {
     }
   };
 
+
+const uploadVideo = async (videoUri, progressCallback) => {
+  try {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Axios n\'est pas initialisé');
+    }
+
+    console.log('🎥 Upload vidéo - URI:', videoUri);
+    console.log('🎥 Sélection vidéo:', selectedVideo);
+
+    // Vérifier la taille du fichier si possible
+    if (selectedVideo?.fileSize && selectedVideo.fileSize > 100 * 1024 * 1024) { // 100MB
+      throw new Error('La vidéo est trop volumineuse (max 100MB)');
+    }
+
+    // Option 1: Upload avec base64 (pour les petites vidéos)
+    if (selectedVideo?.base64 && selectedVideo.fileSize < 10 * 1024 * 1024) { // < 10MB
+      const videoData = `data:${selectedVideo.type || 'video/mp4'};base64,${selectedVideo.base64}`;
+      
+      const response = await instance.post('/api/upload/video', {
+        video: videoData,
+        duration: selectedVideo?.duration || 0,
+        fileName: `video_${Date.now()}.mp4`
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            if (progressCallback) progressCallback(percentCompleted);
+          }
+        },
+        timeout: 300000 // 5 minutes pour les vidéos
+      });
+
+      console.log('✅ Réponse upload vidéo (base64):', response.data);
+      return response.data;
+    }
+    
+    // Option 2: Upload avec FormData (recommandé pour les grandes vidéos)
+    const formData = new FormData();
+    formData.append('video', {
+      uri: Platform.OS === 'ios' ? videoUri.replace('file://', '') : videoUri,
+      type: selectedVideo?.type || 'video/mp4',
+      name: selectedVideo?.fileName || `video_${Date.now()}.mp4`
+    });
+    
+    if (selectedVideo?.duration) {
+      formData.append('duration', String(selectedVideo.duration));
+    }
+
+    const response = await instance.post('/api/upload/video', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Accept': 'application/json'
+      },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          if (progressCallback) progressCallback(percentCompleted);
+        }
+      },
+      timeout: 300000 // 5 minutes pour les vidéos
+    });
+
+    console.log('✅ Réponse upload vidéo (FormData):', response.data);
+    return response.data;
+    
+  } catch (error) {
+    console.error('❌ Erreur upload vidéo:', error);
+    
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+      
+      if (error.response.status === 413) {
+        throw new Error('La vidéo est trop volumineuse');
+      }
+    }
+    
+    throw error;
+  }
+};
+
+
   const refreshUnreadCounts = async () => {
     if (!userData) {
       console.log(i18n.t('cardData.logs.userDataNullSkippingUpdate'));
@@ -1625,6 +1717,7 @@ export const CardDataProvider = ({ children }) => {
         getSharedSecret,
         markConversationAsRead,
         uploadImage,
+        uploadVideo,
         getUserConversations,
         refreshUnreadCounts,
         unreadCountsMap,
