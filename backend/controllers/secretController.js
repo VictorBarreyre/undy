@@ -1356,13 +1356,18 @@ exports.addMessageToConversation = async (req, res) => {
   try {
     console.log("Données reçues:", JSON.stringify(req.body, null, 2));
 
-    // Extraire les données de la requête
+    // Extraire les données de la requête - AJOUT des champs vidéo
     const {
       content,
       messageType = 'text',
       image = null,
       audio = null,
       audioDuration = null,
+      video = null,           // NOUVEAU
+      videoUrl = null,        // NOUVEAU - alias
+      thumbnailUrl = null,    // NOUVEAU
+      duration = null,        // NOUVEAU - durée en secondes
+      videoDuration = null,   // NOUVEAU - durée formatée
       replyTo = null
     } = req.body;
 
@@ -1377,6 +1382,11 @@ exports.addMessageToConversation = async (req, res) => {
 
     if (messageType === 'audio' && !audio) {
       return res.status(400).json({ message: 'L\'URL de l\'audio est requise pour les messages audio.' });
+    }
+
+    // NOUVELLE VALIDATION pour les vidéos
+    if (messageType === 'video' && !video && !videoUrl) {
+      return res.status(400).json({ message: 'L\'URL de la vidéo est requise pour les messages vidéo.' });
     }
 
     // Construction de l'objet message
@@ -1402,6 +1412,20 @@ exports.addMessageToConversation = async (req, res) => {
       console.log("Ajout de message audio:", {
         audio: messageData.audio,
         duration: messageData.audioDuration
+      });
+    }
+
+    // NOUVEAU: Gestion des vidéos
+    if (messageType === 'video') {
+      messageData.video = video || videoUrl; // Support des deux noms de champ
+      messageData.thumbnailUrl = thumbnailUrl;
+      messageData.duration = duration || 0;
+
+      // Log pour débogage des vidéos
+      console.log("Ajout de message vidéo:", {
+        video: messageData.video,
+        thumbnailUrl: messageData.thumbnailUrl,
+        duration: messageData.duration
       });
     }
 
@@ -1446,6 +1470,16 @@ exports.addMessageToConversation = async (req, res) => {
         id: lastMessage._id,
         audio: lastMessage.audio,
         duration: lastMessage.audioDuration
+      });
+    }
+
+    // NOUVEAU: Log pour les messages vidéo
+    if (messageType === 'video') {
+      console.log("Message vidéo ajouté avec succès:", {
+        id: lastMessage._id,
+        video: lastMessage.video,
+        thumbnailUrl: lastMessage.thumbnailUrl,
+        duration: lastMessage.duration
       });
     }
 

@@ -27,7 +27,7 @@ const MessageSchema = new mongoose.Schema({
       return this.messageType === 'image' || this.messageType === 'mixed';
     }
   },
-  // Nouveaux champs pour les messages audio
+  // Champs pour les messages audio
   audio: {
     type: String,  // URL de l'audio
     required: function() {
@@ -39,14 +39,54 @@ const MessageSchema = new mongoose.Schema({
     type: String,  // Durée au format "00:00"
     default: "00:00"
   },
+  // NOUVEAUX CHAMPS POUR LES VIDÉOS
+  video: {
+    type: String,  // URL de la vidéo
+    required: function() {
+      // La vidéo est requise uniquement pour les messages vidéo
+      return this.messageType === 'video';
+    }
+  },
+  videoUrl: {
+    type: String,  // Alias pour compatibilité front-end
+    get: function() {
+      return this.video;
+    },
+    set: function(value) {
+      this.video = value;
+    }
+  },
+  thumbnailUrl: {
+    type: String,  // URL de la miniature de la vidéo (optionnel)
+    default: null
+  },
+  duration: {
+    type: Number,  // Durée en secondes pour les vidéos
+    default: 0
+  },
+  videoDuration: {
+    type: String,  // Durée au format "00:00" pour compatibilité
+    get: function() {
+      if (this.duration) {
+        const minutes = Math.floor(this.duration / 60);
+        const seconds = Math.floor(this.duration % 60);
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
+      return "00:00";
+    }
+  },
   messageType: {
     type: String,
-    enum: ['text', 'image', 'mixed', 'audio'], // Ajout de 'audio'
+    enum: ['text', 'image', 'mixed', 'audio', 'video'], // AJOUT de 'video'
     default: 'text'
   }
   // Si besoin d'autres infos sender utiles
   // senderPicture: String,
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  toJSON: { getters: true },
+  toObject: { getters: true }
+});
 
 // Le reste du schéma reste inchangé
 const ConversationSchema = new mongoose.Schema({

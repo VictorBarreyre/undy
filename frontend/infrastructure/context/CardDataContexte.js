@@ -1073,29 +1073,32 @@ export const CardDataProvider = ({ children }) => {
           console.log("NOTIFICATION: Préparation de la notification");
           
           // Déterminer l'aperçu du message selon le type
-          let messagePreview = "";
-          if (typeof content === 'string') {
-            messagePreview = content.substring(0, 100) + (content.length > 100 ? '...' : '');
-          } else if (content.content) {
-            messagePreview = content.content.substring(0, 100) + (content.content.length > 100 ? '...' : '');
-          } else {
-            // Aperçu selon le type
-            switch (messageData.messageType) {
-              case 'audio':
-                messagePreview = "🎵 Message audio";
-                break;
-              case 'image':
-                messagePreview = "📷 Image";
-                break;
-              case 'mixed':
-                messagePreview = content.content 
-                  ? content.content.substring(0, 100) 
-                  : "🖼️ Image avec message";
-                break;
-              default:
-                messagePreview = "Nouveau message";
-            }
-          }
+    let messagePreview = "";
+if (typeof content === 'string') {
+  messagePreview = content.substring(0, 100) + (content.length > 100 ? '...' : '');
+} else if (content.content) {
+  messagePreview = content.content.substring(0, 100) + (content.content.length > 100 ? '...' : '');
+} else {
+  // Aperçu selon le type
+  switch (messageData.messageType) {
+    case 'audio':
+      messagePreview = "🎵 Message audio";
+      break;
+    case 'image':
+      messagePreview = "📷 Image";
+      break;
+    case 'video':  // AJOUT du cas vidéo
+      messagePreview = "📹 Vidéo";
+      break;
+    case 'mixed':
+      messagePreview = content.content 
+        ? content.content.substring(0, 100) 
+        : "📎 Message avec pièce jointe";
+      break;
+    default:
+      messagePreview = "Nouveau message";
+  }
+}
           
           const notificationData = {
             conversationId,

@@ -492,11 +492,34 @@ const sendMessageNotification = async (req, res) => {
       });
     }
 
-    const truncatedMessage = messagePreview?.length > 100
-      ? messagePreview.substring(0, 97) + '...'
-      : messagePreview || '';
+    // MISE À JOUR: Adapter l'aperçu selon le type de message incluant vidéo
+    let notificationPreview = messagePreview;
+    
+    switch (messageType) {
+      case 'video':
+        notificationPreview = "📹 Vidéo";
+        break;
+      case 'image':
+        notificationPreview = "📷 Photo";
+        break;
+      case 'audio':
+        notificationPreview = "🎵 Message audio";
+        break;
+      case 'mixed':
+        if (messagePreview) {
+          notificationPreview = messagePreview;
+        } else {
+          notificationPreview = "📎 Message avec pièce jointe";
+        }
+        break;
+      default:
+        notificationPreview = messagePreview || "Nouveau message";
+    }
 
-    // CORRECTION: Inclure TOUTES les données nécessaires
+    const truncatedMessage = notificationPreview?.length > 100
+      ? notificationPreview.substring(0, 97) + '...'
+      : notificationPreview;
+
     const notificationResult = await sendPushNotifications(
       recipientIds,
       'messageFrom',
@@ -507,10 +530,9 @@ const sendMessageNotification = async (req, res) => {
         type: 'new_message',
         conversationId,
         senderId: senderIdStr,
-        senderName, // AJOUTÉ
-        messageType,
+        senderName,
+        messageType, // Important pour différencier les types
         timestamp: new Date().toISOString(),
-        // AJOUT DES DONNÉES DE NAVIGATION
         navigationTarget: 'Chat',
         navigationScreen: 'ChatTab',
         navigationParams: { conversationId }
@@ -532,6 +554,8 @@ const sendMessageNotification = async (req, res) => {
     });
   }
 };
+
+
 /**
  * Notification d'achat de secret avec support multilingue
  */

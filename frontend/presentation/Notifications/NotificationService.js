@@ -237,6 +237,8 @@ class NotificationService {
       console.log('[NotificationService] 🆔 ConversationId:', data.conversationId);
       console.log('[NotificationService] 👤 SenderId:', data.senderId);
       console.log('[NotificationService] 📝 SenderName:', data.senderName);
+      console.log('[NotificationService] 📱 MessageType:', data.messageType);
+      
     }
   }
 
