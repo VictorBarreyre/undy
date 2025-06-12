@@ -130,6 +130,12 @@ const TabNavigator = () => {
             backgroundColor: 'white',
             elevation: 0,
             borderTopWidth: 0,
+            shadowColor: '#94A3B8',
+          shadowOffset: { width: 0, height: -2 }, // Négatif pour que l'ombre soit au-dessus
+          shadowOpacity: 0.15,
+          shadowRadius: 3,
+          // Pour Android
+          elevation: 5,
           },
         })}
       >
