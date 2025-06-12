@@ -16,7 +16,6 @@ const {
     refreshStripeOnboarding,
     getSharedSecret,
     markConversationAsRead,
-    uploadImage, 
     getNearbySecrets,
     deleteSecret,
     checkIdentityVerificationStatus, 
@@ -33,6 +32,7 @@ const { moderationMiddleware } = require('../controllers/moderationController');
 
 // Routes publiques
 router.get('/', getAllSecrets);
+
 
 // Routes Stripe et paiements
 router.post('/createsecrets', protect, moderationMiddleware, createSecret); // Ajout du middleware de modération
