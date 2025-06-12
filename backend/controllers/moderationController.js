@@ -14,6 +14,7 @@ const SIGHTENGINE_CONFIG = {
   }
 };
 
+
 // Configuration des seuils de modération depuis les variables d'environnement
 const MODERATION_CONFIG = {
   // Configuration générale
