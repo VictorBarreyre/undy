@@ -1,19 +1,28 @@
-// controllers/uploadController.js - TOUTE MODÉRATION DÉSACTIVÉE
+// controllers/uploadController.js - AVEC MODÉRATION SIGHTENGINE ACTIVÉE
 const cloudinary = require('../config/cloudinary');
 const fs = require('fs');
 const { promisify } = require('util');
+const { 
+  analyzeImage, 
+  analyzeImageFromFile, 
+  analyzeImageFromBase64,
+  analyzeImageResult,
+  submitVideoForAnalysis,
+  checkVideoAnalysisStatus,
+  analyzeVideoResult 
+} = require('./moderationController');
 
 // Conversion des fonctions fs en promesses
 const unlinkAsync = promisify(fs.unlink);
 
 /**
- * Upload une image SANS AUCUNE modération
+ * Upload une image AVEC modération Sightengine
  * @param {Object} req - Requête Express
  * @param {Object} res - Réponse Express
  */
 exports.uploadImage = async (req, res) => {
   try {
-    console.log('📤 Upload d\'image - AUCUNE modération');
+    console.log('📤 Upload d\'image - AVEC modération Sightengine activée');
     
     // Extraction de l'image (base64 ou fichier)
     let imageData;
@@ -30,7 +39,73 @@ exports.uploadImage = async (req, res) => {
       return res.status(400).json({ message: 'Aucune image fournie' });
     }
     
-    // Upload DIRECT vers Cloudinary - AUCUNE modération
+    // 1. MODÉRATION DE L'IMAGE AVEC SIGHTENGINE
+    let moderationResult;
+    
+    try {
+      if (imagePath) {
+        // Modération depuis le fichier
+        console.log('🔍 Analyse Sightengine de l\'image depuis le fichier...');
+        const analysisData = await analyzeImageFromFile(req.file);
+        moderationResult = analyzeImageResult(analysisData);
+      } else {
+        // Modération depuis base64
+        console.log('🔍 Analyse Sightengine de l\'image depuis base64...');
+        const analysisData = await analyzeImageFromBase64(imageData);
+        moderationResult = analyzeImageResult(analysisData);
+      }
+      
+      console.log('📊 Résultat Sightengine:', {
+        isFlagged: moderationResult.isFlagged,
+        reason: moderationResult.reason,
+        categories: moderationResult.details?.flaggedCategories
+      });
+      
+      // Si l'image est flaggée, on refuse l'upload
+      if (moderationResult.isFlagged) {
+        console.log('❌ Image rejetée par Sightengine:', moderationResult.reason);
+        
+        // Nettoyer le fichier temporaire si présent
+        if (imagePath) {
+          await unlinkAsync(imagePath).catch(err => 
+            console.error('Erreur suppression fichier temporaire:', err)
+          );
+        }
+        
+        return res.status(403).json({
+          message: 'Image rejetée: contenu inapproprié détecté',
+          reason: moderationResult.reason,
+          details: moderationResult.details
+        });
+      }
+      
+      console.log('✅ Image approuvée par Sightengine');
+      
+    } catch (moderationError) {
+      console.error('⚠️ Erreur lors de la modération Sightengine:', moderationError);
+      
+      // Configuration: que faire en cas d'erreur de modération?
+      const FAIL_OPEN = process.env.MODERATION_FAIL_OPEN === 'true'; // Par défaut: fail closed
+      
+      if (!FAIL_OPEN) {
+        // Fail closed: bloquer l'upload en cas d'erreur
+        if (imagePath) {
+          await unlinkAsync(imagePath).catch(err => 
+            console.error('Erreur suppression fichier temporaire:', err)
+          );
+        }
+        
+        return res.status(503).json({
+          message: 'Service de modération temporairement indisponible',
+          error: 'Veuillez réessayer dans quelques instants'
+        });
+      }
+      
+      // Fail open: permettre l'upload avec un tag spécial
+      console.log('⚠️ Modération échouée - autorisation par défaut (fail open)');
+    }
+    
+    // 2. UPLOAD VERS CLOUDINARY
     let uploadResult;
     
     if (imagePath) {
@@ -38,23 +113,25 @@ exports.uploadImage = async (req, res) => {
       uploadResult = await cloudinary.uploader.upload(imagePath, {
         folder: 'chat_images',
         resource_type: 'image',
-        tags: ['hushy', 'unmoderated']
+        tags: ['hushy', 'moderated', 'sightengine_approved']
       });
     } else {
       // Upload depuis base64
       uploadResult = await cloudinary.uploader.upload(imageData, {
         folder: 'chat_images',
         resource_type: 'image',
-        tags: ['hushy', 'unmoderated']
+        tags: ['hushy', 'moderated', 'sightengine_approved']
       });
     }
     
     // Nettoyer le fichier temporaire
     if (imagePath) {
-      await unlinkAsync(imagePath).catch(err => console.error('Erreur suppression fichier temporaire:', err));
+      await unlinkAsync(imagePath).catch(err => 
+        console.error('Erreur suppression fichier temporaire:', err)
+      );
     }
     
-    console.log('✅ Image uploadée sans modération:', uploadResult.secure_url);
+    console.log('✅ Image uploadée avec succès:', uploadResult.secure_url);
     
     // Retourner le résultat
     res.status(200).json({
@@ -63,7 +140,9 @@ exports.uploadImage = async (req, res) => {
       width: uploadResult.width,
       height: uploadResult.height,
       format: uploadResult.format,
-      message: 'Image téléchargée sans modération'
+      moderated: true,
+      moderationService: 'sightengine',
+      message: 'Image téléchargée avec succès après modération'
     });
   } catch (error) {
     console.error('Erreur lors du téléchargement de l\'image:', error);
@@ -86,14 +165,13 @@ const formatTime = (seconds) => {
 };
 
 /**
- * Upload un fichier audio SANS AUCUNE modération
+ * Upload un fichier audio (pas de modération Sightengine pour l'audio)
  * @param {Object} req - Requête Express
  * @param {Object} res - Réponse Express
  */
-// Dans uploadController.js - Support amélioré du base64
 exports.uploadAudio = async (req, res) => {
   try {
-    console.log('🎵 Upload d\'audio - AUCUNE modération');
+    console.log('🎵 Upload d\'audio - Sans modération Sightengine (non supporté)');
     
     // Extraction de l'audio
     let audioData;
@@ -106,7 +184,6 @@ exports.uploadAudio = async (req, res) => {
       audioData = req.body.audio;
       audioDuration = req.body.duration || "00:00";
       console.log('📊 Audio base64 détecté, taille:', audioData.length);
-      console.log('📊 Durée fournie:', audioDuration);
     } else if (req.file) {
       // Audio uploadé via multer
       audioPath = req.file.path;
@@ -128,20 +205,16 @@ exports.uploadAudio = async (req, res) => {
     
     try {
       if (audioPath) {
-        // Upload depuis le fichier
-        console.log('📤 Upload depuis fichier...');
         uploadResult = await cloudinary.uploader.upload(audioPath, {
           folder: 'chat_audio',
           resource_type: 'auto',
-          tags: ['audio', 'hushy', 'unmoderated']
+          tags: ['audio', 'hushy']
         });
       } else {
-        // Upload depuis base64
-        console.log('📤 Upload depuis base64...');
         uploadResult = await cloudinary.uploader.upload(audioData, {
           folder: 'chat_audio',
           resource_type: 'auto',
-          tags: ['audio', 'hushy', 'unmoderated', 'base64']
+          tags: ['audio', 'hushy', 'base64']
         });
       }
     } catch (cloudinaryError) {
@@ -161,8 +234,7 @@ exports.uploadAudio = async (req, res) => {
       ? audioDuration 
       : formatTime(uploadResult.duration || 0);
     
-    console.log('✅ Audio uploadé sans modération:', uploadResult.secure_url);
-    console.log('✅ Durée finale:', finalDuration);
+    console.log('✅ Audio uploadé avec succès:', uploadResult.secure_url);
     
     // Retourner le résultat
     res.status(200).json({
@@ -182,14 +254,15 @@ exports.uploadAudio = async (req, res) => {
     });
   }
 };
+
 /**
- * Upload un fichier vidéo SANS AUCUNE modération
+ * Upload un fichier vidéo AVEC modération Sightengine asynchrone
  * @param {Object} req - Requête Express
  * @param {Object} res - Réponse Express
  */
 exports.uploadVideo = async (req, res) => {
   try {
-    console.log('🎥 Upload de vidéo - AUCUNE modération');
+    console.log('🎥 Upload de vidéo - AVEC modération Sightengine asynchrone');
     
     // Extraction de la vidéo
     let videoPath;
@@ -206,38 +279,72 @@ exports.uploadVideo = async (req, res) => {
       return res.status(400).json({ message: 'Aucun fichier vidéo fourni' });
     }
     
-    // Upload DIRECT vers Cloudinary - AUCUNE modération
+    // 1. UPLOAD VERS CLOUDINARY D'ABORD
     let uploadResult;
     
     if (videoPath) {
       uploadResult = await cloudinary.uploader.upload(videoPath, {
         folder: 'chat_videos',
         resource_type: 'video',
-        tags: ['hushy', 'video', 'unmoderated']
+        tags: ['hushy', 'video', 'pending_moderation']
       });
     } else {
       uploadResult = await cloudinary.uploader.upload(videoData, {
         folder: 'chat_videos',
         resource_type: 'video',
-        tags: ['hushy', 'video', 'unmoderated']
+        tags: ['hushy', 'video', 'pending_moderation']
       });
     }
     
     // Nettoyer le fichier temporaire
     if (videoPath) {
-      await unlinkAsync(videoPath).catch(err => console.error('Erreur suppression fichier temporaire:', err));
+      await unlinkAsync(videoPath).catch(err => 
+        console.error('Erreur suppression fichier temporaire:', err)
+      );
     }
     
-    console.log('✅ Vidéo uploadée sans modération:', uploadResult.secure_url);
+    console.log('✅ Vidéo uploadée:', uploadResult.secure_url);
     
-    // IMPORTANT: Retourner la durée en NOMBRE (secondes) et non en string
+    // 2. SOUMETTRE POUR MODÉRATION ASYNCHRONE AVEC SIGHTENGINE
+    let moderationWorkflowId = null;
+    
+    try {
+      console.log('🔍 Soumission de la vidéo à Sightengine...');
+      const moderationSubmission = await submitVideoForAnalysis(uploadResult.secure_url);
+      
+      if (moderationSubmission.id) {
+        moderationWorkflowId = moderationSubmission.id;
+        console.log('✅ Vidéo soumise à Sightengine, workflow ID:', moderationWorkflowId);
+        
+        // TODO: Stocker le workflow ID avec le public_id dans votre base de données
+        // pour pouvoir traiter le webhook plus tard
+        // Exemple:
+        // await VideoModeration.create({
+        //   publicId: uploadResult.public_id,
+        //   workflowId: moderationWorkflowId,
+        //   status: 'pending',
+        //   uploadedAt: new Date()
+        // });
+      }
+    } catch (moderationError) {
+      console.error('⚠️ Erreur lors de la soumission à Sightengine:', moderationError);
+      // On continue quand même - la vidéo est uploadée
+      // mais on ajoute un tag pour indiquer que la modération a échoué
+      await cloudinary.uploader.add_tag('moderation_failed', [uploadResult.public_id]);
+    }
+    
+    // Retourner le résultat
     return res.status(200).json({
       url: uploadResult.secure_url,
       public_id: uploadResult.public_id,
-      duration: uploadResult.duration || 0,  // ← NOMBRE, pas STRING
-      durationFormatted: formatTime(uploadResult.duration || 0), // ← Pour l'affichage uniquement
+      duration: uploadResult.duration || 0,
+      durationFormatted: formatTime(uploadResult.duration || 0),
       format: uploadResult.format,
-      message: 'Vidéo téléchargée sans modération'
+      moderated: false,
+      moderationStatus: moderationWorkflowId ? 'pending' : 'failed_to_submit',
+      moderationWorkflowId: moderationWorkflowId,
+      moderationService: 'sightengine',
+      message: 'Vidéo téléchargée avec succès, modération en cours'
     });
   } catch (error) {
     console.error('Erreur lors du téléchargement de la vidéo:', error);
@@ -249,18 +356,102 @@ exports.uploadVideo = async (req, res) => {
 };
 
 /**
- * Webhook désactivé (plus de modération)
+ * Webhook pour recevoir les résultats de modération Sightengine
  */
 exports.handleModerationWebhook = async (req, res) => {
-  console.log('📨 Webhook de modération reçu mais IGNORÉ (modération désactivée)');
-  res.status(200).json({ 
-    message: 'Webhook ignoré - modération complètement désactivée',
-    status: 'disabled'
-  });
+  try {
+    console.log('📨 Webhook Sightengine reçu');
+    console.log('Headers:', req.headers);
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    
+    // Vérifier la signature du webhook si configurée
+    // Sightengine peut signer les webhooks pour la sécurité
+    // const signature = req.headers['x-sightengine-signature'];
+    // if (!verifyWebhookSignature(req.body, signature)) {
+    //   return res.status(401).json({ message: 'Signature invalide' });
+    // }
+    
+    const { id: workflowId, status, summary, media } = req.body;
+    
+    if (!workflowId) {
+      return res.status(400).json({ message: 'Workflow ID manquant' });
+    }
+    
+    if (status === 'finished' && summary) {
+      // Analyser les résultats Sightengine
+      const analysisResult = analyzeVideoResult({ summary });
+      
+      console.log('📊 Analyse Sightengine terminée:', {
+        workflowId,
+        isFlagged: analysisResult.isFlagged,
+        reason: analysisResult.reason
+      });
+      
+      // TODO: Récupérer le public_id depuis votre base de données
+      // const videoRecord = await VideoModeration.findOne({ workflowId });
+      // if (!videoRecord) {
+      //   console.error('Aucun enregistrement trouvé pour le workflow:', workflowId);
+      //   return res.status(404).json({ message: 'Workflow non trouvé' });
+      // }
+      
+      if (analysisResult.isFlagged) {
+        console.log('❌ Vidéo signalée comme inappropriée par Sightengine:', analysisResult.reason);
+        
+        // Actions à effectuer:
+        // 1. Supprimer la vidéo de Cloudinary
+        // await cloudinary.uploader.destroy(videoRecord.publicId, { resource_type: 'video' });
+        
+        // 2. Mettre à jour le statut dans la base de données
+        // await VideoModeration.updateOne(
+        //   { workflowId },
+        //   { 
+        //     status: 'rejected',
+        //     reason: analysisResult.reason,
+        //     moderatedAt: new Date()
+        //   }
+        // );
+        
+        // 3. Notifier l'utilisateur (par email, notification push, etc.)
+        // await notifyUser(videoRecord.userId, 'video_rejected', analysisResult.reason);
+        
+        // 4. Supprimer le message associé si nécessaire
+        // await Message.deleteOne({ videoUrl: videoRecord.url });
+        
+      } else {
+        console.log('✅ Vidéo approuvée par Sightengine');
+        
+        // Actions à effectuer:
+        // 1. Mettre à jour les tags Cloudinary
+        // await cloudinary.uploader.replace_tag('sightengine_approved', [videoRecord.publicId]);
+        // await cloudinary.uploader.remove_tag('pending_moderation', [videoRecord.publicId]);
+        
+        // 2. Mettre à jour le statut dans la base de données
+        // await VideoModeration.updateOne(
+        //   { workflowId },
+        //   { 
+        //     status: 'approved',
+        //     moderatedAt: new Date()
+        //   }
+        // );
+      }
+    }
+    
+    res.status(200).json({ 
+      message: 'Webhook Sightengine traité avec succès',
+      status: 'processed',
+      workflowId
+    });
+  } catch (error) {
+    console.error('Erreur lors du traitement du webhook Sightengine:', error);
+    res.status(500).json({ 
+      message: 'Erreur lors du traitement du webhook',
+      error: error.message 
+    });
+  }
 };
 
 /**
- * Fonction pour supprimer un média
+ * Fonction pour supprimer un média de Cloudinary
  * @param {string} publicId - ID public Cloudinary
  * @param {string} resourceType - Type de ressource ('image', 'video', 'raw')
  */

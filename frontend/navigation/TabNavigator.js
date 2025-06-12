@@ -23,7 +23,7 @@ const GradientIcon = ({ icon, size, focused }) => {
   return (
     <MaskedView
       maskElement={
-        <View style={{ 
+        <View style={{
           backgroundColor: 'transparent',
           justifyContent: 'center',
           alignItems: 'center',
@@ -36,8 +36,8 @@ const GradientIcon = ({ icon, size, focused }) => {
         colors={['#FF587E', '#CC4B8D']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ 
-          width: size, 
+        style={{
+          width: size,
           height: size,
         }}
       />
@@ -55,7 +55,7 @@ const TabNavigator = () => {
     console.log("TabNavigator - totalUnreadCount:", totalUnreadCount);
     // Rafraîchir toutes les 30 secondes
     const interval = setInterval(refreshUnreadCounts, 30000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -85,9 +85,9 @@ const TabNavigator = () => {
               );
             case 'AddSecret':
               return <GradientIcon icon={faPlus} size={size} focused={focused} />;
-              case 'ChatTab':
-                return (
-                 <View style={{ position: 'relative' }}>
+            case 'ChatTab':
+              return (
+                <View style={{ position: 'relative' }}>
                   <GradientIcon icon={faComments} size={size} focused={focused} />
                   {totalUnreadCount > 0 && (
                     <View style={{
@@ -109,10 +109,10 @@ const TabNavigator = () => {
                           alignItems: 'center'
                         }}
                       >
-                        <Text style={{ 
-                          color: 'white', 
-                          fontSize: 10, 
-                          fontWeight: 'bold' 
+                        <Text style={{
+                          color: 'white',
+                          fontSize: 10,
+                          fontWeight: 'bold'
                         }}>
                           {totalUnreadCount}
                         </Text>
@@ -120,25 +120,25 @@ const TabNavigator = () => {
                     </View>
                   )}
                 </View>
-                );
-            }
-          },
-          tabBarShowLabel: false,
-          tabBarActiveTintColor: '#94A3B8',
-          tabBarInactiveTintColor: '#94A3B8',
-          tabBarStyle: {
-            backgroundColor: 'white',
-            elevation: 0,
-            borderTopWidth: 0,
-            shadowColor: '#94A3B8',
+              );
+          }
+        },
+        tabBarShowLabel: false,
+        tabBarActiveTintColor: '#94A3B8',
+        tabBarInactiveTintColor: '#94A3B8',
+        tabBarStyle: {
+          backgroundColor: 'white',
+          elevation: 0,
+          borderTopWidth: 0,
+          shadowColor: '#94A3B8',
           shadowOffset: { width: 0, height: -2 }, // Négatif pour que l'ombre soit au-dessus
           shadowOpacity: 0.15,
           shadowRadius: 3,
           // Pour Android
           elevation: 5,
-          },
-        })}
-      >
+        },
+      })}
+    >
       <Tab.Screen
         name="HomeTab"
         component={HomeStackNavigator}

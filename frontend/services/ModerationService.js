@@ -1,13 +1,13 @@
-// src/services/ModerationService.js - TOUTE MODÉRATION MÉDIA DÉSACTIVÉE
+// src/services/ModerationService.js - SERVICE DE MODÉRATION COMPLET AVEC SIGHTENGINE
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAxiosInstance } from '../data/api/axiosInstance';
 
-// Configuration du cache (gardé uniquement pour le texte)
+// Configuration du cache
 const CACHE_EXPIRY = 60 * 60 * 1000; // 1 heure en millisecondes
 const CACHE_PREFIX = 'moderation_';
 
-// Liste de mots à filtrer localement (SEULE modération active)
+// Liste de mots à filtrer localement
 const OFFENSIVE_WORDS = [
   // Insultes et mots vulgaires en français
   "putain", "merde", "connard", "salope", "enculé", "pédé",
@@ -17,17 +17,17 @@ const OFFENSIVE_WORDS = [
   "fuck", "shit", "asshole", "bitch", "cunt", "faggot", "nigger",
 ];
 
-// Configuration de modération - SEUL LE TEXTE EST ACTIF
+// Configuration de modération - TOUT EST ACTIF
 const MODERATION_CONFIG = {
-  useLocalFilter: true,       // Filtrage local des mots offensants SEUL ACTIF
-  useCache: true,             // Cache pour le texte uniquement
-  logViolations: true,        // Journalisation des violations de texte
-  threshold: 0.7,             // Seuil par défaut pour le texte
-  // TOUT LE RESTE EST DÉSACTIVÉ
-  enableImageModeration: false,
-  enableVideoModeration: false,
-  enableAudioModeration: false,
-  enableMediaModeration: false,
+  useLocalFilter: true,       // Filtrage local des mots offensants
+  useCache: true,             // Cache pour éviter les appels répétés
+  logViolations: true,        // Journalisation des violations
+  threshold: 0.7,             // Seuil par défaut
+  // MODÉRATION MÉDIA ACTIVÉE
+  enableImageModeration: true,
+  enableVideoModeration: true,
+  enableAudioModeration: false, // Pas de modération audio pour l'instant
+  enableMediaModeration: true,
 };
 
 /**
@@ -91,7 +91,7 @@ const getCacheKey = (content, type = 'text') => {
  * @returns {Promise<Object|null>} - Résultat de modération en cache ou null
  */
 const checkCache = async (content, type = 'text') => {
-  if (!MODERATION_CONFIG.useCache || type !== 'text') return null;
+  if (!MODERATION_CONFIG.useCache) return null;
   
   try {
     const cacheKey = getCacheKey(content, type);
@@ -121,7 +121,7 @@ const checkCache = async (content, type = 'text') => {
  * @param {string} type - Type de contenu ('text', 'image', 'video')
  */
 const storeInCache = async (content, result, type = 'text') => {
-  if (!MODERATION_CONFIG.useCache || type !== 'text') return;
+  if (!MODERATION_CONFIG.useCache) return;
   
   try {
     const cacheKey = getCacheKey(content, type);
@@ -137,7 +137,7 @@ const storeInCache = async (content, result, type = 'text') => {
 };
 
 /**
- * Vérifier le contenu texte avec l'API (SEULE MODÉRATION ACTIVE)
+ * Vérifier le contenu texte avec l'API
  * @param {string} content - Contenu à vérifier
  * @returns {Promise<Object>} - Résultat de modération
  */
@@ -147,12 +147,13 @@ export const checkContentViaAPI = async (content) => {
   }
 
   try {
+    // Vérifier le cache d'abord
     const cachedResult = await checkCache(content, 'text');
     if (cachedResult) {
       return cachedResult;
     }
     
-    // Appel à l'API de modération (si disponible)
+    // Appel à l'API de modération
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error('Erreur: instance axios non disponible');
@@ -166,6 +167,7 @@ export const checkContentViaAPI = async (content) => {
     
     const moderationResult = response.data;
     
+    // Stocker en cache
     await storeInCache(content, moderationResult, 'text');
     
     if (MODERATION_CONFIG.logViolations && moderationResult.isFlagged) {
@@ -175,68 +177,166 @@ export const checkContentViaAPI = async (content) => {
     return moderationResult;
   } catch (error) {
     console.error('Erreur lors de la vérification via API:', error);
+    // Fallback sur la vérification locale
     return checkContentLocally(content);
   }
 };
 
 /**
- * MODÉRATION D'IMAGE COMPLÈTEMENT DÉSACTIVÉE
+ * Modération d'image via Sightengine (backend)
  * @param {string} imageUri - URI de l'image à modérer
- * @returns {Promise<Object>} - Résultat toujours autorisé
+ * @returns {Promise<Object>} - Résultat de modération
  */
 export const moderateImage = async (imageUri) => {
-  console.log('🖼️ MODÉRATION D\'IMAGE COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
+  if (!MODERATION_CONFIG.enableImageModeration) {
+    console.log('🖼️ Modération d\'image désactivée par configuration');
+    return { isFlagged: false, reason: null, disabled: true };
+  }
+
+  console.log('🖼️ Modération d\'image en cours...');
   
-  return { 
-    isFlagged: false, 
-    reason: null,
-    disabled: true,
-    message: 'Modération d\'image complètement désactivée'
-  };
+  try {
+    // Vérifier le cache d'abord
+    const cachedResult = await checkCache(imageUri, 'image');
+    if (cachedResult) {
+      return cachedResult;
+    }
+    
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Instance Axios non disponible');
+    }
+    
+    // Appel à l'API de modération d'image
+    const response = await instance.post('/api/moderation/image-url', { url: imageUri });
+    
+    if (!response.data) {
+      throw new Error('Réponse de modération invalide');
+    }
+    
+    const result = response.data;
+    
+    // Stocker en cache si l'image est validée
+    if (!result.isFlagged) {
+      await storeInCache(imageUri, result, 'image');
+    }
+    
+    if (MODERATION_CONFIG.logViolations && result.isFlagged) {
+      console.log('❌ Image signalée comme inappropriée:', result);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Erreur lors de la modération de l\'image:', error);
+    // En cas d'erreur, permettre l'image par défaut (fail open)
+    return { isFlagged: false, reason: null, error: error.message };
+  }
 };
 
 /**
- * MODÉRATION DE VIDÉO COMPLÈTEMENT DÉSACTIVÉE
+ * Soumettre une vidéo pour modération via Sightengine (backend)
  * @param {string} videoUri - URI de la vidéo à modérer
- * @returns {Promise<Object>} - Résultat toujours autorisé
+ * @returns {Promise<Object>} - Résultat de soumission
  */
 export const submitVideoForModeration = async (videoUri) => {
-  console.log('🎥 MODÉRATION DE VIDÉO COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
+  if (!MODERATION_CONFIG.enableVideoModeration) {
+    console.log('🎥 Modération de vidéo désactivée par configuration');
+    return { isFlagged: false, reason: null, status: 'disabled', disabled: true };
+  }
+
+  console.log('🎥 Soumission de vidéo pour modération...');
   
-  return { 
-    isFlagged: false, 
-    reason: null, 
-    status: 'disabled',
-    disabled: true,
-    message: 'Modération de vidéo complètement désactivée'
-  };
+  try {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Instance Axios non disponible');
+    }
+    
+    // Soumettre la vidéo pour modération
+    const response = await instance.post('/api/moderation/video', { url: videoUri });
+    
+    if (!response.data) {
+      throw new Error('Réponse de soumission invalide');
+    }
+    
+    console.log('✅ Vidéo soumise avec succès:', response.data);
+    
+    return {
+      success: true,
+      workflowId: response.data.workflowId,
+      status: response.data.status || 'pending'
+    };
+  } catch (error) {
+    console.error('Erreur lors de la soumission de la vidéo:', error);
+    return { 
+      success: false, 
+      error: error.message,
+      status: 'error'
+    };
+  }
 };
 
 /**
- * VÉRIFICATION DE STATUT VIDÉO COMPLÈTEMENT DÉSACTIVÉE
- * @param {string} videoUri - URI de la vidéo
- * @param {string} workflowId - ID du workflow
- * @returns {Promise<Object>} - Résultat toujours autorisé
+ * Vérifier le statut de modération d'une vidéo
+ * @param {string} videoUri - URI de la vidéo (pour le cache)
+ * @param {string} workflowId - ID du workflow Sightengine
+ * @returns {Promise<Object>} - Résultat de modération
  */
-export const checkVideoModerationStatus = async (videoUri, workflowId = null) => {
-  console.log('🎥 VÉRIFICATION DE STATUT VIDÉO COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
+export const checkVideoModerationStatus = async (videoUri, workflowId) => {
+  if (!MODERATION_CONFIG.enableVideoModeration) {
+    console.log('🎥 Vérification de statut vidéo désactivée par configuration');
+    return { isFlagged: false, reason: null, status: 'disabled', disabled: true };
+  }
+
+  if (!workflowId) {
+    console.error('Workflow ID requis pour vérifier le statut');
+    return { isFlagged: false, reason: null, status: 'error' };
+  }
+
+  console.log('🎥 Vérification du statut de modération vidéo...');
   
-  return { 
-    isFlagged: false, 
-    reason: null, 
-    status: 'disabled',
-    disabled: true,
-    message: 'Vérification de statut vidéo complètement désactivée'
-  };
+  try {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      throw new Error('Instance Axios non disponible');
+    }
+    
+    const response = await instance.get(`/api/moderation/video-status/${workflowId}`);
+    
+    if (!response.data) {
+      throw new Error('Réponse de statut invalide');
+    }
+    
+    const result = response.data;
+    
+    // Si la modération est terminée et approuvée, stocker en cache
+    if (result.status === 'completed' && !result.isFlagged) {
+      await storeInCache(videoUri, result, 'video');
+    }
+    
+    if (MODERATION_CONFIG.logViolations && result.isFlagged) {
+      console.log('❌ Vidéo signalée comme inappropriée:', result);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Erreur lors de la vérification du statut:', error);
+    return { 
+      isFlagged: false, 
+      reason: null, 
+      status: 'error',
+      error: error.message 
+    };
+  }
 };
 
 /**
- * Point d'entrée principal pour la modération de contenu texte (SEULE ACTIVE)
+ * Point d'entrée principal pour la modération de contenu texte
  * @param {string} content - Contenu texte à modérer
  * @returns {Promise<Object>} - Résultat de modération
  */
 export const moderateContent = async (content) => {
-  // Modération de texte uniquement
+  // Vérification locale d'abord
   if (MODERATION_CONFIG.useLocalFilter) {
     const localResult = checkContentLocally(content);
     if (localResult.isFlagged) {
@@ -244,12 +344,12 @@ export const moderateContent = async (content) => {
     }
   }
   
-  // API si disponible, sinon local uniquement
+  // Puis API si disponible
   return await checkContentViaAPI(content);
 };
 
 /**
- * Modérer un message complet - SEUL LE TEXTE EST VÉRIFIÉ
+ * Modérer un message complet (texte + médias)
  * @param {Object} message - Message à modérer
  * @returns {Promise<Object>} - Résultat global de modération
  */
@@ -262,7 +362,7 @@ export const moderateMessage = async (message) => {
       status: 'completed'
     };
     
-    // 1. SEULE VÉRIFICATION ACTIVE : LE TEXTE
+    // 1. Vérifier le texte
     if (message.content) {
       const textResult = await moderateContent(message.content);
       if (textResult.isFlagged) {
@@ -274,36 +374,30 @@ export const moderateMessage = async (message) => {
       results.details.text = textResult;
     }
     
-    // 2. TOUTES LES AUTRES VÉRIFICATIONS DÉSACTIVÉES
-    if (message.image) {
-      console.log('🖼️ Modération d\'image IGNORÉE - autorisation automatique');
-      results.details.image = { 
-        isFlagged: false, 
-        reason: null, 
-        disabled: true,
-        message: 'Modération d\'image désactivée' 
-      };
+    // 2. Vérifier l'image si présente
+    if (message.image && MODERATION_CONFIG.enableImageModeration) {
+      console.log('🖼️ Vérification de l\'image du message...');
+      const imageResult = await moderateImage(message.image);
+      if (imageResult.isFlagged) {
+        return {
+          ...imageResult,
+          contentType: 'image'
+        };
+      }
+      results.details.image = imageResult;
     }
     
-    if (message.video) {
-      console.log('🎥 Modération de vidéo IGNORÉE - autorisation automatique');
-      results.details.video = { 
-        isFlagged: false, 
-        reason: null, 
-        status: 'disabled',
-        disabled: true,
-        message: 'Modération de vidéo désactivée' 
-      };
-    }
-    
-    if (message.audio) {
-      console.log('🎵 Modération d\'audio IGNORÉE - autorisation automatique');
-      results.details.audio = { 
-        isFlagged: false, 
-        reason: null, 
-        disabled: true,
-        message: 'Modération d\'audio désactivée' 
-      };
+    // 3. Soumettre la vidéo si présente
+    if (message.video && MODERATION_CONFIG.enableVideoModeration) {
+      console.log('🎥 Soumission de la vidéo du message...');
+      const videoSubmission = await submitVideoForModeration(message.video);
+      
+      // Pour les vidéos, on retourne un statut "pending"
+      if (videoSubmission.success) {
+        results.status = 'pending_video';
+        results.workflowId = videoSubmission.workflowId;
+        results.details.video = videoSubmission;
+      }
     }
     
     return results;
@@ -340,8 +434,24 @@ export const getViolationMessage = (reason) => {
     'offensive_language': "Ce message contient un langage offensant.",
     'hate': "Ce message contient un discours haineux.",
     'harassment': "Ce message contient du contenu considéré comme du harcèlement.",
+    'sexual': "Ce message contient du contenu à caractère sexuel.",
+    'violence': "Ce message contient du contenu violent.",
+    'drugs': "Ce message contient des références aux drogues.",
+    'alcohol': "Ce message contient du contenu lié à l'alcool.",
+    'gambling': "Ce message contient du contenu lié aux jeux d'argent.",
+    'minor_protection': "Ce contenu pourrait être inapproprié pour la protection des mineurs.",
+    'offensive_content': "Ce contenu a été jugé offensant.",
+    'inappropriate_content': "Ce contenu est inapproprié.",
     'default': "Ce message a été bloqué car il enfreint nos directives communautaires."
   };
   
   return messages[reason] || messages.default;
+};
+
+/**
+ * Obtenir la configuration de modération actuelle
+ * @returns {Object} - Configuration actuelle
+ */
+export const getModerationConfig = () => {
+  return { ...MODERATION_CONFIG };
 };

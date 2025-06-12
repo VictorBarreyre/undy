@@ -3,10 +3,10 @@ const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 
-// Configuration de l'API Sightengine
+// Configuration de l'API Sightengine depuis les variables d'environnement
 const SIGHTENGINE_CONFIG = {
-  apiUser: process.env.SIGHTENGINE_API_USER || 'votre-api-user',
-  apiSecret: process.env.SIGHTENGINE_API_SECRET || 'votre-api-secret',
+  apiUser: process.env.SIGHTENGINE_API_USER,
+  apiSecret: process.env.SIGHTENGINE_API_SECRET,
   endpoint: 'https://api.sightengine.com/1.0',
   models: {
     image: 'nudity-2.0,wad,offensive,faces,scam,text-content,face-attributes,gore',
@@ -14,10 +14,39 @@ const SIGHTENGINE_CONFIG = {
   }
 };
 
-// Configuration des seuils de modération
+// Configuration des seuils de modération depuis les variables d'environnement
 const MODERATION_CONFIG = {
-  logViolations: true,           // Journaliser les violations
+  // Configuration générale
+  failOpen: process.env.MODERATION_FAIL_OPEN === 'true' || false,
+  logViolations: process.env.MODERATION_LOG_VIOLATIONS !== 'false', // true par défaut
+  
+  // Seuils de modération (avec valeurs par défaut si non définies)
+  thresholds: {
+    nudity: parseFloat(process.env.MODERATION_THRESHOLD_NUDITY) || 0.6,
+    offensive: parseFloat(process.env.MODERATION_THRESHOLD_OFFENSIVE) || 0.7,
+    gore: parseFloat(process.env.MODERATION_THRESHOLD_GORE) || 0.5,
+    violence: parseFloat(process.env.MODERATION_THRESHOLD_VIOLENCE) || 0.5,
+    weapon: parseFloat(process.env.MODERATION_THRESHOLD_WEAPON) || 0.6,
+    drugs: parseFloat(process.env.MODERATION_THRESHOLD_DRUGS) || 0.6,
+    alcohol: parseFloat(process.env.MODERATION_THRESHOLD_ALCOHOL) || 0.8,
+    gambling: parseFloat(process.env.MODERATION_THRESHOLD_GAMBLING) || 0.7,
+    face_minor: parseFloat(process.env.MODERATION_THRESHOLD_MINOR) || 0.7,
+  }
 };
+
+// Vérifier que les clés API sont configurées
+if (!SIGHTENGINE_CONFIG.apiUser || !SIGHTENGINE_CONFIG.apiSecret) {
+  console.error('❌ ERREUR: Les clés API Sightengine ne sont pas configurées!');
+  console.error('Veuillez définir SIGHTENGINE_API_USER et SIGHTENGINE_API_SECRET dans votre fichier .env');
+}
+
+// Logger la configuration au démarrage
+console.log('🔧 Configuration de modération:', {
+  failOpen: MODERATION_CONFIG.failOpen,
+  logViolations: MODERATION_CONFIG.logViolations,
+  thresholds: MODERATION_CONFIG.thresholds,
+  sightengineConfigured: !!(SIGHTENGINE_CONFIG.apiUser && SIGHTENGINE_CONFIG.apiSecret)
+});
 
 /**
  * Liste de mots à filtrer localement
@@ -74,6 +103,10 @@ const checkContentLocally = (content) => {
  */
 const analyzeImage = async (imageUrl) => {
   try {
+    if (!SIGHTENGINE_CONFIG.apiUser || !SIGHTENGINE_CONFIG.apiSecret) {
+      throw new Error('Clés API Sightengine non configurées');
+    }
+
     const params = new URLSearchParams();
     params.append('api_user', SIGHTENGINE_CONFIG.apiUser);
     params.append('api_secret', SIGHTENGINE_CONFIG.apiSecret);
@@ -100,6 +133,10 @@ const analyzeImage = async (imageUrl) => {
  */
 const analyzeImageFromFile = async (file) => {
   try {
+    if (!SIGHTENGINE_CONFIG.apiUser || !SIGHTENGINE_CONFIG.apiSecret) {
+      throw new Error('Clés API Sightengine non configurées');
+    }
+
     const formData = new FormData();
     formData.append('api_user', SIGHTENGINE_CONFIG.apiUser);
     formData.append('api_secret', SIGHTENGINE_CONFIG.apiSecret);
@@ -136,6 +173,10 @@ const analyzeImageFromFile = async (file) => {
  */
 const analyzeImageFromBase64 = async (base64Image) => {
   try {
+    if (!SIGHTENGINE_CONFIG.apiUser || !SIGHTENGINE_CONFIG.apiSecret) {
+      throw new Error('Clés API Sightengine non configurées');
+    }
+
     // Extraire les données base64 (sans le préfixe data:image/...)
     const base64Data = base64Image.includes('base64,') 
       ? base64Image.split('base64,')[1] 
@@ -174,17 +215,8 @@ const analyzeImageFromBase64 = async (base64Image) => {
  * @returns {Object} - Résultat formaté
  */
 const analyzeImageResult = (data) => {
-  // Seuils de modération pour différentes catégories
-  const thresholds = {
-    nudity: 0.6,       // Nudité
-    offensive: 0.7,    // Contenu offensant
-    gore: 0.5,         // Violence
-    weapon: 0.6,       // Armes
-    drugs: 0.6,        // Drogues
-    alcohol: 0.8,      // Alcool
-    gambling: 0.7,     // Jeux d'argent
-    face_minor: 0.7,   // Potentiel mineur
-  };
+  // Utiliser les seuils configurés
+  const thresholds = MODERATION_CONFIG.thresholds;
   
   // Vérifier si la réponse est valide
   if (!data || data.status !== 'success') {
@@ -193,6 +225,19 @@ const analyzeImageResult = (data) => {
       reason: 'error',
       details: { error: 'Réponse API invalide' }
     };
+  }
+  
+  // Log des scores si activé
+  if (MODERATION_CONFIG.logViolations) {
+    console.log('[SIGHTENGINE] Scores détaillés:', {
+      nudity: data.nudity,
+      offensive: data.offensive?.prob,
+      gore: data.gore?.prob,
+      weapon: data.weapon?.prob,
+      drugs: data.drugs?.prob,
+      alcohol: data.alcohol?.prob,
+      gambling: data.gambling?.prob
+    });
   }
   
   // Vérifier chaque catégorie par rapport aux seuils configurés
@@ -206,7 +251,8 @@ const analyzeImageResult = (data) => {
   )) {
     flaggedCategories.push({
       name: 'nudity',
-      score: Math.max(data.nudity.raw, data.nudity.partial)
+      score: Math.max(data.nudity.raw || 0, data.nudity.partial || 0),
+      threshold: thresholds.nudity
     });
   }
   
@@ -214,7 +260,8 @@ const analyzeImageResult = (data) => {
   if (data.offensive && data.offensive.prob > thresholds.offensive) {
     flaggedCategories.push({
       name: 'offensive',
-      score: data.offensive.prob
+      score: data.offensive.prob,
+      threshold: thresholds.offensive
     });
   }
   
@@ -222,36 +269,44 @@ const analyzeImageResult = (data) => {
   if (data.gore && data.gore.prob > thresholds.gore) {
     flaggedCategories.push({
       name: 'gore',
-      score: data.gore.prob
+      score: data.gore.prob,
+      threshold: thresholds.gore
     });
   }
   
-  // Vérifier les armes, drogues, alcool, jeux d'argent
+  // Vérifier les armes
   if (data.weapon && data.weapon.prob > thresholds.weapon) {
     flaggedCategories.push({
       name: 'weapon',
-      score: data.weapon.prob
+      score: data.weapon.prob,
+      threshold: thresholds.weapon
     });
   }
   
+  // Vérifier les drogues
   if (data.drugs && data.drugs.prob > thresholds.drugs) {
     flaggedCategories.push({
       name: 'drugs',
-      score: data.drugs.prob
+      score: data.drugs.prob,
+      threshold: thresholds.drugs
     });
   }
   
+  // Vérifier l'alcool
   if (data.alcohol && data.alcohol.prob > thresholds.alcohol) {
     flaggedCategories.push({
       name: 'alcohol',
-      score: data.alcohol.prob
+      score: data.alcohol.prob,
+      threshold: thresholds.alcohol
     });
   }
   
+  // Vérifier les jeux d'argent
   if (data.gambling && data.gambling.prob > thresholds.gambling) {
     flaggedCategories.push({
       name: 'gambling',
-      score: data.gambling.prob
+      score: data.gambling.prob,
+      threshold: thresholds.gambling
     });
   }
   
@@ -264,7 +319,8 @@ const analyzeImageResult = (data) => {
     if (potentialMinors.length > 0) {
       flaggedCategories.push({
         name: 'minor_face',
-        score: Math.max(...potentialMinors.map(face => face.attributes.minor.prob))
+        score: Math.max(...potentialMinors.map(face => face.attributes.minor.prob)),
+        threshold: thresholds.face_minor
       });
     }
   }
@@ -274,7 +330,10 @@ const analyzeImageResult = (data) => {
     return {
       isFlagged: false,
       reason: null,
-      details: { allScores: data }
+      details: { 
+        allScores: data,
+        thresholdsUsed: thresholds
+      }
     };
   }
   
@@ -285,13 +344,23 @@ const analyzeImageResult = (data) => {
   // Mapper la catégorie Sightengine à un nom plus lisible
   const mappedReason = mapSightengineCategory(highestCategory);
   
+  // Logger si activé
+  if (MODERATION_CONFIG.logViolations) {
+    console.log('[SIGHTENGINE] Contenu signalé:', {
+      reason: mappedReason,
+      flaggedCategories,
+      thresholds
+    });
+  }
+  
   return {
     isFlagged: true,
     reason: mappedReason,
     originalCategory: highestCategory,
     details: {
       flaggedCategories,
-      allScores: data
+      allScores: data,
+      thresholdsUsed: thresholds
     }
   };
 };
@@ -323,6 +392,10 @@ const mapSightengineCategory = (category) => {
  */
 const submitVideoForAnalysis = async (videoUrl) => {
   try {
+    if (!SIGHTENGINE_CONFIG.apiUser || !SIGHTENGINE_CONFIG.apiSecret) {
+      throw new Error('Clés API Sightengine non configurées');
+    }
+
     const params = new URLSearchParams();
     params.append('api_user', SIGHTENGINE_CONFIG.apiUser);
     params.append('api_secret', SIGHTENGINE_CONFIG.apiSecret);
@@ -330,8 +403,10 @@ const submitVideoForAnalysis = async (videoUrl) => {
     params.append('models', SIGHTENGINE_CONFIG.models.video);
     params.append('mode', 'standard');
     
-    // URL de callback pour notification quand l'analyse est terminée
-    params.append('callback_url', process.env.SIGHTENGINE_CALLBACK_URL || 'https://votre-api.com/webhook/sightengine');
+    // URL de callback pour notification quand l'analyse est terminée (si configurée)
+    if (process.env.SIGHTENGINE_CALLBACK_URL) {
+      params.append('callback_url', process.env.SIGHTENGINE_CALLBACK_URL);
+    }
     
     const response = await axios.get(`${SIGHTENGINE_CONFIG.endpoint}/video/check.json?${params.toString()}`);
     
@@ -353,6 +428,10 @@ const submitVideoForAnalysis = async (videoUrl) => {
  */
 const checkVideoAnalysisStatus = async (workflowId) => {
   try {
+    if (!SIGHTENGINE_CONFIG.apiUser || !SIGHTENGINE_CONFIG.apiSecret) {
+      throw new Error('Clés API Sightengine non configurées');
+    }
+
     const params = new URLSearchParams();
     params.append('api_user', SIGHTENGINE_CONFIG.apiUser);
     params.append('api_secret', SIGHTENGINE_CONFIG.apiSecret);
@@ -377,15 +456,8 @@ const checkVideoAnalysisStatus = async (workflowId) => {
  * @returns {Object} - Résultat formaté
  */
 const analyzeVideoResult = (data) => {
-  // Seuils de modération pour différentes catégories
-  const thresholds = {
-    nudity: 0.6,       // Nudité
-    offensive: 0.7,    // Contenu offensant
-    gore: 0.5,         // Violence
-    weapon: 0.6,       // Armes
-    drugs: 0.6,        // Drogues
-    alcohol: 0.8,      // Alcool
-  };
+  // Utiliser les seuils configurés
+  const thresholds = MODERATION_CONFIG.thresholds;
   
   // Vérifier si la réponse est valide
   if (!data || !data.summary) {
@@ -406,7 +478,8 @@ const analyzeVideoResult = (data) => {
   )) {
     flaggedCategories.push({
       name: 'nudity',
-      score: Math.max(summary.nudity.raw, summary.nudity.partial)
+      score: Math.max(summary.nudity.raw || 0, summary.nudity.partial || 0),
+      threshold: thresholds.nudity
     });
   }
   
@@ -414,7 +487,8 @@ const analyzeVideoResult = (data) => {
   if (summary.offensive && summary.offensive.prob > thresholds.offensive) {
     flaggedCategories.push({
       name: 'offensive',
-      score: summary.offensive.prob
+      score: summary.offensive.prob,
+      threshold: thresholds.offensive
     });
   }
   
@@ -422,29 +496,35 @@ const analyzeVideoResult = (data) => {
   if (summary.gore && summary.gore.prob > thresholds.gore) {
     flaggedCategories.push({
       name: 'gore',
-      score: summary.gore.prob
+      score: summary.gore.prob,
+      threshold: thresholds.gore
     });
   }
   
-  // Vérifier les armes, drogues, alcool
+  // Vérifier les armes
   if (summary.weapon && summary.weapon.prob > thresholds.weapon) {
     flaggedCategories.push({
       name: 'weapon',
-      score: summary.weapon.prob
+      score: summary.weapon.prob,
+      threshold: thresholds.weapon
     });
   }
   
+  // Vérifier les drogues
   if (summary.drugs && summary.drugs.prob > thresholds.drugs) {
     flaggedCategories.push({
       name: 'drugs',
-      score: summary.drugs.prob
+      score: summary.drugs.prob,
+      threshold: thresholds.drugs
     });
   }
   
+  // Vérifier l'alcool
   if (summary.alcohol && summary.alcohol.prob > thresholds.alcohol) {
     flaggedCategories.push({
       name: 'alcohol',
-      score: summary.alcohol.prob
+      score: summary.alcohol.prob,
+      threshold: thresholds.alcohol
     });
   }
   
@@ -453,7 +533,10 @@ const analyzeVideoResult = (data) => {
     return {
       isFlagged: false,
       reason: null,
-      details: { summary }
+      details: { 
+        summary,
+        thresholdsUsed: thresholds
+      }
     };
   }
   
@@ -470,7 +553,8 @@ const analyzeVideoResult = (data) => {
     originalCategory: highestCategory,
     details: {
       flaggedCategories,
-      frames: data.frames // Contient les timestamps spécifiques des contenus flaggés
+      frames: data.frames, // Contient les timestamps spécifiques des contenus flaggés
+      thresholdsUsed: thresholds
     }
   };
 };
@@ -547,11 +631,24 @@ const moderateImage = async (req, res) => {
     return res.status(200).json(result);
   } catch (error) {
     console.error('[MODERATION] Erreur lors de la modération de l\'image:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de la modération de l\'image',
-      error: error.message
-    });
+    
+    // Gestion d'erreur selon la configuration
+    if (MODERATION_CONFIG.failOpen) {
+      // Mode fail-open: permettre en cas d'erreur
+      return res.status(200).json({
+        isFlagged: false,
+        reason: null,
+        error: 'Modération échouée - contenu autorisé par défaut',
+        failOpen: true
+      });
+    } else {
+      // Mode fail-closed: bloquer en cas d'erreur
+      return res.status(503).json({
+        success: false,
+        message: 'Service de modération temporairement indisponible',
+        error: error.message
+      });
+    }
   }
 };
 
@@ -629,7 +726,7 @@ const checkVideoModerationStatus = async (req, res) => {
     const statusResult = await checkVideoAnalysisStatus(workflowId);
     
     // Si l'analyse est terminée, analyser les résultats
-    if (statusResult.status === 'completed') {
+    if (statusResult.status === 'finished') {
       const analysisResult = analyzeVideoResult(statusResult);
       
       // Journaliser si nécessaire
@@ -662,95 +759,18 @@ const checkVideoModerationStatus = async (req, res) => {
 };
 
 /**
- * Middleware de modération pour les messages avant leur stockage
- * @param {Object} req - Requête Express
- * @param {Object} res - Réponse Express
- * @param {Function} next - Fonction next d'Express
+ * Obtenir la configuration actuelle de modération
  */
-const moderationMiddleware = async (req, res, next) => {
-  try {
-    // Extraire le contenu du message selon la route
-    let content = '';
-    let imageUrl = null;
-    let videoUrl = null;
-    
-    // Vérifier le corps de la requête selon le type de route
-    if (req.originalUrl.includes('/messages') && req.body) {
-      // Pour les routes de messages
-      content = req.body.content || req.body.text || '';
-      imageUrl = req.body.image || null;
-      videoUrl = req.body.video || null;
-    } else if (req.body && req.body.label) {
-      // Pour les routes de création de secret
-      content = `${req.body.label} ${req.body.content}`;
+const getModerationConfig = (req, res) => {
+  res.status(200).json({
+    success: true,
+    config: {
+      failOpen: MODERATION_CONFIG.failOpen,
+      logViolations: MODERATION_CONFIG.logViolations,
+      thresholds: MODERATION_CONFIG.thresholds,
+      sightengineConfigured: !!(SIGHTENGINE_CONFIG.apiUser && SIGHTENGINE_CONFIG.apiSecret)
     }
-    
-    // Si ni contenu texte ni média, passer au middleware suivant
-    if (!content && !imageUrl && !videoUrl) {
-      return next();
-    }
-    
-    // Vérification du texte localement
-    if (content) {
-      try {
-        const localResult = checkContentLocally(content);
-        
-        if (localResult.isFlagged) {
-          return res.status(403).json({
-            success: false,
-            message: 'Contenu texte inapproprié détecté',
-            details: localResult
-          });
-        }
-      } catch (error) {
-        console.error('[MODERATION] Erreur lors de la vérification du texte:', error);
-        // Continuer même en cas d'erreur pour vérifier les médias
-      }
-    }
-    
-    // Vérification de l'image si présente
-    if (imageUrl) {
-      try {
-        const imageData = await analyzeImage(imageUrl);
-        const imageResult = analyzeImageResult(imageData);
-        
-        if (imageResult.isFlagged) {
-          return res.status(403).json({
-            success: false,
-            message: 'Contenu image inapproprié détecté',
-            details: imageResult
-          });
-        }
-      } catch (error) {
-        console.error('[MODERATION] Erreur lors de la vérification de l\'image:', error);
-        // En cas d'erreur, on laisse passer (fail open)
-      }
-    }
-    
-    // Pour les vidéos, on commence l'analyse mais on ne bloque pas
-    if (videoUrl) {
-      try {
-        const videoSubmission = await submitVideoForAnalysis(videoUrl);
-        
-        // Ajouter l'ID du workflow à la requête pour utilisation ultérieure
-        req.sightengineWorkflowId = videoSubmission.id;
-        
-        // Journaliser la soumission
-        console.log(`[MODERATION] Vidéo soumise pour analyse: ${videoUrl} - Workflow ID: ${videoSubmission.id}`);
-      } catch (error) {
-        console.error('[MODERATION] Erreur lors de la soumission de la vidéo:', error);
-        // Ne pas bloquer en cas d'erreur
-      }
-    }
-    
-    // Si toutes les vérifications passent, continuer
-    next();
-  } catch (error) {
-    console.error('[MODERATION MIDDLEWARE] Erreur générale:', error);
-    
-    // En cas d'erreur dans le middleware, on laisse passer pour éviter de bloquer
-    next();
-  }
+  });
 };
 
 // Exporter les fonctions utiles
@@ -759,7 +779,7 @@ module.exports = {
   moderateImage,
   submitVideoForModeration,
   checkVideoModerationStatus,
-  moderationMiddleware,
+  getModerationConfig,
   checkContentLocally,
   analyzeImage,
   analyzeImageFromFile,
@@ -767,5 +787,7 @@ module.exports = {
   analyzeImageResult,
   submitVideoForAnalysis,
   checkVideoAnalysisStatus,
-  analyzeVideoResult
+  analyzeVideoResult,
+  // Exporter aussi la configuration pour utilisation dans d'autres modules
+  MODERATION_CONFIG
 };

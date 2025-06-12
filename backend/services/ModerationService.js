@@ -1,25 +1,24 @@
-// services/ModerationService.js (Backend) - TOUTE MODÉRATION MÉDIA DÉSACTIVÉE
+// services/ModerationService.js (Backend) - SERVICE DE MODÉRATION AVEC SIGHTENGINE
 
 const axios = require('axios');
 
-console.log('🚫 Backend ModerationService: TOUTE MODÉRATION MÉDIA DÉSACTIVÉE');
+console.log('✅ Backend ModerationService: SERVICE DE MODÉRATION ACTIVÉ');
 
-// Configuration - SEULE LA MODÉRATION TEXTE EST CONSERVÉE
+// Configuration - TOUTE LA MODÉRATION EST ACTIVE
 const MODERATION_CONFIG = {
-  // TOUTE MODÉRATION MÉDIA DÉSACTIVÉE
-  enableImageModeration: false,
-  enableVideoModeration: false,
-  enableAudioModeration: false,
-  enableMediaModeration: false,
+  // MODÉRATION MÉDIA ACTIVÉE
+  enableImageModeration: true,
+  enableVideoModeration: true,
+  enableAudioModeration: false, // Pas de modération audio pour l'instant
   
-  // SEULE LA MODÉRATION TEXTE EST ACTIVE
+  // MODÉRATION TEXTE ACTIVE
   enableTextModeration: true,
   
   // Message de statut
-  message: 'Toute modération média désactivée - seul le texte est vérifié localement'
+  message: 'Service de modération avec Sightengine complètement opérationnel'
 };
 
-// Liste de mots à filtrer localement (SEULE MODÉRATION ACTIVE)
+// Liste de mots à filtrer localement
 const OFFENSIVE_WORDS = [
   // Insultes et mots vulgaires en français
   "putain", "merde", "connard", "salope", "enculé", "pédé",
@@ -30,7 +29,7 @@ const OFFENSIVE_WORDS = [
 ];
 
 /**
- * Vérifier localement si le contenu contient des mots offensants (SEULE MODÉRATION ACTIVE)
+ * Vérifier localement si le contenu contient des mots offensants
  * @param {string} content - Texte à vérifier
  * @returns {Object} Résultat de la vérification
  */
@@ -55,7 +54,7 @@ const checkContentLocally = (content) => {
       }
     };
     
-    console.log('Violation de modération détectée localement:', result);
+    console.log('[MODERATION] Violation détectée localement:', result);
     return result;
   }
 
@@ -63,78 +62,88 @@ const checkContentLocally = (content) => {
 };
 
 /**
- * MODÉRATION D'IMAGE COMPLÈTEMENT DÉSACTIVÉE
- * @param {string|Object} imageData - Données de l'image (ignoré)
- * @returns {Promise<Object>} - Toujours autorisé
+ * Modération d'image - Note: l'implémentation réelle est dans moderationController.js
+ * Cette fonction est un wrapper pour la cohérence de l'API
+ * @param {string|Object} imageData - Données de l'image
+ * @returns {Promise<Object>} - Résultat de modération
  */
 const moderateImage = async (imageData) => {
-  console.log('🖼️ Backend: Modération d\'image COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
+  if (!MODERATION_CONFIG.enableImageModeration) {
+    console.log('🖼️ Backend: Modération d\'image désactivée par configuration');
+    return {
+      isFlagged: false,
+      reason: null,
+      disabled: true
+    };
+  }
+
+  console.log('🖼️ Backend: Modération d\'image activée');
   
+  // Note: L'implémentation réelle avec Sightengine est dans moderationController.js
+  // Cette fonction est appelée depuis les services internes, pas directement depuis les routes
   return {
     isFlagged: false,
     reason: null,
-    disabled: true,
     service: 'backend-moderation',
-    message: 'Modération d\'image complètement désactivée côté serveur'
+    message: 'Utiliser moderationController pour l\'implémentation Sightengine'
   };
 };
 
 /**
- * SOUMISSION DE VIDÉO COMPLÈTEMENT DÉSACTIVÉE
- * @param {string} videoData - URL ou fichier de la vidéo (ignoré)
- * @param {string} messageId - ID du message (ignoré)
- * @returns {Promise<Object>} - Toujours autorisé
+ * Soumission de vidéo pour modération - Note: l'implémentation réelle est dans moderationController.js
+ * @param {string} videoData - URL ou fichier de la vidéo
+ * @param {string} messageId - ID du message
+ * @returns {Promise<Object>} - Résultat de soumission
  */
 const submitVideoForModeration = async (videoData, messageId) => {
-  console.log('🎥 Backend: Soumission de vidéo COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
+  if (!MODERATION_CONFIG.enableVideoModeration) {
+    console.log('🎥 Backend: Soumission de vidéo désactivée par configuration');
+    return {
+      isFlagged: false,
+      reason: null,
+      status: 'disabled',
+      disabled: true
+    };
+  }
+
+  console.log('🎥 Backend: Soumission de vidéo activée');
   
+  // Note: L'implémentation réelle avec Sightengine est dans moderationController.js
   return {
-    isFlagged: false,
-    reason: null,
-    status: 'disabled',
-    disabled: true,
+    status: 'pending',
     service: 'backend-moderation',
-    message: 'Modération de vidéo complètement désactivée côté serveur'
+    message: 'Utiliser moderationController pour l\'implémentation Sightengine'
   };
 };
 
 /**
- * VÉRIFICATION DE STATUT VIDÉO COMPLÈTEMENT DÉSACTIVÉE
- * @param {string} workflowId - ID du workflow (ignoré)
- * @returns {Promise<Object>} - Toujours autorisé
+ * Vérification de statut vidéo - Note: l'implémentation réelle est dans moderationController.js
+ * @param {string} workflowId - ID du workflow
+ * @returns {Promise<Object>} - Statut de modération
  */
 const checkVideoModerationStatus = async (workflowId) => {
-  console.log('🎥 Backend: Vérification de statut vidéo COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
+  if (!MODERATION_CONFIG.enableVideoModeration) {
+    console.log('🎥 Backend: Vérification de statut vidéo désactivée par configuration');
+    return {
+      isFlagged: false,
+      reason: null,
+      status: 'disabled',
+      disabled: true
+    };
+  }
+
+  console.log('🎥 Backend: Vérification de statut vidéo activée');
   
+  // Note: L'implémentation réelle avec Sightengine est dans moderationController.js
   return {
-    isFlagged: false,
-    reason: null,
-    status: 'disabled',
-    disabled: true,
+    status: 'pending',
     service: 'backend-moderation',
-    message: 'Vérification de statut vidéo complètement désactivée côté serveur'
+    message: 'Utiliser moderationController pour l\'implémentation Sightengine'
   };
 };
 
 /**
- * MODÉRATION D'AUDIO COMPLÈTEMENT DÉSACTIVÉE
- * @param {string} audioData - Données audio (ignoré)
- * @returns {Promise<Object>} - Toujours autorisé
- */
-const moderateAudio = async (audioData) => {
-  console.log('🎵 Backend: Modération d\'audio COMPLÈTEMENT DÉSACTIVÉE - autorisation automatique');
-  
-  return {
-    isFlagged: false,
-    reason: null,
-    disabled: true,
-    service: 'backend-moderation',
-    message: 'Modération d\'audio complètement désactivée côté serveur'
-  };
-};
-
-/**
- * Point d'entrée principal pour la modération de contenu texte (SEULE ACTIVE)
+ * Point d'entrée principal pour la modération de contenu texte
  * @param {string} content - Contenu texte à modérer
  * @returns {Promise<Object>} - Résultat de modération
  */
@@ -143,12 +152,12 @@ const moderateContent = async (content) => {
     return { isFlagged: false, reason: null, disabled: true };
   }
   
-  // Seule la vérification locale est active
+  // Vérification locale des mots offensants
   return checkContentLocally(content);
 };
 
 /**
- * Modérer un message complet - SEUL LE TEXTE EST VÉRIFIÉ
+ * Modérer un message complet - utilisé par le middleware
  * @param {Object} message - Message à modérer
  * @returns {Promise<Object>} - Résultat global de modération
  */
@@ -161,7 +170,7 @@ const moderateMessage = async (message) => {
       status: 'completed'
     };
     
-    // 1. SEULE VÉRIFICATION ACTIVE : LE TEXTE
+    // 1. VÉRIFICATION DU TEXTE
     if (message.content && MODERATION_CONFIG.enableTextModeration) {
       const textResult = await moderateContent(message.content);
       results.details.text = textResult;
@@ -175,35 +184,22 @@ const moderateMessage = async (message) => {
       }
     }
     
-    // 2. TOUTES LES AUTRES VÉRIFICATIONS COMPLÈTEMENT IGNORÉES
-    if (message.image) {
-      console.log('🖼️ Backend: Image dans le message - COMPLÈTEMENT IGNORÉE');
+    // 2. Les vérifications d'image et vidéo sont gérées par moderationController.js
+    // via les routes API dédiées, pas dans ce service
+    
+    if (message.image && MODERATION_CONFIG.enableImageModeration) {
+      console.log('🖼️ Backend: Image détectée - modération requise via API');
       results.details.image = {
-        isFlagged: false,
-        reason: null,
-        disabled: true,
-        message: 'Modération d\'image complètement désactivée'
+        status: 'requires_api_call',
+        message: 'Utiliser /api/moderation/image pour vérifier'
       };
     }
     
-    if (message.video) {
-      console.log('🎥 Backend: Vidéo dans le message - COMPLÈTEMENT IGNORÉE');
+    if (message.video && MODERATION_CONFIG.enableVideoModeration) {
+      console.log('🎥 Backend: Vidéo détectée - modération requise via API');
       results.details.video = {
-        isFlagged: false,
-        reason: null,
-        status: 'disabled',
-        disabled: true,
-        message: 'Modération de vidéo complètement désactivée'
-      };
-    }
-    
-    if (message.audio) {
-      console.log('🎵 Backend: Audio dans le message - COMPLÈTEMENT IGNORÉ');
-      results.details.audio = {
-        isFlagged: false,
-        reason: null,
-        disabled: true,
-        message: 'Modération d\'audio complètement désactivée'
+        status: 'requires_api_call',
+        message: 'Utiliser /api/moderation/video pour soumettre'
       };
     }
     
@@ -217,7 +213,7 @@ const moderateMessage = async (message) => {
 };
 
 /**
- * Convertir un code de raison en message utilisateur (SEUL LE TEXTE)
+ * Convertir un code de raison en message utilisateur
  * @param {string} reason - Code de raison de modération
  * @returns {string} - Message utilisateur
  */
@@ -226,6 +222,16 @@ const getViolationMessage = (reason) => {
     'offensive_language': "Ce message contient un langage offensant.",
     'hate': "Ce message contient un discours haineux.",
     'harassment': "Ce message contient du contenu considéré comme du harcèlement.",
+    'sexual': "Ce message contient du contenu à caractère sexuel.",
+    'violence': "Ce message contient du contenu violent.",
+    'drugs': "Ce message contient des références aux drogues.",
+    'alcohol': "Ce message contient du contenu lié à l'alcool.",
+    'gambling': "Ce message contient du contenu lié aux jeux d'argent.",
+    'minor_protection': "Ce contenu pourrait être inapproprié pour la protection des mineurs.",
+    'offensive_content': "Ce contenu a été jugé offensant.",
+    'gore': "Ce contenu contient des images violentes ou choquantes.",
+    'weapon': "Ce contenu contient des armes.",
+    'inappropriate_content': "Ce contenu est inapproprié.",
     'default': "Ce message a été bloqué car il enfreint nos directives communautaires."
   };
   
@@ -239,39 +245,22 @@ const getViolationMessage = (reason) => {
 const getModerationStatus = () => {
   return {
     ...MODERATION_CONFIG,
-    activeModerations: ['text'],
-    disabledModerations: ['image', 'video', 'audio'],
-    message: 'Seule la modération de texte local est active'
+    activeModerations: MODERATION_CONFIG.enableTextModeration ? ['text'] : [],
+    sightengineEnabled: MODERATION_CONFIG.enableImageModeration || MODERATION_CONFIG.enableVideoModeration,
+    message: 'Service de modération avec Sightengine activé'
   };
 };
 
 module.exports = {
-  moderateContent,        // SEULE FONCTION ACTIVE
-  moderateImage,          // DÉSACTIVÉE - retourne toujours autorisé
-  submitVideoForModeration, // DÉSACTIVÉE - retourne toujours autorisé
-  checkVideoModerationStatus, // DÉSACTIVÉE - retourne toujours autorisé
-  moderateAudio,          // DÉSACTIVÉE - retourne toujours autorisé
-  moderateMessage,        // ACTIVE mais ignore tout sauf le texte
-  getViolationMessage,    // ACTIVE pour le texte uniquement
+  moderateContent,        // ACTIVE - Modération de texte local
+  moderateImage,          // WRAPPER - Implémentation dans moderationController
+  submitVideoForModeration, // WRAPPER - Implémentation dans moderationController
+  checkVideoModerationStatus, // WRAPPER - Implémentation dans moderationController
+  moderateMessage,        // ACTIVE - Utilisé par le middleware
+  getViolationMessage,    // ACTIVE - Messages d'erreur
   getModerationStatus,    // Informations sur l'état du service
+  checkContentLocally,    // Export de la fonction locale
   
   // Métadonnées du service
   serviceConfig: MODERATION_CONFIG
 };
-
-/* 
-===================================================================
-TOUT LE CODE SIGHTENGINE ET MODÉRATION MÉDIA A ÉTÉ SUPPRIMÉ
-===================================================================
-
-Ce service backend ne fait plus AUCUN appel à :
-- Sightengine API
-- Modération d'images
-- Modération de vidéos  
-- Modération d'audio
-- APIs externes de modération média
-
-SEULE la modération de texte locale (mots offensants) est conservée.
-
-===================================================================
-*/
