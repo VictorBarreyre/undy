@@ -35,6 +35,7 @@ const MODERATION_CONFIG = {
   }
 };
 
+
 // Vérifier que les clés API sont configurées
 if (!SIGHTENGINE_CONFIG.apiUser || !SIGHTENGINE_CONFIG.apiSecret) {
   console.error('❌ ERREUR: Les clés API Sightengine ne sont pas configurées!');
