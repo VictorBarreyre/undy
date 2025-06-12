@@ -2,7 +2,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { createProxyMiddleware } = require('http-proxy-middleware');
 const userRoutes = require('./routes/userRoutes');
 const secretRoutes = require('./routes/secretRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
@@ -11,11 +10,10 @@ const notificationRoutes = require('./routes/notificationsRoutes');
 const path = require('path');
 const helmet = require('helmet');
 const User = require('./models/User');
-// RETIRER express-fileupload car on utilise multer
-// const fileUpload = require('express-fileupload');
 const webhookRoutes = require('./routes/webHookRoutes');
 const { cleanupExpiredTokens } = require('./controllers/userController');
 const videoModerationPolling = require('./services/videoModerationPolling');
+const cron = require('node-cron');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -32,7 +30,7 @@ app.use(
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'"], // Permettre les scripts inline pour redirect.html
         styleSrc: ["'self'", "'unsafe-inline'"],  // Permettre les styles inline
-        imgSrc: ["'self'", "data:"],
+        imgSrc: ["'self'", "data:", "https:", "http:"], // Permettre les images externes
         connectSrc: ["'self'"],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
@@ -43,26 +41,10 @@ app.use(
   })
 );
 
-
-// Démarrer le polling toutes les 5 minutes
-videoModerationPolling.start(5);
-
-// Ou utiliser un cron job pour plus de contrôle
-const cron = require('node-cron');
-cron.schedule('*/5 * * * *', async () => {
-  await videoModerationPolling.checkPendingVideos();
-});
-
-app.use('/webhooks', webhookRoutes);
-
-// IMPORTANT: Augmenter les limites pour les uploads de vidéos
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ limit: '100mb', extended: true }));
-
-// Activer "trust proxy" pour gérer les redirections HTTPS (nécessaire pour Heroku ou tout proxy)
+// Activer "trust proxy" pour gérer les redirections HTTPS (nécessaire pour Heroku)
 app.set('trust proxy', 1);
 
-// Middleware pour forcer HTTPS
+// Middleware pour forcer HTTPS en production
 app.use((req, res, next) => {
     if (req.headers['x-forwarded-proto'] !== 'https' && process.env.NODE_ENV === 'production') {
         return res.redirect(`https://${req.hostname}${req.url}`);
@@ -70,9 +52,11 @@ app.use((req, res, next) => {
     next();
 });
 
-// Configuration CORS pour autoriser les origines en développement
+// Configuration CORS
 const corsOptions = {
-    origin: '*', // Autorise toutes les origines
+    origin: process.env.NODE_ENV === 'production' 
+        ? process.env.FRONTEND_URL || true // Utiliser l'URL du frontend ou autoriser toutes les origines
+        : true, // Autoriser toutes les origines en développement
     methods: 'GET,POST,PUT,DELETE,OPTIONS',
     allowedHeaders: 'Origin, X-Requested-With, Content-Type, Accept, Authorization',
     credentials: true,
@@ -83,35 +67,21 @@ app.use(cors(corsOptions));
 
 // Middleware pour journaliser les requêtes
 app.use((req, res, next) => {
-    console.log(`Requête reçue de ${req.ip} : ${req.method} ${req.path}`);
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - IP: ${req.ip}`);
     next();
 });
 
-// Servir les fichiers statiques du dossier public
+// IMPORTANT: Configurer les parsers AVANT les routes
+// Augmenter les limites pour les uploads de vidéos
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
+
+// Route webhook (doit être après les parsers)
+app.use('/webhooks', webhookRoutes);
+
+// Servir les fichiers statiques
 app.use(express.static(path.join(__dirname, 'public')));
-
-app.use('/uploads', (req, res, next) => {
-    req.protocol = 'https'; // Forcer le protocole HTTPS
-    next();
-}, express.static(path.join(__dirname, 'uploads')));
-
-// RETIRER express-fileupload - on utilise multer dans les routes
-// app.use(fileUpload({
-//   limits: { fileSize: 50 * 1024 * 1024 },
-//   useTempFiles: true,
-//   tempFileDir: '/tmp/'
-// }));
-
-// **Configuration du Proxy en développement**
-if (process.env.NODE_ENV === 'development') {
-    app.use(
-        '/api',
-        createProxyMiddleware({
-            target: 'https://undy-5948c5547ec9.herokuapp.com',
-            changeOrigin: true,
-        })
-    );
-}
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes API
 app.use('/api/users', userRoutes);
@@ -125,7 +95,12 @@ app.get('/', (req, res) => {
     const baseUrl = process.env.NODE_ENV === 'production'
         ? `https://${req.hostname}`
         : `http://${req.hostname}:${PORT}`;
-    res.send(`Server is running. Base URL: ${baseUrl}`);
+    res.json({
+        status: 'running',
+        baseUrl: baseUrl,
+        environment: process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Route pour la page de redirection
@@ -134,57 +109,136 @@ app.get('/redirect.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'redirect.html'));
 });
 
+// Gestion des erreurs 404
+app.use((req, res, next) => {
+    res.status(404).json({ 
+        error: 'Route non trouvée',
+        path: req.path,
+        method: req.method 
+    });
+});
+
+// Gestion globale des erreurs
+app.use((err, req, res, next) => {
+    console.error('Erreur:', err.stack);
+    res.status(err.status || 500).json({
+        error: process.env.NODE_ENV === 'production' 
+            ? 'Une erreur est survenue' 
+            : err.message,
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+});
+
+// Variables pour stocker les tâches planifiées
+let cronJob = null;
+let cleanupInterval = null;
+
 // Connexion à MongoDB
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
 .then(() => {
-    console.log('MongoDB connecté');
+    console.log('✅ MongoDB connecté');
     
     // Nettoyer les tokens expirés au démarrage
     cleanupExpiredTokens()
-        .then(() => console.log('[Token Cleanup] Nettoyage initial des tokens effectué'))
-        .catch(err => console.error('[Token Cleanup] Erreur lors du nettoyage initial:', err));
+        .then(() => console.log('✅ [Token Cleanup] Nettoyage initial des tokens effectué'))
+        .catch(err => console.error('❌ [Token Cleanup] Erreur lors du nettoyage initial:', err));
     
-    // Configurer le nettoyage périodique des tokens expirés
-    const cleanupInterval = setInterval(async () => {
+    // Configurer le nettoyage périodique des tokens expirés (toutes les 24h)
+    cleanupInterval = setInterval(async () => {
         try {
             await cleanupExpiredTokens();
-            console.log('[Token Cleanup] Nettoyage périodique des tokens effectué');
+            console.log('✅ [Token Cleanup] Nettoyage périodique des tokens effectué');
         } catch (error) {
-            console.error('[Token Cleanup] Erreur lors du nettoyage périodique:', error);
+            console.error('❌ [Token Cleanup] Erreur lors du nettoyage périodique:', error);
         }
     }, 24 * 60 * 60 * 1000); // 24 heures
     
-    // Nettoyer l'intervalle si le processus se termine
-    process.on('SIGTERM', () => {
-        clearInterval(cleanupInterval);
-        console.log('[Token Cleanup] Arrêt du nettoyage périodique');
+    // Démarrer le polling de modération vidéo avec cron (toutes les 5 minutes)
+    cronJob = cron.schedule('*/5 * * * *', async () => {
+        try {
+            await videoModerationPolling.checkPendingVideos();
+            console.log('✅ [Video Moderation] Vérification des vidéos en attente effectuée');
+        } catch (error) {
+            console.error('❌ [Video Moderation] Erreur lors de la vérification:', error);
+        }
     });
+    
+    console.log('✅ [Cron] Tâche de modération vidéo planifiée (toutes les 5 minutes)');
 })
-.catch(err => console.error('Erreur de connexion MongoDB:', err));
+.catch(err => {
+    console.error('❌ Erreur de connexion MongoDB:', err);
+    process.exit(1); // Arrêter le serveur si MongoDB ne peut pas se connecter
+});
 
 // Démarrer le serveur
-app.listen(PORT, () => {
-    console.log(`Serveur démarré sur le port ${PORT}`);
-    console.log(`Environnement: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Nettoyage automatique des tokens: activé (toutes les 24h)`);
+const server = app.listen(PORT, () => {
+    console.log(`✅ Serveur démarré sur le port ${PORT}`);
+    console.log(`📍 Environnement: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔄 Nettoyage automatique des tokens: activé (toutes les 24h)`);
+    console.log(`🎥 Polling de modération vidéo: activé (toutes les 5 minutes)`);
+    
+    if (process.env.NODE_ENV === 'production') {
+        console.log('🔒 HTTPS forcé: activé');
+    }
 });
+
+// Fonction de nettoyage gracieux
+const gracefulShutdown = (signal) => {
+    console.log(`\n⚠️  ${signal} reçu, fermeture gracieuse du serveur...`);
+    
+    // Arrêter d'accepter de nouvelles connexions
+    server.close(() => {
+        console.log('🔌 Serveur HTTP fermé');
+        
+        // Arrêter les tâches planifiées
+        if (cronJob) {
+            cronJob.stop();
+            console.log('⏹️  Tâche cron arrêtée');
+        }
+        
+        if (cleanupInterval) {
+            clearInterval(cleanupInterval);
+            console.log('⏹️  Nettoyage périodique des tokens arrêté');
+        }
+        
+        // Arrêter le polling si une méthode stop existe
+        if (videoModerationPolling && typeof videoModerationPolling.stop === 'function') {
+            videoModerationPolling.stop();
+            console.log('⏹️  Polling vidéo arrêté');
+        }
+        
+        // Fermer la connexion MongoDB
+        mongoose.connection.close(false, () => {
+            console.log('🔌 Connexion MongoDB fermée');
+            console.log('👋 Arrêt complet du serveur');
+            process.exit(0);
+        });
+    });
+    
+    // Forcer la fermeture après 30 secondes si le graceful shutdown prend trop de temps
+    setTimeout(() => {
+        console.error('❌ Fermeture forcée après timeout de 30 secondes');
+        process.exit(1);
+    }, 30000);
+};
 
 // Gestion propre de l'arrêt du serveur
-process.on('SIGTERM', () => {
-    console.log('SIGTERM reçu, fermeture du serveur...');
-    mongoose.connection.close(() => {
-        console.log('Connexion MongoDB fermée');
-        process.exit(0);
-    });
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Gestion des erreurs non capturées
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    // En production, vous pourriez vouloir notifier un service de monitoring
 });
 
-process.on('SIGINT', () => {
-    console.log('SIGINT reçu, fermeture du serveur...');
-    mongoose.connection.close(() => {
-        console.log('Connexion MongoDB fermée');
-        process.exit(0);
-    });
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    // Fermeture gracieuse après une erreur critique
+    gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
+
+module.exports = app; // Utile pour les tests
