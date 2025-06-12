@@ -15,6 +15,7 @@ const User = require('./models/User');
 // const fileUpload = require('express-fileupload');
 const webhookRoutes = require('./routes/webHookRoutes');
 const { cleanupExpiredTokens } = require('./controllers/userController');
+const videoModerationPolling = require('./services/videoModerationPolling');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -41,6 +42,16 @@ app.use(
     },
   })
 );
+
+
+// Démarrer le polling toutes les 5 minutes
+videoModerationPolling.start(5);
+
+// Ou utiliser un cron job pour plus de contrôle
+const cron = require('node-cron');
+cron.schedule('*/5 * * * *', async () => {
+  await videoModerationPolling.checkPendingVideos();
+});
 
 app.use('/webhooks', webhookRoutes);
 

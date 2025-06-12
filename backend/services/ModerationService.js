@@ -28,7 +28,6 @@ const OFFENSIVE_WORDS = [
   "fuck", "shit", "asshole", "bitch", "cunt", "faggot", "nigger",
 ];
 
-
 /**
  * Vérifier localement si le contenu contient des mots offensants
  * @param {string} content - Texte à vérifier
