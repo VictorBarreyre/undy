@@ -18,23 +18,31 @@ import Video from 'react-native-video';
 
 // Composant VideoPlayer intégré
 const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [videoDimensions, setVideoDimensions] = useState({
     width: 200,
     height: 150
   });
-  const videoRef = useRef(null);
 
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
+  // Fonction pour formater la durée
+  const formatDuration = (seconds) => {
+    if (!seconds) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const handlePress = () => {
+    if (videoRef.current && !error && !isLoading) {
+      videoRef.current.presentFullscreenPlayer();
+    }
   };
 
   const handleLoad = (data) => {
     setIsLoading(false);
     
-    // Calculer les dimensions appropriées
     if (data.naturalSize) {
       const { width, height } = data.naturalSize;
       const aspectRatio = width / height;
@@ -59,23 +67,47 @@ const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
     setIsLoading(false);
   };
 
-  const formatDuration = (seconds) => {
-    if (!seconds) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  // Styles définis localement
+  const overlayStyles = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  };
+
+  const playButtonStyles = {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  };
+
+  const durationStyles = {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  };
+
+  const errorStyles = {
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10
   };
 
   if (error) {
     return (
-      <Box 
-        style={[videoDimensions, {
-          backgroundColor: 'rgba(0,0,0,0.1)',
-          justifyContent: 'center',
-          alignItems: 'center',
-          borderRadius: 10
-        }]}
-      >
+      <Box style={[videoDimensions, errorStyles]}>
         <FontAwesomeIcon icon={faVideoCamera} size={30} color="#999" />
         <Text style={{ color: '#999', marginTop: 8, fontSize: 12 }}>
           Vidéo non disponible
@@ -87,7 +119,7 @@ const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
   return (
     <TouchableOpacity
       activeOpacity={0.9}
-      onPress={handlePlayPause}
+      onPress={handlePress}
       style={{ position: 'relative' }}
     >
       <Box style={[videoDimensions, { borderRadius: 10, overflow: 'hidden' }]}>
@@ -101,36 +133,33 @@ const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
             bottom: 0,
             right: 0,
           }}
-          paused={!isPlaying}
+          paused={true}
           resizeMode="cover"
           onLoad={handleLoad}
           onError={handleError}
-          onEnd={() => setIsPlaying(false)}
-          repeat={false}
           poster={thumbnailUri}
           posterResizeMode="cover"
+          controls={false}
+          
+          // Callbacks fullscreen
+          onFullscreenPlayerWillPresent={() => {
+            console.log('Entering fullscreen');
+          }}
+          onFullscreenPlayerDidPresent={() => {
+            // Vidéo démarre automatiquement en fullscreen
+          }}
+          onFullscreenPlayerWillDismiss={() => {
+            console.log('Leaving fullscreen');
+          }}
+          onFullscreenPlayerDidDismiss={() => {
+            // Retour à l'état initial
+          }}
         />
         
         {/* Overlay de contrôle */}
-        {!isPlaying && !isLoading && (
-          <View style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.3)',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}>
-            <View style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
+        {!isLoading && (
+          <View style={overlayStyles}>
+            <View style={playButtonStyles}>
               <FontAwesomeIcon icon={faPlay} size={20} color="#FFF" />
             </View>
           </View>
@@ -138,31 +167,14 @@ const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
         
         {/* Indicateur de chargement */}
         {isLoading && (
-          <View style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.3)',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}>
+          <View style={overlayStyles}>
             <ActivityIndicator size="large" color="#FFF" />
           </View>
         )}
         
-        {/* Durée de la vidéo */}
-        {duration && !isPlaying && !isLoading && (
-          <View style={{
-            position: 'absolute',
-            bottom: 8,
-            right: 8,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            paddingHorizontal: 8,
-            paddingVertical: 4,
-            borderRadius: 4,
-          }}>
+        {/* Durée */}
+        {duration && !isLoading && (
+          <View style={durationStyles}>
             <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '600' }}>
               {formatDuration(duration)}
             </Text>
@@ -701,7 +713,7 @@ const MessageItem = memo(({
         {hasVideo ? (
           <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             <Box style={getBubbleStyle(false, isReply)}>
-              <VideoPlayer 
+              <VideoPlayer
                 uri={item.video || item.videoUrl} 
                 thumbnailUri={item.thumbnailUrl}
                 duration={item.duration || item.videoDuration}
