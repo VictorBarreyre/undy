@@ -20,7 +20,7 @@ const MODERATION_CONFIG = {
   // Configuration générale
   failOpen: process.env.MODERATION_FAIL_OPEN === 'true' || false,
   logViolations: process.env.MODERATION_LOG_VIOLATIONS !== 'false', // true par défaut
-  
+
   // Seuils de modération (avec valeurs par défaut si non définies)
   thresholds: {
     nudity: parseFloat(process.env.MODERATION_THRESHOLD_NUDITY) || 0.6,
@@ -73,9 +73,9 @@ const checkContentLocally = (content) => {
   }
 
   const lowerContent = content.toLowerCase();
-  
+
   // Recherche des mots offensants
-  const foundWords = OFFENSIVE_WORDS.filter(word => 
+  const foundWords = OFFENSIVE_WORDS.filter(word =>
     lowerContent.includes(word.toLowerCase())
   );
 
@@ -87,11 +87,11 @@ const checkContentLocally = (content) => {
         flaggedWords: foundWords,
       }
     };
-    
+
     if (MODERATION_CONFIG.logViolations) {
       console.log('[MODERATION] Violation détectée localement:', result);
     }
-    
+
     return result;
   }
 
@@ -116,7 +116,7 @@ const analyzeImage = async (imageUrl) => {
     params.append('models', SIGHTENGINE_CONFIG.models.image);
 
     const response = await axios.get(`${SIGHTENGINE_CONFIG.endpoint}/check.json?${params.toString()}`);
-    
+
     if (!response.data || response.data.status !== 'success') {
       throw new Error('Invalid response from Sightengine API');
     }
@@ -143,20 +143,20 @@ const analyzeImageFromFile = async (file) => {
     formData.append('api_user', SIGHTENGINE_CONFIG.apiUser);
     formData.append('api_secret', SIGHTENGINE_CONFIG.apiSecret);
     formData.append('models', SIGHTENGINE_CONFIG.models.image);
-    
+
     // Ajouter le fichier
     formData.append('media', fs.createReadStream(file.path));
-    
+
     const response = await axios.post(
-      `${SIGHTENGINE_CONFIG.endpoint}/check.json`, 
-      formData, 
-      { 
-        headers: { 
-          ...formData.getHeaders() 
-        } 
+      `${SIGHTENGINE_CONFIG.endpoint}/check.json`,
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders()
+        }
       }
     );
-    
+
     if (!response.data || response.data.status !== 'success') {
       throw new Error('Invalid response from Sightengine API');
     }
@@ -180,18 +180,18 @@ const analyzeImageFromBase64 = async (base64Image) => {
     }
 
     // Extraire les données base64 (sans le préfixe data:image/...)
-    const base64Data = base64Image.includes('base64,') 
-      ? base64Image.split('base64,')[1] 
+    const base64Data = base64Image.includes('base64,')
+      ? base64Image.split('base64,')[1]
       : base64Image;
-    
+
     const formData = new FormData();
     formData.append('api_user', SIGHTENGINE_CONFIG.apiUser);
     formData.append('api_secret', SIGHTENGINE_CONFIG.apiSecret);
     formData.append('models', SIGHTENGINE_CONFIG.models.image);
     formData.append('media_base64', base64Data);
-    
+
     const response = await axios.post(
-      `${SIGHTENGINE_CONFIG.endpoint}/check.json`, 
+      `${SIGHTENGINE_CONFIG.endpoint}/check.json`,
       formData,
       {
         headers: {
@@ -199,7 +199,7 @@ const analyzeImageFromBase64 = async (base64Image) => {
         }
       }
     );
-    
+
     if (!response.data || response.data.status !== 'success') {
       throw new Error('Invalid response from Sightengine API');
     }
@@ -219,7 +219,7 @@ const analyzeImageFromBase64 = async (base64Image) => {
 const analyzeImageResult = (data) => {
   // Utiliser les seuils configurés
   const thresholds = MODERATION_CONFIG.thresholds;
-  
+
   // Vérifier si la réponse est valide
   if (!data || data.status !== 'success') {
     return {
@@ -228,7 +228,7 @@ const analyzeImageResult = (data) => {
       details: { error: 'Réponse API invalide' }
     };
   }
-  
+
   // Log des scores si activé
   if (MODERATION_CONFIG.logViolations) {
     console.log('[SIGHTENGINE] Scores détaillés:', {
@@ -241,10 +241,10 @@ const analyzeImageResult = (data) => {
       gambling: data.gambling?.prob
     });
   }
-  
+
   // Vérifier chaque catégorie par rapport aux seuils configurés
   const flaggedCategories = [];
-  
+
   // Vérifier la nudité
   if (data.nudity && (
     (data.nudity.raw > thresholds.nudity) ||
@@ -257,7 +257,7 @@ const analyzeImageResult = (data) => {
       threshold: thresholds.nudity
     });
   }
-  
+
   // Vérifier le contenu offensant
   if (data.offensive && data.offensive.prob > thresholds.offensive) {
     flaggedCategories.push({
@@ -266,7 +266,7 @@ const analyzeImageResult = (data) => {
       threshold: thresholds.offensive
     });
   }
-  
+
   // Vérifier le contenu gore/violent
   if (data.gore && data.gore.prob > thresholds.gore) {
     flaggedCategories.push({
@@ -275,7 +275,7 @@ const analyzeImageResult = (data) => {
       threshold: thresholds.gore
     });
   }
-  
+
   // Vérifier les armes
   if (data.weapon && data.weapon.prob > thresholds.weapon) {
     flaggedCategories.push({
@@ -284,7 +284,7 @@ const analyzeImageResult = (data) => {
       threshold: thresholds.weapon
     });
   }
-  
+
   // Vérifier les drogues
   if (data.drugs && data.drugs.prob > thresholds.drugs) {
     flaggedCategories.push({
@@ -293,7 +293,7 @@ const analyzeImageResult = (data) => {
       threshold: thresholds.drugs
     });
   }
-  
+
   // Vérifier l'alcool
   if (data.alcohol && data.alcohol.prob > thresholds.alcohol) {
     flaggedCategories.push({
@@ -302,7 +302,7 @@ const analyzeImageResult = (data) => {
       threshold: thresholds.alcohol
     });
   }
-  
+
   // Vérifier les jeux d'argent
   if (data.gambling && data.gambling.prob > thresholds.gambling) {
     flaggedCategories.push({
@@ -311,13 +311,13 @@ const analyzeImageResult = (data) => {
       threshold: thresholds.gambling
     });
   }
-  
+
   // Vérifier si des mineurs sont potentiellement présents dans l'image
   if (data.faces && data.faces.length > 0) {
-    const potentialMinors = data.faces.filter(face => 
+    const potentialMinors = data.faces.filter(face =>
       face.attributes && face.attributes.minor && face.attributes.minor.prob > thresholds.face_minor
     );
-    
+
     if (potentialMinors.length > 0) {
       flaggedCategories.push({
         name: 'minor_face',
@@ -326,26 +326,26 @@ const analyzeImageResult = (data) => {
       });
     }
   }
-  
+
   // Si aucune catégorie n'est signalée, le contenu est approprié
   if (flaggedCategories.length === 0) {
     return {
       isFlagged: false,
       reason: null,
-      details: { 
+      details: {
         allScores: data,
         thresholdsUsed: thresholds
       }
     };
   }
-  
+
   // Trouver la catégorie avec le score le plus élevé
   flaggedCategories.sort((a, b) => b.score - a.score);
   const highestCategory = flaggedCategories[0].name;
-  
+
   // Mapper la catégorie Sightengine à un nom plus lisible
   const mappedReason = mapSightengineCategory(highestCategory);
-  
+
   // Logger si activé
   if (MODERATION_CONFIG.logViolations) {
     console.log('[SIGHTENGINE] Contenu signalé:', {
@@ -354,7 +354,7 @@ const analyzeImageResult = (data) => {
       thresholds
     });
   }
-  
+
   return {
     isFlagged: true,
     reason: mappedReason,
@@ -383,7 +383,7 @@ const mapSightengineCategory = (category) => {
     'gambling': 'gambling',
     'minor_face': 'minor_protection'
   };
-  
+
   return mapping[category] || 'inappropriate_content';
 };
 
@@ -404,14 +404,14 @@ const submitVideoForAnalysis = async (videoUrl) => {
     params.append('url', videoUrl);
     params.append('models', SIGHTENGINE_CONFIG.models.video);
     params.append('mode', 'standard');
-    
+
     // URL de callback pour notification quand l'analyse est terminée (si configurée)
     if (process.env.SIGHTENGINE_CALLBACK_URL) {
       params.append('callback_url', process.env.SIGHTENGINE_CALLBACK_URL);
     }
-    
+
     const response = await axios.get(`${SIGHTENGINE_CONFIG.endpoint}/video/check.json?${params.toString()}`);
-    
+
     if (!response.data || !response.data.id) {
       throw new Error('Invalid response from Sightengine video API');
     }
@@ -438,9 +438,9 @@ const checkVideoAnalysisStatus = async (workflowId) => {
     params.append('api_user', SIGHTENGINE_CONFIG.apiUser);
     params.append('api_secret', SIGHTENGINE_CONFIG.apiSecret);
     params.append('id', workflowId);
-    
+
     const response = await axios.get(`${SIGHTENGINE_CONFIG.endpoint}/video/check-status.json?${params.toString()}`);
-    
+
     if (!response.data) {
       throw new Error('Invalid response from Sightengine video status API');
     }
@@ -460,7 +460,7 @@ const checkVideoAnalysisStatus = async (workflowId) => {
 const analyzeVideoResult = (data) => {
   // Utiliser les seuils configurés
   const thresholds = MODERATION_CONFIG.thresholds;
-  
+
   // Vérifier si la réponse est valide
   if (!data || !data.summary) {
     return {
@@ -469,10 +469,10 @@ const analyzeVideoResult = (data) => {
       details: { error: 'Réponse API invalide' }
     };
   }
-  
+
   const summary = data.summary;
   const flaggedCategories = [];
-  
+
   // Vérifier la nudité
   if (summary.nudity && (
     (summary.nudity.raw > thresholds.nudity) ||
@@ -484,7 +484,7 @@ const analyzeVideoResult = (data) => {
       threshold: thresholds.nudity
     });
   }
-  
+
   // Vérifier le contenu offensant
   if (summary.offensive && summary.offensive.prob > thresholds.offensive) {
     flaggedCategories.push({
@@ -493,7 +493,7 @@ const analyzeVideoResult = (data) => {
       threshold: thresholds.offensive
     });
   }
-  
+
   // Vérifier le contenu gore/violent
   if (summary.gore && summary.gore.prob > thresholds.gore) {
     flaggedCategories.push({
@@ -502,7 +502,7 @@ const analyzeVideoResult = (data) => {
       threshold: thresholds.gore
     });
   }
-  
+
   // Vérifier les armes
   if (summary.weapon && summary.weapon.prob > thresholds.weapon) {
     flaggedCategories.push({
@@ -511,7 +511,7 @@ const analyzeVideoResult = (data) => {
       threshold: thresholds.weapon
     });
   }
-  
+
   // Vérifier les drogues
   if (summary.drugs && summary.drugs.prob > thresholds.drugs) {
     flaggedCategories.push({
@@ -520,7 +520,7 @@ const analyzeVideoResult = (data) => {
       threshold: thresholds.drugs
     });
   }
-  
+
   // Vérifier l'alcool
   if (summary.alcohol && summary.alcohol.prob > thresholds.alcohol) {
     flaggedCategories.push({
@@ -529,26 +529,26 @@ const analyzeVideoResult = (data) => {
       threshold: thresholds.alcohol
     });
   }
-  
+
   // Si aucune catégorie n'est signalée, le contenu est approprié
   if (flaggedCategories.length === 0) {
     return {
       isFlagged: false,
       reason: null,
-      details: { 
+      details: {
         summary,
         thresholdsUsed: thresholds
       }
     };
   }
-  
+
   // Trouver la catégorie avec le score le plus élevé
   flaggedCategories.sort((a, b) => b.score - a.score);
   const highestCategory = flaggedCategories[0].name;
-  
+
   // Mapper la catégorie Sightengine à un nom plus lisible
   const mappedReason = mapSightengineCategory(highestCategory);
-  
+
   return {
     isFlagged: true,
     reason: mappedReason,
@@ -569,22 +569,22 @@ const analyzeVideoResult = (data) => {
 const moderateContent = async (req, res) => {
   try {
     const { content } = req.body;
-    
+
     if (!content) {
       return res.status(400).json({
         success: false,
         message: 'Le contenu à modérer est requis'
       });
     }
-    
+
     // Vérification locale (c'est tout ce que nous utilisons pour le texte)
     const localResult = checkContentLocally(content);
-    
+
     // Journaliser les statistiques de modération pour analyse
     if (MODERATION_CONFIG.logViolations) {
       console.log(`[MODERATION STATS] Content: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}" | Flagged: ${localResult.isFlagged} | Reason: ${localResult.reason || 'None'}`);
     }
-    
+
     return res.status(200).json(localResult);
   } catch (error) {
     console.error('[MODERATION] Erreur de modération:', error);
@@ -604,7 +604,7 @@ const moderateContent = async (req, res) => {
 const moderateImage = async (req, res) => {
   try {
     let imageData;
-    
+
     // Déterminer la source de l'image
     if (req.file) {
       // Image téléchargée via multer
@@ -621,19 +621,19 @@ const moderateImage = async (req, res) => {
         message: 'Aucune image valide fournie. Veuillez fournir un fichier, une URL ou une image en base64.'
       });
     }
-    
+
     // Analyser le résultat
     const result = analyzeImageResult(imageData);
-    
+
     // Journaliser si nécessaire
     if (MODERATION_CONFIG.logViolations && result.isFlagged) {
       console.log('[MODERATION] Image signalée:', result);
     }
-    
+
     return res.status(200).json(result);
   } catch (error) {
     console.error('[MODERATION] Erreur lors de la modération de l\'image:', error);
-    
+
     // Gestion d'erreur selon la configuration
     if (MODERATION_CONFIG.failOpen) {
       // Mode fail-open: permettre en cas d'erreur
@@ -662,7 +662,7 @@ const moderateImage = async (req, res) => {
 const submitVideoForModeration = async (req, res) => {
   try {
     let videoUrl;
-    
+
     // Déterminer la source de la vidéo
     if (req.file) {
       // Vidéo téléchargée via multer
@@ -670,7 +670,7 @@ const submitVideoForModeration = async (req, res) => {
       // et obtenir une URL accessible, car Sightengine nécessite une URL publique
       // Pour cet exemple, supposons que vous avez une fonction uploadToStorage
       // videoUrl = await uploadToStorage(req.file);
-      
+
       // Pour cet exemple, nous allons simplement retourner une erreur
       return res.status(400).json({
         success: false,
@@ -685,13 +685,13 @@ const submitVideoForModeration = async (req, res) => {
         message: 'Aucune vidéo valide fournie. Veuillez fournir une URL vidéo.'
       });
     }
-    
+
     // Soumettre la vidéo pour analyse
     const submissionResult = await submitVideoForAnalysis(videoUrl);
-    
+
     // Journaliser la soumission
     console.log(`[MODERATION] Vidéo soumise pour analyse: ${videoUrl} - Workflow ID: ${submissionResult.id}`);
-    
+
     return res.status(200).json({
       success: true,
       message: 'Vidéo soumise pour analyse',
@@ -716,33 +716,33 @@ const submitVideoForModeration = async (req, res) => {
 const checkVideoModerationStatus = async (req, res) => {
   try {
     const { workflowId } = req.params;
-    
+
     if (!workflowId) {
       return res.status(400).json({
         success: false,
         message: 'ID de workflow requis'
       });
     }
-    
+
     // Vérifier le statut
     const statusResult = await checkVideoAnalysisStatus(workflowId);
-    
+
     // Si l'analyse est terminée, analyser les résultats
     if (statusResult.status === 'finished') {
       const analysisResult = analyzeVideoResult(statusResult);
-      
+
       // Journaliser si nécessaire
       if (MODERATION_CONFIG.logViolations && analysisResult.isFlagged) {
         console.log('[MODERATION] Vidéo signalée:', analysisResult);
       }
-      
+
       return res.status(200).json({
         ...analysisResult,
         workflowId,
         status: 'completed'
       });
     }
-    
+
     // Sinon, retourner le statut actuel
     return res.status(200).json({
       success: true,
@@ -775,6 +775,61 @@ const getModerationConfig = (req, res) => {
   });
 };
 
+
+/**
+ * Middleware de modération pour les routes
+ * @param {Object} req - Requête Express
+ * @param {Object} res - Réponse Express
+ * @param {Function} next - Fonction next d'Express
+ */
+const moderationMiddleware = async (req, res, next) => {
+  try {
+    // Extraire le contenu selon le type de route
+    let contentToModerate = '';
+
+    // Pour la création de secret
+    if (req.originalUrl.includes('/createsecrets') && req.body) {
+      contentToModerate = `${req.body.label || ''} ${req.body.content || ''}`;
+    }
+    // Pour les messages
+    else if (req.originalUrl.includes('/messages') && req.body) {
+      contentToModerate = req.body.content || req.body.text || '';
+    }
+
+    // Si pas de contenu, passer au middleware suivant
+    if (!contentToModerate) {
+      return next();
+    }
+
+    // Vérifier le contenu
+    const moderationResult = checkContentLocally(contentToModerate);
+
+    if (moderationResult.isFlagged) {
+      return res.status(403).json({
+        success: false,
+        message: 'Contenu inapproprié détecté',
+        reason: moderationResult.reason,
+        details: moderationResult.details
+      });
+    }
+
+    // Si tout est OK, continuer
+    next();
+  } catch (error) {
+    console.error('[MODERATION MIDDLEWARE] Erreur:', error);
+    // En cas d'erreur, laisser passer selon la configuration
+    if (MODERATION_CONFIG.failOpen) {
+      next();
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la modération',
+        error: error.message
+      });
+    }
+  }
+};
+
 // Exporter les fonctions utiles
 module.exports = {
   moderateContent,
@@ -790,6 +845,6 @@ module.exports = {
   submitVideoForAnalysis,
   checkVideoAnalysisStatus,
   analyzeVideoResult,
-  // Exporter aussi la configuration pour utilisation dans d'autres modules
+  moderationMiddleware,
   MODERATION_CONFIG
 };
