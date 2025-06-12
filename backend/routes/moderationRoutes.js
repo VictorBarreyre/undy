@@ -6,15 +6,16 @@ const {
   moderateImage, 
   submitVideoForModeration,
   checkVideoModerationStatus,
-  moderationMiddleware 
+  moderationMiddleware,
+  getModerationConfig  // <-- DÉPLACER ICI
 } = require('../controllers/moderationController');
 const protect = require('../middleware/authMiddleware');
 const { 
   imageUploadMiddleware, 
   videoUploadMiddleware, 
   handleMulterError,
-  cleanupTempFiles,
-  getModerationConfig
+  cleanupTempFiles
+  // getModerationConfig <-- RETIRER D'ICI
 } = require('../middleware/uploadMiddleware');
 
 // Route pour modération de texte
@@ -32,8 +33,8 @@ router.post('/video', protect, videoUploadMiddleware.single('video'), handleMult
 // Route pour vérifier le statut d'une modération vidéo
 router.get('/video-status/:workflowId', protect, checkVideoModerationStatus);
 
+// Route pour obtenir la configuration
 router.get('/config', protect, getModerationConfig);
-
 
 // Exporter le middleware pour utilisation dans d'autres routes
 exports.moderationMiddleware = moderationMiddleware;
