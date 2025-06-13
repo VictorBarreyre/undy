@@ -325,6 +325,7 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
     console.log('Début de sendPushNotifications avec userIds:', userIds);
     console.log('TitleKey:', titleKey, 'TitleData:', titleData);
     console.log('BodyKey:', bodyKey, 'BodyData:', bodyData);
+    console.log('ExtraData:', extraData);
 
     // Vérifier la configuration du provider APNs
     if (!apnProvider) {
@@ -333,11 +334,11 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
     }
 
     // Récupérer les utilisateurs avec leur langue préférée et token APNs
-    const users = await User.find({
+    const users = await User.find({ 
       _id: { $in: userIds },
       apnsToken: { $exists: true, $ne: null }
     });
-
+    
     console.log(`Nombre d'utilisateurs trouvés avec token APNs: ${users.length}`);
 
     // Préparation des résultats
@@ -361,15 +362,29 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
         title = titleKey;
       }
 
-      // Traduire le corps
+      // Traduire le corps - VERSION CORRIGÉE
       if (typeof bodyKey === 'string') {
+        // Liste des clés de traduction connues
+        const knownTranslationKeys = [
+          'audioMessage', 'imageMessage', 'videoMessage', 'mixedMessage', 'newMessage',
+          'secretSold', 'secretPurchased', 'nearbySecrets', 'stripeReminder',
+          'eventNotification', 'statsUpdate', 'welcomeBack'
+        ];
+        
+        // Vérifier si c'est une clé de traduction ou du contenu direct
         if (bodyKey.startsWith('KEY_')) {
+          // Préfixe KEY_ explicite
           body = translate(bodyKey.substring(4), { lng: userLanguage, ...bodyData });
-        } else {
+        } else if (extraData.isTranslationKey || knownTranslationKeys.includes(bodyKey)) {
+          // C'est une clé de traduction
           body = translate(bodyKey, { lng: userLanguage, ...bodyData });
+        } else {
+          // C'est du contenu direct (message utilisateur)
+          // Ne pas traduire, utiliser tel quel
+          body = bodyKey || '';
         }
       } else {
-        body = bodyKey;
+        body = bodyKey || '';
       }
 
       console.log(`Notification traduite: Titre="${title}" Corps="${body}"`);
@@ -494,48 +509,52 @@ const sendMessageNotification = async (req, res) => {
 
     // MISE À JOUR: Adapter l'aperçu selon le type de message incluant vidéo
     let notificationPreview = messagePreview;
-
-    switch (messageType) {
-      case 'video':
-        notificationPreview = "📹 Vidéo";
-        break;
-      case 'image':
-        notificationPreview = "📷 Photo";
-        break;
-      case 'audio':
-        notificationPreview = "🎵 Message audio";
-        break;
-      case 'mixed':
-        if (messagePreview) {
-          notificationPreview = messagePreview;
-        } else {
-          notificationPreview = "📎 Message avec pièce jointe";
-        }
-        break;
-      default:
-        notificationPreview = messagePreview || "Nouveau message";
+    let useTranslationKey = false;
+    
+    // Si pas de messagePreview ou message spécial, utiliser les clés de traduction
+    if (!messagePreview || messagePreview.trim() === '') {
+      useTranslationKey = true;
+      switch (messageType) {
+        case 'video':
+          notificationPreview = "videoMessage"; // Clé de traduction
+          break;
+        case 'image':
+          notificationPreview = "imageMessage"; // Clé de traduction
+          break;
+        case 'audio':
+          notificationPreview = "audioMessage"; // Clé de traduction
+          break;
+        case 'mixed':
+          notificationPreview = "mixedMessage"; // Clé de traduction
+          break;
+        default:
+          notificationPreview = "newMessage"; // Clé de traduction
+      }
+    } else {
+      // Si on a un preview, l'utiliser directement (pas de traduction)
+      notificationPreview = messagePreview.length > 100
+        ? messagePreview.substring(0, 97) + '...'
+        : messagePreview;
     }
-
-    const truncatedMessage = notificationPreview?.length > 100
-      ? notificationPreview.substring(0, 97) + '...'
-      : notificationPreview || '';
 
     const notificationResult = await sendPushNotifications(
       recipientIds,
       'messageFrom',
       { senderName },
-      truncatedMessage,
+      notificationPreview,
       {},
       {
         type: 'new_message',
         conversationId,
         senderId: senderIdStr,
         senderName,
-        messageType, // Important pour différencier les types
+        messageType,
         timestamp: new Date().toISOString(),
         navigationTarget: 'Chat',
         navigationScreen: 'ChatTab',
-        navigationParams: { conversationId }
+        navigationParams: { conversationId },
+        // Ajouter un flag pour indiquer si c'est une clé de traduction
+        isTranslationKey: useTranslationKey
       }
     );
 
@@ -554,7 +573,6 @@ const sendMessageNotification = async (req, res) => {
     });
   }
 };
-
 
 /**
  * Notification d'achat de secret avec support multilingue

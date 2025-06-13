@@ -2,6 +2,7 @@
   "messageFrom": "Message de {{senderName}}",
   "audioMessage": "🎵 Message audio",
   "imageMessage": "📷 Image",
+  "videoMessage": "📹 Video",
   "mixedMessage": "📷 Image avec message",
   "newMessage": "Nouveau message",
   "secretSold": "Secret vendu!",

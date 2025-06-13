@@ -22,9 +22,27 @@ const defaultFrTranslations = {
   "statsUpdate_body": "Vous avez {{secretsCount}} secrets et {{purchasesCount}} achats",
   "welcomeBack": "Bon retour !",
   "welcomeBack_body": "Vous nous avez manqué ! Cela fait {{daysAbsent}} jours que vous n'êtes pas venu",
-  "audioMessage": "Message audio",
-  "imageMessage": "Image partagée",
-  "mixedMessage": "Message avec contenu multimédia"
+  "audioMessage": "🎵 Message audio",
+  "imageMessage": "📷 Image",
+  "videoMessage": "📹 Vidéo", // AJOUT
+  "mixedMessage": "📷 Image avec message",
+  "newMessage": "Nouveau message", // AJOUT
+  // Ajout des clés manquantes pour les notifications de test et erreurs
+  "simulatorTestSuccess": "Test de notification simulé avec succès",
+  "testNotificationTitle": "Test de Notification",
+  "testNotificationBody": "Ceci est une notification de test de votre application",
+  "testNotificationSuccess": "Notification de test envoyée avec succès",
+  "testNotificationFailure": "Échec de l'envoi de la notification de test",
+  "noPushTokenFound": "Aucun token de notification trouvé pour cet utilisateur",
+  "errorFindingUserToken": "Erreur lors de la recherche du token de l'utilisateur",
+  "serverErrorDuringTest": "Erreur serveur lors du test de notification",
+  "apnsProviderNotInitialized": "Le service de notifications APNs n'est pas initialisé",
+  "invalidPushToken": "Token de notification invalide",
+  "tokenRegisteredSuccess": "Token enregistré avec succès",
+  "missingPushToken": "Token de notification manquant",
+  "userNotFound": "Utilisateur introuvable",
+  "tokenAlreadyRegistered": "Token déjà enregistré",
+  "serverError": "Erreur serveur"
 };
 
 // Définitions des traductions par défaut (anglais)
@@ -42,9 +60,27 @@ const defaultEnTranslations = {
   "statsUpdate_body": "You have {{secretsCount}} secrets and {{purchasesCount}} purchases",
   "welcomeBack": "Welcome back!",
   "welcomeBack_body": "We missed you! It's been {{daysAbsent}} days since your last visit",
-  "audioMessage": "Audio message",
-  "imageMessage": "Shared image",
-  "mixedMessage": "Message with multimedia content"
+  "audioMessage": "🎵 Audio message",
+  "imageMessage": "📷 Image",
+  "videoMessage": "📹 Video", // AJOUT
+  "mixedMessage": "📷 Image with message",
+  "newMessage": "New message", // AJOUT
+  // Ajout des clés manquantes pour les notifications de test et erreurs
+  "simulatorTestSuccess": "Test notification simulated successfully",
+  "testNotificationTitle": "Test Notification",
+  "testNotificationBody": "This is a test notification from your app",
+  "testNotificationSuccess": "Test notification sent successfully",
+  "testNotificationFailure": "Failed to send test notification",
+  "noPushTokenFound": "No push notification token found for this user",
+  "errorFindingUserToken": "Error finding user's notification token",
+  "serverErrorDuringTest": "Server error during notification test",
+  "apnsProviderNotInitialized": "APNs notification service is not initialized",
+  "invalidPushToken": "Invalid push notification token",
+  "tokenRegisteredSuccess": "Token registered successfully",
+  "missingPushToken": "Push notification token missing",
+  "userNotFound": "User not found",
+  "tokenAlreadyRegistered": "Token already registered",
+  "serverError": "Server error"
 };
 
 // S'assurer que les répertoires de localisation existent
