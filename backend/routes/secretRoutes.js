@@ -1,6 +1,30 @@
 const express = require('express');
 const router = express.Router();
-const { /* ... imports ... */ } = require('../controllers/secretController');
+const { 
+    createSecret, 
+    getAllSecrets, 
+    purchaseSecret, 
+    getPurchasedSecrets,
+    getUnpurchasedSecrets,
+    getUserSecretsWithCount,
+    getSecretConversation,
+    addMessageToConversation,
+    getUserConversations,
+    deleteConversation,
+    createPaymentIntent,
+    confirmPayment,
+    refreshStripeOnboarding,
+    getSharedSecret,
+    markConversationAsRead,
+    getNearbySecrets,
+    deleteSecret,
+    checkIdentityVerificationStatus, 
+    handleStripeReturn,
+    verifyIdentity,
+    updateBankAccount,
+    getConversationMessages,
+    getConversation
+} = require('../controllers/secretController');
 const protect = require('../middleware/authMiddleware');
 const { moderationMiddleware } = require('../controllers/moderationController');
 
