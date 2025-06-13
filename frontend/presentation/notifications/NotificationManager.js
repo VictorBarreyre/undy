@@ -14,167 +14,66 @@ class NotificationManager {
     this.currentUserId = null;
   }
 
-  // Nouvelle méthode pour réinitialiser complètement
-  async reinitializeForUser(userData) {
-    try {
-      console.log('[NotificationManager] 🔄 Réinitialisation complète pour:', userData._id);
-      
-      // 1. Marquer comme non initialisé
-      this.initialized = false;
-      
-      // 2. Nettoyer l'ancien token local
-      await AsyncStorage.removeItem('apnsToken');
-      console.log('[NotificationManager] ✅ Token local supprimé');
-      
-      // 3. Nettoyer sur le serveur si on est sur un vrai device
-      if (!isSimulator()) {
-        try {
-          await this.cleanupSimulatorToken();
-          console.log('[NotificationManager] ✅ Token serveur nettoyé');
-        } catch (error) {
-          console.log('[NotificationManager] ⚠️ Erreur nettoyage serveur:', error.message);
-        }
-      }
-      
-      // 4. Nettoyer et réinitialiser le service de notifications
-      this.notificationService.cleanup();
-      await this.notificationService.initialize();
-      console.log('[NotificationManager] ✅ Service réinitialisé');
-      
-      // 5. Redemander les permissions et obtenir un nouveau token
-      const { granted, token } = await this.notificationService.requestPermissions();
-      console.log('[NotificationManager] 📱 Nouveau token obtenu:', token);
-      
-      // 6. Debug info
-      console.log('[NotificationManager] 🔍 Debug info:');
-      console.log('- Device type:', isSimulator() ? 'SIMULATEUR' : 'DEVICE PHYSIQUE');
-      console.log('- User ID:', userData._id);
-      console.log('- Token:', token);
-      
-      // 7. Enregistrer le nouveau token si valide
-      if (granted && token && userData?._id && token !== 'SIMULATOR_MOCK_TOKEN') {
-        await this.registerTokenWithServer(userData._id, token);
-        console.log('[NotificationManager] ✅ Token enregistré sur le serveur');
-      }
-      
-      // 8. Marquer comme initialisé et sauvegarder l'ID utilisateur
-      this.initialized = true;
-      this.currentUserId = userData._id;
-      
-      console.log('[NotificationManager] ✅ Réinitialisation terminée avec succès');
-      return { success: true, token };
-    } catch (error) {
-      console.error('[NotificationManager] ❌ Erreur réinitialisation:', error);
-      this.initialized = false;
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Modifier la méthode initialize pour détecter les incohérences
+  // Méthode principale d'initialisation
   async initialize(userData) {
     try {
-      console.log('[NotificationManager] 📱 Initialisation pour utilisateur:', userData._id);
-      console.log('[NotificationManager] 📱 Device:', isSimulator() ? 'SIMULATEUR' : 'DEVICE PHYSIQUE');
+      console.log('[NotificationManager] 📱 Début initialisation pour:', userData._id);
+      console.log('[NotificationManager] 📱 Type de device:', Constants.isDevice ? 'DEVICE PHYSIQUE' : 'SIMULATEUR');
+      console.log('[NotificationManager] 📱 Device name:', Constants.deviceName || 'Non disponible');
       
-      // Si déjà initialisé pour un autre utilisateur, réinitialiser
-      if (this.initialized && this.currentUserId !== userData._id) {
-        console.log('[NotificationManager] 👤 Changement d\'utilisateur détecté');
-        return await this.reinitializeForUser(userData);
-      }
-      
-      // Si déjà initialisé pour le même utilisateur
+      // Si déjà initialisé pour le même utilisateur, ne rien faire
       if (this.initialized && this.currentUserId === userData._id) {
-        // Vérifier la cohérence du token
-        const currentToken = await AsyncStorage.getItem('apnsToken');
-        const isOnSimulator = isSimulator();
-        
-        console.log('[NotificationManager] 🔍 Vérification de cohérence:');
-        console.log('- Token actuel:', currentToken);
-        console.log('- Sur simulateur:', isOnSimulator);
-        
-        // Si on est sur device physique mais qu'on a un token simulateur
-        if (!isOnSimulator && currentToken === 'SIMULATOR_MOCK_TOKEN') {
-          console.log('[NotificationManager] ⚠️ Token simulateur détecté sur device physique!');
-          return await this.reinitializeForUser(userData);
-        }
-        
-        // Si on est sur simulateur mais qu'on a un vrai token
-        if (isOnSimulator && currentToken && currentToken !== 'SIMULATOR_MOCK_TOKEN') {
-          console.log('[NotificationManager] ⚠️ Token device détecté sur simulateur!');
-          return await this.reinitializeForUser(userData);
-        }
-        
-        console.log('[NotificationManager] ✅ Déjà initialisé et cohérent');
+        console.log('[NotificationManager] ✅ Déjà initialisé pour cet utilisateur');
         return true;
       }
 
-      // Première initialisation
-      console.log('[NotificationManager] 🚀 Première initialisation...');
-      
-      // Nettoyer d'abord les tokens simulateur si on est sur un vrai device
-      if (!isSimulator()) {
+      // Si changement d'utilisateur, réinitialiser
+      if (this.initialized && this.currentUserId !== userData._id) {
+        console.log('[NotificationManager] 👤 Changement d\'utilisateur détecté, réinitialisation...');
+        await this.cleanup();
+      }
+
+      // Nettoyer les anciens tokens simulateur sur device physique
+      if (Constants.isDevice) {
         const oldToken = await AsyncStorage.getItem('apnsToken');
         if (oldToken === 'SIMULATOR_MOCK_TOKEN') {
-          console.log('[NotificationManager] 🧹 Nettoyage du token simulateur existant');
+          console.log('[NotificationManager] 🧹 Nettoyage du token simulateur sur device physique');
           await AsyncStorage.removeItem('apnsToken');
-          await this.cleanupSimulatorToken();
         }
       }
       
-      // Initialiser le service
+      // Initialiser le service de notifications
       await this.notificationService.initialize();
-      console.log('[NotificationManager] ✅ Service initialisé');
+      console.log('[NotificationManager] ✅ Service de notifications initialisé');
       
       // Demander les permissions et obtenir le token
       const { granted, token } = await this.notificationService.requestPermissions();
       console.log('[NotificationManager] 📱 Permissions:', granted ? 'Accordées' : 'Refusées');
-      console.log('[NotificationManager] 🔑 Token:', token);
+      console.log('[NotificationManager] 🔑 Token obtenu:', token ? token.substring(0, 20) + '...' : 'Aucun');
       
       if (granted && token && userData?._id) {
-        // Vérifier une dernière fois la cohérence avant l'enregistrement
-        const isOnSimulator = isSimulator();
-        const isSimulatorToken = token === 'SIMULATOR_MOCK_TOKEN';
-        
-        if (!isOnSimulator && isSimulatorToken) {
-          console.log('[NotificationManager] ⚠️ Incohérence détectée, réinitialisation forcée');
-          return await this.reinitializeForUser(userData);
-        }
-        
         // Enregistrer le token sur le serveur
         await this.registerTokenWithServer(userData._id, token);
       }
       
+      // Marquer comme initialisé
       this.initialized = true;
       this.currentUserId = userData._id;
-      console.log('[NotificationManager] ✅ Initialisation terminée');
+      
+      console.log('[NotificationManager] ✅ Initialisation terminée avec succès');
       return true;
     } catch (error) {
       console.error('[NotificationManager] ❌ Erreur initialisation:', error);
+      this.initialized = false;
       return false;
-    }
-  }
-
-  async cleanupSimulatorToken() {
-    try {
-      const instance = getAxiosInstance();
-      if (!instance) return;
-
-      console.log('[NotificationManager] 🧹 Nettoyage du token simulateur...');
-      
-      const response = await instance.post('/api/notifications/cleanup-simulator');
-      
-      if (response.data.success) {
-        console.log('[NotificationManager] ✅ Token simulateur nettoyé sur le serveur');
-      }
-    } catch (error) {
-      console.error('[NotificationManager] ⚠️ Erreur cleanup:', error);
     }
   }
 
   // Enregistrer le token sur le serveur
   async registerTokenWithServer(userId, token) {
+    // Ne pas envoyer les tokens simulateur au serveur
     if (!token || token === 'SIMULATOR_TOKEN' || token === 'SIMULATOR_MOCK_TOKEN') {
-      console.log('[NotificationManager] 🚫 Token simulateur, pas d\'envoi au serveur');
+      console.log('[NotificationManager] 🚫 Token simulateur détecté, pas d\'envoi au serveur');
       return true;
     }
 
@@ -185,27 +84,49 @@ class NotificationManager {
         return false;
       }
 
-      console.log('[NotificationManager] 📤 Enregistrement du token:', token.substring(0, 20) + '...');
+      console.log('[NotificationManager] 📤 Enregistrement du token pour l\'utilisateur:', userId);
       
       const response = await instance.post('/api/notifications/register', {
         apnsToken: token
       });
       
-      console.log('[NotificationManager] ✅ Token enregistré:', response.data);
-      return true;
+      if (response.data.success) {
+        console.log('[NotificationManager] ✅ Token enregistré avec succès');
+        // Sauvegarder localement pour référence
+        await AsyncStorage.setItem('lastRegisteredToken', token);
+      } else {
+        console.log('[NotificationManager] ⚠️ Réponse serveur:', response.data);
+      }
+      
+      return response.data.success;
     } catch (error) {
-      console.error('[NotificationManager] ❌ Erreur enregistrement token:', error);
+      console.error('[NotificationManager] ❌ Erreur enregistrement token:', error.response?.data || error.message);
       return false;
     }
   }
 
-  // Méthode pour nettoyer complètement (utilisée lors du logout)
+  // Nettoyer les tokens simulateur sur le serveur
+  async cleanupSimulatorToken() {
+    try {
+      const instance = getAxiosInstance();
+      if (!instance) return;
+
+      console.log('[NotificationManager] 🧹 Nettoyage du token simulateur sur le serveur...');
+      
+      const response = await instance.post('/api/notifications/cleanup-simulator');
+      
+      if (response.data.success) {
+        console.log('[NotificationManager] ✅ Token simulateur nettoyé');
+      }
+    } catch (error) {
+      console.error('[NotificationManager] ⚠️ Erreur cleanup:', error.message);
+    }
+  }
+
+  // Méthode de nettoyage complet
   async cleanup() {
     try {
       console.log('[NotificationManager] 🧹 Nettoyage complet...');
-      
-      // Nettoyer le token local
-      await AsyncStorage.removeItem('apnsToken');
       
       // Nettoyer le service
       this.notificationService.cleanup();
@@ -236,7 +157,7 @@ class NotificationManager {
           if (userDataStr) {
             const userData = JSON.parse(userDataStr);
             senderId = userData?._id;
-            console.log('[NotificationManager] 📱 SenderId récupéré depuis AsyncStorage:', senderId);
+            console.log('[NotificationManager] 📱 SenderId récupéré:', senderId);
           }
         } catch (error) {
           console.error('[NotificationManager] ❌ Erreur récupération userData:', error);
@@ -244,7 +165,7 @@ class NotificationManager {
       }
 
       if (!senderId) {
-        console.error('[NotificationManager] ❌ SenderId manquant! Impossible d\'envoyer la notification');
+        console.error('[NotificationManager] ❌ SenderId manquant!');
         return false;
       }
 
@@ -256,7 +177,6 @@ class NotificationManager {
         messageType
       });
 
-      // Appeler l'API serveur pour envoyer la notification push
       const response = await instance.post('/api/notifications/message', {
         conversationId,
         senderId,
@@ -268,7 +188,7 @@ class NotificationManager {
       console.log('[NotificationManager] ✅ Réponse serveur:', response.data);
       return response.data.success;
     } catch (error) {
-      console.error('[NotificationManager] ❌ Erreur envoi notification:', error);
+      console.error('[NotificationManager] ❌ Erreur envoi notification:', error.response?.data || error.message);
       return false;
     }
   }
@@ -277,7 +197,10 @@ class NotificationManager {
   async schedulePurchaseNotification(secretId, buyerId, buyerName, price, currency) {
     try {
       const instance = getAxiosInstance();
-      if (!instance) return false;
+      if (!instance) {
+        console.error('[NotificationManager] ❌ Client HTTP non initialisé');
+        return false;
+      }
 
       console.log('[NotificationManager] 💰 Envoi notification d\'achat');
 
@@ -291,7 +214,7 @@ class NotificationManager {
 
       return response.data.success;
     } catch (error) {
-      console.error('[NotificationManager] ❌ Erreur notification achat:', error);
+      console.error('[NotificationManager] ❌ Erreur notification achat:', error.response?.data || error.message);
       return false;
     }
   }
@@ -300,7 +223,10 @@ class NotificationManager {
   async scheduleStripeSetupReminderNotification(userId) {
     try {
       const instance = getAxiosInstance();
-      if (!instance) return false;
+      if (!instance) {
+        console.error('[NotificationManager] ❌ Client HTTP non initialisé');
+        return false;
+      }
 
       const response = await instance.post('/api/notifications/stripe-reminder', {
         userId
@@ -308,7 +234,7 @@ class NotificationManager {
 
       return response.data.success;
     } catch (error) {
-      console.error('[NotificationManager] ❌ Erreur notification Stripe:', error);
+      console.error('[NotificationManager] ❌ Erreur notification Stripe:', error.response?.data || error.message);
       return false;
     }
   }
@@ -316,25 +242,48 @@ class NotificationManager {
   // Test de notification
   async testRemoteNotification() {
     try {
+      console.log('[NotificationManager] 🧪 Début du test de notification');
+      
+      // Obtenir le token actuel
       const token = await this.notificationService.getToken();
       if (!token) {
+        console.log('[NotificationManager] ❌ Aucun token disponible');
         return { success: false, message: 'Aucun token disponible' };
       }
 
-      console.log('[NotificationManager] 🧪 Test de notification avec token:', token.substring(0, 20) + '...');
+      console.log('[NotificationManager] 🔑 Test avec token:', token.substring(0, 20) + '...');
 
       const instance = getAxiosInstance();
       if (!instance) {
+        console.log('[NotificationManager] ❌ Client HTTP non initialisé');
         return { success: false, message: 'Client HTTP non initialisé' };
       }
 
       const response = await instance.post('/api/notifications/test', { token });
+      console.log('[NotificationManager] ✅ Réponse du test:', response.data);
+      
       return response.data;
     } catch (error) {
-      console.error('[NotificationManager] ❌ Erreur test notification:', error);
+      console.error('[NotificationManager] ❌ Erreur test notification:', error.response?.data || error.message);
       return { success: false, error: error.message };
     }
   }
+
+  // Méthode utilitaire pour obtenir le statut actuel
+  async getStatus() {
+    const token = await this.notificationService.getToken();
+    const isDevice = Constants.isDevice;
+    
+    return {
+      initialized: this.initialized,
+      currentUserId: this.currentUserId,
+      hasToken: !!token,
+      tokenPreview: token ? token.substring(0, 20) + '...' : 'Aucun',
+      isDevice: isDevice,
+      deviceType: isDevice ? 'DEVICE PHYSIQUE' : 'SIMULATEUR'
+    };
+  }
 }
 
+// Export d'une instance unique
 export default new NotificationManager();
