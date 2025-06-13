@@ -553,9 +553,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
- const login = async (accessToken, refreshToken) => {
+const login = async (accessToken, refreshToken) => {
   try {
-    console.log('[AuthProvider] Début de la connexion');
+    console.log('[AuthProvider] 🚀 Début de la connexion');
     
     // Étape 1: Stockez les tokens
     await AsyncStorage.multiSet([
@@ -576,34 +576,33 @@ export const AuthProvider = ({ children }) => {
     let user = null;
     try {
       user = await fetchUserData();
-      console.log('[AuthProvider] Données utilisateur récupérées avec succès');
+      console.log('[AuthProvider] ✅ Données utilisateur récupérées');
       
-      // Étape 5: Initialiser les notifications après avoir les données utilisateur
+      // Étape 5: Réinitialiser les notifications pour le nouvel utilisateur
       if (user && user._id) {
         try {
           const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
           const NotificationService = require('../../presentation/notifications/NotificationService').default;
           
           if (NotificationManager && NotificationService) {
-            // Initialiser d'abord le service
-            await NotificationService.initialize();
+            console.log('[AuthProvider] 🔔 Réinitialisation des notifications pour le nouvel utilisateur');
             
-            // Puis initialiser le manager avec l'utilisateur
-            console.warn('[NOTIF_AUTH] Initialisation des notifications pour l\'utilisateur:', user._id);
-            const success = await NotificationManager.initialize(user);
-            console.warn('[NOTIF_AUTH] Résultat de l\'initialisation:', success);
+            // Utiliser reinitializeForUser pour garantir un token correct
+            const result = await NotificationManager.reinitializeForUser(user);
+            
+            console.log('[AuthProvider] 🔔 Résultat de la réinitialisation:', result);
             
             // Stocker l'état
-            await AsyncStorage.setItem('notificationsInitialized', success ? 'true' : 'false');
-            setNotificationsInitialized(success);
+            await AsyncStorage.setItem('notificationsInitialized', result.success ? 'true' : 'false');
+            setNotificationsInitialized(result.success);
           }
         } catch (notifError) {
-          console.error('[AuthProvider] Erreur d\'initialisation des notifications:', notifError);
+          console.error('[AuthProvider] ⚠️ Erreur d\'initialisation des notifications:', notifError);
           // Ne pas bloquer la connexion si les notifications échouent
         }
       }
     } catch (error) {
-      console.error('[AuthProvider] Erreur fetchUserData:', error);
+      console.error('[AuthProvider] ⚠️ Erreur fetchUserData:', error);
       
       // Réessayer après un court délai
       setTimeout(async () => {
@@ -613,19 +612,17 @@ export const AuthProvider = ({ children }) => {
           if (secondUser && secondUser._id) {
             try {
               const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
-              const NotificationService = require('../../presentation/notifications/NotificationService').default;
               
-              if (NotificationManager && NotificationService && !notificationsInitialized) {
-                await NotificationService.initialize();
-                await NotificationManager.initialize(secondUser);
+              if (NotificationManager && !notificationsInitialized) {
+                await NotificationManager.reinitializeForUser(secondUser);
                 setNotificationsInitialized(true);
               }
             } catch (notifError) {
-              console.error('[AuthProvider] Erreur lors de la seconde tentative:', notifError);
+              console.error('[AuthProvider] ⚠️ Erreur lors de la seconde tentative:', notifError);
             }
           }
         } catch (secondError) {
-          console.error('[AuthProvider] Échec de la 2e tentative:', secondError);
+          console.error('[AuthProvider] ⚠️ Échec de la 2e tentative:', secondError);
         }
       }, 1000);
     }
@@ -633,54 +630,67 @@ export const AuthProvider = ({ children }) => {
     // Étape 6: Terminez la connexion
     setIsLoggedIn(true);
     
-    console.log('[AuthProvider] Connexion réussie');
+    console.log('[AuthProvider] ✅ Connexion réussie');
   } catch (error) {
-    console.error('[AuthProvider] Erreur lors de la connexion:', error);
+    console.error('[AuthProvider] ❌ Erreur lors de la connexion:', error);
     throw error;
   }
 };
-
-  const logout = async () => {
-    try {
-      console.log('[AuthProvider] Début de la déconnexion');
-      const instance = getAxiosInstance();
-      if (instance) {
-        delete instance.defaults.headers.common['Authorization'];
-      }
-
-      // Tentative de nettoyage des notifications
-      try {
-        console.log('[NOTIF_AUTH] Nettoyage des notifications');
-        const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
-        if (NotificationManager && NotificationManager.notificationService) {
-          await NotificationManager.notificationService.cancelAllNotifications();
-          console.log('[NOTIF_AUTH] Notifications annulées avec succès');
-
-          // Supprimer l'indicateur d'initialisation
-          await AsyncStorage.removeItem('notificationsInitialized');
-        }
-      } catch (notifError) {
-        console.error('[AuthProvider] Erreur lors du nettoyage des notifications:', notifError);
-      }
-
-      // Suppression des données
-      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData']);
-      await AsyncStorage.removeItem(`pendingSecretData_${userData?._id}`);
-
-      // Mise à jour des états
-      setUserData(null);
-      setIsLoadingUserData(false);
-      setUserToken(null);
-      setIsLoggedIn(false);
-
-      console.log('[AuthProvider] Déconnexion réussie');
-      return true;
-    } catch (error) {
-      console.error('[AuthProvider] Erreur lors de la déconnexion:', error);
-      setIsLoadingUserData(false);
-      throw error;
+const logout = async () => {
+  try {
+    console.log('[AuthProvider] 🚪 Début de la déconnexion');
+    
+    // Nettoyer l'instance Axios
+    const instance = getAxiosInstance();
+    if (instance) {
+      delete instance.defaults.headers.common['Authorization'];
     }
-  };
+
+    // Nettoyer les notifications
+    try {
+      console.log('[AuthProvider] 🔔 Nettoyage des notifications');
+      const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
+      
+      if (NotificationManager) {
+        // Nettoyer complètement le manager
+        await NotificationManager.cleanup();
+        
+        // Annuler toutes les notifications
+        if (NotificationManager.notificationService) {
+          await NotificationManager.notificationService.cancelAllNotifications();
+        }
+        
+        console.log('[AuthProvider] ✅ Notifications nettoyées');
+      }
+      
+      // Supprimer l'indicateur d'initialisation
+      await AsyncStorage.removeItem('notificationsInitialized');
+      setNotificationsInitialized(false);
+    } catch (notifError) {
+      console.error('[AuthProvider] ⚠️ Erreur lors du nettoyage des notifications:', notifError);
+    }
+
+    // Suppression des données
+    await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData', 'apnsToken']);
+    
+    if (userData?._id) {
+      await AsyncStorage.removeItem(`pendingSecretData_${userData._id}`);
+    }
+
+    // Mise à jour des états
+    setUserData(null);
+    setIsLoadingUserData(false);
+    setUserToken(null);
+    setIsLoggedIn(false);
+
+    console.log('[AuthProvider] ✅ Déconnexion réussie');
+    return true;
+  } catch (error) {
+    console.error('[AuthProvider] ❌ Erreur lors de la déconnexion:', error);
+    setIsLoadingUserData(false);
+    throw error;
+  }
+};
 
   const persistUserData = useCallback(async (data) => {
     try {
