@@ -168,12 +168,12 @@ const createApnsNotification = (title, body, extraData = {}) => {
 
   // Activer le content-available pour les notifications en arrière-plan
   notification.contentAvailable = true;
-  
+
   console.log('Notification APNs créée:', {
     topic: notification.topic,
     payload: notification.payload
   });
-  
+
   return notification;
 };
 
@@ -210,7 +210,7 @@ const sendTestNotification = async (req, res) => {
     // Si un token spécifique est fourni, l'utiliser
     if (token) {
       console.log(`[TEST_NOTIF] Utilisation du token spécifié: ${token}`);
-      
+
       // Traiter le cas du token simulateur
       if (token === "SIMULATOR_MOCK_TOKEN") {
         console.log('[TEST_NOTIF] Token simulateur détecté, envoi d\'une réponse simulée');
@@ -226,7 +226,7 @@ const sendTestNotification = async (req, res) => {
       // Récupérer le token de l'utilisateur
       console.log(`[TEST_NOTIF] Recherche du token de l'utilisateur ${userId}`);
       const user = await User.findById(userId);
-      
+
       if (!user || !user.apnsToken) {
         console.log(`[TEST_NOTIF] Aucun token APNs trouvé pour l'utilisateur ${userId}`);
         return res.status(404).json({
@@ -243,7 +243,7 @@ const sendTestNotification = async (req, res) => {
     // Créer la notification de test
     const title = translate('testNotificationTitle', { lng: userLanguage });
     const body = translate('testNotificationBody', { lng: userLanguage });
-    
+
     const notification = createApnsNotification(title, body, {
       type: 'test',
       userId: userId,
@@ -333,11 +333,11 @@ const sendPushNotifications = async (userIds, titleKey, titleData = {}, bodyKey,
     }
 
     // Récupérer les utilisateurs avec leur langue préférée et token APNs
-    const users = await User.find({ 
+    const users = await User.find({
       _id: { $in: userIds },
       apnsToken: { $exists: true, $ne: null }
     });
-    
+
     console.log(`Nombre d'utilisateurs trouvés avec token APNs: ${users.length}`);
 
     // Préparation des résultats
@@ -494,7 +494,7 @@ const sendMessageNotification = async (req, res) => {
 
     // MISE À JOUR: Adapter l'aperçu selon le type de message incluant vidéo
     let notificationPreview = messagePreview;
-    
+
     switch (messageType) {
       case 'video':
         notificationPreview = "📹 Vidéo";
@@ -518,7 +518,7 @@ const sendMessageNotification = async (req, res) => {
 
     const truncatedMessage = notificationPreview?.length > 100
       ? notificationPreview.substring(0, 97) + '...'
-      : notificationPreview;
+      : notificationPreview || '';
 
     const notificationResult = await sendPushNotifications(
       recipientIds,
@@ -642,10 +642,10 @@ const sendPurchaseNotification = async (req, res) => {
     // Test des traductions avant l'envoi
     const sellerLanguage = secret.user.language || 'fr';
     const testTitle = translate('secretSold', { lng: sellerLanguage });
-    const testBody = translate('secretPurchased', { 
-      lng: sellerLanguage, 
-      buyerName, 
-      price: formattedPrice 
+    const testBody = translate('secretPurchased', {
+      lng: sellerLanguage,
+      buyerName,
+      price: formattedPrice
     });
 
     console.log('[PURCHASE_NOTIFICATION] Aperçu des traductions:', {
@@ -679,9 +679,9 @@ const sendPurchaseNotification = async (req, res) => {
         // Données de navigation
         navigationTarget: 'Chat',
         navigationScreen: 'ChatTab',
-        navigationParams: { 
+        navigationParams: {
           conversationId: conversation._id.toString(),
-          fromPurchaseNotification: true 
+          fromPurchaseNotification: true
         }
       }
     );
