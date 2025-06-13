@@ -801,6 +801,38 @@ const sendStripeReminderNotification = async (req, res) => {
   }
 };
 
+const cleanupSimulatorTokens = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Vérifier si l'utilisateur a un token simulateur
+    const user = await User.findById(userId);
+    
+    if (user && user.apnsToken === 'SIMULATOR_MOCK_TOKEN') {
+      // Supprimer le token simulateur
+      await User.findByIdAndUpdate(userId, { $unset: { apnsToken: 1 } });
+      
+      console.log(`[CLEANUP] Token simulateur supprimé pour l'utilisateur ${userId}`);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Token simulateur supprimé, veuillez réenregistrer votre device'
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Pas de token simulateur trouvé'
+    });
+  } catch (error) {
+    console.error('[CLEANUP] Erreur:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
 // Export du contrôleur
 module.exports = {
   registerToken,

@@ -7,7 +7,7 @@ const protect  = require('../middleware/authMiddleware');
 console.log("Fonctions disponibles dans le contrôleur:", Object.keys(notificationsController));
 
 // Route pour enregistrer le token de l'appareil
-router.post('/token', protect, notificationsController.registerToken);
+router.post('/register', protect, notificationsController.registerToken);
 
 // Route pour les notifications d'achat
 router.post('/purchase', protect, notificationsController.sendPurchaseNotification);
@@ -20,5 +20,8 @@ router.post('/stripe-reminder', protect, notificationsController.sendStripeRemin
 
 // Route pour les tests de notification
 router.post('/test', protect, notificationsController.sendTestNotification);
+
+router.post('/cleanup-simulator', protect, notificationsController.cleanupSimulatorTokens);
+
 
 module.exports = router;

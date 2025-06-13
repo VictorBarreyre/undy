@@ -15,6 +15,11 @@ class NotificationManager {
     try {
       console.log('[NotificationManager] Initialisation...');
       
+      // Nettoyer d'abord les tokens simulateur si on est sur un vrai device
+      if (!isSimulator()) {
+        await this.cleanupSimulatorToken();
+      }
+      
       // Initialiser le service
       await this.notificationService.initialize();
       
@@ -32,6 +37,25 @@ class NotificationManager {
     } catch (error) {
       console.error('[NotificationManager] Erreur initialisation:', error);
       return false;
+    }
+  }
+
+    async cleanupSimulatorToken() {
+    try {
+      const instance = getAxiosInstance();
+      if (!instance) return;
+
+      console.log('[NotificationManager] Nettoyage du token simulateur...');
+      
+      const response = await instance.post('/api/notifications/cleanup-simulator');
+      
+      if (response.data.success) {
+        // Supprimer aussi localement
+        await AsyncStorage.removeItem('apnsToken');
+        console.log('[NotificationManager] Token simulateur nettoyé');
+      }
+    } catch (error) {
+      console.error('[NotificationManager] Erreur cleanup:', error);
     }
   }
 
