@@ -840,4 +840,5 @@ module.exports = {
   sendMessageNotification,
   sendPurchaseNotification,
   sendStripeReminderNotification,
+  cleanupSimulatorTokens
 };
