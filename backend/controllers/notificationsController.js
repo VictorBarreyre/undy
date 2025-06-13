@@ -614,15 +614,36 @@ const sendPurchaseNotification = async (req, res) => {
       hasApnsToken: !!secret.user.apnsToken
     });
 
-    // Ne pas notifier si l'acheteur est aussi le vendeur ou si pas de token APNs
-    if (buyerId === secret.user._id.toString() || !secret.user.apnsToken) {
-      console.log('[PURCHASE_NOTIFICATION] Pas de notification nécessaire:', {
-        isSamePerson: buyerId === secret.user._id.toString(),
-        hasToken: !!secret.user.apnsToken
-      });
+    // CORRECTION ICI : Comparer les IDs correctement
+    // Convertir les deux en string pour la comparaison
+    const sellerIdStr = secret.user._id.toString();
+    const buyerIdStr = buyerId.toString();
+    
+    // Ne pas notifier si l'acheteur est aussi le vendeur
+    if (buyerIdStr === sellerIdStr) {
+      console.log('[PURCHASE_NOTIFICATION] L\'acheteur est le vendeur, pas de notification');
       return res.status(200).json({
         success: true,
-        message: 'Pas de notification nécessaire'
+        message: 'Pas de notification nécessaire (auto-achat)'
+      });
+    }
+    
+    // Vérifier que le vendeur a un token APNs
+    if (!secret.user.apnsToken) {
+      console.log('[PURCHASE_NOTIFICATION] Le vendeur n\'a pas de token APNs');
+      return res.status(200).json({
+        success: true,
+        message: 'Pas de token de notification pour le vendeur'
+      });
+    }
+
+    // AJOUT: Gérer le cas du token simulateur pour le vendeur
+    if (secret.user.apnsToken === 'SIMULATOR_MOCK_TOKEN') {
+      console.log('[PURCHASE_NOTIFICATION] Token simulateur détecté pour le vendeur, skip de l\'envoi');
+      return res.status(200).json({
+        success: true,
+        message: 'Notification simulée (vendeur sur simulateur)',
+        simulated: true
       });
     }
 
@@ -643,16 +664,10 @@ const sendPurchaseNotification = async (req, res) => {
         sellerId: secret.user._id.toString(),
         buyerId
       });
-      return res.status(404).json({
-        success: false,
-        message: 'Conversation non trouvée'
-      });
+      // Au lieu de retourner une erreur, on peut quand même envoyer la notification
+      // mais sans les infos de navigation vers la conversation
+      console.log('[PURCHASE_NOTIFICATION] Envoi de la notification sans conversation');
     }
-
-    console.log('[PURCHASE_NOTIFICATION] Conversation trouvée:', {
-      conversationId: conversation._id,
-      participantsCount: conversation.participants.length
-    });
 
     // Formater le prix
     const formattedPrice = `${price} ${currency}`;
@@ -672,9 +687,12 @@ const sendPurchaseNotification = async (req, res) => {
       body: testBody
     });
 
+    // IMPORTANT: S'assurer d'envoyer au VENDEUR (secret.user._id), pas à l'acheteur
+    console.log('[PURCHASE_NOTIFICATION] Envoi de la notification au vendeur:', sellerIdStr);
+
     // Envoyer la notification avec toutes les données nécessaires
     const notificationResult = await sendPushNotifications(
-      [secret.user._id.toString()],
+      [sellerIdStr], // IMPORTANT: Utiliser l'ID du vendeur, pas de l'acheteur
       'secretSold', // Titre: "Secret vendu!" / "Secret sold!"
       {},
       'secretPurchased', // Corps: "{{buyerName}} a acheté votre secret pour {{price}}"
@@ -685,37 +703,47 @@ const sendPurchaseNotification = async (req, res) => {
       {
         type: 'new_message', // Type pour navigation automatique
         secretId,
-        buyerId,
+        buyerId: buyerIdStr,
+        sellerId: sellerIdStr, // Ajouter l'ID du vendeur
         price,
         timestamp: new Date().toISOString(),
         // Données essentielles pour la navigation vers la conversation
-        conversationId: conversation._id.toString(),
-        senderId: buyerId,
+        conversationId: conversation ? conversation._id.toString() : null,
+        senderId: buyerIdStr,
         senderName: buyerName,
-        messagePreview: `Votre secret a été acheté pour ${formattedPrice}`,
+        messagePreview: `${buyerName} a acheté votre secret pour ${formattedPrice}`,
         messageType: 'purchase', // Pour différencier du message normal
         // Données de navigation
         navigationTarget: 'Chat',
         navigationScreen: 'ChatTab',
-        navigationParams: {
+        navigationParams: conversation ? {
           conversationId: conversation._id.toString(),
           fromPurchaseNotification: true
-        }
+        } : null,
+        // Ajout d'un flag pour identifier clairement que c'est une notification d'achat
+        isPurchaseNotification: true,
+        isTranslationKey: true // Pour les clés de traduction
       }
     );
 
     console.log('[PURCHASE_NOTIFICATION] Résultat d\'envoi:', {
       success: notificationResult.success,
       sentCount: notificationResult.results?.sent?.length || 0,
-      failedCount: notificationResult.results?.failed?.length || 0
+      failedCount: notificationResult.results?.failed?.length || 0,
+      targetUserId: sellerIdStr,
+      targetUserName: secret.user.name
     });
 
     res.status(200).json({
       success: true,
-      message: 'Notification d\'achat envoyée',
+      message: 'Notification d\'achat envoyée au vendeur',
       details: notificationResult,
-      conversationId: conversation._id.toString(),
+      conversationId: conversation ? conversation._id.toString() : null,
       debug: {
+        sellerId: sellerIdStr,
+        sellerName: secret.user.name,
+        buyerId: buyerIdStr,
+        buyerName: buyerName,
         sellerLanguage,
         translatedTitle: testTitle,
         translatedBody: testBody
@@ -730,7 +758,6 @@ const sendPurchaseNotification = async (req, res) => {
     });
   }
 };
-
 
 /**
  * Notification de rappel Stripe avec support multilingue
