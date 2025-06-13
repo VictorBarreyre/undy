@@ -462,7 +462,8 @@ const sendMessageNotification = async (req, res) => {
       senderId,
       senderName,
       messagePreview: messagePreview?.substring(0, 50),
-      messageType
+      messageType,
+      senderIdType: typeof senderId // Ajout pour debug
     });
 
     if (!conversationId || !senderId) {
@@ -473,8 +474,9 @@ const sendMessageNotification = async (req, res) => {
       });
     }
 
-    const senderIdStr = typeof senderId === 'string' ? senderId : senderId.toString();
-    console.log('[NOTIFICATION] ID de l\'expéditeur (chaîne):', senderIdStr);
+    // Convertir senderId en string pour une comparaison fiable
+    const senderIdStr = senderId.toString();
+    console.log('[NOTIFICATION] ID de l\'expéditeur (string):', senderIdStr);
 
     const conversation = await Conversation.findById(conversationId)
       .populate({
@@ -490,21 +492,39 @@ const sendMessageNotification = async (req, res) => {
       });
     }
 
-const recipientIds = conversation.participants
-  .filter(p => {
-    const isExpéditeur = p._id.equals(senderId); // Utiliser equals() pour comparer les ObjectIds
-    const hasToken = !!p.apnsToken;
-    
-    console.log('[NOTIFICATION] Participant:', {
-      id: p._id.toString(),
-      name: p.name,
-      isExpéditeur: isExpéditeur,
-      hasToken: hasToken
+    // Debug: afficher tous les participants
+    console.log('[NOTIFICATION] Participants de la conversation:');
+    conversation.participants.forEach((p, index) => {
+      console.log(`  Participant ${index + 1}:`, {
+        id: p._id.toString(),
+        name: p.name,
+        hasToken: !!p.apnsToken,
+        token: p.apnsToken
+      });
     });
-    
-    return !isExpéditeur && hasToken;
-  })
-  .map(p => p._id.toString());
+
+    // Filtrer les participants pour exclure l'expéditeur
+    const recipientIds = conversation.participants
+      .filter(p => {
+        // Convertir l'ID du participant en string pour la comparaison
+        const participantIdStr = p._id.toString();
+        const isExpéditeur = participantIdStr === senderIdStr;
+        const hasToken = !!p.apnsToken;
+        
+        console.log('[NOTIFICATION] Évaluation participant:', {
+          participantId: participantIdStr,
+          senderId: senderIdStr,
+          isExpéditeur: isExpéditeur,
+          hasToken: hasToken,
+          name: p.name
+        });
+        
+        return !isExpéditeur && hasToken;
+      })
+      .map(p => p._id.toString());
+
+    console.log('[NOTIFICATION] IDs des destinataires finaux:', recipientIds);
+    console.log('[NOTIFICATION] Nombre de destinataires:', recipientIds.length);
 
     if (recipientIds.length === 0) {
       console.log('[NOTIFICATION] Aucun destinataire valide trouvé');
@@ -514,31 +534,29 @@ const recipientIds = conversation.participants
       });
     }
 
-    // MISE À JOUR: Adapter l'aperçu selon le type de message incluant vidéo
+    // Adapter l'aperçu selon le type de message
     let notificationPreview = messagePreview;
     let useTranslationKey = false;
     
-    // Si pas de messagePreview ou message spécial, utiliser les clés de traduction
     if (!messagePreview || messagePreview.trim() === '') {
       useTranslationKey = true;
       switch (messageType) {
         case 'video':
-          notificationPreview = "videoMessage"; // Clé de traduction
+          notificationPreview = "videoMessage";
           break;
         case 'image':
-          notificationPreview = "imageMessage"; // Clé de traduction
+          notificationPreview = "imageMessage";
           break;
         case 'audio':
-          notificationPreview = "audioMessage"; // Clé de traduction
+          notificationPreview = "audioMessage";
           break;
         case 'mixed':
-          notificationPreview = "mixedMessage"; // Clé de traduction
+          notificationPreview = "mixedMessage";
           break;
         default:
-          notificationPreview = "newMessage"; // Clé de traduction
+          notificationPreview = "newMessage";
       }
     } else {
-      // Si on a un preview, l'utiliser directement (pas de traduction)
       notificationPreview = messagePreview.length > 100
         ? messagePreview.substring(0, 97) + '...'
         : messagePreview;
@@ -560,7 +578,6 @@ const recipientIds = conversation.participants
         navigationTarget: 'Chat',
         navigationScreen: 'ChatTab',
         navigationParams: { conversationId },
-        // Ajouter un flag pour indiquer si c'est une clé de traduction
         isTranslationKey: useTranslationKey
       }
     );

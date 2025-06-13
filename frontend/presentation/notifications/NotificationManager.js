@@ -96,50 +96,57 @@ class NotificationManager {
   }
 
   // Envoyer une notification de message au serveur
-  async scheduleMessageNotification(messageSender, conversationId, messagePreview, messageType = 'text', senderId = null) {
-    try {
-      const instance = getAxiosInstance();
-      if (!instance) {
-        console.error('[NotificationManager] Client HTTP non initialisé');
-        return false;
-      }
-
-      // Récupérer l'ID de l'expéditeur si non fourni
-      if (!senderId) {
-        try {
-          const userDataStr = await AsyncStorage.getItem('userData');
-          if (userDataStr) {
-            const userData = JSON.parse(userDataStr);
-            senderId = userData?._id;
-          }
-        } catch (error) {
-          console.error('[NotificationManager] Erreur récupération userData:', error);
-        }
-      }
-
-      console.log('[NotificationManager] Envoi notification message:', {
-        conversationId,
-        senderId,
-        senderName: messageSender,
-        preview: messagePreview.substring(0, 50)
-      });
-
-      // Appeler l'API serveur pour envoyer la notification push
-      const response = await instance.post('/api/notifications/message', {
-        conversationId,
-        senderId,
-        senderName: messageSender,
-        messagePreview,
-        messageType
-      });
-
-      console.log('[NotificationManager] Réponse serveur:', response.data);
-      return response.data.success;
-    } catch (error) {
-      console.error('[NotificationManager] Erreur envoi notification:', error);
+async scheduleMessageNotification(messageSender, conversationId, messagePreview, messageType = 'text', senderId = null) {
+  try {
+    const instance = getAxiosInstance();
+    if (!instance) {
+      console.error('[NotificationManager] Client HTTP non initialisé');
       return false;
     }
+
+    // Récupérer l'ID de l'expéditeur si non fourni
+    if (!senderId) {
+      try {
+        const userDataStr = await AsyncStorage.getItem('userData');
+        if (userDataStr) {
+          const userData = JSON.parse(userDataStr);
+          senderId = userData?._id;
+          console.log('[NotificationManager] SenderId récupéré depuis AsyncStorage:', senderId);
+        }
+      } catch (error) {
+        console.error('[NotificationManager] Erreur récupération userData:', error);
+      }
+    }
+
+    if (!senderId) {
+      console.error('[NotificationManager] SenderId manquant! Impossible d\'envoyer la notification');
+      return false;
+    }
+
+    console.log('[NotificationManager] Envoi notification message:', {
+      conversationId,
+      senderId,
+      senderName: messageSender,
+      preview: messagePreview?.substring(0, 50),
+      messageType
+    });
+
+    // Appeler l'API serveur pour envoyer la notification push
+    const response = await instance.post('/api/notifications/message', {
+      conversationId,
+      senderId,
+      senderName: messageSender,
+      messagePreview,
+      messageType
+    });
+
+    console.log('[NotificationManager] Réponse serveur:', response.data);
+    return response.data.success;
+  } catch (error) {
+    console.error('[NotificationManager] Erreur envoi notification:', error);
+    return false;
   }
+}
 
   // Notification d'achat
   async schedulePurchaseNotification(secretId, buyerName, price, currency) {
