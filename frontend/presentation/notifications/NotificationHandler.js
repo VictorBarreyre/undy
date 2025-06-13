@@ -1,5 +1,5 @@
 import { useEffect, useRef, useContext } from 'react';
-import { AppState, Alert } from 'react-native';
+import { AppState } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../../infrastructure/context/AuthContext';
 import { useCardData } from '../../infrastructure/context/CardDataContexte';
@@ -229,23 +229,7 @@ const NotificationHandler = () => {
                 } catch (fallbackError) {
                   console.error('[NotificationHandler] ❌ Erreur navigation fallback:', fallbackError);
 
-                  Alert.alert(
-                    'Nouveau message',
-                    `De: ${data.senderName || 'Inconnu'}`,
-                    [
-                      { text: 'Ignorer', style: 'cancel' },
-                      {
-                        text: 'Voir',
-                        onPress: () => {
-                          try {
-                            navigation.navigate('ChatTab');
-                          } catch (err) {
-                            console.error('[NotificationHandler] ❌ Impossible de naviguer:', err);
-                          }
-                        }
-                      }
-                    ]
-                  );
+      
                 }
               }
 
@@ -274,23 +258,7 @@ const NotificationHandler = () => {
               } catch (altError) {
                 console.error('[NotificationHandler] ❌ Erreur navigation alternative:', altError);
 
-                Alert.alert(
-                  'Nouveau message',
-                  `De: ${data.senderName || 'Inconnu'}`,
-                  [
-                    { text: 'Ignorer', style: 'cancel' },
-                    {
-                      text: 'Voir',
-                      onPress: () => {
-                        try {
-                          navigation.navigate('ChatTab');
-                        } catch (err) {
-                          console.error('[NotificationHandler] ❌ Impossible de naviguer:', err);
-                        }
-                      }
-                    }
-                  ]
-                );
+              
               }
             }
           } else {
@@ -328,7 +296,6 @@ const NotificationHandler = () => {
 
         case 'test':
           console.log('[NotificationHandler] 🧪 Notification de test reçue');
-          Alert.alert('Test', 'Notification de test reçue avec succès !');
           break;
 
         default:
