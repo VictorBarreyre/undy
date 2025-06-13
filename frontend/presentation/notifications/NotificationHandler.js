@@ -6,6 +6,7 @@ import { useCardData } from '../../infrastructure/context/CardDataContexte';
 import NotificationService from '../notifications/NotificationService';
 import NotificationManager from '../notifications/NotificationManager';
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
+import Constants from 'expo-constants';
 
 const NotificationHandler = () => {
   const navigation = useNavigation();
