@@ -31,6 +31,14 @@ const NotificationHandler = () => {
           await NotificationManager.initialize(userData);
           console.log('[NotificationHandler] ✅ NotificationManager initialisé');
 
+           const currentToken = await NotificationService.getToken();
+          console.log('========== DEBUG UTILISATEUR ==========');
+          console.log('[DEBUG] Mon user ID:', userData._id);
+          console.log('[DEBUG] Mon nom:', userData.name);
+          console.log('[DEBUG] Mon token APNs:', currentToken);
+          console.log('[DEBUG] Type de device:', Constants.isDevice ? 'DEVICE PHYSIQUE' : 'SIMULATEUR');
+          console.log('======================================');
+
           // Ajouter un listener pour les clics sur notifications
           removeNotificationListener.current = NotificationService.addNotificationListener((data) => {
             console.log('[NotificationHandler] 🔔 Listener déclenché avec data:', JSON.stringify(data, null, 2));
@@ -42,6 +50,7 @@ const NotificationHandler = () => {
           try {
             const initialNotification = await PushNotificationIOS.getInitialNotification();
             console.log('[NotificationHandler] 📱 Notification initiale:', initialNotification);
+
 
             if (initialNotification) {
               // Extraire les données
