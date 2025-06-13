@@ -1,6 +1,14 @@
 import NotificationService from './NotificationService';
 import { getAxiosInstance } from '../../data/api/axiosInstance';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+
+
+
+const isSimulator = () => {
+  return !Constants.isDevice;
+};
+
 
 class NotificationManager {
   constructor() {

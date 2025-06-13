@@ -490,14 +490,21 @@ const sendMessageNotification = async (req, res) => {
       });
     }
 
-    const recipientIds = conversation.participants
-      .filter(p => {
-        const participantIdStr = typeof p._id === 'string' ? p._id : p._id.toString();
-        const isExpéditeur = participantIdStr === senderIdStr;
-        const hasToken = !!p.apnsToken;
-        return !isExpéditeur && hasToken;
-      })
-      .map(p => typeof p._id === 'string' ? p._id : p._id.toString());
+const recipientIds = conversation.participants
+  .filter(p => {
+    const isExpéditeur = p._id.equals(senderId); // Utiliser equals() pour comparer les ObjectIds
+    const hasToken = !!p.apnsToken;
+    
+    console.log('[NOTIFICATION] Participant:', {
+      id: p._id.toString(),
+      name: p.name,
+      isExpéditeur: isExpéditeur,
+      hasToken: hasToken
+    });
+    
+    return !isExpéditeur && hasToken;
+  })
+  .map(p => p._id.toString());
 
     if (recipientIds.length === 0) {
       console.log('[NOTIFICATION] Aucun destinataire valide trouvé');
