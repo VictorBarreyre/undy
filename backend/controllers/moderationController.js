@@ -184,11 +184,19 @@ const analyzeImageFromBase64 = async (base64Image) => {
       ? base64Image.split('base64,')[1]
       : base64Image;
 
+    // Convertir base64 en Buffer
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+
     const formData = new FormData();
     formData.append('api_user', SIGHTENGINE_CONFIG.apiUser);
     formData.append('api_secret', SIGHTENGINE_CONFIG.apiSecret);
     formData.append('models', SIGHTENGINE_CONFIG.models.image);
-    formData.append('media_base64', base64Data);
+    
+    // ✅ Utiliser 'media' avec le buffer, pas 'media_base64'
+    formData.append('media', imageBuffer, {
+      filename: 'image.jpg',
+      contentType: 'image/jpeg'
+    });
 
     const response = await axios.post(
       `${SIGHTENGINE_CONFIG.endpoint}/check.json`,
@@ -210,7 +218,6 @@ const analyzeImageFromBase64 = async (base64Image) => {
     throw error;
   }
 };
-
 /**
  * Analyser le résultat de modération d'image
  * @param {Object} data - Données de réponse de l'API
