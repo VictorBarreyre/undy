@@ -463,9 +463,10 @@ const sendMessageNotification = async (req, res) => {
       senderName,
       messagePreview: messagePreview?.substring(0, 50),
       messageType,
-      senderIdType: typeof senderId // Ajout pour debug
+      senderIdType: typeof senderId
     });
 
+    // Validation des paramètres requis
     if (!conversationId || !senderId) {
       console.log('[NOTIFICATION] Paramètres manquants:', { conversationId, senderId });
       return res.status(400).json({
@@ -474,10 +475,19 @@ const sendMessageNotification = async (req, res) => {
       });
     }
 
-    // Convertir senderId en string pour une comparaison fiable
-    const senderIdStr = senderId.toString();
-    console.log('[NOTIFICATION] ID de l\'expéditeur (string):', senderIdStr);
+    // Conversion sécurisée du senderId
+    const senderIdStr = senderId ? String(senderId) : null;
+    if (!senderIdStr) {
+      console.log('[NOTIFICATION] senderId invalide:', senderId);
+      return res.status(400).json({
+        success: false,
+        message: 'senderId invalide'
+      });
+    }
+    
+    console.log('[NOTIFICATION] ID de l\'expéditeur normalisé:', senderIdStr);
 
+    // Récupérer la conversation avec les participants
     const conversation = await Conversation.findById(conversationId)
       .populate({
         path: 'participants',
@@ -495,50 +505,67 @@ const sendMessageNotification = async (req, res) => {
     // Debug: afficher tous les participants
     console.log('[NOTIFICATION] Participants de la conversation:');
     conversation.participants.forEach((p, index) => {
+      const participantIdStr = p._id ? String(p._id) : 'ID_INVALIDE';
       console.log(`  Participant ${index + 1}:`, {
-        id: p._id.toString(),
+        id: participantIdStr,
         name: p.name,
         hasToken: !!p.apnsToken,
-        token: p.apnsToken
+        tokenPreview: p.apnsToken ? p.apnsToken.substring(0, 8) + '...' : 'Aucun'
       });
     });
 
-    // Filtrer les participants pour exclure l'expéditeur
-    const recipientIds = conversation.participants
-      .filter(p => {
-        // Convertir l'ID du participant en string pour la comparaison
-        const participantIdStr = p._id.toString();
-        const isExpéditeur = participantIdStr === senderIdStr;
-        const hasToken = !!p.apnsToken;
-        
-        console.log('[NOTIFICATION] Évaluation participant:', {
-          participantId: participantIdStr,
-          senderId: senderIdStr,
-          isExpéditeur: isExpéditeur,
-          hasToken: hasToken,
-          name: p.name
-        });
-        
-        return !isExpéditeur && hasToken;
-      })
-      .map(p => p._id.toString());
+    // Filtrer pour obtenir les destinataires (tous sauf l'expéditeur)
+    const recipients = conversation.participants.filter(participant => {
+      // Conversion sécurisée de l'ID du participant
+      const participantIdStr = participant._id ? String(participant._id) : null;
+      
+      if (!participantIdStr) {
+        console.log('[NOTIFICATION] Participant avec ID invalide ignoré');
+        return false;
+      }
 
-    console.log('[NOTIFICATION] IDs des destinataires finaux:', recipientIds);
-    console.log('[NOTIFICATION] Nombre de destinataires:', recipientIds.length);
+      // Comparaison stricte des IDs normalisés
+      const isSender = participantIdStr === senderIdStr;
+      const hasValidToken = !!participant.apnsToken && participant.apnsToken !== 'SIMULATOR_MOCK_TOKEN';
+      
+      console.log('[NOTIFICATION] Évaluation participant:', {
+        participantId: participantIdStr,
+        participantName: participant.name,
+        isSender: isSender,
+        hasValidToken: hasValidToken,
+        shouldNotify: !isSender && hasValidToken
+      });
+      
+      // Ne notifier que les participants qui ne sont PAS l'expéditeur ET qui ont un token valide
+      return !isSender && hasValidToken;
+    });
+
+    // Extraire les IDs des destinataires
+    const recipientIds = recipients.map(p => String(p._id));
+
+    console.log('[NOTIFICATION] Récapitulatif:');
+    console.log('  - Nombre total de participants:', conversation.participants.length);
+    console.log('  - Nombre de destinataires à notifier:', recipientIds.length);
+    console.log('  - IDs des destinataires:', recipientIds);
 
     if (recipientIds.length === 0) {
       console.log('[NOTIFICATION] Aucun destinataire valide trouvé');
       return res.status(200).json({
         success: true,
-        message: 'Aucun destinataire à notifier'
+        message: 'Aucun destinataire à notifier',
+        details: {
+          totalParticipants: conversation.participants.length,
+          reason: 'Tous les participants sont soit l\'expéditeur, soit sans token valide'
+        }
       });
     }
 
-    // Adapter l'aperçu selon le type de message
+    // Préparer l'aperçu du message selon le type
     let notificationPreview = messagePreview;
     let useTranslationKey = false;
     
     if (!messagePreview || messagePreview.trim() === '') {
+      // Pas de preview fourni, utiliser une clé de traduction selon le type
       useTranslationKey = true;
       switch (messageType) {
         case 'video':
@@ -556,44 +583,67 @@ const sendMessageNotification = async (req, res) => {
         default:
           notificationPreview = "newMessage";
       }
+      console.log('[NOTIFICATION] Utilisation de la clé de traduction:', notificationPreview);
     } else {
+      // Tronquer le message si nécessaire
       notificationPreview = messagePreview.length > 100
         ? messagePreview.substring(0, 97) + '...'
         : messagePreview;
+      console.log('[NOTIFICATION] Message preview tronqué:', notificationPreview);
     }
 
+    // Envoyer les notifications
     const notificationResult = await sendPushNotifications(
       recipientIds,
-      'messageFrom',
+      'messageFrom',  // Clé de traduction pour le titre
       { senderName },
       notificationPreview,
       {},
       {
         type: 'new_message',
-        conversationId,
+        conversationId: String(conversationId),
         senderId: senderIdStr,
         senderName,
         messageType,
         timestamp: new Date().toISOString(),
+        // Données pour la navigation dans l'app
         navigationTarget: 'Chat',
         navigationScreen: 'ChatTab',
-        navigationParams: { conversationId },
+        navigationParams: { 
+          conversationId: String(conversationId)
+        },
+        // Indiquer si le body est une clé de traduction
         isTranslationKey: useTranslationKey
       }
     );
 
-    console.log('[NOTIFICATION] Résultat de l\'envoi:', notificationResult);
+    console.log('[NOTIFICATION] Résultat de l\'envoi:', {
+      success: notificationResult.success,
+      sentCount: notificationResult.results?.sent?.length || 0,
+      failedCount: notificationResult.results?.failed?.length || 0
+    });
 
+    // Réponse détaillée
     res.status(200).json({
       success: true,
-      message: 'Notification de message envoyée',
-      details: notificationResult
+      message: 'Notifications de message envoyées',
+      details: {
+        ...notificationResult,
+        summary: {
+          totalParticipants: conversation.participants.length,
+          notifiedCount: recipientIds.length,
+          senderId: senderIdStr,
+          senderName: senderName
+        }
+      }
     });
+
   } catch (error) {
-    console.error('Erreur lors de l\'envoi de la notification de message:', error);
+    console.error('[NOTIFICATION] Erreur lors de l\'envoi de la notification de message:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur'
+      message: 'Erreur serveur',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
