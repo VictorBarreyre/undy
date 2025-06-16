@@ -49,7 +49,6 @@ const TabNavigator = () => {
   const { userData, userToken } = useContext(AuthContext);
   const { totalUnreadCount, refreshUnreadCounts } = useCardData();
 
-
   useEffect(() => {
     refreshUnreadCounts();
     console.log("TabNavigator - totalUnreadCount:", totalUnreadCount);
@@ -59,6 +58,25 @@ const TabNavigator = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Styles par défaut avec ombre
+  const defaultTabBarStyle = {
+    backgroundColor: 'white',
+    elevation: 5,
+    borderTopWidth: 0,
+    shadowColor: '#94A3B8',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  };
+
+  // Styles sans ombre pour ChatTab
+  const noShadowTabBarStyle = {
+    backgroundColor: 'white',
+    elevation: 0,
+    borderTopWidth: 0,
+    shadowOpacity: 0,
+    shadowRadius: 0,
+  };
 
   return (
     <Tab.Navigator
@@ -126,17 +144,8 @@ const TabNavigator = () => {
         tabBarShowLabel: false,
         tabBarActiveTintColor: '#94A3B8',
         tabBarInactiveTintColor: '#94A3B8',
-        tabBarStyle: {
-          backgroundColor: 'white',
-          elevation: 0,
-          borderTopWidth: 0,
-          shadowColor: '#94A3B8',
-          shadowOffset: { width: 0, height: -2 }, // Négatif pour que l'ombre soit au-dessus
-          shadowOpacity: 0.15,
-          shadowRadius: 3,
-          // Pour Android
-          elevation: 5,
-        },
+        // Style par défaut (avec ombre)
+        tabBarStyle: defaultTabBarStyle,
       })}
     >
       <Tab.Screen
@@ -152,7 +161,11 @@ const TabNavigator = () => {
       <Tab.Screen
         name="ChatTab"
         component={ConversationStackNavigator}
-        options={{ headerShown: false }}
+        options={{ 
+          headerShown: false,
+          // Style sans ombre pour ChatTab uniquement
+          tabBarStyle: noShadowTabBarStyle
+        }}
       />
       <Tab.Screen
         name="Profile"

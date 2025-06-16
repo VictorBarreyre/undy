@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef, memo, useCallback } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Share, ActionSheetIOS, Alert, Linking, PermissionsAndroid, ActivityIndicator } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, Pressable, Animated, PanResponder, Share, ActionSheetIOS, Alert, Linking, PermissionsAndroid, Dimensions } from 'react-native';
 import { Box, Text, FlatList, HStack, Image, VStack, View, Modal } from 'native-base';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faChevronLeft, faPlus, faTimes, faArrowUp, faChevronDown, faPaperPlane, faCheck, faMicrophone, faStop, faPlay, faPause } from '@fortawesome/free-solid-svg-icons';
@@ -25,6 +25,8 @@ import RNFS from 'react-native-fs';
 import { AudioRecorder, AudioUtils } from 'react-native-audio';
 import Sound from 'react-native-sound';
 import useContentModeration from '../../infrastructure/hook/useContentModeration';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 
 const ChatScreen = ({ route }) => {
@@ -32,22 +34,24 @@ const ChatScreen = ({ route }) => {
   const { t } = useTranslation();
   const dateFormatter = useDateFormatter();
   const navigation = useNavigation();
-  
+
   // Props from navigation
   const { conversationId, secretData, conversation, showModalOnMount } = route.params;
-  
+  const insets = useSafeAreaInsets();
+
+
   // Context hooks - AJOUT de uploadVideo
-  const { 
-    handleAddMessage, 
-    markConversationAsRead, 
-    uploadImage, 
+  const {
+    handleAddMessage,
+    markConversationAsRead,
+    uploadImage,
     uploadVideo, // AJOUT
-    refreshUnreadCounts, 
-    handleShareSecret, 
-    triggerConfetti 
+    refreshUnreadCounts,
+    handleShareSecret,
+    triggerConfetti
   } = useCardData();
   const { userData, userToken } = useContext(AuthContext);
-  
+
   // State hooks
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
@@ -81,7 +85,7 @@ const ChatScreen = ({ route }) => {
     hasScrolledToBottom: false,
     showButton: false
   });
-  
+
   // Ref hooks
   const shareButtonScale = useRef(new Animated.Value(1)).current;
   const soundRef = useRef(null);
@@ -91,7 +95,7 @@ const ChatScreen = ({ route }) => {
   const scrollSaveTimeout = useRef(null);
   const isRefreshingCountsRef = useRef(false);
   const inputRef = useRef(null);
-  
+
   // Custom hooks
   const {
     checkText,
@@ -108,7 +112,26 @@ const ChatScreen = ({ route }) => {
   });
 
   // ====== 2. TOUTES LES FONCTIONS ======
+
+const getKeyboardOffset = () => {
+  const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
+  const aspectRatio = screenHeight / screenWidth;
   
+  // Plus l'écran est "allongé", moins on a besoin d'offset
+  // iPhone SE a un ratio ~1.78, iPhone 16 Pro ~2.16
+  
+  if (aspectRatio < 1.8) {
+    // Écrans plus "carrés" (SE, 8)
+    return screenHeight * 0.025;
+  } else if (aspectRatio < 2.0) {
+    // Écrans moyens
+    return screenHeight * 0.07;
+  } else {
+    // Écrans modernes allongés
+    return screenHeight * 0.07;
+  }
+};
+
   const getConversationMessages = async (conversationId) => {
     try {
       const instance = getAxiosInstance();
@@ -830,7 +853,7 @@ const ChatScreen = ({ route }) => {
 
         try {
           console.log('📹 Début upload vidéo...');
-          
+
           const videoResult = await uploadVideo(videoToUpload, (progress) => {
             setUploadProgress(progress);
             console.log('Progress vidéo:', progress + '%');
@@ -857,15 +880,15 @@ const ChatScreen = ({ route }) => {
             prev.map(msg =>
               msg.id === tempId
                 ? {
-                    ...msg,
-                    id: newMessage._id,
-                    video: videoResult.url,
-                    videoUrl: videoResult.url,
-                    thumbnailUrl: videoResult.thumbnailUrl,
-                    duration: videoResult.duration,
-                    isSending: false,
-                    isPendingModeration: false
-                  }
+                  ...msg,
+                  id: newMessage._id,
+                  video: videoResult.url,
+                  videoUrl: videoResult.url,
+                  thumbnailUrl: videoResult.thumbnailUrl,
+                  duration: videoResult.duration,
+                  isSending: false,
+                  isPendingModeration: false
+                }
                 : msg
             )
           );
@@ -1005,25 +1028,31 @@ const ChatScreen = ({ route }) => {
           t('chat.selectMediaType'),
           '',
           [
-            { text: t('chat.photo'), onPress: async () => {
-              const result = await launchCamera({ ...options, mediaType: 'photo' });
-              handleImageResult(result);
-            }},
-            { text: t('chat.video'), onPress: async () => {
-              const result = await launchCamera({ ...options, mediaType: 'video' });
-              handleVideoResult(result);
-            }},
-            { text: t('chat.gallery'), onPress: async () => {
-              const result = await launchImageLibrary(options);
-              if (result.assets && result.assets[0]) {
-                const asset = result.assets[0];
-                if (asset.type?.startsWith('video')) {
-                  handleVideoResult(result);
-                } else {
-                  handleImageResult(result);
+            {
+              text: t('chat.photo'), onPress: async () => {
+                const result = await launchCamera({ ...options, mediaType: 'photo' });
+                handleImageResult(result);
+              }
+            },
+            {
+              text: t('chat.video'), onPress: async () => {
+                const result = await launchCamera({ ...options, mediaType: 'video' });
+                handleVideoResult(result);
+              }
+            },
+            {
+              text: t('chat.gallery'), onPress: async () => {
+                const result = await launchImageLibrary(options);
+                if (result.assets && result.assets[0]) {
+                  const asset = result.assets[0];
+                  if (asset.type?.startsWith('video')) {
+                    handleVideoResult(result);
+                  } else {
+                    handleImageResult(result);
+                  }
                 }
               }
-            }},
+            },
             { text: t('chat.cancel'), style: 'cancel' }
           ]
         );
@@ -1050,7 +1079,7 @@ const ChatScreen = ({ route }) => {
   const handleVideoResult = (result) => {
     if (result.assets && result.assets[0]) {
       const video = result.assets[0];
-      
+
       // Vérifier la taille
       if (video.fileSize && video.fileSize > 100 * 1024 * 1024) {
         Alert.alert(
@@ -1060,7 +1089,7 @@ const ChatScreen = ({ route }) => {
         );
         return;
       }
-      
+
       setSelectedVideo(video);
       updateInputAreaHeight(true);
 
@@ -1519,14 +1548,14 @@ const ChatScreen = ({ route }) => {
 
 
   // ====== 5. RETURN PRINCIPAL ======
-  
+
   return (
     <Background>
       <SafeAreaView style={{ flex: 1 }} {...panResponder.panHandlers}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? getKeyboardOffset() : 0}
         >
           {/* En-tête avec informations de conversation */}
           <HStack
@@ -1697,7 +1726,7 @@ const ChatScreen = ({ route }) => {
                     </Text>
                   )}
                 </View>
-                
+
                 {/* Bouton de suppression */}
                 <TouchableOpacity
                   onPress={() => {
@@ -1942,57 +1971,59 @@ const ChatScreen = ({ route }) => {
       </SafeAreaView>
 
       {/* Badge de messages non lus */}
-      {unreadState.showButton && (
-        <TouchableOpacity
-          onPress={scrollToUnreadMessages}
-          activeOpacity={1}
-          style={{
-            position: 'absolute',
-            paddingHorizontal: 16,
-            paddingVertical: 10,
-            bottom: 80,
-            right: 20,
-            borderRadius: 20,
-            justifyContent: 'center',
-            alignItems: 'center',
-            flexDirection: 'row',
-            overflow: 'hidden',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.25,
-            shadowRadius: 3.84,
-            elevation: 5,
-            zIndex: 999,
-            opacity: 0.5
-          }}
-        >
-          <LinearGradient
-            colors={['#FF587E', '#CC4B8D']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+      {
+        unreadState.showButton && (
+          <TouchableOpacity
+            onPress={scrollToUnreadMessages}
+            activeOpacity={1}
             style={{
               position: 'absolute',
-              left: 0,
-              right: 0,
-              top: 0,
-              bottom: 0
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              bottom: 80,
+              right: 20,
+              borderRadius: 20,
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexDirection: 'row',
+              overflow: 'hidden',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+              elevation: 5,
+              zIndex: 999,
+              opacity: 0.5
             }}
-          />
-          <Text style={{
-            color: 'white',
-            fontWeight: 'bold',
-            zIndex: 1,
-            marginRight: 5,
-          }}>
-            {t('chat.newMessages')}
-          </Text>
-          <FontAwesomeIcon
-            icon={faChevronDown}
-            size={12}
-            color="white"
-          />
-        </TouchableOpacity>
-      )}
+          >
+            <LinearGradient
+              colors={['#FF587E', '#CC4B8D']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0
+              }}
+            />
+            <Text style={{
+              color: 'white',
+              fontWeight: 'bold',
+              zIndex: 1,
+              marginRight: 5,
+            }}>
+              {t('chat.newMessages')}
+            </Text>
+            <FontAwesomeIcon
+              icon={faChevronDown}
+              size={12}
+              color="white"
+            />
+          </TouchableOpacity>
+        )
+      }
 
       {/* Modal participants */}
       <Modal
@@ -2188,7 +2219,7 @@ const ChatScreen = ({ route }) => {
           </BlurView>
         </View>
       </Modal>
-    </Background>
+    </Background >
   );
 };
 
