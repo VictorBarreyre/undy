@@ -2,11 +2,18 @@
   "name": "hushy",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start --dev-client",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web",
-    "build:ios": "react-native bundle --entry-file='index.js' --bundle-output='./ios/main.jsbundle' --dev=false --platform='ios'"
+    "start": "react-native start",
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "ios:clean": "cd ios && rm -rf build ~/Library/Developer/Xcode/DerivedData && pod install && cd .. && react-native run-ios",
+    "ios:fresh": "cd ios && rm -rf build ~/Library/Developer/Xcode/DerivedData && pod deintegrate && pod install && cd .. && react-native run-ios",
+    "ios:simulator": "react-native run-ios --simulator=\"iPhone 16 Pro\"",
+    "ios:device": "react-native run-ios --device",
+    "ios:reset": "killall -9 node || true && watchman watch-del-all && cd ios && rm -rf build Pods && pod install && cd .. && react-native start --reset-cache",
+    "ios:bundle": "react-native bundle --entry-file='index.js' --bundle-output='./ios/main.jsbundle' --dev=false --platform='ios'",
+    "clean": "watchman watch-del-all && rm -rf node_modules && npm install && cd ios && pod install && cd ..",
+    "pod-install": "cd ios && pod install",
+    "start:reset": "react-native start --reset-cache"
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",
