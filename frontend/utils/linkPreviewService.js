@@ -24,13 +24,13 @@ const loadingUrls = new Set();
 const throttleRequests = async () => {
   const now = Date.now();
   const timeSinceLastRequest = now - lastRequestTime;
-  
+
   if (timeSinceLastRequest < REQUEST_THROTTLE) {
     const waitTime = REQUEST_THROTTLE - timeSinceLastRequest;
-    console.log(`Limitation de débit: attente de ${waitTime}ms avant la prochaine requête`);
-    await new Promise(resolve => setTimeout(resolve, waitTime));
+
+    await new Promise((resolve) => setTimeout(resolve, waitTime));
   }
-  
+
   lastRequestTime = Date.now();
 };
 
@@ -46,7 +46,7 @@ const normalizeCacheKey = (url) => {
   } catch (e) {
     // En cas d'erreur, utiliser une méthode simple de hachage
     return String(url).split('').reduce(
-      (hash, char) => ((hash << 5) - hash) + char.charCodeAt(0), 0
+      (hash, char) => (hash << 5) - hash + char.charCodeAt(0), 0
     ).toString(36);
   }
 };
@@ -95,14 +95,14 @@ const createFallbackMetadata = (url) => {
  */
 const createLoadingMetadata = (url) => {
   const platform = detectPlatform(url);
-  
+
   return {
     url,
     platform,
     title: 'Chargement en cours...',
     description: 'Les informations sont en cours de chargement.',
     image: null,
-    siteName: platform === 'website' ? (new URL(url).hostname || 'Site web') : platform,
+    siteName: platform === 'website' ? new URL(url).hostname || 'Site web' : platform,
     author: null,
     text: '',
     status: 'loading'
@@ -116,10 +116,10 @@ const createLoadingMetadata = (url) => {
  */
 const detectPlatform = (url) => {
   if (!url) return 'website';
-  
+
   try {
     const lowerUrl = url.toLowerCase();
-    
+
     if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com')) {
       return 'twitter';
     } else if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
@@ -149,52 +149,52 @@ const detectPlatform = (url) => {
 const fetchMetadataWithRetry = async (url, retryCount = 0) => {
   try {
     await throttleRequests();
-    
+
     const axiosInstance = getAxiosInstance();
     const controller = new AbortController();
-    
+
     // Créer un timeout pour la requête
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-    
+
     try {
       const response = await axiosInstance.get('/api/link-preview/getDataLink', {
         params: { url },
         signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       // Vérifier la structure de la réponse
       const metadata = response?.data?.data || response?.data;
-      
+
       if (!metadata) {
         throw new Error('Format de réponse invalide');
       }
-      
+
       return metadata;
     } finally {
       clearTimeout(timeoutId);
     }
   } catch (error) {
     console.error(`Erreur lors de la récupération des métadonnées (tentative ${retryCount + 1}/${MAX_RETRIES + 1}):`, error.message);
-    
+
     // Vérifier si on peut réessayer
-    if (retryCount < MAX_RETRIES && 
-        (error.code === 'ECONNABORTED' || 
-         error.name === 'AbortError' || 
-         error.message.includes('timeout') ||
-         error.message.includes('503') ||
-         error.response?.status === 503)) {
-      
+    if (retryCount < MAX_RETRIES && (
+    error.code === 'ECONNABORTED' ||
+    error.name === 'AbortError' ||
+    error.message.includes('timeout') ||
+    error.message.includes('503') ||
+    error.response?.status === 503)) {
+
       // Attente exponentielle entre les tentatives
       const waitTime = 1000 * Math.pow(2, retryCount);
-      console.log(`Nouvelle tentative dans ${waitTime}ms...`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-      
+
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+
       // Réessayer
       return fetchMetadataWithRetry(url, retryCount + 1);
     }
-    
+
     // Plus de tentatives possibles, renvoyer une erreur
     throw error;
   }
@@ -210,37 +210,37 @@ const fetchMetadataWithRetry = async (url, retryCount = 0) => {
  */
 export const getLinkMetadata = async (url, options = {}) => {
   const { forceRefresh = false, returnLoadingState = true } = options;
-  
+
   if (!url) {
-    console.log('URL manquante');
+
     return createFallbackMetadata('https://example.com');
   }
 
   try {
     // Normaliser l'URL pour le cache
     const cacheKey = normalizeCacheKey(url);
-    
+
     // Vérifier si cette URL est déjà en cours de chargement
     if (loadingUrls.has(cacheKey)) {
-      console.log(`URL ${url} déjà en cours de chargement`);
-      
+
+
       // Si on veut un état de chargement immédiat
       if (returnLoadingState) {
         return createLoadingMetadata(url);
       }
-      
+
       // Sinon, vérifier le cache quand même
       if (!forceRefresh && metadataCache[cacheKey]) {
         return metadataCache[cacheKey];
       }
-      
+
       // Ou renvoyer un fallback
       return createFallbackMetadata(url);
     }
 
     // 1. Vérifier d'abord le cache en mémoire si pas de rafraîchissement forcé
     if (!forceRefresh && metadataCache[cacheKey]) {
-      console.log('Utilisation du cache en mémoire pour:', url);
+
       return metadataCache[cacheKey];
     }
 
@@ -256,44 +256,44 @@ export const getLinkMetadata = async (url, options = {}) => {
           if (Date.now() - timestamp < CACHE_EXPIRY) {
             // Mettre à jour le cache en mémoire
             metadataCache[cacheKey] = data;
-            console.log('Utilisation du cache persistant pour:', url);
+
             return data;
           }
         }
       } catch (cacheError) {
-        console.log('Erreur de lecture du cache:', cacheError.message);
+
       }
     }
 
     // Marquer cette URL comme étant en cours de chargement
     loadingUrls.add(cacheKey);
-    
+
     // Si on veut un état de chargement immédiat, le renvoyer maintenant
     if (returnLoadingState) {
       // Démarrer le chargement en arrière-plan
-      fetchMetadataWithRetry(url)
-        .then(metadata => {
-          // Mettre en cache les données récupérées
-          if (metadata) {
-            metadataCache[cacheKey] = metadata;
-            AsyncStorage.setItem(`metadata_${cacheKey}`, JSON.stringify({
-              data: metadata,
-              timestamp: Date.now()
-            })).catch(e => console.log('Erreur lors de la mise en cache:', e.message));
-          }
-        })
-        .catch(error => console.error('Erreur en arrière-plan:', error.message))
-        .finally(() => {
-          // Libérer l'URL du statut de chargement
-          loadingUrls.delete(cacheKey);
-        });
-      
+      fetchMetadataWithRetry(url).
+      then((metadata) => {
+        // Mettre en cache les données récupérées
+        if (metadata) {
+          metadataCache[cacheKey] = metadata;
+          AsyncStorage.setItem(`metadata_${cacheKey}`, JSON.stringify({
+            data: metadata,
+            timestamp: Date.now()
+          })).catch((e) => {});
+        }
+      }).
+      catch((error) => console.error('Erreur en arrière-plan:', error.message)).
+      finally(() => {
+        // Libérer l'URL du statut de chargement
+        loadingUrls.delete(cacheKey);
+      });
+
       return createLoadingMetadata(url);
     }
 
     try {
       // 3. Appeler l'API backend pour extraire les métadonnées
-      console.log('Appel de l\'API backend pour:', url);
+
       const metadata = await fetchMetadataWithRetry(url);
 
       // 4. Mettre en cache pour les prochaines utilisations
@@ -305,9 +305,9 @@ export const getLinkMetadata = async (url, options = {}) => {
             data: metadata,
             timestamp: Date.now()
           }));
-          console.log('Métadonnées mises en cache pour:', url);
+
         } catch (storageError) {
-          console.log('Erreur de mise en cache:', storageError.message);
+
         }
       }
 
@@ -338,22 +338,22 @@ export const clearLinkPreviewCache = async (url) => {
 
       // Supprimer du cache persistant
       await AsyncStorage.removeItem(`metadata_${cacheKey}`);
-      console.log(`Cache vidé pour: ${url}`);
+
     } else {
       // Vider le cache mémoire
-      Object.keys(metadataCache).forEach(key => {
+      Object.keys(metadataCache).forEach((key) => {
         delete metadataCache[key];
       });
 
       // Trouver et supprimer toutes les clés de cache de prévisualisation
       const allKeys = await AsyncStorage.getAllKeys();
-      const previewKeys = allKeys.filter(key => key.startsWith('metadata_'));
+      const previewKeys = allKeys.filter((key) => key.startsWith('metadata_'));
 
       if (previewKeys.length > 0) {
         await AsyncStorage.multiRemove(previewKeys);
       }
 
-      console.log(`Cache de prévisualisation entièrement vidé (${previewKeys.length} entrées)`);
+
     }
     return true;
   } catch (error) {
@@ -369,7 +369,7 @@ export const clearLinkPreviewCache = async (url) => {
  */
 export const refreshLinkMetadata = async (url) => {
   if (!url) return null;
-  
+
   // Forcer le rafraîchissement depuis l'API et attendre le résultat
   return getLinkMetadata(url, { forceRefresh: true, returnLoadingState: false });
 };
@@ -377,5 +377,5 @@ export const refreshLinkMetadata = async (url) => {
 export default {
   getLinkMetadata,
   refreshLinkMetadata,
-  clearLinkPreviewCache,
+  clearLinkPreviewCache
 };

@@ -73,4 +73,8 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-# @end expo-cli
+# Scripts locaux
+remove-console.js
+remove-console.js.bak
+
+

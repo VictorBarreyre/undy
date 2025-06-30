@@ -6,19 +6,19 @@ import i18n from 'i18next'; // Import direct de i18n
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Ajoutez cette ligne
 import ConfettiCannon from 'react-native-confetti-cannon';
-import mixpanel from "../../services/mixpanel"
-import { moderateContent } from "../../services/ModerationService"
+import mixpanel from "../../services/mixpanel";
+import { moderateContent } from "../../services/ModerationService";
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 // Définition des couleurs pour les confettis
 const CONFETTI_COLORS = [
-  '#50C8FF', // Bleu cyan électrique
-  '#A78BFF', // Violet électrique
-  '#FF7AC7', // Rose bonbon éclatant
-  '#FF5F5F', // Rouge corail vif
-  '#FFFFFF', // Blanc
+'#50C8FF', // Bleu cyan électrique
+'#A78BFF', // Violet électrique
+'#FF7AC7', // Rose bonbon éclatant
+'#FF5F5F', // Rouge corail vif
+'#FFFFFF' // Blanc
 ];
 
 
@@ -63,7 +63,7 @@ export const CardDataProvider = ({ children }) => {
     gravity: 0.5,
     velocity: 25,
     angleRange: [0, 180],
-    colors: CONFETTI_COLORS,
+    colors: CONFETTI_COLORS
   });
 
   const [moderationStats, setModerationStats] = useState({
@@ -97,10 +97,10 @@ export const CardDataProvider = ({ children }) => {
 
       // Pays utilisant l'euro
       const euroCountries = [
-        'FRANCE', 'GERMANY', 'ITALY', 'SPAIN', 'PORTUGAL', 'NETHERLANDS',
-        'BELGIUM', 'IRELAND', 'GREECE', 'AUSTRIA', 'FINLAND', 'LUXEMBOURG',
-        'SLOVAKIA', 'SLOVENIA', 'ESTONIA', 'LATVIA', 'LITHUANIA', 'CYPRUS', 'MALTA'
-      ];
+      'FRANCE', 'GERMANY', 'ITALY', 'SPAIN', 'PORTUGAL', 'NETHERLANDS',
+      'BELGIUM', 'IRELAND', 'GREECE', 'AUSTRIA', 'FINLAND', 'LUXEMBOURG',
+      'SLOVAKIA', 'SLOVENIA', 'ESTONIA', 'LATVIA', 'LITHUANIA', 'CYPRUS', 'MALTA'];
+
 
       const upperCountry = country.toUpperCase();
 
@@ -172,7 +172,7 @@ export const CardDataProvider = ({ children }) => {
               }
             }
           } catch (locError) {
-            console.log('Erreur de géolocalisation, utilisation de la langue:', locError);
+
             // Fallback sur la langue uniquement
             const currentLanguage = i18n.language || navigator.language;
             detectedCurrency = detectUserCurrency(null, currentLanguage);
@@ -231,7 +231,7 @@ export const CardDataProvider = ({ children }) => {
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== 'granted') {
-        console.log(i18n.t('location.logs.permissionDenied'));
+
         return null;
       }
 
@@ -256,7 +256,7 @@ export const CardDataProvider = ({ children }) => {
     try {
       // Vérifier si on peut envoyer une notification (pas plus d'une par jour)
       const lastNotifTime = await AsyncStorage.getItem('lastNearbyNotificationTime');
-      if (lastNotifTime && (Date.now() - parseInt(lastNotifTime) < 24 * 60 * 60 * 1000)) {
+      if (lastNotifTime && Date.now() - parseInt(lastNotifTime) < 24 * 60 * 60 * 1000) {
         return false; // Notification déjà envoyée dans les dernières 24h
       }
 
@@ -297,7 +297,7 @@ export const CardDataProvider = ({ children }) => {
       if (stripeStatus.stripeStatus === 'pending') {
         // Vérifier si on a déjà envoyé un rappel récemment
         const lastReminderTime = await AsyncStorage.getItem('lastStripeReminderTime');
-        if (lastReminderTime && (Date.now() - parseInt(lastReminderTime) < 3 * 24 * 60 * 60 * 1000)) {
+        if (lastReminderTime && Date.now() - parseInt(lastReminderTime) < 3 * 24 * 60 * 60 * 1000) {
           return false; // Rappel déjà envoyé dans les 3 derniers jours
         }
 
@@ -364,16 +364,16 @@ export const CardDataProvider = ({ children }) => {
       if (secretData.location) {
         // Validation stricte de l'objet location
         if (
-          secretData.location.type === 'Point' &&
-          Array.isArray(secretData.location.coordinates) &&
-          secretData.location.coordinates.length === 2 &&
-          secretData.location.coordinates.every(coord =>
-            typeof coord === 'number' &&
-            !isNaN(coord)
-          )
-        ) {
+        secretData.location.type === 'Point' &&
+        Array.isArray(secretData.location.coordinates) &&
+        secretData.location.coordinates.length === 2 &&
+        secretData.location.coordinates.every((coord) =>
+        typeof coord === 'number' &&
+        !isNaN(coord)
+        ))
+        {
           payload.location = secretData.location;
-          console.log('Sending location object:', payload.location);
+
         } else {
           console.warn('Invalid location object:', secretData.location);
         }
@@ -385,11 +385,11 @@ export const CardDataProvider = ({ children }) => {
 
         // Validation géographique
         if (
-          !isNaN(lat) && !isNaN(lng) &&
-          lat >= -90 && lat <= 90 &&
-          lng >= -180 && lng <= 180
-        ) {
-          payload.latitude = lng;    // Attention à l'ordre longitude, latitude
+        !isNaN(lat) && !isNaN(lng) &&
+        lat >= -90 && lat <= 90 &&
+        lng >= -180 && lng <= 180)
+        {
+          payload.latitude = lng; // Attention à l'ordre longitude, latitude
           payload.longitude = lat;
         } else {
           console.warn('Invalid coordinates:', { lat, lng });
@@ -397,11 +397,11 @@ export const CardDataProvider = ({ children }) => {
       }
 
       // Log des données avant envoi avec plus de détails
-      console.log('Données envoyées à l\'API:', JSON.stringify(payload, null, 2));
+
 
       const response = await instance.post('/api/secrets/createsecrets', payload);
 
-      console.log(i18n.t('cardData.logs.secretCreationResponse'), response.data);
+
 
       // Structuration de la réponse
       const result = {
@@ -429,9 +429,9 @@ export const CardDataProvider = ({ children }) => {
 
       // Génération d'un message d'erreur plus informatif
       const errorMessage =
-        error?.response?.data?.message ||
-        error.message ||
-        i18n.t('cardData.errors.secretCreationGeneric');
+      error?.response?.data?.message ||
+      error.message ||
+      i18n.t('cardData.errors.secretCreationGeneric');
 
       throw new Error(errorMessage);
     }
@@ -440,9 +440,9 @@ export const CardDataProvider = ({ children }) => {
   const getModerationStats = () => {
     return {
       ...moderationStats,
-      flagRate: moderationStats.totalChecked > 0
-        ? ((moderationStats.totalFlagged / moderationStats.totalChecked) * 100).toFixed(2)
-        : 0
+      flagRate: moderationStats.totalChecked > 0 ?
+      (moderationStats.totalFlagged / moderationStats.totalChecked * 100).toFixed(2) :
+      0
     };
   };
 
@@ -455,7 +455,7 @@ export const CardDataProvider = ({ children }) => {
     try {
       const response = await instance.post('/api/secrets/stripe/refresh-onboarding');
 
-      console.log(i18n.t('cardData.logs.stripeRefreshResponse'), response.data);
+
 
       // Nouvelle logique basée sur le statut
       switch (response.data.status) {
@@ -512,7 +512,7 @@ export const CardDataProvider = ({ children }) => {
         action: 'update_bank_account'
       });
 
-      console.log('Réponse de la requête de modification du compte bancaire:', response.data);
+
 
       if (response.data && response.data.url) {
         return {
@@ -535,8 +535,8 @@ export const CardDataProvider = ({ children }) => {
       console.error('Erreur lors de la requête de modification du compte bancaire:', error);
 
       const errorMessage = error?.response?.data?.message ||
-        error?.message ||
-        i18n.t('stripe.genericError');
+      error?.message ||
+      i18n.t('stripe.genericError');
 
       return {
         success: false,
@@ -552,7 +552,7 @@ export const CardDataProvider = ({ children }) => {
       const action = parsedUrl.searchParams.get('action');
       const secretPending = parsedUrl.searchParams.get('secretPending') === 'true';
 
-      console.log("Traitement du retour Stripe", { action, secretPending });
+
 
       // Vérifier le statut du compte Stripe
       const stripeStatus = await handleStripeOnboardingRefresh();
@@ -586,7 +586,7 @@ export const CardDataProvider = ({ children }) => {
           }
 
           if (pendingSecretData) {
-            console.log("Données de secret en attente trouvées, tentative de publication");
+
             // Maintenant poster le secret
             return {
               success: true,
@@ -603,9 +603,9 @@ export const CardDataProvider = ({ children }) => {
 
       return {
         success: isStripeActive,
-        message: isStripeActive
-          ? 'Compte Stripe configuré avec succès'
-          : 'Configuration Stripe en cours',
+        message: isStripeActive ?
+        'Compte Stripe configuré avec succès' :
+        'Configuration Stripe en cours',
         stripeStatus,
         isStripeActive
       };
@@ -685,7 +685,7 @@ export const CardDataProvider = ({ children }) => {
   };
 
   const fetchUnpurchasedSecrets = async (forceFetch = false, languages = null) => {
-    if (!forceFetch && lastFetchTime && (Date.now() - lastFetchTime < CACHE_DURATION)) {
+    if (!forceFetch && lastFetchTime && Date.now() - lastFetchTime < CACHE_DURATION) {
       return data;
     }
 
@@ -761,7 +761,7 @@ export const CardDataProvider = ({ children }) => {
       const { data } = await instance.get('/api/secrets/user-secrets-with-count');
 
       // Ajouter les calculs de prix pour chaque secret
-      const secretsWithPrices = data.secrets.map(secret => ({
+      const secretsWithPrices = data.secrets.map((secret) => ({
         ...secret,
         priceDetails: calculatePrices(secret.price)
       }));
@@ -777,7 +777,7 @@ export const CardDataProvider = ({ children }) => {
   };
 
   const purchaseAndAccessConversation = async (secretId, price, paymentId) => {
-    console.log("DÉBUT: purchaseAndAccessConversation", { secretId, price, paymentId });
+
 
     const instance = getAxiosInstance();
     if (!instance) {
@@ -791,11 +791,11 @@ export const CardDataProvider = ({ children }) => {
 
     try {
       // Tentative d'achat
-      console.log("INFO: Tentative d'achat initiée", { secretId, paymentId });
+
 
       // Tracking de la tentative
       try {
-        console.log("MIXPANEL: Tracking Purchase Attempt");
+
         mixpanel.track("Purchase Attempt", {
           product_id: secretId,
           price,
@@ -804,18 +804,18 @@ export const CardDataProvider = ({ children }) => {
           user_id: userData?._id,
           payment_id: paymentId
         });
-        console.log("MIXPANEL: Tracking Purchase Attempt - Terminé");
+
       } catch (mpError) {
         console.error("MIXPANEL ERREUR (non bloquante):", mpError);
       }
 
       // Appel API pour l'achat
-      console.log("API: Envoi de la requête d'achat");
+
       const purchaseResponse = await instance.post(
         `/api/secrets/${secretId}/purchase`,
         { paymentIntentId: paymentId }
       );
-      console.log("API: Réponse d'achat reçue", purchaseResponse.data);
+
 
       // Vérification de l'ID de conversation
       if (!purchaseResponse.data.conversationId) {
@@ -834,31 +834,31 @@ export const CardDataProvider = ({ children }) => {
       }
 
       // Mise à jour des données locales
-      console.log("STATE: Mise à jour des données locales");
-      setData(currentData => {
-        const newData = currentData.filter(secret => secret._id !== secretId);
-        console.log("STATE: Données filtrées", {
-          avantLength: currentData.length,
-          aprèsLength: newData.length
-        });
+
+      setData((currentData) => {
+        const newData = currentData.filter((secret) => secret._id !== secretId);
+
+
+
+
         return newData;
       });
       setLastFetchTime(null);
-      console.log("STATE: Mise à jour terminée");
+
 
       // Récupération des données de conversation
-      console.log("API: Récupération des données de conversation");
+
       const conversationResponse = await instance.get(
         `/api/secrets/conversations/secret/${secretId}`
       );
-      console.log("API: Réponse de conversation reçue", {
-        status: conversationResponse.status,
-        dataSize: JSON.stringify(conversationResponse.data).length
-      });
+
+
+
+
 
       // Envoi d'une notification au vendeur (via le backend)
       try {
-        console.log("NOTIFICATION: Envoi de la notification d'achat au vendeur");
+
         await instance.post('/api/notifications/purchase', {
           secretId,
           buyerId: userData?._id,
@@ -866,7 +866,7 @@ export const CardDataProvider = ({ children }) => {
           price,
           currency: userCurrency || '€'
         });
-        console.log("NOTIFICATION: Demande envoyée avec succès");
+
       } catch (notifError) {
         console.error("NOTIFICATION ERREUR (non bloquante):", notifError);
         // Ne pas bloquer la transaction en cas d'échec de notification
@@ -874,7 +874,7 @@ export const CardDataProvider = ({ children }) => {
 
       // Tracking de l'achat réussi
       try {
-        console.log("MIXPANEL: Tracking Purchase Succès");
+
         mixpanel.track("Purchase", {
           product_id: secretId,
           price,
@@ -884,7 +884,7 @@ export const CardDataProvider = ({ children }) => {
           payment_id: paymentId,
           conversation_id: purchaseResponse.data.conversationId
         });
-        console.log("MIXPANEL: Tracking Purchase Succès - Terminé");
+
       } catch (mpError) {
         console.error("MIXPANEL ERREUR (non bloquante):", mpError);
       }
@@ -895,14 +895,14 @@ export const CardDataProvider = ({ children }) => {
         conversation: conversationResponse.data
       };
 
-      console.log("RETOUR: Préparation des données de retour", {
-        conversationId: result.conversationId,
-        hasConversation: !!result.conversation,
-        conversationLength: result.conversation ? Object.keys(result.conversation).length : 0
-      });
+
+
+
+
+
 
       // Retour des données pour la redirection
-      console.log("FIN: purchaseAndAccessConversation - Succès");
+
       return result;
 
     } catch (error) {
@@ -915,7 +915,7 @@ export const CardDataProvider = ({ children }) => {
 
       // Tracking de l'erreur
       try {
-        console.log("MIXPANEL: Tracking Purchase Failed");
+
         mixpanel.track("Purchase Failed", {
           product_id: secretId,
           price,
@@ -924,7 +924,7 @@ export const CardDataProvider = ({ children }) => {
           error_type: error.response?.data?.error || 'unknown',
           user_id: userData?._id
         });
-        console.log("MIXPANEL: Tracking Purchase Failed - Terminé");
+
       } catch (mpError) {
         console.error("MIXPANEL ERREUR (non bloquante):", mpError);
       }
@@ -944,7 +944,7 @@ export const CardDataProvider = ({ children }) => {
       const response = await instance.get('/api/secrets/purchased');
 
       // Ajouter les calculs de prix pour chaque secret acheté
-      const purchasedWithPrices = response.data.map(secret => ({
+      const purchasedWithPrices = response.data.map((secret) => ({
         ...secret,
         priceDetails: calculatePrices(secret.price)
       }));
@@ -960,7 +960,7 @@ export const CardDataProvider = ({ children }) => {
   const moderateMessageBeforeSend = async (content) => {
     try {
       // Incrémenter le compteur de vérifications
-      setModerationStats(prev => ({
+      setModerationStats((prev) => ({
         ...prev,
         totalChecked: prev.totalChecked + 1
       }));
@@ -971,7 +971,7 @@ export const CardDataProvider = ({ children }) => {
       // Si le contenu est signalé comme inapproprié
       if (result.isFlagged) {
         // Mettre à jour les statistiques de modération
-        setModerationStats(prev => ({
+        setModerationStats((prev) => ({
           ...prev,
           totalFlagged: prev.totalFlagged + 1,
           lastFlagged: {
@@ -1010,18 +1010,18 @@ export const CardDataProvider = ({ children }) => {
     }
 
     // Log des données d'entrée
-    console.log("handleAddMessage - DONNÉES D'ENTRÉE:", {
-      conversationId,
-      contentType: typeof content,
-      contentPreview: typeof content === 'string'
-        ? content.substring(0, 30)
-        : JSON.stringify(content).substring(0, 30)
-    });
+
+
+
+
+
+
+
 
     // Gérer les différents types de contenu
-    const messageData = typeof content === 'string'
-      ? { content, messageType: 'text' }
-      : content;
+    const messageData = typeof content === 'string' ?
+    { content, messageType: 'text' } :
+    content;
 
     // Si c'est un message audio, assurez-vous que les données nécessaires sont incluses
     if (messageData.messageType === 'audio' && !messageData.audio) {
@@ -1040,29 +1040,29 @@ export const CardDataProvider = ({ children }) => {
     }
 
     try {
-      console.log("Envoi du message à l'API:", {
-        url: `/api/secrets/conversations/${conversationId}/messages`,
-        messageType: messageData.messageType,
-        hasContent: !!messageData.content,
-        hasImage: !!messageData.image,
-        hasAudio: !!messageData.audio
-      });
+
+
+
+
+
+
+
 
       const response = await instance.post(
         `/api/secrets/conversations/${conversationId}/messages`,
         messageData
       );
 
-      console.log("Réponse complète de l'API:", JSON.stringify(response.data));
+
 
       // La réponse contient soit directement le message, soit un objet contenant une propriété message
       // Adaptons notre code pour gérer les deux cas
       const messageObject = response.data.message || response.data;
       const messageId = messageObject._id;
 
-      console.log("Message ID extrait:", messageId);
-      console.log("Contenu du message extrait:", messageObject.content);
-      console.log("Type de message extrait:", messageObject.messageType);
+
+
+
 
       if (messageId && userData && userData._id) {
         // S'assurer que l'ID utilisateur est une chaîne
@@ -1070,7 +1070,7 @@ export const CardDataProvider = ({ children }) => {
 
         // Envoyer la notification aux autres participants
         try {
-          console.log("NOTIFICATION: Préparation de la notification");
+
 
           // Déterminer l'aperçu du message selon le type
           let messagePreview = "";
@@ -1087,13 +1087,13 @@ export const CardDataProvider = ({ children }) => {
               case 'image':
                 messagePreview = "📷 Image";
                 break;
-              case 'video':  // AJOUT du cas vidéo
+              case 'video': // AJOUT du cas vidéo
                 messagePreview = "📹 Vidéo";
                 break;
               case 'mixed':
-                messagePreview = content.content
-                  ? content.content.substring(0, 100)
-                  : "📎 Message avec pièce jointe";
+                messagePreview = content.content ?
+                content.content.substring(0, 100) :
+                "📎 Message avec pièce jointe";
                 break;
               default:
                 messagePreview = "Nouveau message";
@@ -1108,17 +1108,17 @@ export const CardDataProvider = ({ children }) => {
             messagePreview
           };
 
-          console.log("NOTIFICATION DATA:", JSON.stringify(notificationData));
 
-          console.log("NOTIFICATION: Envoi de la notification");
+
+
 
           try {
             const notifResponse = await instance.post('/api/notifications/message', notificationData);
-            console.log("NOTIFICATION: Réponse reçue", {
-              status: notifResponse.status,
-              success: notifResponse.data?.success,
-              message: notifResponse.data?.message
-            });
+
+
+
+
+
           } catch (apiError) {
             console.error("NOTIFICATION API ERROR:", apiError.message);
             console.error("STATUS:", apiError.response?.status);
@@ -1157,7 +1157,7 @@ export const CardDataProvider = ({ children }) => {
   };
 
   const getConversationMessages = async (conversationId) => {
-    console.log('[CardDataContexte] 📞 getConversationMessages pour:', conversationId);
+
 
     if (!conversationId) {
       console.error('[CardDataContexte] ❌ Pas de conversationId fourni');
@@ -1171,17 +1171,17 @@ export const CardDataProvider = ({ children }) => {
     }
 
     try {
-      console.log('[CardDataContexte] 🔄 Appel API pour les messages...');
+
       const response = await instance.get(
         `/api/secrets/conversations/${conversationId}/messages`
       );
 
-      console.log('[CardDataContexte] 📦 Réponse messages reçue:', {
-        status: response.status,
-        hasMessages: !!response.data?.messages,
-        messageCount: response.data?.messages?.length || 0,
-        conversationId: response.data?.conversationId
-      });
+
+
+
+
+
+
 
       // Retourner directement la réponse de l'API
       return response.data;
@@ -1203,7 +1203,7 @@ export const CardDataProvider = ({ children }) => {
   };
 
   const getUserConversations = async () => {
-    console.log('[CardDataContexte] 🔄 Début getUserConversations');
+
 
     const instance = getAxiosInstance();
     if (!instance) {
@@ -1212,33 +1212,33 @@ export const CardDataProvider = ({ children }) => {
     }
 
     try {
-      console.log('[CardDataContexte] 📞 Appel API /api/secrets/conversations');
+
       const response = await instance.get('/api/secrets/conversations');
 
-      console.log('[CardDataContexte] 📦 Réponse reçue:', {
-        status: response.status,
-        dataType: typeof response.data,
-        isArray: Array.isArray(response.data),
-        count: response.data?.length || 0
-      });
+
+
+
+
+
+
 
       if (!userData) {
-        console.log('[CardDataContexte] ⚠️ Pas de données utilisateur');
+
         return [];
       }
 
       const userIdStr = userData?._id?.toString() || '';
-      console.log('[CardDataContexte] 👤 ID utilisateur:', userIdStr);
+
 
       // Normaliser la structure des conversations
       const normalizedConversations = (response.data || []).map((conv, index) => {
-        console.log(`[CardDataContexte] 🔧 Normalisation conversation ${index + 1}:`, {
-          id: conv._id,
-          hasMessages: !!conv.messages,
-          messageCount: conv.messages?.length || 0,
-          hasSecret: !!conv.secret,
-          unreadCountType: typeof conv.unreadCount
-        });
+
+
+
+
+
+
+
 
         // Création d'un objet conversation normalisé
         const normalizedConv = {
@@ -1253,9 +1253,9 @@ export const CardDataProvider = ({ children }) => {
         if (typeof conv.unreadCount === 'number') {
           normalizedConv.unreadCount = conv.unreadCount;
         } else if (conv.unreadCount instanceof Map || typeof conv.unreadCount === 'object') {
-          normalizedConv.unreadCount = (conv.unreadCount instanceof Map)
-            ? (conv.unreadCount.get(userIdStr) || 0)
-            : (conv.unreadCount?.[userIdStr] || 0);
+          normalizedConv.unreadCount = conv.unreadCount instanceof Map ?
+          conv.unreadCount.get(userIdStr) || 0 :
+          conv.unreadCount?.[userIdStr] || 0;
         } else {
           normalizedConv.unreadCount = 0;
         }
@@ -1275,21 +1275,21 @@ export const CardDataProvider = ({ children }) => {
           };
         }
 
-        console.log(`[CardDataContexte] ✅ Conversation ${index + 1} normalisée:`, {
-          id: normalizedConv._id,
-          messageCount: normalizedConv.messages.length,
-          unreadCount: normalizedConv.unreadCount,
-          hasSecret: !!normalizedConv.secret
-        });
+
+
+
+
+
+
 
         return normalizedConv;
       });
 
-      console.log('[CardDataContexte] 🎯 Résultat final:', {
-        totalConversations: normalizedConversations.length,
-        conversationsWithMessages: normalizedConversations.filter(c => c.messages.length > 0).length,
-        conversationsWithSecrets: normalizedConversations.filter(c => c.secret).length
-      });
+
+
+
+
+
 
       return normalizedConversations;
     } catch (error) {
@@ -1316,29 +1316,29 @@ export const CardDataProvider = ({ children }) => {
           title: i18n.t('cardData.share.title'),
           subject: i18n.t('cardData.share.subject'),
           activityItemSources: [
-            {
-              placeholderItem: { type: 'text/plain', content: shareMessage },
-              item: {
-                default: { type: 'text/plain', content: shareMessage }
-              },
-              subject: {
-                default: i18n.t('cardData.share.subject')
-              },
-              linkMetadata: {
-                originalUrl: secret.shareLink,
-                url: secret.shareLink,
-                title: i18n.t('cardData.share.confidentialSecret')
-              }
+          {
+            placeholderItem: { type: 'text/plain', content: shareMessage },
+            item: {
+              default: { type: 'text/plain', content: shareMessage }
+            },
+            subject: {
+              default: i18n.t('cardData.share.subject')
+            },
+            linkMetadata: {
+              originalUrl: secret.shareLink,
+              url: secret.shareLink,
+              title: i18n.t('cardData.share.confidentialSecret')
             }
-          ]
+          }]
+
         };
 
         const shareResult = await Share.share(shareOptions, {
           dialogTitle: i18n.t('cardData.share.dialogTitle'),
           excludedActivityTypes: [
-            'com.apple.UIKit.activity.Print',
-            'com.apple.UIKit.activity.AssignToContact'
-          ]
+          'com.apple.UIKit.activity.Print',
+          'com.apple.UIKit.activity.AssignToContact']
+
         });
 
         return shareResult;
@@ -1357,13 +1357,13 @@ export const CardDataProvider = ({ children }) => {
       throw new Error(i18n.t('cardData.errors.axiosNotInitialized'));
     }
     try {
-      console.log(i18n.t('cardData.logs.searchingSecret'), secretId);
+
       const response = await instance.get(`/api/secrets/shared/${secretId}`);
-      console.log(i18n.t('cardData.logs.responseReceived'), response.data);
+
       return response.data;
     } catch (error) {
-      console.log(i18n.t('cardData.logs.soughtSecret'), secretId);
-      console.log(i18n.t('cardData.errors.fullError'), error.response?.data);
+
+
       throw error;
     }
   };
@@ -1384,130 +1384,130 @@ export const CardDataProvider = ({ children }) => {
   };
 
 
-const uploadVideo = async (videoData, progressCallback) => {
-  try {
-    const instance = getAxiosInstance();
-    if (!instance) {
-      throw new Error('Axios n\'est pas initialisé');
-    }
-
-    console.log('🎥 Upload vidéo - Données reçues:', {
-      hasUri: !!videoData?.uri,
-      hasBase64: !!videoData?.base64,
-      fileSize: videoData?.fileSize,
-      type: videoData?.type,
-      fileName: videoData?.fileName
-    });
-
-    // Vérifier la taille du fichier
-    if (videoData?.fileSize && videoData.fileSize > 100 * 1024 * 1024) {
-      throw new Error('La vidéo est trop volumineuse (max 100MB)');
-    }
-
-    let response;
-
-    // Option 1: Si on a du base64 ET que le fichier est petit (<10MB)
-    if (videoData?.base64 && (!videoData.fileSize || videoData.fileSize < 10 * 1024 * 1024)) {
-      console.log('📤 Upload avec base64...');
-      
-      const videoDataBase64 = `data:${videoData.type || 'video/mp4'};base64,${videoData.base64}`;
-      
-      response = await instance.post('/api/upload/video', {
-        video: videoDataBase64,
-        duration: videoData?.duration || 0,
-        fileName: videoData?.fileName || `video_${Date.now()}.mp4`
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            if (progressCallback) progressCallback(percentCompleted);
-          }
-        },
-        timeout: 300000 // 5 minutes
-      });
-    }
-    // Option 2: Upload avec FormData (pour les fichiers plus gros)
-    else if (videoData?.uri) {
-      console.log('📤 Upload avec FormData...');
-      
-      const formData = new FormData();
-      
-      // IMPORTANT: Structure correcte pour React Native FormData
-      const videoFile = {
-        uri: videoData.uri,
-        type: videoData?.type || 'video/mp4',
-        name: videoData?.fileName || `video_${Date.now()}.mp4`
-      };
-      
-      // Ajouter le fichier vidéo
-      formData.append('video', videoFile);
-      
-      // Ajouter la durée si disponible
-      if (videoData?.duration) {
-        formData.append('duration', String(videoData.duration));
+  const uploadVideo = async (videoData, progressCallback) => {
+    try {
+      const instance = getAxiosInstance();
+      if (!instance) {
+        throw new Error('Axios n\'est pas initialisé');
       }
 
-      // Log pour debug
-      console.log('📋 FormData préparé:', {
-        uri: videoFile.uri,
-        type: videoFile.type,
-        name: videoFile.name,
-        duration: videoData?.duration
-      });
 
-      response = await instance.post('/api/upload/video', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Accept': 'application/json'
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            console.log(`Upload progress: ${percentCompleted}%`);
-            if (progressCallback) progressCallback(percentCompleted);
-          }
-        },
-        timeout: 300000, // 5 minutes
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity
-      });
-    } else {
-      throw new Error('Format de vidéo non supporté - ni base64 ni URI fourni');
-    }
 
-    console.log('✅ Réponse upload vidéo:', response.data);
-    return response.data;
-    
-  } catch (error) {
-    console.error('❌ Erreur upload vidéo détaillée:', {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-      headers: error.response?.headers
-    });
-    
-    if (error.response) {
-      if (error.response.status === 413) {
-        throw new Error('La vidéo est trop volumineuse');
-      } else if (error.response.status === 400) {
-        throw new Error(error.response.data?.message || 'Format de vidéo invalide');
+
+
+
+
+
+
+      // Vérifier la taille du fichier
+      if (videoData?.fileSize && videoData.fileSize > 100 * 1024 * 1024) {
+        throw new Error('La vidéo est trop volumineuse (max 100MB)');
       }
+
+      let response;
+
+      // Option 1: Si on a du base64 ET que le fichier est petit (<10MB)
+      if (videoData?.base64 && (!videoData.fileSize || videoData.fileSize < 10 * 1024 * 1024)) {
+
+
+        const videoDataBase64 = `data:${videoData.type || 'video/mp4'};base64,${videoData.base64}`;
+
+        response = await instance.post('/api/upload/video', {
+          video: videoDataBase64,
+          duration: videoData?.duration || 0,
+          fileName: videoData?.fileName || `video_${Date.now()}.mp4`
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round(
+                progressEvent.loaded * 100 / progressEvent.total
+              );
+              if (progressCallback) progressCallback(percentCompleted);
+            }
+          },
+          timeout: 300000 // 5 minutes
+        });
+      }
+      // Option 2: Upload avec FormData (pour les fichiers plus gros)
+      else if (videoData?.uri) {
+
+
+        const formData = new FormData();
+
+        // IMPORTANT: Structure correcte pour React Native FormData
+        const videoFile = {
+          uri: videoData.uri,
+          type: videoData?.type || 'video/mp4',
+          name: videoData?.fileName || `video_${Date.now()}.mp4`
+        };
+
+        // Ajouter le fichier vidéo
+        formData.append('video', videoFile);
+
+        // Ajouter la durée si disponible
+        if (videoData?.duration) {
+          formData.append('duration', String(videoData.duration));
+        }
+
+        // Log pour debug
+
+
+
+
+
+
+
+        response = await instance.post('/api/upload/video', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Accept': 'application/json'
+          },
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round(
+                progressEvent.loaded * 100 / progressEvent.total
+              );
+
+              if (progressCallback) progressCallback(percentCompleted);
+            }
+          },
+          timeout: 300000, // 5 minutes
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity
+        });
+      } else {
+        throw new Error('Format de vidéo non supporté - ni base64 ni URI fourni');
+      }
+
+
+      return response.data;
+
+    } catch (error) {
+      console.error('❌ Erreur upload vidéo détaillée:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers
+      });
+
+      if (error.response) {
+        if (error.response.status === 413) {
+          throw new Error('La vidéo est trop volumineuse');
+        } else if (error.response.status === 400) {
+          throw new Error(error.response.data?.message || 'Format de vidéo invalide');
+        }
+      }
+
+      throw error;
     }
-    
-    throw error;
-  }
-};
+  };
   const refreshUnreadCounts = async () => {
     if (!userData) {
-      console.log(i18n.t('cardData.logs.userDataNullSkippingUpdate'));
+
       setUnreadCountsMap({});
       setTotalUnreadCount(0);
       return { countsMap: {}, total: 0 };
@@ -1520,7 +1520,7 @@ const uploadVideo = async (videoData, progressCallback) => {
       const countsMap = {};
       let total = 0;
 
-      conversations.forEach(conv => {
+      conversations.forEach((conv) => {
         // Si la conversation a été marquée comme lue localement, forcer à 0
         if (markedAsReadConversations[conv._id]) {
           countsMap[conv._id] = 0;
@@ -1533,9 +1533,9 @@ const uploadVideo = async (videoData, progressCallback) => {
           count = conv.unreadCount;
         } else if (conv.unreadCount instanceof Map || typeof conv.unreadCount === 'object') {
           const userIdStr = userData?._id?.toString() || '';
-          count = (conv.unreadCount instanceof Map)
-            ? (conv.unreadCount.get(userIdStr) || 0)
-            : (conv.unreadCount?.[userIdStr] || 0);
+          count = conv.unreadCount instanceof Map ?
+          conv.unreadCount.get(userIdStr) || 0 :
+          conv.unreadCount?.[userIdStr] || 0;
         }
 
         countsMap[conv._id] = count;
@@ -1560,19 +1560,19 @@ const uploadVideo = async (videoData, progressCallback) => {
 
     try {
       // Marquer localement immédiatement
-      setMarkedAsReadConversations(prev => ({
+      setMarkedAsReadConversations((prev) => ({
         ...prev,
         [conversationId]: true
       }));
 
       // Mettre à jour les compteurs locaux immédiatement
-      setUnreadCountsMap(prev => ({
+      setUnreadCountsMap((prev) => ({
         ...prev,
         [conversationId]: 0
       }));
 
       // Recalculer le total immédiatement
-      setTotalUnreadCount(prev => prev - (unreadCountsMap[conversationId] || 0));
+      setTotalUnreadCount((prev) => prev - (unreadCountsMap[conversationId] || 0));
 
       // Appel API en arrière-plan
       if (userToken) {
@@ -1664,10 +1664,10 @@ const uploadVideo = async (videoData, progressCallback) => {
       // Appel à l'API pour supprimer le secret
       const response = await instance.delete(`/api/secrets/${secretId}`);
 
-      console.log(i18n.t('cardData.logs.secretDeleted'), secretId);
+
 
       // Mettre à jour le cache local si nécessaire
-      setData(currentData => currentData.filter(secret => secret._id !== secretId));
+      setData((currentData) => currentData.filter((secret) => secret._id !== secretId));
       setLastFetchTime(null); // Forcer un rafraîchissement lors de la prochaine requête
 
       return response.data;
@@ -1691,7 +1691,7 @@ const uploadVideo = async (videoData, progressCallback) => {
         skipImageUpload: options.skipImageUpload || false
       };
 
-      console.log("Payload envoyé à l'API:", JSON.stringify(payload, null, 2));
+
 
       // Ajouter les images seulement si on ne skip pas l'upload
       if (!options.skipImageUpload) {
@@ -1767,35 +1767,35 @@ const uploadVideo = async (videoData, progressCallback) => {
         moderateMessageBeforeSend,
         getModerationStats,
         checkAndNotifyNearbySecrets, // Nouvelle fonction
-        checkAndSendStripeReminder,
+        checkAndSendStripeReminder
       }}>
         {children}
       </CardDataContext.Provider>
-      {showConfetti && (
-        <ConfettiCannon
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9999,
-            elevation: 10, // Important pour Android
-          }}
-          count={confettiConfig.count}
-          origin={confettiConfig.origin}
-          explosionSpeed={confettiConfig.explosionSpeed}
-          fallSpeed={confettiConfig.fallSpeed}
-          fadeOut={true}
-          colors={confettiConfig.colors}
-          gravity={confettiConfig.gravity}
-          velocity={confettiConfig.velocity}
-          angleRange={confettiConfig.angleRange}
-          particleSize={8}
-        />
-      )}
-    </>
-  );
+      {showConfetti &&
+      <ConfettiCannon
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 9999,
+          elevation: 10 // Important pour Android
+        }}
+        count={confettiConfig.count}
+        origin={confettiConfig.origin}
+        explosionSpeed={confettiConfig.explosionSpeed}
+        fallSpeed={confettiConfig.fallSpeed}
+        fadeOut={true}
+        colors={confettiConfig.colors}
+        gravity={confettiConfig.gravity}
+        velocity={confettiConfig.velocity}
+        angleRange={confettiConfig.angleRange}
+        particleSize={8} />
+
+      }
+    </>);
+
 };
 
 export const ConfettiPresets = {
@@ -1803,24 +1803,24 @@ export const ConfettiPresets = {
     origin: { x: SCREEN_WIDTH / 2, y: 0 },
     gravity: 0.5,
     velocity: 25,
-    angleRange: [0, 180],
+    angleRange: [0, 180]
   },
   lowHeight: {
     origin: { x: SCREEN_WIDTH / 2, y: 0 },
     gravity: 0.7,
     velocity: 15,
-    angleRange: [0, 180],
+    angleRange: [0, 180]
   },
   mediumHeight: {
     origin: { x: SCREEN_WIDTH / 2, y: 0 },
     gravity: 0.5,
     velocity: 20,
-    angleRange: [0, 180],
+    angleRange: [0, 180]
   },
   amazing: {
     colors: CONFETTI_COLORS,
     count: 250,
-    explosionSpeed: 300,
+    explosionSpeed: 300
   }
 };
 

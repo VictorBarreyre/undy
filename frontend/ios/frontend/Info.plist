@@ -67,7 +67,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Hushy a besoin d'accéder à votre caméra pour prendre des photos et des vidéos à partager dans vos conversations, ainsi que pour la vérification d'identité</string>
 	<key>NSContactsUsageDescription</key>
-	<string>Cette application a besoin d'accéder à vos contacts pour fonctionner correctement</string>
+	<string>L'app utilise vos contacts pour vous permettre d'inviter vos amis à rejoindre la plateforme et partager du contenu avec eux</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Hushy a besoin de votre position pour afficher les secrets autour de vous</string>
 	<key>NSMicrophoneUsageDescription</key>
@@ -84,6 +84,11 @@
 		<string>fetch</string>
 		<string>processing</string>
 		<string>location</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.hushy.app.refresh</string>
+		<string>com.hushy.app.processing</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>SplashScreen</string>

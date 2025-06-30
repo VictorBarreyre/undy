@@ -8,7 +8,7 @@ import i18n from 'i18next'; // Importation directe de i18n
 import ContactsPermissionModal from '../../presentation/components/ContactsPermissionsModal';
 import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location'; // Ajoutez cette ligne
-import mixpanel from "../../services/mixpanel"
+import mixpanel from "../../services/mixpanel";
 
 
 export const AuthContext = createContext();
@@ -76,11 +76,11 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initAxios = async () => {
-      console.log('[AuthProvider] Initialisation...');
+
       try {
-        console.log('[AuthProvider] Création de l\'instance Axios');
+
         await createAxiosInstance();
-        console.log('[AuthProvider] Chargement des données stockées');
+
         await loadStoredData();
       } catch (error) {
         console.error('[AuthProvider] Erreur d\'initialisation:', error);
@@ -89,18 +89,18 @@ export const AuthProvider = ({ children }) => {
     };
 
     const handleAuthError = async (event) => {
-      console.log('[AuthProvider] Erreur d\'authentification détectée:', event);
+
       try {
-        console.log('[AuthProvider] Tentative de déconnexion...');
+
         await logout();
-        console.log('[AuthProvider] Déconnexion réussie');
+
 
         Alert.alert(
           i18n.t('auth.alerts.sessionExpired.title'),
           event.message,
           [{
             text: i18n.t('auth.alerts.ok'),
-            onPress: () => console.log('[AuthProvider] Alerte acquittée par l\'utilisateur')
+            onPress: () => {}
           }]
         );
       } catch (error) {
@@ -108,14 +108,14 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    console.log('[AuthProvider] Mise en place des event listeners');
+
     // Utiliser DeviceEventEmitter au lieu de window.addEventListener
     const subscription = DeviceEventEmitter.addListener('authError', handleAuthError);
 
     initAxios();
 
     return () => {
-      console.log('[AuthProvider] Nettoyage des event listeners');
+
       subscription.remove(); // Nettoyer l'écouteur d'événements
     };
   }, []);
@@ -128,7 +128,7 @@ export const AuthProvider = ({ children }) => {
         timestamp: Date.now(),
         session_id: 'SESSION_ID', // Remplacez par une méthode pour générer un ID de session
         platform: Platform.OS,
-        app_version: '1.0', // Remplacez par la version actuelle de votre application
+        app_version: '1.0' // Remplacez par la version actuelle de votre application
       };
 
       mixpanel.track("Daily activ users", dailyActivUsersProps); // Utilisez l'instance importée
@@ -168,24 +168,24 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loadStoredData = async () => {
-    console.log('[AuthProvider] Début du chargement des données stockées');
+
     try {
       const [accessToken, refreshToken, storedUserData] = await Promise.all([
-        AsyncStorage.getItem('accessToken'),
-        AsyncStorage.getItem('refreshToken'),
-        AsyncStorage.getItem('userData')
-      ]);
+      AsyncStorage.getItem('accessToken'),
+      AsyncStorage.getItem('refreshToken'),
+      AsyncStorage.getItem('userData')]
+      );
 
-      console.log('[AuthProvider] Tokens récupérés:', {
-        hasAccessToken: !!accessToken,
-        hasRefreshToken: !!refreshToken,
-        hasStoredData: !!storedUserData
-      });
+
+
+
+
+
 
       if (accessToken) {
         const instance = getAxiosInstance();
         if (instance) {
-          console.log('[AuthProvider] Mise à jour du header Authorization');
+
           instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
         }
 
@@ -193,27 +193,27 @@ export const AuthProvider = ({ children }) => {
         setIsLoggedIn(true);
 
         if (storedUserData) {
-          console.log('[AuthProvider] Chargement des données utilisateur stockées');
+
           const parsedData = JSON.parse(storedUserData);
           setUserData(cleanUserData(parsedData));
         }
 
         if (refreshToken) {
-          console.log('[AuthProvider] Tentative de récupération des données fraîches');
+
           try {
             await fetchUserData();
-            console.log('[AuthProvider] Données utilisateur mises à jour avec succès');
+
           } catch (error) {
             console.error('[AuthProvider] Erreur fetchUserData:', error);
           }
         }
       } else {
-        console.log('[AuthProvider] Aucun token trouvé');
+
       }
     } catch (error) {
       console.error('[AuthProvider] Erreur loadStoredData:', error);
     } finally {
-      console.log('[AuthProvider] Fin du chargement des données');
+
       setIsLoadingUserData(false);
     }
   };
@@ -223,28 +223,28 @@ export const AuthProvider = ({ children }) => {
 
     // Vérifier le token toutes les 30 minutes
     const checkTokenValidity = async () => {
-        try {
-            const token = await AsyncStorage.getItem('accessToken');
-            if (!token) return;
+      try {
+        const token = await AsyncStorage.getItem('accessToken');
+        if (!token) return;
 
-            // Décoder le token pour vérifier l'expiration
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            const expiresAt = payload.exp * 1000; // Convertir en millisecondes
-            const now = Date.now();
-            const timeUntilExpiry = expiresAt - now;
+        // Décoder le token pour vérifier l'expiration
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const expiresAt = payload.exp * 1000; // Convertir en millisecondes
+        const now = Date.now();
+        const timeUntilExpiry = expiresAt - now;
 
-            // Si le token expire dans moins de 5 minutes, le rafraîchir
-            if (timeUntilExpiry < 5 * 60 * 1000) {
-                console.log('[AuthContext] Token proche de l\'expiration, rafraîchissement...');
-                const instance = getAxiosInstance();
-                if (instance) {
-                    // Forcer un appel API pour déclencher le refresh
-                    await instance.get('/api/users/profile');
-                }
-            }
-        } catch (error) {
-            console.error('[AuthContext] Erreur lors de la vérification du token:', error);
+        // Si le token expire dans moins de 5 minutes, le rafraîchir
+        if (timeUntilExpiry < 5 * 60 * 1000) {
+
+          const instance = getAxiosInstance();
+          if (instance) {
+            // Forcer un appel API pour déclencher le refresh
+            await instance.get('/api/users/profile');
+          }
         }
+      } catch (error) {
+        console.error('[AuthContext] Erreur lors de la vérification du token:', error);
+      }
     };
 
     // Vérifier immédiatement
@@ -254,10 +254,10 @@ export const AuthProvider = ({ children }) => {
     const interval = setInterval(checkTokenValidity, 30 * 60 * 1000);
 
     return () => clearInterval(interval);
-}, [isLoggedIn, userToken]);
+  }, [isLoggedIn, userToken]);
 
   const fetchUserData = async () => {
-    console.log('[AuthProvider] Début fetchUserData');
+
     const instance = getAxiosInstance();
     if (!instance) {
       throw new Error(i18n.t('auth.errors.axiosNotInitialized'));
@@ -289,7 +289,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      console.log('[AuthProvider] Données utilisateur mises à jour avec succès');
+
       return cleanedData;
     } catch (error) {
       console.error('[AuthProvider] Erreur fetchUserData:', error);
@@ -353,7 +353,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
   const updateUserData = async (updatedData, isContactsUpdate = false) => {
-    console.log('[Location] Données de mise à jour:', updatedData);
+
 
     const instance = getAxiosInstance();
     if (!instance) {
@@ -362,7 +362,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const changedFields = {};
-      Object.keys(updatedData).forEach(key => {
+      Object.keys(updatedData).forEach((key) => {
         // Ajouter une condition spécifique pour contacts et location
         if (key === 'contacts' || key === 'location') {
           changedFields[key] = updatedData[key];
@@ -371,7 +371,7 @@ export const AuthProvider = ({ children }) => {
         }
       });
 
-      console.log('[Location] Champs modifiés:', changedFields);
+
 
       if (Object.keys(changedFields).length === 0) {
         return { success: true, message: i18n.t('auth.success.noChangeNeeded') };
@@ -381,7 +381,7 @@ export const AuthProvider = ({ children }) => {
 
       const response = await instance.put('/api/users/profile', changedFields);
 
-      console.log('[Location] Réponse du serveur:', response.data);
+
 
       // Mettre à jour le state local avec toutes les données
       setUserData({ ...userData, ...response.data });
@@ -404,7 +404,7 @@ export const AuthProvider = ({ children }) => {
 
 
   const updateContactsAccess = async (enabled) => {
-    console.log(`[AuthProvider] Début updateContactsAccess avec enabled=${enabled}`);
+
 
     try {
       if (enabled) {
@@ -412,14 +412,14 @@ export const AuthProvider = ({ children }) => {
         const permissionResult = await checkAndRequestContactsPermission();
 
         if (!permissionResult.granted) {
-          console.log('[AuthProvider] Permission non accordée');
+
           return false;
         }
 
         // Tenter de récupérer les contacts pour vérifier l'accès
         try {
           const { data } = await ExpoContacts.getContactsAsync();
-          console.log(`[AuthProvider] ${data.length} contacts récupérés`);
+
 
           // Passer isContactsUpdate=true pour éviter la récursion
           const result = await updateUserData({ contacts: true }, true);
@@ -461,51 +461,51 @@ export const AuthProvider = ({ children }) => {
 
 
   const getContactsWithAppStatus = async () => {
-    console.log('[AuthProvider] Début getContactsWithAppStatus');
+
 
     try {
       // Vérifier d'abord si la permission est accordée au niveau système
       const { status } = await ExpoContacts.getPermissionsAsync();
 
-      console.log(`[AuthProvider] Permission check: ${status}`);
+
 
       const isGranted = status === 'granted';
 
       if (!isGranted) {
-        console.log('[AuthProvider] Permission non accordée, retour sans contacts');
+
         return { contacts: [], hasAppUsers: false };
       }
 
       // Récupérer les contacts du téléphone
       const { data: phoneContacts } = await ExpoContacts.getContactsAsync({
         fields: [
-          ExpoContacts.Fields.ID,
-          ExpoContacts.Fields.Name,
-          ExpoContacts.Fields.FirstName,
-          ExpoContacts.Fields.LastName,
-          ExpoContacts.Fields.PhoneNumbers
-        ]
+        ExpoContacts.Fields.ID,
+        ExpoContacts.Fields.Name,
+        ExpoContacts.Fields.FirstName,
+        ExpoContacts.Fields.LastName,
+        ExpoContacts.Fields.PhoneNumbers]
+
       });
-      console.log(`[AuthProvider] ${phoneContacts.length} contacts récupérés`);
+
 
       if (!phoneContacts || phoneContacts.length === 0) {
         return { contacts: [], hasAppUsers: false };
       }
 
       // Récupérer les numéros de téléphone formatés
-      const phoneNumbers = phoneContacts.flatMap(contact => {
+      const phoneNumbers = phoneContacts.flatMap((contact) => {
         if (!contact.phoneNumbers || contact.phoneNumbers.length === 0) {
           return [];
         }
 
-        return contact.phoneNumbers.map(phone => ({
+        return contact.phoneNumbers.map((phone) => ({
           contactId: contact.id, // Modifié: ExpoContacts utilise id au lieu de recordID
           contactName: contact.name || `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'Sans nom',
           phoneNumber: phone.number.replace(/\D/g, '')
         }));
-      }).filter(entry => entry.phoneNumber && entry.phoneNumber.length > 0);
+      }).filter((entry) => entry.phoneNumber && entry.phoneNumber.length > 0);
 
-      console.log(`[AuthProvider] ${phoneNumbers.length} numéros de téléphone extraits`);
+
 
       if (phoneNumbers.length === 0) {
         return { contacts: [], hasAppUsers: false };
@@ -521,20 +521,20 @@ export const AuthProvider = ({ children }) => {
 
       try {
         const response = await instance.post('/api/users/check-contacts', {
-          phoneNumbers: phoneNumbers.map(p => p.phoneNumber)
+          phoneNumbers: phoneNumbers.map((p) => p.phoneNumber)
         });
 
-        console.log(`[AuthProvider] Réponse API: ${response.data.usersPhoneNumbers?.length || 0} numéros correspondants`);
+
 
         // Associer le statut d'utilisation de l'app à chaque contact
-        const contactsWithStatus = phoneNumbers.map(contact => ({
+        const contactsWithStatus = phoneNumbers.map((contact) => ({
           ...contact,
           hasApp: response.data.usersPhoneNumbers?.includes(contact.phoneNumber) || false
         }));
 
         // Vérifier si au moins un contact utilise l'application
-        const hasAppUsers = contactsWithStatus.some(contact => contact.hasApp);
-        console.log(`[AuthProvider] ${hasAppUsers ? 'Des' : 'Aucun'} contact(s) utilise(nt) l'application`);
+        const hasAppUsers = contactsWithStatus.some((contact) => contact.hasApp);
+
 
         return {
           contacts: contactsWithStatus,
@@ -543,7 +543,7 @@ export const AuthProvider = ({ children }) => {
       } catch (apiError) {
         console.error('[AuthProvider] Erreur API check-contacts:', apiError);
         return {
-          contacts: phoneNumbers.map(contact => ({ ...contact, hasApp: false })),
+          contacts: phoneNumbers.map((contact) => ({ ...contact, hasApp: false })),
           hasAppUsers: false
         };
       }
@@ -553,144 +553,144 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-const login = async (accessToken, refreshToken) => {
-  try {
-    console.log('[AuthProvider] 🚀 Début de la connexion');
-    
-    // Étape 1: Stockez les tokens
-    await AsyncStorage.multiSet([
+  const login = async (accessToken, refreshToken) => {
+    try {
+
+
+      // Étape 1: Stockez les tokens
+      await AsyncStorage.multiSet([
       ['accessToken', accessToken],
-      ['refreshToken', refreshToken]
-    ]);
-    
-    // Étape 2: Mettez à jour l'instance Axios avec le nouveau token
-    const instance = getAxiosInstance();
-    if (instance) {
-      instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-    }
-    
-    // Étape 3: Mettez à jour l'état local
-    setUserToken(accessToken);
-    
-    // Étape 4: Récupérez les données utilisateur
-    let user = null;
-    try {
-      user = await fetchUserData();
-      console.log('[AuthProvider] ✅ Données utilisateur récupérées');
-      
-      // Étape 5: Réinitialiser les notifications pour le nouvel utilisateur
-      if (user && user._id) {
-        try {
-          const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
-          const NotificationService = require('../../presentation/notifications/NotificationService').default;
-          
-          if (NotificationManager && NotificationService) {
-            console.log('[AuthProvider] 🔔 Réinitialisation des notifications pour le nouvel utilisateur');
-            
-            // Utiliser reinitializeForUser pour garantir un token correct
-            const result = await NotificationManager.reinitializeForUser(user);
-            
-            console.log('[AuthProvider] 🔔 Résultat de la réinitialisation:', result);
-            
-            // Stocker l'état
-            await AsyncStorage.setItem('notificationsInitialized', result.success ? 'true' : 'false');
-            setNotificationsInitialized(result.success);
-          }
-        } catch (notifError) {
-          console.error('[AuthProvider] ⚠️ Erreur d\'initialisation des notifications:', notifError);
-          // Ne pas bloquer la connexion si les notifications échouent
-        }
+      ['refreshToken', refreshToken]]
+      );
+
+      // Étape 2: Mettez à jour l'instance Axios avec le nouveau token
+      const instance = getAxiosInstance();
+      if (instance) {
+        instance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
       }
-    } catch (error) {
-      console.error('[AuthProvider] ⚠️ Erreur fetchUserData:', error);
-      
-      // Réessayer après un court délai
-      setTimeout(async () => {
-        try {
-          const secondUser = await fetchUserData();
-          
-          if (secondUser && secondUser._id) {
-            try {
-              const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
-              
-              if (NotificationManager && !notificationsInitialized) {
-                await NotificationManager.reinitializeForUser(secondUser);
-                setNotificationsInitialized(true);
-              }
-            } catch (notifError) {
-              console.error('[AuthProvider] ⚠️ Erreur lors de la seconde tentative:', notifError);
+
+      // Étape 3: Mettez à jour l'état local
+      setUserToken(accessToken);
+
+      // Étape 4: Récupérez les données utilisateur
+      let user = null;
+      try {
+        user = await fetchUserData();
+
+
+        // Étape 5: Réinitialiser les notifications pour le nouvel utilisateur
+        if (user && user._id) {
+          try {
+            const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
+            const NotificationService = require('../../presentation/notifications/NotificationService').default;
+
+            if (NotificationManager && NotificationService) {
+
+
+              // Utiliser reinitializeForUser pour garantir un token correct
+              const result = await NotificationManager.reinitializeForUser(user);
+
+
+
+              // Stocker l'état
+              await AsyncStorage.setItem('notificationsInitialized', result.success ? 'true' : 'false');
+              setNotificationsInitialized(result.success);
             }
+          } catch (notifError) {
+            console.error('[AuthProvider] ⚠️ Erreur d\'initialisation des notifications:', notifError);
+            // Ne pas bloquer la connexion si les notifications échouent
           }
-        } catch (secondError) {
-          console.error('[AuthProvider] ⚠️ Échec de la 2e tentative:', secondError);
         }
-      }, 1000);
-    }
-    
-    // Étape 6: Terminez la connexion
-    setIsLoggedIn(true);
-    
-    console.log('[AuthProvider] ✅ Connexion réussie');
-  } catch (error) {
-    console.error('[AuthProvider] ❌ Erreur lors de la connexion:', error);
-    throw error;
-  }
-};
-const logout = async () => {
-  try {
-    console.log('[AuthProvider] 🚪 Début de la déconnexion');
-    
-    // Nettoyer l'instance Axios
-    const instance = getAxiosInstance();
-    if (instance) {
-      delete instance.defaults.headers.common['Authorization'];
-    }
+      } catch (error) {
+        console.error('[AuthProvider] ⚠️ Erreur fetchUserData:', error);
 
-    // Nettoyer les notifications
-    try {
-      console.log('[AuthProvider] 🔔 Nettoyage des notifications');
-      const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
-      
-      if (NotificationManager) {
-        // Nettoyer complètement le manager
-        await NotificationManager.cleanup();
-        
-        // Annuler toutes les notifications
-        if (NotificationManager.notificationService) {
-          await NotificationManager.notificationService.cancelAllNotifications();
-        }
-        
-        console.log('[AuthProvider] ✅ Notifications nettoyées');
+        // Réessayer après un court délai
+        setTimeout(async () => {
+          try {
+            const secondUser = await fetchUserData();
+
+            if (secondUser && secondUser._id) {
+              try {
+                const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
+
+                if (NotificationManager && !notificationsInitialized) {
+                  await NotificationManager.reinitializeForUser(secondUser);
+                  setNotificationsInitialized(true);
+                }
+              } catch (notifError) {
+                console.error('[AuthProvider] ⚠️ Erreur lors de la seconde tentative:', notifError);
+              }
+            }
+          } catch (secondError) {
+            console.error('[AuthProvider] ⚠️ Échec de la 2e tentative:', secondError);
+          }
+        }, 1000);
       }
-      
-      // Supprimer l'indicateur d'initialisation
-      await AsyncStorage.removeItem('notificationsInitialized');
-      setNotificationsInitialized(false);
-    } catch (notifError) {
-      console.error('[AuthProvider] ⚠️ Erreur lors du nettoyage des notifications:', notifError);
+
+      // Étape 6: Terminez la connexion
+      setIsLoggedIn(true);
+
+
+    } catch (error) {
+      console.error('[AuthProvider] ❌ Erreur lors de la connexion:', error);
+      throw error;
     }
+  };
+  const logout = async () => {
+    try {
 
-    // Suppression des données
-    await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData', 'apnsToken']);
-    
-    if (userData?._id) {
-      await AsyncStorage.removeItem(`pendingSecretData_${userData._id}`);
+
+      // Nettoyer l'instance Axios
+      const instance = getAxiosInstance();
+      if (instance) {
+        delete instance.defaults.headers.common['Authorization'];
+      }
+
+      // Nettoyer les notifications
+      try {
+
+        const NotificationManager = require('../../presentation/notifications/NotificationManager').default;
+
+        if (NotificationManager) {
+          // Nettoyer complètement le manager
+          await NotificationManager.cleanup();
+
+          // Annuler toutes les notifications
+          if (NotificationManager.notificationService) {
+            await NotificationManager.notificationService.cancelAllNotifications();
+          }
+
+
+        }
+
+        // Supprimer l'indicateur d'initialisation
+        await AsyncStorage.removeItem('notificationsInitialized');
+        setNotificationsInitialized(false);
+      } catch (notifError) {
+        console.error('[AuthProvider] ⚠️ Erreur lors du nettoyage des notifications:', notifError);
+      }
+
+      // Suppression des données
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userData', 'apnsToken']);
+
+      if (userData?._id) {
+        await AsyncStorage.removeItem(`pendingSecretData_${userData._id}`);
+      }
+
+      // Mise à jour des états
+      setUserData(null);
+      setIsLoadingUserData(false);
+      setUserToken(null);
+      setIsLoggedIn(false);
+
+
+      return true;
+    } catch (error) {
+      console.error('[AuthProvider] ❌ Erreur lors de la déconnexion:', error);
+      setIsLoadingUserData(false);
+      throw error;
     }
-
-    // Mise à jour des états
-    setUserData(null);
-    setIsLoadingUserData(false);
-    setUserToken(null);
-    setIsLoggedIn(false);
-
-    console.log('[AuthProvider] ✅ Déconnexion réussie');
-    return true;
-  } catch (error) {
-    console.error('[AuthProvider] ❌ Erreur lors de la déconnexion:', error);
-    setIsLoadingUserData(false);
-    throw error;
-  }
-};
+  };
 
   const persistUserData = useCallback(async (data) => {
     try {
@@ -714,47 +714,47 @@ const logout = async () => {
     }
   }, []);
 
-useEffect(() => {
-  if (userData && isLoggedIn && !notificationTestComplete.current) {
-    const testNotificationSetup = async () => {
-      console.warn("[AUTH_TEST] Vérification du système de notifications (exécution unique)");
-      
-      try {
-        console.warn("[AUTH_TEST] Utilisateur connecté, test des notifications");
-        
-        // Importation dynamique
-        const NotificationService = require('../../presentation/notifications/NotificationService').default;
-        
-        if (NotificationService) {
-          // Initialiser d'abord le service
-          await NotificationService.initialize();
-          
-          // CORRECTION: checkPermissions retourne directement un booléen, pas un objet
-          const hasPermission = await NotificationService.checkPermissions();
-          console.warn("[AUTH_TEST] Statut des permissions:", hasPermission);
-          
-          if (!hasPermission) {
-            // Demander les permissions si nécessaire
-            const { granted } = await NotificationService.requestPermissions();
-            console.warn("[AUTH_TEST] Permissions accordées:", granted);
+  useEffect(() => {
+    if (userData && isLoggedIn && !notificationTestComplete.current) {
+      const testNotificationSetup = async () => {
+        console.warn("[AUTH_TEST] Vérification du système de notifications (exécution unique)");
+
+        try {
+          console.warn("[AUTH_TEST] Utilisateur connecté, test des notifications");
+
+          // Importation dynamique
+          const NotificationService = require('../../presentation/notifications/NotificationService').default;
+
+          if (NotificationService) {
+            // Initialiser d'abord le service
+            await NotificationService.initialize();
+
+            // CORRECTION: checkPermissions retourne directement un booléen, pas un objet
+            const hasPermission = await NotificationService.checkPermissions();
+            console.warn("[AUTH_TEST] Statut des permissions:", hasPermission);
+
+            if (!hasPermission) {
+              // Demander les permissions si nécessaire
+              const { granted } = await NotificationService.requestPermissions();
+              console.warn("[AUTH_TEST] Permissions accordées:", granted);
+            }
+
+            // Ne pas envoyer de notification de test automatiquement
+            // Cela évite de spammer l'utilisateur à chaque connexion
+            console.warn("[AUTH_TEST] Système de notifications prêt");
           }
-          
-          // Ne pas envoyer de notification de test automatiquement
-          // Cela évite de spammer l'utilisateur à chaque connexion
-          console.warn("[AUTH_TEST] Système de notifications prêt");
+        } catch (error) {
+          console.warn("[AUTH_TEST] Erreur lors du test:", error);
+        } finally {
+          // Toujours marquer comme terminé
+          notificationTestComplete.current = true;
         }
-      } catch (error) {
-        console.warn("[AUTH_TEST] Erreur lors du test:", error);
-      } finally {
-        // Toujours marquer comme terminé
-        notificationTestComplete.current = true;
-      }
-    };
-    
-    // Délai pour s'assurer que tout est bien initialisé
-    setTimeout(testNotificationSetup, 2000);
-  }
-}, [userData, isLoggedIn]);
+      };
+
+      // Délai pour s'assurer que tout est bien initialisé
+      setTimeout(testNotificationSetup, 2000);
+    }
+  }, [userData, isLoggedIn]);
 
   useEffect(() => {
     loadPersistedUserData();
@@ -784,7 +784,7 @@ useEffect(() => {
 
       const clearedUserData = {
         ...userData,
-        profilePicture: null,
+        profilePicture: null
       };
 
       setUserData(clearedUserData);
@@ -827,12 +827,12 @@ useEffect(() => {
   };
 
   const checkAndRequestContactsPermission = async () => {
-    console.log('[AuthProvider] Vérification et demande de permission contacts');
+
 
     try {
       // Vérifier la permission avec expo-contacts
       const { status: permissionStatus } = await ExpoContacts.getPermissionsAsync();
-      console.log(`[AuthProvider] Permission status: ${permissionStatus}`);
+
 
       if (permissionStatus === 'granted') {
         return { granted: true, needsSettings: false };
@@ -840,7 +840,7 @@ useEffect(() => {
 
       // Si la permission n'est pas accordée, demander via expo-contacts
       const { status: requestStatus } = await ExpoContacts.requestPermissionsAsync();
-      console.log(`[AuthProvider] Request status: ${requestStatus}`);
+
 
       if (requestStatus === 'granted') {
         return { granted: true, needsSettings: false };
@@ -852,19 +852,19 @@ useEffect(() => {
           t('permissions.contactsNeededTitle'),
           t('permissions.contactsNeededMessage'),
           [
-            {
-              text: t('permissions.cancel'),
-              style: "cancel",
-              onPress: () => resolve({ granted: false, needsSettings: false })
-            },
-            {
-              text: t('permissions.openSettings'),
-              onPress: () => {
-                Linking.openSettings();
-                resolve({ granted: false, needsSettings: true });
-              }
+          {
+            text: t('permissions.cancel'),
+            style: "cancel",
+            onPress: () => resolve({ granted: false, needsSettings: false })
+          },
+          {
+            text: t('permissions.openSettings'),
+            onPress: () => {
+              Linking.openSettings();
+              resolve({ granted: false, needsSettings: true });
             }
-          ]
+          }]
+
         );
       });
     } catch (error) {
@@ -947,16 +947,16 @@ useEffect(() => {
       // Ce code ne s'exécute que si la permission est déjà accordée ou vient d'être accordée
       const { data } = await ExpoContacts.getContactsAsync({
         fields: [
-          ExpoContacts.Fields.ID,
-          ExpoContacts.Fields.Name,
-          ExpoContacts.Fields.FirstName,
-          ExpoContacts.Fields.LastName,
-          ExpoContacts.Fields.PhoneNumbers,
-          ExpoContacts.Fields.Emails,
-          ExpoContacts.Fields.Image
-        ]
+        ExpoContacts.Fields.ID,
+        ExpoContacts.Fields.Name,
+        ExpoContacts.Fields.FirstName,
+        ExpoContacts.Fields.LastName,
+        ExpoContacts.Fields.PhoneNumbers,
+        ExpoContacts.Fields.Emails,
+        ExpoContacts.Fields.Image]
+
       });
-      console.log('Contacts:', data);
+
       return data;
     } catch (error) {
       console.error(i18n.t('auth.errors.retrievingContacts'), error);
@@ -970,14 +970,14 @@ useEffect(() => {
       const { data } = await ExpoContacts.getContactsAsync({
         id: contactId,
         fields: [
-          ExpoContacts.Fields.ID,
-          ExpoContacts.Fields.Name,
-          ExpoContacts.Fields.FirstName,
-          ExpoContacts.Fields.LastName,
-          ExpoContacts.Fields.PhoneNumbers,
-          ExpoContacts.Fields.Emails,
-          ExpoContacts.Fields.Image
-        ]
+        ExpoContacts.Fields.ID,
+        ExpoContacts.Fields.Name,
+        ExpoContacts.Fields.FirstName,
+        ExpoContacts.Fields.LastName,
+        ExpoContacts.Fields.PhoneNumbers,
+        ExpoContacts.Fields.Emails,
+        ExpoContacts.Fields.Image]
+
       });
 
       return data[0] || null; // Retourner le premier contact s'il existe
@@ -999,10 +999,10 @@ useEffect(() => {
   };
 
   const requestLocationPermission = async () => {
-    console.log('[Location] Début de demande de permission');
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      console.log(`[Location] Statut de permission: ${status}`);
+
 
       if (status === 'granted') {
         return { granted: true };
@@ -1013,19 +1013,19 @@ useEffect(() => {
             t('permissions.locationNeededTitle'),
             t('permissions.locationNeededMessage'),
             [
-              {
-                text: t('permissions.cancel'),
-                style: "cancel",
-                onPress: () => resolve({ granted: false, needsSettings: false })
-              },
-              {
-                text: t('permissions.openSettings'),
-                onPress: () => {
-                  Linking.openSettings();
-                  resolve({ granted: false, needsSettings: true });
-                }
+            {
+              text: t('permissions.cancel'),
+              style: "cancel",
+              onPress: () => resolve({ granted: false, needsSettings: false })
+            },
+            {
+              text: t('permissions.openSettings'),
+              onPress: () => {
+                Linking.openSettings();
+                resolve({ granted: false, needsSettings: true });
               }
-            ]
+            }]
+
           );
         });
       }
@@ -1064,7 +1064,7 @@ useEffect(() => {
 
       // Obtenir la position
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.Balanced
       });
 
       return {
@@ -1104,17 +1104,17 @@ useEffect(() => {
         checkLocationPermission,
         locationEnabled,
         getCurrentLocation
-      }}
-    >
+      }}>
+
       {children}
       <ContactsPermissionModal
         visible={contactsPermissionModalVisible}
         onClose={handlePermissionModalClose}
         onOpenSettings={handleOpenSettings}
-        onRequestPermission={handleRequestPermission}
-      />
-    </AuthContext.Provider>
-  );
+        onRequestPermission={handleRequestPermission} />
+
+    </AuthContext.Provider>);
+
 };
 
 export default AuthProvider;

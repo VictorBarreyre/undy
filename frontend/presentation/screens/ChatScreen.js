@@ -107,30 +107,30 @@ const ChatScreen = ({ route }) => {
   } = useContentModeration({
     showAlerts: true,
     onViolation: (result) => {
-      console.log('Contenu inapproprié détecté:', result);
+
     }
   });
 
   // ====== 2. TOUTES LES FONCTIONS ======
 
-const getKeyboardOffset = () => {
-  const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
-  const aspectRatio = screenHeight / screenWidth;
-  
-  // Plus l'écran est "allongé", moins on a besoin d'offset
-  // iPhone SE a un ratio ~1.78, iPhone 16 Pro ~2.16
-  
-  if (aspectRatio < 1.8) {
-    // Écrans plus "carrés" (SE, 8)
-    return screenHeight * 0.025;
-  } else if (aspectRatio < 2.0) {
-    // Écrans moyens
-    return screenHeight * 0.07;
-  } else {
-    // Écrans modernes allongés
-    return screenHeight * 0.07;
-  }
-};
+  const getKeyboardOffset = () => {
+    const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
+    const aspectRatio = screenHeight / screenWidth;
+
+    // Plus l'écran est "allongé", moins on a besoin d'offset
+    // iPhone SE a un ratio ~1.78, iPhone 16 Pro ~2.16
+
+    if (aspectRatio < 1.8) {
+      // Écrans plus "carrés" (SE, 8)
+      return screenHeight * 0.025;
+    } else if (aspectRatio < 2.0) {
+      // Écrans moyens
+      return screenHeight * 0.07;
+    } else {
+      // Écrans modernes allongés
+      return screenHeight * 0.07;
+    }
+  };
 
   const getConversationMessages = async (conversationId) => {
     try {
@@ -151,22 +151,22 @@ const getKeyboardOffset = () => {
     if (Platform.OS === 'android') {
       try {
         const grants = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-        ]);
+        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+        PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO]
+        );
 
         return (
           grants['android.permission.WRITE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED &&
           grants['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED &&
-          grants['android.permission.RECORD_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED
-        );
+          grants['android.permission.RECORD_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED);
+
       } catch (err) {
         console.warn(err);
         return false;
       }
-    }
-    else if (Platform.OS === 'ios') {
+    } else
+    if (Platform.OS === 'ios') {
       return isRecordingPermitted;
     }
 
@@ -188,9 +188,9 @@ const getKeyboardOffset = () => {
           "Permission requise",
           "L'application a besoin d'accéder au microphone pour enregistrer des messages vocaux.",
           [
-            { text: "Annuler", style: "cancel" },
-            { text: "Paramètres", onPress: () => Linking.openSettings() }
-          ]
+          { text: "Annuler", style: "cancel" },
+          { text: "Paramètres", onPress: () => Linking.openSettings() }]
+
         );
         return;
       }
@@ -233,7 +233,7 @@ const getKeyboardOffset = () => {
 
     try {
       const filePath = await AudioRecorder.stopRecording();
-      console.log('Enregistrement terminé à:', filePath);
+
 
       setIsRecording(false);
       setAudioPath(filePath);
@@ -256,7 +256,7 @@ const getKeyboardOffset = () => {
 
       const sound = new Sound(audioPath, '', (error) => {
         if (error) {
-          console.log('Erreur lors du chargement du son', error);
+
           return;
         }
 
@@ -265,11 +265,11 @@ const getKeyboardOffset = () => {
 
         sound.play((success) => {
           if (success) {
-            console.log('Lecture terminée avec succès');
+
             setIsPlaying(false);
             setPlayTime('00:00');
           } else {
-            console.log('Lecture terminée avec erreur');
+
           }
         });
 
@@ -321,25 +321,25 @@ const getKeyboardOffset = () => {
         throw new Error('URI audio non défini');
       }
 
-      console.log('Upload audio base64 - URI:', audioUri);
+
 
       const fileExists = await RNFS.exists(audioUri);
-      console.log('Le fichier audio existe:', fileExists);
+
 
       if (!fileExists) {
         throw new Error('Le fichier audio n\'existe pas');
       }
 
       const fileInfo = await RNFS.stat(audioUri);
-      console.log('Informations du fichier:', {
-        size: fileInfo.size,
-        path: fileInfo.path,
-        isFile: fileInfo.isFile()
-      });
 
-      console.log('Lecture du fichier audio en base64...');
+
+
+
+
+
+
       const base64Audio = await RNFS.readFile(audioUri, 'base64');
-      console.log('Fichier audio converti en base64, longueur:', base64Audio.length);
+
 
       const audioDataUri = `data:audio/aac;base64,${base64Audio}`;
 
@@ -351,7 +351,7 @@ const getKeyboardOffset = () => {
         duration: audioLength || "00:00"
       };
 
-      console.log('Envoi de la requête upload audio base64...');
+
 
       const response = await instance.post('/api/upload/audio', requestData, {
         headers: {
@@ -361,14 +361,14 @@ const getKeyboardOffset = () => {
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
+              progressEvent.loaded * 100 / progressEvent.total
             );
-            console.log(`Upload progress: ${percentCompleted}%`);
+
             if (progressCallback) progressCallback(percentCompleted);
           } else {
             uploadedSize = progressEvent.loaded;
             const estimatedPercent = Math.min(
-              Math.round((uploadedSize / totalSize) * 100),
+              Math.round(uploadedSize / totalSize * 100),
               99
             );
             if (progressCallback) progressCallback(estimatedPercent);
@@ -377,11 +377,11 @@ const getKeyboardOffset = () => {
         timeout: 60000
       });
 
-      console.log('Réponse upload audio:', response.data);
+
 
       try {
         await RNFS.unlink(audioUri);
-        console.log('Fichier audio temporaire supprimé');
+
       } catch (cleanupError) {
         console.warn('Impossible de supprimer le fichier temporaire:', cleanupError);
       }
@@ -416,10 +416,10 @@ const getKeyboardOffset = () => {
 
   const handleReplyToMessage = useCallback((message) => {
     const animateMessage = (messageId) => {
-      const messageIndex = messages.findIndex(msg => msg.id === messageId);
+      const messageIndex = messages.findIndex((msg) => msg.id === messageId);
       if (messageIndex === -1) return;
 
-      setMessages(prevMessages => {
+      setMessages((prevMessages) => {
         const newMessages = [...prevMessages];
         if (newMessages[messageIndex]) {
           newMessages[messageIndex] = {
@@ -431,7 +431,7 @@ const getKeyboardOffset = () => {
       });
 
       setTimeout(() => {
-        setMessages(prevMessages => {
+        setMessages((prevMessages) => {
           const newMessages = [...prevMessages];
           if (newMessages[messageIndex]) {
             newMessages[messageIndex] = {
@@ -467,17 +467,17 @@ const getKeyboardOffset = () => {
 
       setIsSharing(true);
       Animated.sequence([
-        Animated.timing(shareButtonScale, {
-          toValue: 0.8,
-          duration: 100,
-          useNativeDriver: true
-        }),
-        Animated.timing(shareButtonScale, {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: true
-        })
-      ]).start();
+      Animated.timing(shareButtonScale, {
+        toValue: 0.8,
+        duration: 100,
+        useNativeDriver: true
+      }),
+      Animated.timing(shareButtonScale, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true
+      })]
+      ).start();
 
       const secretToShare = {
         _id: secretData._id || conversation?.secret?._id,
@@ -512,13 +512,13 @@ const getKeyboardOffset = () => {
       const manipResult = await ImageManipulator.manipulate(
         imageUri,
         [
-          {
-            resize: {
-              width: MAX_WIDTH,
-              height: MAX_HEIGHT,
-            },
-          },
-        ],
+        {
+          resize: {
+            width: MAX_WIDTH,
+            height: MAX_HEIGHT
+          }
+        }],
+
         { compress: 0.7, format: 'jpeg' }
       );
 
@@ -570,12 +570,12 @@ const getKeyboardOffset = () => {
       scrollSaveTimeout.current = setTimeout(() => {
         saveScrollPosition(currentPosition);
 
-        const isBottomReached = (layoutMeasurement.height + currentPosition) >= (contentSize.height - 20);
+        const isBottomReached = layoutMeasurement.height + currentPosition >= contentSize.height - 20;
 
-        const areUnreadMessagesVisible = (
-          unreadState.count > 0 &&
-          layoutMeasurement.height + contentOffset.y >= contentSize.height - (unreadState.count * 50)
-        );
+        const areUnreadMessagesVisible =
+        unreadState.count > 0 &&
+        layoutMeasurement.height + contentOffset.y >= contentSize.height - unreadState.count * 50;
+
 
         if (isBottomReached || areUnreadMessagesVisible) {
           markConversationAsRead(conversationId, userToken);
@@ -666,10 +666,10 @@ const getKeyboardOffset = () => {
         video: selectedVideo ? selectedVideo.uri : null,
         messageType: messageType,
         onModerationComplete: (result) => {
-          console.log('Modération terminée pour message:', result);
+
 
           if (result.status === 'flagged') {
-            setMessages(prev => prev.filter(msg => msg.id !== result.messageId));
+            setMessages((prev) => prev.filter((msg) => msg.id !== result.messageId));
 
             Alert.alert(
               "Message supprimé",
@@ -682,11 +682,11 @@ const getKeyboardOffset = () => {
       const moderationResult = await checkMessage(messageToCheck);
 
       if (!moderationResult.isValid) {
-        console.log('Message bloqué par la modération:', moderationResult.reason);
+
         return;
       }
 
-      setMessages(prev => [...prev, {
+      setMessages((prev) => [...prev, {
         id: tempId,
         text: messageText || undefined,
         messageType: messageType,
@@ -765,10 +765,10 @@ const getKeyboardOffset = () => {
         } catch (uploadError) {
           console.error(t('chat.errors.imageUpload'), uploadError);
 
-          setMessages(prev => prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, sendFailed: true, isSending: false }
-              : msg
+          setMessages((prev) => prev.map((msg) =>
+          msg.id === tempId ?
+          { ...msg, sendFailed: true, isSending: false } :
+          msg
           ));
 
           throw new Error(t('chat.errors.imageUploadFailed'));
@@ -783,13 +783,13 @@ const getKeyboardOffset = () => {
         setUploadProgress(0);
 
         try {
-          console.log('🎤 Début upload audio...');
+
           const audioResult = await uploadAudio(audioToUpload, (progress) => {
             setUploadProgress(progress);
-            console.log('Progress:', progress + '%');
+
           });
 
-          console.log('✅ Upload audio réussi:', audioResult);
+
 
           const audioMessageContent = {
             messageType: 'audio',
@@ -804,19 +804,19 @@ const getKeyboardOffset = () => {
 
           const newMessage = await handleAddMessage(conversationId, audioMessageContent);
 
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id === tempId
-                ? {
-                  ...msg,
-                  id: newMessage._id,
-                  audio: audioResult.url,
-                  audioDuration: audioResult.duration || audioLength,
-                  isSending: false,
-                  isPendingModeration: false
-                }
-                : msg
-            )
+          setMessages((prev) =>
+          prev.map((msg) =>
+          msg.id === tempId ?
+          {
+            ...msg,
+            id: newMessage._id,
+            audio: audioResult.url,
+            audioDuration: audioResult.duration || audioLength,
+            isSending: false,
+            isPendingModeration: false
+          } :
+          msg
+          )
           );
 
         } catch (error) {
@@ -831,10 +831,10 @@ const getKeyboardOffset = () => {
 
           Alert.alert("Erreur", errorMessage);
 
-          setMessages(prev => prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, sendFailed: true, isSending: false }
-              : msg
+          setMessages((prev) => prev.map((msg) =>
+          msg.id === tempId ?
+          { ...msg, sendFailed: true, isSending: false } :
+          msg
           ));
 
           throw error;
@@ -852,14 +852,14 @@ const getKeyboardOffset = () => {
         setUploadProgress(0);
 
         try {
-          console.log('📹 Début upload vidéo...');
+
 
           const videoResult = await uploadVideo(videoToUpload, (progress) => {
             setUploadProgress(progress);
-            console.log('Progress vidéo:', progress + '%');
+
           });
 
-          console.log('✅ Upload vidéo réussi:', videoResult);
+
 
           const videoMessageContent = {
             messageType: 'video',
@@ -876,21 +876,21 @@ const getKeyboardOffset = () => {
 
           const newMessage = await handleAddMessage(conversationId, videoMessageContent);
 
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id === tempId
-                ? {
-                  ...msg,
-                  id: newMessage._id,
-                  video: videoResult.url,
-                  videoUrl: videoResult.url,
-                  thumbnailUrl: videoResult.thumbnailUrl,
-                  duration: videoResult.duration,
-                  isSending: false,
-                  isPendingModeration: false
-                }
-                : msg
-            )
+          setMessages((prev) =>
+          prev.map((msg) =>
+          msg.id === tempId ?
+          {
+            ...msg,
+            id: newMessage._id,
+            video: videoResult.url,
+            videoUrl: videoResult.url,
+            thumbnailUrl: videoResult.thumbnailUrl,
+            duration: videoResult.duration,
+            isSending: false,
+            isPendingModeration: false
+          } :
+          msg
+          )
           );
 
         } catch (error) {
@@ -905,10 +905,10 @@ const getKeyboardOffset = () => {
 
           Alert.alert("Erreur", errorMessage);
 
-          setMessages(prev => prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, sendFailed: true, isSending: false }
-              : msg
+          setMessages((prev) => prev.map((msg) =>
+          msg.id === tempId ?
+          { ...msg, sendFailed: true, isSending: false } :
+          msg
           ));
 
           throw error;
@@ -924,7 +924,7 @@ const getKeyboardOffset = () => {
         const newMessage = await handleAddMessage(conversationId, messageContent);
 
         if (moderationResult.status === 'pending' && moderationResult.workflowId) {
-          setMessagesAwaitingModeration(prev => ({
+          setMessagesAwaitingModeration((prev) => ({
             ...prev,
             [tempId]: {
               realId: newMessage._id,
@@ -933,28 +933,28 @@ const getKeyboardOffset = () => {
           }));
         }
 
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === tempId
-              ? {
-                ...msg,
-                id: newMessage._id,
-                image: messageContent.image || undefined,
-                isSending: false,
-                isPendingModeration: moderationResult.status === 'pending'
-              }
-              : msg
-          )
+        setMessages((prev) =>
+        prev.map((msg) =>
+        msg.id === tempId ?
+        {
+          ...msg,
+          id: newMessage._id,
+          image: messageContent.image || undefined,
+          isSending: false,
+          isPendingModeration: moderationResult.status === 'pending'
+        } :
+        msg
+        )
         );
       } catch (error) {
         console.error(t('chat.errors.sendMessage'), error);
 
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === tempId
-              ? { ...msg, sendFailed: true, isSending: false }
-              : msg
-          )
+        setMessages((prev) =>
+        prev.map((msg) =>
+        msg.id === tempId ?
+        { ...msg, sendFailed: true, isSending: false } :
+        msg
+        )
         );
 
         throw error;
@@ -982,19 +982,19 @@ const getKeyboardOffset = () => {
 
       const actionSheetOptions = {
         options: [
-          t('chat.documentOptions.takePhoto'),
-          t('chat.documentOptions.recordVideo'),
-          t('chat.documentOptions.chooseFromGallery'),
-          t('chat.documentOptions.cancel')
-        ],
-        cancelButtonIndex: 3,
+        t('chat.documentOptions.takePhoto'),
+        t('chat.documentOptions.recordVideo'),
+        t('chat.documentOptions.chooseFromGallery'),
+        t('chat.documentOptions.cancel')],
+
+        cancelButtonIndex: 3
       };
 
       if (Platform.OS === 'ios') {
         ActionSheetIOS.showActionSheetWithOptions(
           {
             options: actionSheetOptions.options,
-            cancelButtonIndex: actionSheetOptions.cancelButtonIndex,
+            cancelButtonIndex: actionSheetOptions.cancelButtonIndex
           },
           async (buttonIndex) => {
             switch (buttonIndex) {
@@ -1028,33 +1028,33 @@ const getKeyboardOffset = () => {
           t('chat.selectMediaType'),
           '',
           [
-            {
-              text: t('chat.photo'), onPress: async () => {
-                const result = await launchCamera({ ...options, mediaType: 'photo' });
-                handleImageResult(result);
-              }
-            },
-            {
-              text: t('chat.video'), onPress: async () => {
-                const result = await launchCamera({ ...options, mediaType: 'video' });
-                handleVideoResult(result);
-              }
-            },
-            {
-              text: t('chat.gallery'), onPress: async () => {
-                const result = await launchImageLibrary(options);
-                if (result.assets && result.assets[0]) {
-                  const asset = result.assets[0];
-                  if (asset.type?.startsWith('video')) {
-                    handleVideoResult(result);
-                  } else {
-                    handleImageResult(result);
-                  }
+          {
+            text: t('chat.photo'), onPress: async () => {
+              const result = await launchCamera({ ...options, mediaType: 'photo' });
+              handleImageResult(result);
+            }
+          },
+          {
+            text: t('chat.video'), onPress: async () => {
+              const result = await launchCamera({ ...options, mediaType: 'video' });
+              handleVideoResult(result);
+            }
+          },
+          {
+            text: t('chat.gallery'), onPress: async () => {
+              const result = await launchImageLibrary(options);
+              if (result.assets && result.assets[0]) {
+                const asset = result.assets[0];
+                if (asset.type?.startsWith('video')) {
+                  handleVideoResult(result);
+                } else {
+                  handleImageResult(result);
                 }
               }
-            },
-            { text: t('chat.cancel'), style: 'cancel' }
-          ]
+            }
+          },
+          { text: t('chat.cancel'), style: 'cancel' }]
+
         );
       }
     } catch (error) {
@@ -1160,8 +1160,8 @@ const getKeyboardOffset = () => {
       prevProps.item.audio === nextProps.item.audio &&
       prevProps.item.video === nextProps.item.video &&
       prevProps.item.audioDuration === nextProps.item.audioDuration &&
-      prevProps.item.messageType === nextProps.item.messageType
-    );
+      prevProps.item.messageType === nextProps.item.messageType);
+
   });
 
   const renderMessage = useCallback(({ item, index }) => {
@@ -1173,9 +1173,9 @@ const getKeyboardOffset = () => {
         messages={messages}
         userData={userData}
         showTimestamps={showTimestamps}
-        onReplyToMessage={handleReplyToMessage}
-      />
-    );
+        onReplyToMessage={handleReplyToMessage} />);
+
+
   }, [messages, userData, showTimestamps]);
 
   // ====== 3. TOUS LES useEffect ======
@@ -1186,7 +1186,7 @@ const getKeyboardOffset = () => {
       if (Platform.OS === 'ios') {
         try {
           AudioRecorder.requestAuthorization().then((isAuthorized) => {
-            console.log('Autorisation audio:', isAuthorized);
+
             setIsRecordingPermitted(isAuthorized);
           });
         } catch (error) {
@@ -1218,14 +1218,14 @@ const getKeyboardOffset = () => {
   // useEffect pour charger les messages
   useEffect(() => {
     const loadMessagesIfNeeded = async () => {
-      console.log('[ChatScreen] 🔍 Vérification du chargement des messages...');
-      console.log('[ChatScreen] 📊 État actuel:', {
-        hasConversationId: !!conversationId,
-        hasConversation: !!conversation,
-        hasMessages: !!conversation?.messages,
-        messageCount: conversation?.messages?.length || 0,
-        conversationFromParams: !!route.params?.conversation
-      });
+
+
+
+
+
+
+
+
 
       if (!conversationId) {
         console.error('[ChatScreen] ❌ Pas de conversationId fourni');
@@ -1233,25 +1233,25 @@ const getKeyboardOffset = () => {
       }
 
       if (conversation?.messages && conversation.messages.length > 0) {
-        console.log('[ChatScreen] ✅ Messages déjà présents:', conversation.messages.length);
+
         return;
       }
 
-      console.log('[ChatScreen] 🔄 Chargement des messages nécessaire...');
+
       setIsLoadingMessages(true);
 
       try {
-        console.log('[ChatScreen] 📞 Appel getConversationMessages...');
+
         const messagesData = await getConversationMessages(conversationId);
-        console.log('[ChatScreen] 📦 Messages récupérés:', {
-          count: messagesData?.messages?.length || 0,
-          conversationId: messagesData?.conversationId
-        });
+
+
+
+
 
         let fullConversation = conversation;
 
         if (!fullConversation || !fullConversation.secret) {
-          console.log('[ChatScreen] 🔄 Récupération des détails de la conversation...');
+
           try {
             const instance = getAxiosInstance();
 
@@ -1259,7 +1259,7 @@ const getKeyboardOffset = () => {
               const response = await instance.get(`/api/secrets/conversations/${conversationId}`);
               if (response.data) {
                 fullConversation = response.data;
-                console.log('[ChatScreen] ✅ Conversation complète récupérée');
+
               }
             }
           } catch (error) {
@@ -1272,7 +1272,7 @@ const getKeyboardOffset = () => {
           messages: messagesData?.messages || []
         };
 
-        console.log('[ChatScreen] 📋 Mise à jour des paramètres de navigation...');
+
         navigation.setParams({
           conversation: updatedConversation,
           secretData: secretData || (fullConversation?.secret ? {
@@ -1284,7 +1284,7 @@ const getKeyboardOffset = () => {
           } : null)
         });
 
-        console.log('[ChatScreen] ✅ Messages chargés avec succès:', messagesData?.messages?.length || 0);
+
 
       } catch (error) {
         console.error('[ChatScreen] ❌ Erreur chargement messages:', error);
@@ -1292,9 +1292,9 @@ const getKeyboardOffset = () => {
           "Erreur",
           "Impossible de charger les messages de cette conversation. Veuillez réessayer.",
           [
-            { text: "Retour", onPress: () => navigation.goBack() },
-            { text: "Réessayer", onPress: () => loadMessagesIfNeeded() }
-          ]
+          { text: "Retour", onPress: () => navigation.goBack() },
+          { text: "Réessayer", onPress: () => loadMessagesIfNeeded() }]
+
         );
       } finally {
         setIsLoadingMessages(false);
@@ -1309,13 +1309,13 @@ const getKeyboardOffset = () => {
   }, [conversationId, conversation?.messages?.length, navigation]);
 
   useEffect(() => {
-    console.log('[ChatScreen] 🔄 Paramètres de navigation mis à jour');
-    console.log('[ChatScreen] 📊 Nouvelles données:', {
-      conversationId: route.params?.conversationId,
-      hasConversation: !!route.params?.conversation,
-      hasSecretData: !!route.params?.secretData,
-      messageCount: route.params?.conversation?.messages?.length || 0
-    });
+
+
+
+
+
+
+
   }, [route.params]);
 
   useEffect(() => {
@@ -1333,8 +1333,8 @@ const getKeyboardOffset = () => {
 
     if (typeof conversation.unreadCount === 'number') {
       currentUnreadCount = conversation.unreadCount;
-    }
-    else if (conversation.unreadCount && userData?._id) {
+    } else
+    if (conversation.unreadCount && userData?._id) {
       if (conversation.unreadCount instanceof Map) {
         currentUnreadCount = conversation.unreadCount.get(userIdStr) || 0;
       } else if (typeof conversation.unreadCount === 'object') {
@@ -1342,7 +1342,7 @@ const getKeyboardOffset = () => {
       }
     }
 
-    setUnreadState(prev => ({
+    setUnreadState((prev) => ({
       count: currentUnreadCount,
       hasScrolledToBottom: currentUnreadCount === 0,
       showButton: currentUnreadCount > 0
@@ -1365,7 +1365,7 @@ const getKeyboardOffset = () => {
           if (response.data) {
             const updatedConversation = {
               ...response.data,
-              unreadCount: response.data.unreadCount || (conversation && conversation.unreadCount) || 0
+              unreadCount: response.data.unreadCount || conversation && conversation.unreadCount || 0
             };
 
             navigation.setParams({
@@ -1400,18 +1400,18 @@ const getKeyboardOffset = () => {
   }, []);
 
   useEffect(() => {
-    const keyboardDidShowListener = Platform.OS === 'ios'
-      ? RN.Keyboard.addListener('keyboardWillShow', (e) => {
-        const offset = e.endCoordinates.height;
-        setKeyboardOffset(offset);
-      })
-      : null;
+    const keyboardDidShowListener = Platform.OS === 'ios' ?
+    RN.Keyboard.addListener('keyboardWillShow', (e) => {
+      const offset = e.endCoordinates.height;
+      setKeyboardOffset(offset);
+    }) :
+    null;
 
-    const keyboardDidHideListener = Platform.OS === 'ios'
-      ? RN.Keyboard.addListener('keyboardWillHide', () => {
-        setKeyboardOffset(95);
-      })
-      : null;
+    const keyboardDidHideListener = Platform.OS === 'ios' ?
+    RN.Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardOffset(95);
+    }) :
+    null;
 
     return () => {
       if (keyboardDidShowListener) {
@@ -1428,7 +1428,7 @@ const getKeyboardOffset = () => {
     if (!conversation?.messages || !userData) return;
 
     const userMapping = {};
-    conversation.participants?.forEach(participant => {
+    conversation.participants?.forEach((participant) => {
       userMapping[participant._id] = {
         name: participant.name,
         profilePicture: participant.profilePicture
@@ -1439,7 +1439,7 @@ const getKeyboardOffset = () => {
     let lastMessageDate = null;
 
     const sortedMessages = [...conversation.messages].sort((a, b) =>
-      new Date(a.createdAt) - new Date(b.createdAt)
+    new Date(a.createdAt) - new Date(b.createdAt)
     );
 
     sortedMessages.forEach((msg, index) => {
@@ -1450,10 +1450,10 @@ const getKeyboardOffset = () => {
 
       const currentMessageDate = new Date(msg.createdAt);
       const isCurrentUser =
-        (msg.sender && typeof msg.sender === 'object' ? msg.sender._id : msg.sender) === userData._id;
+      (msg.sender && typeof msg.sender === 'object' ? msg.sender._id : msg.sender) === userData._id;
 
       if (!lastMessageDate ||
-        currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
+      currentMessageDate.toDateString() !== lastMessageDate.toDateString()) {
         formattedMessages.push({
           id: `separator-${index}`,
           type: 'separator',
@@ -1466,9 +1466,9 @@ const getKeyboardOffset = () => {
 
       const formattedMessage = {
         id: msg._id || `msg-${index}`,
-        text: (msg.messageType === 'image' || msg.messageType === 'audio' || msg.messageType === 'video') && !msg.content?.trim()
-          ? undefined
-          : msg.content,
+        text: (msg.messageType === 'image' || msg.messageType === 'audio' || msg.messageType === 'video') && !msg.content?.trim() ?
+        undefined :
+        msg.content,
         sender: isCurrentUser ? 'user' : 'other',
         timestamp: msg.createdAt,
         formattedTime: dateFormatter.formatTimeOnly(msg.createdAt),
@@ -1486,11 +1486,11 @@ const getKeyboardOffset = () => {
         formattedMessage.audio = msg.audio;
         formattedMessage.audioDuration = msg.audioDuration || '00:00';
 
-        console.log("Message audio formaté:", {
-          id: formattedMessage.id,
-          audio: formattedMessage.audio,
-          audioDuration: formattedMessage.audioDuration
-        });
+
+
+
+
+
       }
 
       if (msg.messageType === 'video') {
@@ -1499,11 +1499,11 @@ const getKeyboardOffset = () => {
         formattedMessage.thumbnailUrl = msg.thumbnailUrl;
         formattedMessage.duration = msg.duration || 0;
 
-        console.log("Message vidéo formaté:", {
-          id: formattedMessage.id,
-          video: formattedMessage.video,
-          duration: formattedMessage.duration
-        });
+
+
+
+
+
       }
 
       formattedMessages.push(formattedMessage);
@@ -1555,14 +1555,14 @@ const getKeyboardOffset = () => {
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? getKeyboardOffset() : 0}
-        >
+          keyboardVerticalOffset={Platform.OS === 'ios' ? getKeyboardOffset() : 0}>
+
           {/* En-tête avec informations de conversation */}
           <HStack
             alignItems="center"
             space={3}
-            p={4}
-          >
+            p={4}>
+
             <TouchableOpacity onPress={() => navigation.navigate('Conversations')}>
               <FontAwesomeIcon icon={faChevronLeft} size={20} color="#000" />
             </TouchableOpacity>
@@ -1570,14 +1570,14 @@ const getKeyboardOffset = () => {
             <HStack flex={1} alignItems="center" space={5}>
               <Image
                 source={
-                  secretData?.user?.profilePicture
-                    ? { uri: secretData.user.profilePicture }
-                    : require('../../assets/images/default.png')
+                secretData?.user?.profilePicture ?
+                { uri: secretData.user.profilePicture } :
+                require('../../assets/images/default.png')
                 }
                 alt={t('chat.profilePicture')}
                 size={12}
-                rounded="full"
-              />
+                rounded="full" />
+
               <VStack space={1} flex={1}>
                 <HStack justifyContent="space-between" alignItems="center">
                   <Text style={styles.h5}>
@@ -1611,7 +1611,7 @@ const getKeyboardOffset = () => {
               ref={flatListRef}
               data={messages}
               renderItem={renderMessage}
-              keyExtractor={item => item?.id?.toString() || Math.random().toString()}
+              keyExtractor={(item) => item?.id?.toString() || Math.random().toString()}
               windowSize={7}
               removeClippedSubviews={true}
               maxToRenderPerBatch={5}
@@ -1621,18 +1621,18 @@ const getKeyboardOffset = () => {
               scrollEventThrottle={16}
               maintainVisibleContentPosition={{
                 minIndexForVisible: 0,
-                autoscrollToTopThreshold: 10,
+                autoscrollToTopThreshold: 10
               }}
               bounces={false}
-              ListEmptyComponent={() => (
-                <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
+              ListEmptyComponent={() =>
+              <VStack flex={1} justifyContent="center" alignItems="center" p={4}>
                   <Text style={styles.caption} textAlign="center" color="#94A3B8" mt={2}>
                     {t('chat.sayHelloToStart')}
                   </Text>
                 </VStack>
-              )}
-              onLayout={onFlatListLayout}
-            />
+              }
+              onLayout={onFlatListLayout} />
+
           </Box>
 
           {/* Zone d'input avec hauteur fixe */}
@@ -1640,115 +1640,115 @@ const getKeyboardOffset = () => {
             style={{
               padding: 10,
               backgroundColor: 'white',
-              borderTopLeftRadius: (selectedImage || selectedVideo) ? 25 : 0,
-              borderTopRightRadius: (selectedImage || selectedVideo) ? 25 : 0,
-            }}
-          >
-            {replyToMessage && (
-              <ReplyBanner
-                replyToMessage={replyToMessage}
-                onCancelReply={handleCancelReply}
-              />
-            )}
+              borderTopLeftRadius: selectedImage || selectedVideo ? 25 : 0,
+              borderTopRightRadius: selectedImage || selectedVideo ? 25 : 0
+            }}>
+
+            {replyToMessage &&
+            <ReplyBanner
+              replyToMessage={replyToMessage}
+              onCancelReply={handleCancelReply} />
+
+            }
 
             {/* Affichage de l'image sélectionnée */}
-            {selectedImage && (
-              <View
-                style={{
-                  marginBottom: 10,
-                  borderRadius: 15,
-                  overflow: 'hidden',
-                  position: 'relative',
-                  backgroundColor: 'transparent',
-                }}
-              >
-                <Image
-                  alt={t('chat.selectedImage')}
-                  source={{ uri: selectedImage.uri }}
-                  style={{
-                    height: 200,
-                    borderRadius: 15,
-                  }}
-                  resizeMode="cover"
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedImage(null);
-                    updateInputAreaHeight(false);
-                  }}
-                  style={{
-                    position: 'absolute',
-                    top: 10,
-                    right: 10,
-                    backgroundColor: '#94A3B833',
-                    borderRadius: 15,
-                    width: 30,
-                    height: 30,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  <FontAwesomeIcon icon={faTimes} size={16} color="white" />
-                </TouchableOpacity>
-              </View>
-            )}
+            {selectedImage &&
+            <View
+              style={{
+                marginBottom: 10,
+                borderRadius: 15,
+                overflow: 'hidden',
+                position: 'relative',
+                backgroundColor: 'transparent'
+              }}>
 
-            {/* AJOUT: Affichage de la vidéo sélectionnée */}
-            {selectedVideo && (
-              <View
+                <Image
+                alt={t('chat.selectedImage')}
+                source={{ uri: selectedImage.uri }}
                 style={{
-                  marginBottom: 10,
-                  borderRadius: 15,
-                  overflow: 'hidden',
-                  position: 'relative',
-                  backgroundColor: '#000',
                   height: 200,
-                  justifyContent: 'center',
-                  alignItems: 'center'
+                  borderRadius: 15
                 }}
-              >
-                {/* Placeholder pour la vidéo */}
-                <View style={{
+                resizeMode="cover" />
+
+                <TouchableOpacity
+                onPress={() => {
+                  setSelectedImage(null);
+                  updateInputAreaHeight(false);
+                }}
+                style={{
                   position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  backgroundColor: '#000',
+                  top: 10,
+                  right: 10,
+                  backgroundColor: '#94A3B833',
+                  borderRadius: 15,
+                  width: 30,
+                  height: 30,
                   justifyContent: 'center',
                   alignItems: 'center'
                 }}>
+
+                  <FontAwesomeIcon icon={faTimes} size={16} color="white" />
+                </TouchableOpacity>
+              </View>
+            }
+
+            {/* AJOUT: Affichage de la vidéo sélectionnée */}
+            {selectedVideo &&
+            <View
+              style={{
+                marginBottom: 10,
+                borderRadius: 15,
+                overflow: 'hidden',
+                position: 'relative',
+                backgroundColor: '#000',
+                height: 200,
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+
+                {/* Placeholder pour la vidéo */}
+                <View style={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: '#000',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
                   <FontAwesomeIcon icon={faPlay} size={50} color="white" style={{ opacity: 0.7 }} />
                   <Text style={{ color: 'white', marginTop: 10 }}>
                     {selectedVideo.fileName || 'video.mp4'}
                   </Text>
-                  {selectedVideo.duration && (
-                    <Text style={{ color: 'white', fontSize: 12, marginTop: 5 }}>
+                  {selectedVideo.duration &&
+                <Text style={{ color: 'white', fontSize: 12, marginTop: 5 }}>
                       {Math.floor(selectedVideo.duration)}s
                     </Text>
-                  )}
+                }
                 </View>
 
                 {/* Bouton de suppression */}
                 <TouchableOpacity
-                  onPress={() => {
-                    setSelectedVideo(null);
-                    updateInputAreaHeight(false);
-                  }}
-                  style={{
-                    position: 'absolute',
-                    top: 10,
-                    right: 10,
-                    backgroundColor: '#94A3B833',
-                    borderRadius: 15,
-                    width: 30,
-                    height: 30,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
+                onPress={() => {
+                  setSelectedVideo(null);
+                  updateInputAreaHeight(false);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: 10,
+                  right: 10,
+                  backgroundColor: '#94A3B833',
+                  borderRadius: 15,
+                  width: 30,
+                  height: 30,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}>
+
                   <FontAwesomeIcon icon={faTimes} size={16} color="white" />
                 </TouchableOpacity>
               </View>
-            )}
+            }
 
             {/* Champ de saisie et boutons */}
             <HStack space={2} alignItems="center">
@@ -1761,20 +1761,20 @@ const getKeyboardOffset = () => {
                   borderRadius: 18,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  overflow: 'hidden',
-                }}
-              >
+                  overflow: 'hidden'
+                }}>
+
                 <MaskedView
                   maskElement={
-                    <View style={{ backgroundColor: 'transparent' }}>
+                  <View style={{ backgroundColor: 'transparent' }}>
                       <FontAwesomeIcon
-                        icon={faPlus}
-                        color="white"
-                        size={22}
-                      />
+                      icon={faPlus}
+                      color="white"
+                      size={22} />
+
                     </View>
-                  }
-                >
+                  }>
+
                   <LinearGradient
                     colors={['#FF587E', '#CC4B8D']}
                     start={{ x: 0, y: 0 }}
@@ -1783,9 +1783,9 @@ const getKeyboardOffset = () => {
                       width: 22,
                       height: 22,
                       justifyContent: 'center',
-                      alignItems: 'center',
-                    }}
-                  />
+                      alignItems: 'center'
+                    }} />
+
                 </MaskedView>
               </TouchableOpacity>
 
@@ -1798,20 +1798,20 @@ const getKeyboardOffset = () => {
                   borderRadius: 18,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  overflow: 'hidden',
-                }}
-              >
+                  overflow: 'hidden'
+                }}>
+
                 <MaskedView
                   maskElement={
-                    <View style={{ backgroundColor: 'transparent' }}>
+                  <View style={{ backgroundColor: 'transparent' }}>
                       <FontAwesomeIcon
-                        icon={isRecording ? faStop : faMicrophone}
-                        color="white"
-                        size={22}
-                      />
+                      icon={isRecording ? faStop : faMicrophone}
+                      color="white"
+                      size={22} />
+
                     </View>
-                  }
-                >
+                  }>
+
                   <LinearGradient
                     colors={isRecording ? ['#FF0000', '#CC0000'] : ['#FF587E', '#CC4B8D']}
                     start={{ x: 0, y: 0 }}
@@ -1820,9 +1820,9 @@ const getKeyboardOffset = () => {
                       width: 22,
                       height: 22,
                       justifyContent: 'center',
-                      alignItems: 'center',
-                    }}
-                  />
+                      alignItems: 'center'
+                    }} />
+
                 </MaskedView>
               </TouchableOpacity>
 
@@ -1830,104 +1830,104 @@ const getKeyboardOffset = () => {
               <Box
                 flex={1}
                 borderWidth={1}
-                borderColor={isRecording ? '#FF587E' : (audioPath ? '#FF587E33' : '#94A3B833')}
+                borderColor={isRecording ? '#FF587E' : audioPath ? '#FF587E33' : '#94A3B833'}
                 borderRadius={18}
                 height={46}
                 overflow="hidden"
-                position="relative"
-              >
+                position="relative">
+
                 {/* État d'enregistrement */}
-                {isRecording ? (
-                  <View
+                {isRecording ?
+                <View
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    padding: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+
+                    <Text style={{ color: "#FF587E" }}>{recordTime || "00:00"}</Text>
+                    <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center'
+                  }}>
+                      <View style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: '#FF0000',
+                      marginRight: 5
+                    }} />
+                    </View>
+                  </View> :
+
+                <View style={{ width: '100%', height: '100%', position: 'relative' }}>
+                    {/* Input texte */}
+                    <RN.TextInput
+                    ref={inputRef}
+                    value={message}
+                    onChangeText={setMessage}
+                    placeholder={selectedImage || selectedVideo ? t('chat.send') : audioPath ? '' : t('chat.message')}
+                    placeholderTextColor="#8E8E93"
                     style={{
                       width: '100%',
                       height: '100%',
                       padding: 10,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}
-                  >
-                    <Text style={{ color: "#FF587E" }}>{recordTime || "00:00"}</Text>
-                    <View style={{
-                      flexDirection: 'row',
-                      alignItems: 'center'
-                    }}>
-                      <View style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 4,
-                        backgroundColor: '#FF0000',
-                        marginRight: 5
-                      }} />
-                    </View>
-                  </View>
-                ) : (
-                  <View style={{ width: '100%', height: '100%', position: 'relative' }}>
-                    {/* Input texte */}
-                    <RN.TextInput
-                      ref={inputRef}
-                      value={message}
-                      onChangeText={setMessage}
-                      placeholder={(selectedImage || selectedVideo) ? t('chat.send') : (audioPath ? '' : t('chat.message'))}
-                      placeholderTextColor="#8E8E93"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        padding: 10,
-                        paddingRight: 40,
-                        color: "#8E8E93",
-                        opacity: (!isRecording && audioPath && !message.trim()) ? 0 : 1
-                      }}
-                    />
+                      paddingRight: 40,
+                      color: "#8E8E93",
+                      opacity: !isRecording && audioPath && !message.trim() ? 0 : 1
+                    }} />
+
 
                     {/* Lecteur audio */}
-                    {!isRecording && audioPath && !message.trim() && (
-                      <View style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        width: '100%',
-                        height: '100%',
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingHorizontal: 10,
-                        backgroundColor: 'white',
-                      }}>
+                    {!isRecording && audioPath && !message.trim() &&
+                  <View style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: '100%',
+                    height: '100%',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 10,
+                    backgroundColor: 'white'
+                  }}>
                         <TouchableOpacity
-                          onPress={isPlaying ? stopPlaying : startPlaying}
-                          style={{ marginRight: 10 }}
-                        >
+                      onPress={isPlaying ? stopPlaying : startPlaying}
+                      style={{ marginRight: 10 }}>
+
                           <FontAwesomeIcon
-                            icon={isPlaying ? faPause : faPlay}
-                            size={16}
-                            color="#FF587E"
-                          />
+                        icon={isPlaying ? faPause : faPlay}
+                        size={16}
+                        color="#FF587E" />
+
                         </TouchableOpacity>
                         <Text style={{ color: "#8E8E93", fontSize: 14 }}>
-                          {isPlaying ? playTime : (audioLength || "00:00")}
+                          {isPlaying ? playTime : audioLength || "00:00"}
                         </Text>
                         <TouchableOpacity
-                          onPress={() => setAudioPath('')}
-                          style={{
-                            position: 'absolute',
-                            right: 40,
-                            top: '50%',
-                            transform: [{ translateY: -8 }]
-                          }}
-                        >
+                      onPress={() => setAudioPath('')}
+                      style={{
+                        position: 'absolute',
+                        right: 40,
+                        top: '50%',
+                        transform: [{ translateY: -8 }]
+                      }}>
+
                           <FontAwesomeIcon
-                            icon={faTimes}
-                            size={16}
-                            color="#8E8E93"
-                          />
+                        icon={faTimes}
+                        size={16}
+                        color="#8E8E93" />
+
                         </TouchableOpacity>
                       </View>
-                    )}
+                  }
                   </View>
-                )}
+                }
 
                 {/* Bouton d'envoi */}
                 <TouchableOpacity
@@ -1942,12 +1942,12 @@ const getKeyboardOffset = () => {
                     height: 28,
                     borderRadius: 14,
                     overflow: 'hidden'
-                  }}
-                >
+                  }}>
+
                   <View style={{
                     width: '100%',
                     height: '100%',
-                    opacity: (!message.trim() && !selectedImage && !audioPath && !selectedVideo) ? 0.5 : 1
+                    opacity: !message.trim() && !selectedImage && !audioPath && !selectedVideo ? 0.5 : 1
                   }}>
                     <LinearGradient
                       colors={['#FF587E', '#CC4B8D']}
@@ -1958,8 +1958,8 @@ const getKeyboardOffset = () => {
                         height: '100%',
                         justifyContent: 'center',
                         alignItems: 'center'
-                      }}
-                    >
+                      }}>
+
                       <FontAwesomeIcon icon={faArrowUp} size={14} color="white" />
                     </LinearGradient>
                   </View>
@@ -1972,79 +1972,79 @@ const getKeyboardOffset = () => {
 
       {/* Badge de messages non lus */}
       {
-        unreadState.showButton && (
-          <TouchableOpacity
-            onPress={scrollToUnreadMessages}
-            activeOpacity={1}
-            style={{
-              position: 'absolute',
-              paddingHorizontal: 16,
-              paddingVertical: 10,
-              bottom: 80,
-              right: 20,
-              borderRadius: 20,
-              justifyContent: 'center',
-              alignItems: 'center',
-              flexDirection: 'row',
-              overflow: 'hidden',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.25,
-              shadowRadius: 3.84,
-              elevation: 5,
-              zIndex: 999,
-              opacity: 0.5
-            }}
-          >
+      unreadState.showButton &&
+      <TouchableOpacity
+        onPress={scrollToUnreadMessages}
+        activeOpacity={1}
+        style={{
+          position: 'absolute',
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          bottom: 80,
+          right: 20,
+          borderRadius: 20,
+          justifyContent: 'center',
+          alignItems: 'center',
+          flexDirection: 'row',
+          overflow: 'hidden',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+          elevation: 5,
+          zIndex: 999,
+          opacity: 0.5
+        }}>
+
             <LinearGradient
-              colors={['#FF587E', '#CC4B8D']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                top: 0,
-                bottom: 0
-              }}
-            />
+          colors={['#FF587E', '#CC4B8D']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0
+          }} />
+
             <Text style={{
-              color: 'white',
-              fontWeight: 'bold',
-              zIndex: 1,
-              marginRight: 5,
-            }}>
+          color: 'white',
+          fontWeight: 'bold',
+          zIndex: 1,
+          marginRight: 5
+        }}>
               {t('chat.newMessages')}
             </Text>
             <FontAwesomeIcon
-              icon={faChevronDown}
-              size={12}
-              color="white"
-            />
+          icon={faChevronDown}
+          size={12}
+          color="white" />
+
           </TouchableOpacity>
-        )
+
       }
 
       {/* Modal participants */}
       <Modal
         isOpen={isParticipantsModalVisible}
-        onClose={() => setParticipantsModalVisible(false)}
-      >
+        onClose={() => setParticipantsModalVisible(false)}>
+
         <View width='100%' style={{ flex: 1 }}>
           <BlurView
             style={[
-              styles.blurBackground,
-              {
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                flex: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }
-            ]}
+            styles.blurBackground,
+            {
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center'
+            }]
+            }
             blurType="light"
             blurAmount={8}
-            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
-          >
+            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)">
+
             <Modal.Content
               width="90%"
               style={{
@@ -2057,14 +2057,14 @@ const getKeyboardOffset = () => {
                 backgroundColor: 'white',
                 borderRadius: 8,
                 padding: 16
-              }}
-            >
+              }}>
+
               <Modal.CloseButton
                 _icon={{
                   color: "#94A3B8",
                   size: "sm"
-                }}
-              />
+                }} />
+
 
               <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
                 {/* Header */}
@@ -2079,32 +2079,32 @@ const getKeyboardOffset = () => {
 
                 {/* Participants List */}
                 <VStack space={4} paddingVertical={20}>
-                  {conversation?.participants?.map((participant) => (
-                    <HStack
-                      key={participant._id}
-                      alignItems="center"
-                      space={3}
-                    >
+                  {conversation?.participants?.map((participant) =>
+                  <HStack
+                    key={participant._id}
+                    alignItems="center"
+                    space={3}>
+
                       <Image
-                        source={
-                          participant.profilePicture
-                            ? { uri: participant.profilePicture }
-                            : require('../../assets/images/default.png')
-                        }
-                        alt={participant.name}
-                        size={12}
-                        rounded="full"
-                      />
+                      source={
+                      participant.profilePicture ?
+                      { uri: participant.profilePicture } :
+                      require('../../assets/images/default.png')
+                      }
+                      alt={participant.name}
+                      size={12}
+                      rounded="full" />
+
                       <VStack>
                         <Text style={styles.h5}>{participant.name}</Text>
-                        {participant._id === userData?._id && (
-                          <Text style={styles.littleCaption} color="#94A3B8">
+                        {participant._id === userData?._id &&
+                      <Text style={styles.littleCaption} color="#94A3B8">
                             {t('chat.you')}
                           </Text>
-                        )}
+                      }
                       </VStack>
                     </HStack>
-                  ))}
+                  )}
                 </VStack>
               </VStack>
             </Modal.Content>
@@ -2117,18 +2117,18 @@ const getKeyboardOffset = () => {
         <View width='100%' style={{ flex: 1 }}>
           <BlurView
             style={[
-              styles.blurBackground,
-              {
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                flex: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }
-            ]}
+            styles.blurBackground,
+            {
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center'
+            }]
+            }
             blurType="light"
             blurAmount={8}
-            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
-          >
+            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)">
+
             <Modal.Content
               width="90%"
               style={{
@@ -2141,22 +2141,22 @@ const getKeyboardOffset = () => {
                 backgroundColor: 'white',
                 borderRadius: 8,
                 padding: 16
-              }}
-            >
+              }}>
+
               <Modal.CloseButton
                 _icon={{
                   color: "#94A3B8",
                   size: "sm"
-                }}
-              />
+                }} />
+
 
               <VStack justifyContent="space-between" width='100%' space={2} flexGrow={1} flexShrink={1}>
                 {/* Header */}
                 <VStack space={1} justifyContent="start">
                   <Text style={styles.h5}>
-                    {secretData && secretData.user
-                      ? t('chat.postedBy', { name: secretData.user.name })
-                      : t('chat.postedByDefault')}
+                    {secretData && secretData.user ?
+                    t('chat.postedBy', { name: secretData.user.name }) :
+                    t('chat.postedByDefault')}
                   </Text>
                   <Text color='#FF78B2' mt={1} style={styles.littleCaption}>
                     {t('chat.expiresIn')} {timeLeft}
@@ -2186,9 +2186,9 @@ const getKeyboardOffset = () => {
                         overflow: 'hidden',
                         marginTop: 8,
                         paddingHorizontal: 20,
-                        paddingVertical: 2,
-                      }}
-                    >
+                        paddingVertical: 2
+                      }}>
+
                       <LinearGradient
                         colors={shareSuccess ? ['#4CAF50', '#2E7D32'] : ['#FF587E', '#CC4B8D']}
                         start={{ x: 0, y: 0 }}
@@ -2199,8 +2199,8 @@ const getKeyboardOffset = () => {
                           right: 0,
                           top: 0,
                           bottom: 0
-                        }}
-                      />
+                        }} />
+
                       <HStack space={3} alignItems="center">
                         <Text color='white' style={styles.ctalittle}>
                           {shareSuccess ? t('chat.shared') : t('chat.share')}
@@ -2208,8 +2208,8 @@ const getKeyboardOffset = () => {
                         <FontAwesomeIcon
                           icon={shareSuccess ? faCheck : faPaperPlane}
                           size={16}
-                          color="white"
-                        />
+                          color="white" />
+
                       </HStack>
                     </TouchableOpacity>
                   </Animated.View>
@@ -2219,8 +2219,8 @@ const getKeyboardOffset = () => {
           </BlurView>
         </View>
       </Modal>
-    </Background >
-  );
+    </Background>);
+
 };
 
 export default ChatScreen;

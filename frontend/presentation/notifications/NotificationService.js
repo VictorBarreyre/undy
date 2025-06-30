@@ -18,22 +18,22 @@ class NotificationService {
 
   // Méthode pour nettoyer les listeners en double
   cleanupDuplicateListeners() {
-    console.log('[NotificationService] 🧹 Nettoyage des listeners dupliqués');
-    console.log('[NotificationService] 📊 Listeners avant nettoyage:', this.notificationListeners.length);
-    
+
+
+
     // Garder seulement les listeners uniques (par référence de fonction)
     const uniqueListeners = [];
     const seenListeners = new Set();
-    
-    this.notificationListeners.forEach(listener => {
+
+    this.notificationListeners.forEach((listener) => {
       if (!seenListeners.has(listener)) {
         seenListeners.add(listener);
         uniqueListeners.push(listener);
       }
     });
-    
+
     this.notificationListeners = uniqueListeners;
-    console.log('[NotificationService] 📊 Listeners après nettoyage:', this.notificationListeners.length);
+
   }
 
   // Initialiser le service
@@ -82,7 +82,7 @@ class NotificationService {
   async requestPermissions() {
     try {
       if (isSimulator()) {
-        console.log('[NotificationService] Simulateur détecté');
+
         return { granted: true, token: 'SIMULATOR_MOCK_TOKEN' };
       }
 
@@ -91,10 +91,10 @@ class NotificationService {
         const permissions = await PushNotificationIOS.requestPermissions({
           alert: true,
           badge: true,
-          sound: true,
+          sound: true
         });
 
-        console.log('[NotificationService] Permissions iOS:', permissions);
+
 
         if (permissions.alert || permissions.badge || permissions.sound) {
           // Attendre que le token soit enregistré
@@ -107,7 +107,7 @@ class NotificationService {
             const removeListener = PushNotificationIOS.addEventListener('register', (token) => {
               clearTimeout(timeout);
               removeListener();
-              console.log('[NotificationService] Token APNs reçu:', token);
+
               resolve({ granted: true, token });
             });
 
@@ -124,7 +124,7 @@ class NotificationService {
 
         return { granted: false, token: null };
       } else {
-        console.log('[NotificationService] Android non supporté avec cette librairie');
+
         return { granted: false, token: null };
       }
     } catch (error) {
@@ -135,52 +135,52 @@ class NotificationService {
 
   // Callback quand le token est reçu
   onRegistered = (deviceToken) => {
-    console.log('[NotificationService] Token enregistré:', deviceToken);
+
     AsyncStorage.setItem('apnsToken', deviceToken).catch(console.error);
-  }
+  };
 
   // Callback pour les erreurs d'enregistrement
   onRegistrationError = (error) => {
     console.error('[NotificationService] Erreur enregistrement token:', error);
-  }
+  };
 
   // Callback pour les notifications reçues - VERSION SÉCURISÉE
   onRemoteNotification = (notification) => {
-    console.log('[NotificationService] Notification reçue:', notification);
-    
+
+
     // Éviter les appels multiples
     if (notification._remoteNotificationCompleteCallbackCalled) {
-      console.log('[NotificationService] ⚠️ Notification déjà traitée, skip');
+
       return;
     }
-    
-    const isUserInteraction = notification.userInteraction || 
-                            (AppState.currentState !== 'active');
-    
-    console.log('[NotificationService] User interaction:', isUserInteraction);
-    console.log('[NotificationService] App state:', AppState.currentState);
-    
+
+    const isUserInteraction = notification.userInteraction ||
+    AppState.currentState !== 'active';
+
+
+
+
     // Traiter la notification
     if (isUserInteraction) {
-      console.log('[NotificationService] 👆 Traitement comme interaction utilisateur');
+
       this.handleNotificationOpen(notification);
     } else {
-      console.log('[NotificationService] 📱 App active, affichage en foreground');
+
       this.handleForegroundNotification(notification);
     }
-    
-    console.log('[NotificationService] ✅ Traitement terminé');
-    
+
+
+
     // SOLUTION SÉCURISÉE: Ne pas appeler finish() pour éviter les erreurs
     // Le système iOS gère automatiquement la complétion dans la plupart des cas
     notification._remoteNotificationCompleteCallbackCalled = true;
-    
-    console.log('[NotificationService] 🔒 Notification marquée comme traitée (sans finish() pour éviter les erreurs)');
-  }
+
+
+  };
 
   // Gérer l'ouverture d'une notification avec déduplication
   handleNotificationOpen = (notification) => {
-    console.log('[NotificationService] 🎯 handleNotificationOpen appelé');
+
 
     let data = null;
 
@@ -204,28 +204,28 @@ class NotificationService {
 
     // AJOUT: Déduplication par notification ID
     const notificationId = data.notificationId || data.id || Date.now().toString();
-    
+
     if (this.processedNotifications.has(notificationId)) {
-      console.log('[NotificationService] ⚠️ Notification déjà traitée:', notificationId);
+
       return;
     }
-    
+
     this.processedNotifications.add(notificationId);
-    
+
     // Nettoyer après 30 secondes
     setTimeout(() => {
       this.processedNotifications.delete(notificationId);
     }, 30000);
-    
-    console.log('[NotificationService] 📊 Données extraites:', JSON.stringify(data, null, 2));
-    console.log('[NotificationService] 👥 Nombre de listeners:', this.notificationListeners.length);
+
+
+
 
     // Appeler les listeners UNE SEULE FOIS
     this.notificationListeners.forEach((listener, index) => {
-      console.log(`[NotificationService] 📣 Appel du listener ${index + 1}/${this.notificationListeners.length}`);
+
       try {
         listener(data);
-        console.log(`[NotificationService] ✅ Listener ${index + 1} exécuté avec succès`);
+
       } catch (error) {
         console.error(`[NotificationService] ❌ Erreur listener ${index + 1}:`, error);
       }
@@ -233,14 +233,14 @@ class NotificationService {
 
     // Log spécifique pour le type de notification
     if (data?.type === 'new_message' && data?.conversationId) {
-      console.log('[NotificationService] 💬 Notification de message détectée');
-      console.log('[NotificationService] 🆔 ConversationId:', data.conversationId);
-      console.log('[NotificationService] 👤 SenderId:', data.senderId);
-      console.log('[NotificationService] 📝 SenderName:', data.senderName);
-      console.log('[NotificationService] 📱 MessageType:', data.messageType);
-      
+
+
+
+
+
+
     }
-  }
+  };
 
   // Gérer les notifications en foreground
   handleForegroundNotification = (notification) => {
@@ -261,58 +261,58 @@ class NotificationService {
         alert.title,
         alert.body,
         [
-          { text: 'Ignorer', style: 'cancel' },
-          {
-            text: 'Voir',
-            onPress: () => this.handleNotificationOpen(notification)
-          }
-        ]
+        { text: 'Ignorer', style: 'cancel' },
+        {
+          text: 'Voir',
+          onPress: () => this.handleNotificationOpen(notification)
+        }]
+
       );
     }
-  }
+  };
 
   // Ajouter un listener pour les notifications avec déduplication améliorée
   addNotificationListener(callback) {
-    console.log('[NotificationService] 🎯 Tentative d\'ajout de listener');
-    console.log('[NotificationService] 📊 État actuel:', {
-      listenersCount: this.notificationListeners.length,
-      callbackType: typeof callback
-    });
-    
+
+
+
+
+
+
     // Vérification du callback
     if (typeof callback !== 'function') {
       console.error('[NotificationService] ❌ Le callback n\'est pas une fonction');
       return () => {}; // Retourner une fonction vide pour éviter les erreurs
     }
-    
+
     // Éviter les doublons en vérifiant la référence ET le contenu
     const callbackString = callback.toString();
-    const isDuplicate = this.notificationListeners.some(existingCallback => {
+    const isDuplicate = this.notificationListeners.some((existingCallback) => {
       return existingCallback === callback || existingCallback.toString() === callbackString;
     });
-    
+
     if (!isDuplicate) {
       this.notificationListeners.push(callback);
-      console.log('[NotificationService] ➕ Listener ajouté, total:', this.notificationListeners.length);
+
     } else {
-      console.log('[NotificationService] ⚠️ Listener déjà existant, ignoré');
+
     }
-    
+
     // Nettoyer périodiquement si trop de listeners
     if (this.notificationListeners.length > 3) {
-      console.log('[NotificationService] 🧹 Nettoyage automatique déclenché');
+
       this.cleanupDuplicateListeners();
     }
-    
+
     // Retourner une fonction pour retirer le listener
     return () => {
-      console.log('[NotificationService] 🗑️ Suppression du listener demandée');
+
       const index = this.notificationListeners.indexOf(callback);
       if (index > -1) {
         this.notificationListeners.splice(index, 1);
-        console.log('[NotificationService] ➖ Listener retiré, total:', this.notificationListeners.length);
+
       } else {
-        console.log('[NotificationService] ⚠️ Listener non trouvé lors de la suppression');
+
       }
     };
   }
@@ -341,10 +341,10 @@ class NotificationService {
           title: title,
           body: body,
           userInfo: data,
-          sound: 'default',
+          sound: 'default'
         });
 
-        console.log('[NotificationService] Notification locale programmée');
+
         return true;
       }
       return false;
@@ -412,7 +412,7 @@ class NotificationService {
   cleanup() {
     if (Platform.OS === 'ios') {
       // Retirer tous les listeners enregistrés
-      this.removeListeners.forEach(remove => {
+      this.removeListeners.forEach((remove) => {
         if (typeof remove === 'function') {
           remove();
         }
@@ -433,11 +433,11 @@ class NotificationService {
 
   // Méthode pour forcer le nettoyage des listeners (debug)
   forceCleanupListeners() {
-    console.log('[NotificationService] 🔧 Nettoyage forcé des listeners');
-    console.log('[NotificationService] 📊 Listeners avant:', this.notificationListeners.length);
+
+
     this.notificationListeners = [];
     this.processedNotifications.clear();
-    console.log('[NotificationService] ✅ Listeners nettoyés');
+
   }
 }
 

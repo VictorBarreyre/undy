@@ -17,7 +17,7 @@ const Home = ({ navigation }) => {
   const { t } = useTranslation();
   const { getContacts, userData } = useContext(AuthContext);
   const { data, fetchUnpurchasedSecrets, fetchSecretsByLocation } = useCardData();
-  
+
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [activeType, setActiveType] = useState(t('filter.all'));
   const [userContacts, setUserContacts] = useState([]);
@@ -49,7 +49,7 @@ const Home = ({ navigation }) => {
   const requestLocationPermission = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      
+
       if (status === 'granted') {
         // Permission accordée, récupérer la localisation
         const location = await Location.getCurrentPositionAsync({});
@@ -72,15 +72,15 @@ const Home = ({ navigation }) => {
       t('permissions.locationNeededTitle'),
       t('permissions.locationNeededMessage'),
       [
-        { 
-          text: t('permissions.cancel'), 
-          style: 'cancel' 
-        },
-        { 
-          text: t('permissions.openSettings'), 
-          onPress: () => Linking.openSettings() 
-        }
-      ]
+      {
+        text: t('permissions.cancel'),
+        style: 'cancel'
+      },
+      {
+        text: t('permissions.openSettings'),
+        onPress: () => Linking.openSettings()
+      }]
+
     );
   };
 
@@ -94,15 +94,15 @@ const Home = ({ navigation }) => {
     const loadContacts = async () => {
       if (activeType === t('filter.contacts') && !isContactsLoaded) {
         try {
-          console.log("Chargement des contacts...");
+
           const contacts = await getContacts();
           if (contacts && contacts.length > 0) {
-            const phoneNumbers = contacts.flatMap(contact =>
-              contact.phoneNumbers.map(phone => phone.number.replace(/\D/g, ''))
+            const phoneNumbers = contacts.flatMap((contact) =>
+            contact.phoneNumbers.map((phone) => phone.number.replace(/\D/g, ''))
             );
             setUserContacts(phoneNumbers);
             setIsContactsLoaded(true);
-            console.log(`${phoneNumbers.length} contacts chargés`);
+
           }
         } catch (error) {
           console.error(t('home.errors.contactsLoading'), error);
@@ -115,7 +115,7 @@ const Home = ({ navigation }) => {
 
   const handleFilterChange = (filters) => {
     setSelectedFilters(filters);
-    console.log(t('home.logs.selectedFilters'), filters);
+
     // Ajouté pour recharger les données lorsque les filtres catégories changent
     if (activeType === t('filter.all')) {
       fetchUnpurchasedSecrets(true);
@@ -123,42 +123,42 @@ const Home = ({ navigation }) => {
   };
 
   const handleTypeChange = async (type) => {
-    console.log(`Changement de type de filtre: ${type} (était: ${activeType})`);
-    
+
+
     if (type === activeType) {
-      console.log("Même type de filtre - aucune action nécessaire");
+
       return; // Éviter les doubles appels si le même filtre est sélectionné
     }
-    
+
     setActiveType(type);
     setIsDataLoading(true); // Indique que le chargement des données est en cours
-  
+
     try {
       if (type === t('filter.aroundMe')) {
         // Vérifier si la permission est déjà accordée
         const hasPermission = await checkLocationPermission();
-        
+
         if (hasPermission) {
           // Si permission accordée, récupérer la localisation actuelle
           const location = await Location.getCurrentPositionAsync({});
           setUserLocation(location);
-          console.log("Localisation obtenue:", location.coords.latitude, location.coords.longitude);
-          
+
+
           // Charger les secrets à proximité
           await fetchSecretsByLocation(locationRadius);
-          console.log(`Secrets chargés dans un rayon de ${locationRadius}km`);
+
         } else {
-          console.log("Permission de localisation non accordée");
+
         }
       } else if (type === t('filter.contacts')) {
         // Le chargement des contacts est géré par le useEffect ci-dessus
         // On charge les données mais elles seront filtrées par SwipeDeck
         await fetchUnpurchasedSecrets(true);
-        console.log("Données chargées pour filtre contacts");
+
       } else {
         // Pour les autres types de filtres (all, following)
         await fetchUnpurchasedSecrets(true);
-        console.log(`Données chargées pour filtre ${type}`);
+
       }
     } catch (error) {
       console.error('Erreur lors du changement de filtre:', error);
@@ -171,12 +171,12 @@ const Home = ({ navigation }) => {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      console.log("Rechargement des secrets...");
-      
+
+
       if (activeType === t('filter.aroundMe')) {
         // Pour le filtre "Autour de moi", on doit vérifier la localisation
         const hasPermission = await checkLocationPermission();
-        
+
         if (hasPermission) {
           // Mettre à jour la localisation actuelle
           const location = await Location.getCurrentPositionAsync({});
@@ -193,8 +193,8 @@ const Home = ({ navigation }) => {
         // Pour les autres filtres, on recharge simplement les données
         await fetchUnpurchasedSecrets(true);
       }
-      
-      console.log("Rechargement terminé");
+
+
     } catch (error) {
       console.error("Erreur lors du rechargement:", error);
       Alert.alert(
@@ -208,9 +208,9 @@ const Home = ({ navigation }) => {
 
   return (
     <Background>
-      <Box alignItems='center' alignContent='center' paddingTop={2} width="100%"  style={{ overflow: 'visible' }} >
-        <FilterBar 
-          onTypeChange={handleTypeChange} 
+      <Box alignItems='center' alignContent='center' paddingTop={2} width="100%" style={{ overflow: 'visible' }}>
+        <FilterBar
+          onTypeChange={handleTypeChange}
           onFilterChange={handleFilterChange}
           activeButton={activeType} // Passe le bouton actif au composant FilterBar
         />
@@ -219,23 +219,23 @@ const Home = ({ navigation }) => {
         <VStack paddingLeft={1} space={0}>
           <HStack paddingTop={2} alignItems='center' justifyContent='space-between'>
             <Text paddingBottom={1} style={styles.h3}>{t('home.latestHushys')}</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={handleRefresh}
               disabled={isRefreshing}
-              style={{ 
+              style={{
                 marginRight: 10,
-                padding: 5, // Ajoute une zone de toucher plus grande
-              }}
-            >
-              {isRefreshing ? (
-                <Spinner size="sm" color="#FF78B2" />
-              ) : (
-                <FontAwesomeIcon
-                  icon={faRotate}
-                  size={18}
-                  color='#FF78B2'
-                />
-              )}
+                padding: 5 // Ajoute une zone de toucher plus grande
+              }}>
+
+              {isRefreshing ?
+              <Spinner size="sm" color="#FF78B2" /> :
+
+              <FontAwesomeIcon
+                icon={faRotate}
+                size={18}
+                color='#FF78B2' />
+
+              }
             </TouchableOpacity>
           </HStack>
           <Text paddingBottom={1} color='#94A3B8' style={styles.caption}>
@@ -249,12 +249,12 @@ const Home = ({ navigation }) => {
             userContacts={userContacts}
             userLocation={userLocation}
             isDataLoading={isDataLoading}
-            style={styles.swipper}
-          />
+            style={styles.swipper} />
+
         </Box>
       </VStack>
-    </Background>
-  );
+    </Background>);
+
 };
 
 export default Home;

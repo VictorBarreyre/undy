@@ -42,19 +42,19 @@ const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
 
   const handleLoad = (data) => {
     setIsLoading(false);
-    
+
     if (data.naturalSize) {
       const { width, height } = data.naturalSize;
       const aspectRatio = width / height;
-      
+
       let finalWidth = 200;
       let finalHeight = 200 / aspectRatio;
-      
+
       if (finalHeight > 250) {
         finalHeight = 250;
         finalWidth = 250 * aspectRatio;
       }
-      
+
       setVideoDimensions({
         width: finalWidth,
         height: finalHeight
@@ -76,7 +76,7 @@ const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   };
 
   const playButtonStyles = {
@@ -85,7 +85,7 @@ const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
     borderRadius: 25,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   };
 
   const durationStyles = {
@@ -95,7 +95,7 @@ const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 4,
+    borderRadius: 4
   };
 
   const errorStyles = {
@@ -112,16 +112,16 @@ const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
         <Text style={{ color: '#999', marginTop: 8, fontSize: 12 }}>
           Vidéo non disponible
         </Text>
-      </Box>
-    );
+      </Box>);
+
   }
 
   return (
     <TouchableOpacity
       activeOpacity={0.9}
       onPress={handlePress}
-      style={{ position: 'relative' }}
-    >
+      style={{ position: 'relative' }}>
+
       <Box style={[videoDimensions, { borderRadius: 10, overflow: 'hidden' }]}>
         <Video
           ref={videoRef}
@@ -131,7 +131,7 @@ const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
             top: 0,
             left: 0,
             bottom: 0,
-            right: 0,
+            right: 0
           }}
           paused={true}
           resizeMode="cover"
@@ -140,49 +140,49 @@ const VideoPlayer = memo(({ uri, thumbnailUri, duration, isUser }) => {
           poster={thumbnailUri}
           posterResizeMode="cover"
           controls={false}
-          
+
           // Callbacks fullscreen
           onFullscreenPlayerWillPresent={() => {
-            console.log('Entering fullscreen');
+
           }}
           onFullscreenPlayerDidPresent={() => {
+
             // Vidéo démarre automatiquement en fullscreen
-          }}
-          onFullscreenPlayerWillDismiss={() => {
-            console.log('Leaving fullscreen');
+          }} onFullscreenPlayerWillDismiss={() => {
+
           }}
           onFullscreenPlayerDidDismiss={() => {
+
             // Retour à l'état initial
-          }}
-        />
+          }} />
         
         {/* Overlay de contrôle */}
-        {!isLoading && (
-          <View style={overlayStyles}>
+        {!isLoading &&
+        <View style={overlayStyles}>
             <View style={playButtonStyles}>
               <FontAwesomeIcon icon={faPlay} size={20} color="#FFF" />
             </View>
           </View>
-        )}
+        }
         
         {/* Indicateur de chargement */}
-        {isLoading && (
-          <View style={overlayStyles}>
+        {isLoading &&
+        <View style={overlayStyles}>
             <ActivityIndicator size="large" color="#FFF" />
           </View>
-        )}
+        }
         
         {/* Durée */}
-        {duration && !isLoading && (
-          <View style={durationStyles}>
+        {duration && !isLoading &&
+        <View style={durationStyles}>
             <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '600' }}>
               {formatDuration(duration)}
             </Text>
           </View>
-        )}
+        }
       </Box>
-    </TouchableOpacity>
-  );
+    </TouchableOpacity>);
+
 });
 
 const getMessagePosition = (index, messages) => {
@@ -192,12 +192,12 @@ const getMessagePosition = (index, messages) => {
   const nextIndex = safeIndex(index + 1);
 
   const isPreviousSameSender = prevIndex !== -1 &&
-    messages[prevIndex].sender === messages[index].sender &&
-    messages[prevIndex].type !== 'separator';
+  messages[prevIndex].sender === messages[index].sender &&
+  messages[prevIndex].type !== 'separator';
 
   const isNextSameSender = nextIndex !== -1 &&
-    messages[nextIndex].sender === messages[index].sender &&
-    messages[nextIndex].type !== 'separator';
+  messages[nextIndex].sender === messages[index].sender &&
+  messages[nextIndex].type !== 'separator';
 
   if (isPreviousSameSender && isNextSameSender) return 'middle';
   if (isPreviousSameSender) return 'last';
@@ -243,17 +243,17 @@ const MessageItem = memo(({
   useEffect(() => {
     if (item.isHighlighted) {
       Animated.sequence([
-        Animated.timing(highlightAnimation, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: false
-        }),
-        Animated.timing(highlightAnimation, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: false
-        })
-      ]).start();
+      Animated.timing(highlightAnimation, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: false
+      }),
+      Animated.timing(highlightAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false
+      })]
+      ).start();
     }
   }, [item.isHighlighted]);
 
@@ -305,18 +305,18 @@ const MessageItem = memo(({
 
   const closeMenu = () => {
     Animated.parallel([
-      Animated.timing(menuAnimation, {
-        toValue: 0,
-        duration: 150,
-        easing: Easing.in(Easing.ease),
-        useNativeDriver: true
-      }),
-      Animated.timing(shadowAnimation, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: false
-      })
-    ]).start(() => {
+    Animated.timing(menuAnimation, {
+      toValue: 0,
+      duration: 150,
+      easing: Easing.in(Easing.ease),
+      useNativeDriver: true
+    }),
+    Animated.timing(shadowAnimation, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: false
+    })]
+    ).start(() => {
       setShowOptions(false);
     });
   };
@@ -344,30 +344,30 @@ const MessageItem = memo(({
                 messageType: item.messageType,
                 replyToMessage: item.replyToMessage
               });
-            }}
-          >
+            }}>
+
             <Text
               style={[
-                styles.littleCaption,
-                {
-                  color: 'red',
-                  textDecorationLine: 'underline'
-                }
-              ]}
-            >
+              styles.littleCaption,
+              {
+                color: 'red',
+                textDecorationLine: 'underline'
+              }]
+              }>
+
               {t('chat.retry')}
             </Text>
           </TouchableOpacity>
-        </HStack>
-      );
+        </HStack>);
+
     }
 
     if (isSending) {
       return (
         <Text style={[styles.littleCaption, { color: '#94A3B8' }]} mr={2}>
           {t('chat.sending')}
-        </Text>
-      );
+        </Text>);
+
     }
 
     return null;
@@ -386,7 +386,7 @@ const MessageItem = memo(({
 
   const hasRealText = item.text && typeof item.text === 'string' && item.text.trim().length > 0 && item.text.trim() !== " ";
   const hasImage = item.image && typeof item.image === 'string' && item.image.length > 0;
-  const hasVideo = (item.messageType === 'video' && item.video) || (item.video && typeof item.video === 'string' && item.video.length > 0);
+  const hasVideo = item.messageType === 'video' && item.video || item.video && typeof item.video === 'string' && item.video.length > 0;
 
   const isUser = item.sender === 'user';
   const getBubbleStyle = useCallback((isTextMessage = true, isReplyBubble = false) => {
@@ -467,8 +467,8 @@ const MessageItem = memo(({
           alignSelf: 'flex-start',
           flexDirection: "row",
           width: '78%'
-        }}
-      >
+        }}>
+
         <Box
           style={{
             position: 'absolute',
@@ -484,9 +484,9 @@ const MessageItem = memo(({
             borderLeftColor: 'transparent',
             borderRightColor: 'transparent',
             borderBottomColor: "white",
-            transform: [{ rotate: '180deg' }],
-          }}
-        />
+            transform: [{ rotate: '180deg' }]
+          }} />
+
         <TouchableOpacity
           onPress={handleReply}
           style={{
@@ -495,8 +495,8 @@ const MessageItem = memo(({
             flexDirection: "row",
             alignItems: "center",
             paddingHorizontal: 12
-          }}
-        >
+          }}>
+
           <FontAwesomeIcon icon={faReply} size={14} color="#94A3B8" />
           <Text style={styles.littleCaption} color="#94A3B8" fontSize="xs" ml={2} fontWeight="medium">
             Répondre
@@ -514,8 +514,8 @@ const MessageItem = memo(({
             flexDirection: "row",
             alignItems: "center",
             paddingHorizontal: 12
-          }}
-        >
+          }}>
+
           <FontAwesomeIcon icon={faCopy} size={14} color="#94A3B8" />
           <Text style={styles.littleCaption} color="#94A3B8" fontSize="xs" ml={2}>
             Copier
@@ -531,15 +531,15 @@ const MessageItem = memo(({
             flexDirection: "row",
             alignItems: "center",
             paddingHorizontal: 12
-          }}
-        >
+          }}>
+
           <FontAwesomeIcon icon={faTimes} size={14} color="#94A3B8" />
           <Text style={styles.littleCaption} color="#94A3B8" fontSize="xs" ml={2}>
             Annuler
           </Text>
         </TouchableOpacity>
-      </Animated.View>
-    );
+      </Animated.View>);
+
   };
 
   const messageContent = () => {
@@ -563,11 +563,11 @@ const MessageItem = memo(({
             key={`${url}-${index}`}
             mt={hasCleanText ? 2 : 0}
             width="full"
-            alignSelf={isUser ? 'flex-end' : 'flex-start'}
-          >
+            alignSelf={isUser ? 'flex-end' : 'flex-start'}>
+
             <LinkPreview url={url} onPress={() => Linking.openURL(url)} isUser={isUser} />
-          </Box>
-        );
+          </Box>);
+
       });
     };
 
@@ -618,11 +618,11 @@ const MessageItem = memo(({
           const Sound = require('react-native-sound');
           Sound.setCategory('Playback');
 
-          console.log("Tentative de lecture de l'audio:", uri);
+
 
           const sound = new Sound(uri, null, (error) => {
             if (error) {
-              console.log('Erreur lors du chargement du son', error);
+
               return;
             }
 
@@ -632,9 +632,9 @@ const MessageItem = memo(({
 
             sound.play((success) => {
               if (success) {
-                console.log('Lecture terminée avec succès');
+
               } else {
-                console.log('Erreur lors de la lecture');
+
               }
               setIsPlaying(false);
               setPlaybackPosition(0);
@@ -678,98 +678,98 @@ const MessageItem = memo(({
             <Box
               bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"}
               p={2}
-              borderRadius="full"
-            >
+              borderRadius="full">
+
               <FontAwesomeIcon
                 icon={isPlaying ? faPause : faPlay}
                 size={16}
-                color={isUser ? "white" : "#FF78B2"}
-              />
+                color={isUser ? "white" : "#FF78B2"} />
+
             </Box>
           </TouchableOpacity>
 
           <Box flex={1} height={2} bg={isUser ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)"} borderRadius={4}>
             <Box
               height="100%"
-              width={`${(playbackPosition / (soundRef.current?.getDuration() || 1)) * 100}%`}
+              width={`${playbackPosition / (soundRef.current?.getDuration() || 1) * 100}%`}
               bg={isUser ? "white" : "#FF78B2"}
-              borderRadius={4}
-            />
+              borderRadius={4} />
+
           </Box>
 
           <Text fontSize="xs" color={isUser ? "white" : "gray.600"}>
             {isPlaying ? formatTime(playbackPosition) : playbackDuration}
           </Text>
-        </HStack>
-      );
+        </HStack>);
+
     };
 
-    const messageComponent = (
-      <Pressable onLongPress={handleLongPress}>
-        {isReply && item.replyToMessage && (
-          <ReplyPreview replyToMessage={item.replyToMessage} isUser={isUser} />
-        )}
+    const messageComponent =
+    <Pressable onLongPress={handleLongPress}>
+        {isReply && item.replyToMessage &&
+      <ReplyPreview replyToMessage={item.replyToMessage} isUser={isUser} />
+      }
 
-        {hasVideo ? (
-          <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
+        {hasVideo ?
+      <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             <Box style={getBubbleStyle(false, isReply)}>
               <VideoPlayer
-                uri={item.video || item.videoUrl} 
-                thumbnailUri={item.thumbnailUrl}
-                duration={item.duration || item.videoDuration}
-                isUser={isUser}
-              />
+            uri={item.video || item.videoUrl}
+            thumbnailUri={item.thumbnailUrl}
+            duration={item.duration || item.videoDuration}
+            isUser={isUser} />
+
             </Box>
             
-            {hasCleanText && (
-              <Box p={3} style={getBubbleStyle(true, isReply)} mt={1}>
+            {hasCleanText &&
+        <Box p={3} style={getBubbleStyle(true, isReply)} mt={1}>
                 <MessageText text={cleanText} isUser={isUser} />
               </Box>
-            )}
+        }
             
             {hasEmbeds && renderEmbeds()}
-          </VStack>
-        ) : hasAudio ? (
-          <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
+          </VStack> :
+      hasAudio ?
+      <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             <Box
-              p={3}
-              style={getBubbleStyle(true, isReply)}
-              minWidth={180}
-              maxWidth={250}
-              position="relative"
-              overflow="hidden"
-            >
-              {isUser ? (
-                <LinearGradient
-                  colors={['#FF587E', '#CC4B8D']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                  }}
-                />
-              ) : (
-                <Box
-                  bg='#FFFFFF'
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                  }}
-                />
-              )}
+          p={3}
+          style={getBubbleStyle(true, isReply)}
+          minWidth={180}
+          maxWidth={250}
+          position="relative"
+          overflow="hidden">
+
+              {isUser ?
+          <LinearGradient
+            colors={['#FF587E', '#CC4B8D']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: 0,
+              bottom: 0
+            }} /> :
+
+
+          <Box
+            bg='#FFFFFF'
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: 0,
+              bottom: 0
+            }} />
+
+          }
 
               <AudioPlayer uri={item.audio} duration={item.audioDuration} isUser={isUser} />
             </Box>
-          </VStack>
-        ) : hasImage && hasCleanText ? (
-          <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
+          </VStack> :
+      hasImage && hasCleanText ?
+      <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             <Box style={getBubbleStyle(false, isReply)}>
               <MessageImage uri={item.image} onPress={openImageViewer} />
             </Box>
@@ -779,30 +779,30 @@ const MessageItem = memo(({
             </Box>
 
             {hasEmbeds && renderEmbeds()}
-          </VStack>
-        ) : hasImage ? (
-          <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
+          </VStack> :
+      hasImage ?
+      <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             <Box style={getBubbleStyle(false, isReply)}>
               <MessageImage uri={item.image} onPress={openImageViewer} />
             </Box>
 
             {hasEmbeds && renderEmbeds()}
-          </VStack>
-        ) : hasCleanText ? (
-          <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
+          </VStack> :
+      hasCleanText ?
+      <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             <Box p={3} style={getBubbleStyle(true, isReply)}>
               <MessageText text={cleanText} isUser={isUser} />
             </Box>
 
             {hasEmbeds && renderEmbeds()}
-          </VStack>
-        ) : (
-          <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
+          </VStack> :
+
+      <VStack alignItems={isUser ? 'flex-end' : 'flex-start'}>
             {hasEmbeds && renderEmbeds()}
           </VStack>
-        )}
-      </Pressable>
-    );
+      }
+      </Pressable>;
+
 
     return messageComponent;
   };
@@ -818,8 +818,8 @@ const MessageItem = memo(({
         shadowOpacity: shadowOpacity,
         shadowRadius: shadowElevation,
         zIndex: showOptions ? 10 : 1
-      }}
-    >
+      }}>
+
       <HStack
         width="100%"
         justifyContent="space-between"
@@ -828,41 +828,41 @@ const MessageItem = memo(({
         mb={isLastMessage ? 4 : 0}
         px={2}
         opacity={messageOpacity}
-        position="relative"
-      >
+        position="relative">
+
         {renderContextMenu()}
 
         <HStack
           flex={1}
           justifyContent={isUser ? 'flex-end' : 'flex-start'}
           alignItems="flex-end"
-          space={1}
-        >
+          space={1}>
+
           {!isUser && avatarContent()}
 
           <VStack
             maxWidth="80%"
-            alignItems={isUser ? 'flex-end' : 'flex-start'}
-          >
-            {!isUser && (position === 'first' || position === 'single') && (
-              <HStack alignItems="center">
+            alignItems={isUser ? 'flex-end' : 'flex-start'}>
+
+            {!isUser && (position === 'first' || position === 'single') &&
+            <HStack alignItems="center">
                 <Text
-                  style={styles.littleCaption}
-                  color="#94A3B8"
-                  ml={2}
-                  mb={1}
-                >
+                style={styles.littleCaption}
+                color="#94A3B8"
+                ml={2}
+                mb={1}>
+
                   {item.senderInfo?.name || t('chat.defaultUser')}
                 </Text>
                 {renderMessageStatus()}
               </HStack>
-            )}
+            }
 
-            {isUser && (
-              <HStack alignItems="center" >
+            {isUser &&
+            <HStack alignItems="center">
                 {renderMessageStatus()}
               </HStack>
-            )}
+            }
 
             {messageContent()}
           </VStack>
@@ -870,43 +870,43 @@ const MessageItem = memo(({
           {isUser && avatarContent()}
         </HStack>
 
-        {hasImage && (
-          <ImageView
-            images={[{ uri: item.image }]}
-            imageIndex={0}
-            visible={isImageViewVisible}
-            onRequestClose={closeImageViewer}
-            swipeToCloseEnabled={true}
-            doubleTapToZoomEnabled={true}
-          />
-        )}
+        {hasImage &&
+        <ImageView
+          images={[{ uri: item.image }]}
+          imageIndex={0}
+          visible={isImageViewVisible}
+          onRequestClose={closeImageViewer}
+          swipeToCloseEnabled={true}
+          doubleTapToZoomEnabled={true} />
 
-        {showTimestamps && (
-          <Animated.View
-            style={{
-              opacity: timestampOpacity,
-              alignItems: 'flex-end'
-            }}
-          >
+        }
+
+        {showTimestamps &&
+        <Animated.View
+          style={{
+            opacity: timestampOpacity,
+            alignItems: 'flex-end'
+          }}>
+
             <Animated.Text
-              style={[
-                styles.littleCaption,
-                {
-                  color: '#94A3B8',
-                  fontSize: 10,
-                  marginBottom: 6,
-                  marginRight: 10,
-                  transform: [{ translateX: timestampWidth }]
-                }
-              ]}
-            >
+            style={[
+            styles.littleCaption,
+            {
+              color: '#94A3B8',
+              fontSize: 10,
+              marginBottom: 6,
+              marginRight: 10,
+              transform: [{ translateX: timestampWidth }]
+            }]
+            }>
+
               {dateFormatter.formatTimeOnly(item.timestamp)}
             </Animated.Text>
           </Animated.View>
-        )}
+        }
       </HStack>
-    </Animated.View>
-  );
+    </Animated.View>);
+
 }, (prevProps, nextProps) => {
   return (
     prevProps.item.id === nextProps.item.id &&
@@ -917,8 +917,8 @@ const MessageItem = memo(({
     prevProps.userData?._id === nextProps.userData?._id &&
     prevProps.item.isHighlighted === nextProps.item.isHighlighted &&
     !prevProps.item.isSending === !nextProps.item.isSending &&
-    !prevProps.item.sendFailed === !nextProps.item.sendFailed
-  );
+    !prevProps.item.sendFailed === !nextProps.item.sendFailed);
+
 });
 
 export default MessageItem;

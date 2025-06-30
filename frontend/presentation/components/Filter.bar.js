@@ -33,7 +33,7 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 3,
-    elevation: 2,
+    elevation: 2
   };
 
   // Nettoyage des données pour éviter les doublons ou les valeurs invalides
@@ -41,13 +41,13 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
 
   // Effet pour synchroniser avec activeButton du parent
   useEffect(() => {
-    console.log(`FilterBar: activeButton mis à jour: ${activeButton}`);
+
   }, [activeButton]);
 
   const handleCheckboxChange = (value) => {
-    const updatedFilters = selectedFilters.includes(value)
-      ? selectedFilters.filter((filter) => filter !== value)
-      : [...selectedFilters, value];
+    const updatedFilters = selectedFilters.includes(value) ?
+    selectedFilters.filter((filter) => filter !== value) :
+    [...selectedFilters, value];
 
     setSelectedFilters(updatedFilters);
     onFilterChange(updatedFilters);
@@ -84,7 +84,7 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
   const requestContactsPermission = async () => {
     try {
       const { status } = await ExpoContacts.requestPermissionsAsync();
-      
+
       if (status === 'granted') {
         handleContactsPermissionSuccess();
       } else {
@@ -100,7 +100,7 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
   const requestLocationPermission = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      
+
       if (status === 'granted') {
         handleLocationPermissionSuccess();
       } else {
@@ -115,18 +115,18 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
   // Actions à effectuer lorsque la permission de contacts est accordée
   const handleContactsPermissionSuccess = async () => {
     try {
-      console.log("Permission de contacts accordée, chargement...");
+
       const contacts = await getContacts();
       setContactsData(contacts);
-      
-      const hasAppUsers = contacts.some(contact => contact.usesApp === true);
-      
+
+      const hasAppUsers = contacts.some((contact) => contact.usesApp === true);
+
       if (!hasAppUsers && contacts.length > 0) {
         setShowInviteModal(true);
       }
-      
+
       onTypeChange(t('filter.contacts'));
-      console.log("Notification de changement vers contacts envoyée au parent");
+
     } catch (error) {
       console.error('Erreur lors du chargement des contacts:', error);
       Alert.alert(
@@ -140,9 +140,9 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
   // Actions à effectuer lorsque la permission de localisation est accordée
   const handleLocationPermissionSuccess = async () => {
     try {
-      console.log("Permission de localisation accordée");
+
       onTypeChange(t('filter.aroundMe'));
-      console.log("Notification de changement vers aroundMe envoyée au parent");
+
     } catch (error) {
       console.error('Erreur lors de la gestion de la permission de localisation:', error);
       Alert.alert(
@@ -159,15 +159,15 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
       t('permissions.contactsNeededTitle'),
       t('permissions.contactsNeededMessage'),
       [
-        { 
-          text: t('permissions.cancel'), 
-          style: 'cancel' 
-        },
-        { 
-          text: t('permissions.openSettings'), 
-          onPress: openSettings 
-        }
-      ]
+      {
+        text: t('permissions.cancel'),
+        style: 'cancel'
+      },
+      {
+        text: t('permissions.openSettings'),
+        onPress: openSettings
+      }]
+
     );
   };
 
@@ -177,48 +177,48 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
       t('permissions.locationNeededTitle'),
       t('permissions.locationNeededMessage'),
       [
-        { 
-          text: t('permissions.cancel'), 
-          style: 'cancel' 
-        },
-        { 
-          text: t('permissions.openSettings'), 
-          onPress: openSettings 
-        }
-      ]
+      {
+        text: t('permissions.cancel'),
+        style: 'cancel'
+      },
+      {
+        text: t('permissions.openSettings'),
+        onPress: openSettings
+      }]
+
     );
   };
 
   // Fonction pour gérer le clic sur un bouton de type
   const handleButtonClickType = async (buttonName) => {
-    console.log(`Clic sur le bouton: ${buttonName}`);
-    
+
+
     if (buttonName === activeButton) {
-      console.log("Ce filtre est déjà actif, aucune action");
+
       return;
     }
-    
+
     if (buttonName === t('filter.contacts')) {
       const hasPermission = await checkContactsPermission();
-      
+
       if (hasPermission) {
         handleContactsPermissionSuccess();
       } else {
         requestContactsPermission();
       }
-    } 
-    else if (buttonName === t('filter.aroundMe')) {
+    } else
+    if (buttonName === t('filter.aroundMe')) {
       const hasPermission = await checkLocationPermission();
-      
+
       if (hasPermission) {
         handleLocationPermissionSuccess();
       } else {
         requestLocationPermission();
       }
-    } 
-    else {
+    } else
+    {
       onTypeChange(buttonName);
-      console.log(`Notification de changement vers ${buttonName} envoyée au parent`);
+
     }
   };
 
@@ -230,28 +230,28 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
       const query = searchQuery.toLowerCase();
       const results = data.filter(
         (item) =>
-          item.content.toLowerCase().includes(query) ||
-          item.user?.name.toLowerCase().includes(query)
+        item.content.toLowerCase().includes(query) ||
+        item.user?.name.toLowerCase().includes(query)
       );
       setFilteredResults(results);
     }
   }, [searchQuery, data]);
 
   const buttonTypes = [
-    t('filter.all'),
-    t('filter.contacts'),
-    t('filter.aroundMe'),
-    t('filter.categories')
-  ];
+  t('filter.all'),
+  t('filter.contacts'),
+  t('filter.aroundMe'),
+  t('filter.categories')];
+
 
   return (
-    <Box width="100%" paddingTop={1} paddingBottom={2} >
-      <View style={{ flexDirection: 'row', width: '100%'}}>
+    <Box width="100%" paddingTop={1} paddingBottom={2}>
+      <View style={{ flexDirection: 'row', width: '100%' }}>
         <View style={styles.containerFilter}>
-          <ScrollView paddingLeft={6} horizontal showsHorizontalScrollIndicator={false} style={styles.scrollContainer}   contentContainerStyle={{
-    paddingBottom: 4, // Ajouter de l'espace pour l'ombre
-       // Un peu d'espace en haut aussi
-  }}>
+          <ScrollView paddingLeft={6} horizontal showsHorizontalScrollIndicator={false} style={styles.scrollContainer} contentContainerStyle={{
+            paddingBottom: 4 // Ajouter de l'espace pour l'ombre
+            // Un peu d'espace en haut aussi
+          }}>
             {buttonTypes.map((type) => {
               if (type === t('filter.categories')) {
                 return (
@@ -261,20 +261,20 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
                     marginLeft={3}
                     variant="secondary"
                     style={[
-                      activeButton === type ? styles.activeButton : styles.inactiveButton,
-                      {
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingHorizontal: 26,
-                        paddingVertical: 8,
-                        borderRadius: 999,
-                        // Ombre seulement si le bouton est inactif
-                        ...(activeButton !== type && inactiveShadowStyle)
-                      }
-                    ]}
-                    onPress={() => setOverlayVisible(true)}
-                  >
+                    activeButton === type ? styles.activeButton : styles.inactiveButton,
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingHorizontal: 26,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      // Ombre seulement si le bouton est inactif
+                      ...(activeButton !== type && inactiveShadowStyle)
+                    }]
+                    }
+                    onPress={() => setOverlayVisible(true)}>
+
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Text style={activeButton === type ? styles.activeText : styles.inactiveText}>
                         {type}
@@ -283,11 +283,11 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
                         icon={faChevronDown}
                         size={16}
                         color={activeButton === type ? styles.activeText.color : styles.inactiveText.color}
-                        style={{ marginLeft: 8 }}
-                      />
+                        style={{ marginLeft: 8 }} />
+
                     </View>
-                  </Button>
-                );
+                  </Button>);
+
               }
 
               return (
@@ -295,38 +295,38 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
                   key={type}
                   marginRight={4}
                   marginLeft={12}
-                  onPress={() => handleButtonClickType(type)}
-                >
-                  {activeButton === type ? (
-                    <LinearGradient
-                      colors={['#FF587E', '#CC4B8D']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 0.8, y: 1 }}
-                      style={{
-                        paddingHorizontal: 26,
-                        paddingVertical: 8,
-                        borderRadius: 999,
-                      }}
-                    >
+                  onPress={() => handleButtonClickType(type)}>
+
+                  {activeButton === type ?
+                  <LinearGradient
+                    colors={['#FF587E', '#CC4B8D']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0.8, y: 1 }}
+                    style={{
+                      paddingHorizontal: 26,
+                      paddingVertical: 8,
+                      borderRadius: 999
+                    }}>
+
                       <Text style={styles.activeText}>{type}</Text>
-                    </LinearGradient>
-                  ) : (
-                    <View
-                      style={[
-                        styles.inactiveButton,
-                        {
-                          paddingHorizontal: 26,
-                          paddingVertical: 8,
-                          borderRadius: 999,
-                          ...inactiveShadowStyle // Ombre appliquée ici
-                        }
-                      ]}
-                    >
+                    </LinearGradient> :
+
+                  <View
+                    style={[
+                    styles.inactiveButton,
+                    {
+                      paddingHorizontal: 26,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      ...inactiveShadowStyle // Ombre appliquée ici
+                    }]
+                    }>
+
                       <Text style={styles.inactiveText}>{type}</Text>
                     </View>
-                  )}
-                </Pressable>
-              );
+                  }
+                </Pressable>);
+
             })}
           </ScrollView>
         </View>
@@ -334,78 +334,78 @@ const FilterBar = ({ onFilterChange, onTypeChange, activeButton }) => {
         <InviteContactsModal
           isVisible={showInviteModal}
           onClose={() => setShowInviteModal(false)}
-          contacts={contactsData}
-        />
+          contacts={contactsData} />
+
 
         {/* Modale des préférences */}
         <Modal
           animationType="swipe"
           transparent={true}
           visible={isOverlayVisible}
-          onRequestClose={() => setOverlayVisible(false)}
-        >
+          onRequestClose={() => setOverlayVisible(false)}>
+
           <BlurView
             style={[
-              styles.blurBackground,
-              { backgroundColor: 'rgba(0, 0, 0, 0.2)' }
-            ]}
+            styles.blurBackground,
+            { backgroundColor: 'rgba(0, 0, 0, 0.2)' }]
+            }
             blurType="light"
             blurAmount={8}
-            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)"
-          >
+            reducedTransparencyFallbackColor="rgba(255, 255, 255, 0.8)">
+
             <SafeAreaView style={styles.overlayModal}>
               <Box style={styles.overlayContent}>
                 <View style={{ flexDirection: 'row', paddingVertical: 8, justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                   <Text style={styles.h3}>{t('filter.preferences')}</Text>
                   <Pressable
                     style={styles.closeButton}
-                    onPress={() => setOverlayVisible(false)}
-                  >
+                    onPress={() => setOverlayVisible(false)}>
+
                     <FontAwesomeIcon icon={faTimes} size={24} color="black" />
                   </Pressable>
                 </View>
                 <Box marginTop={6} width="100%">
-                  {labels.map((label, index) => (
-                    <Box key={`${label}-${index}`}>
+                  {labels.map((label, index) =>
+                  <Box key={`${label}-${index}`}>
                       <View
-                        style={{
-                          width: "100%",
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          paddingVertical: 20
-                        }}
-                      >
+                      style={{
+                        width: "100%",
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        paddingVertical: 20
+                      }}>
+
                         <Text style={styles.h5}>{label}</Text>
                         <Checkbox
-                          value={label}
-                          aria-label={label}
-                          style={{
-                            borderColor: selectedFilters.includes(label)
-                              ? '#FF78B2'
-                              : 'rgba(148, 163, 184, 0.5)',
-                            borderWidth: 1,
-                          }}
-                          _checked={{
-                            bg: '#FF78B2',
-                            borderColor: '#FF78B2',
-                            _icon: { color: 'white' },
-                          }}
-                          isChecked={selectedFilters.includes(label)}
-                          onChange={() => handleCheckboxChange(label)}
-                        />
+                        value={label}
+                        aria-label={label}
+                        style={{
+                          borderColor: selectedFilters.includes(label) ?
+                          '#FF78B2' :
+                          'rgba(148, 163, 184, 0.5)',
+                          borderWidth: 1
+                        }}
+                        _checked={{
+                          bg: '#FF78B2',
+                          borderColor: '#FF78B2',
+                          _icon: { color: 'white' }
+                        }}
+                        isChecked={selectedFilters.includes(label)}
+                        onChange={() => handleCheckboxChange(label)} />
+
                       </View>
                       <Divider opacity={30} bg="#94A3B8" />
                     </Box>
-                  ))}
+                  )}
                 </Box>
               </Box>
             </SafeAreaView>
           </BlurView>
         </Modal>
       </View>
-    </Box>
-  );
+    </Box>);
+
 };
 
 export default FilterBar;

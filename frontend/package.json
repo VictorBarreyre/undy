@@ -2,7 +2,9 @@
   "name": "hushy",
   "version": "1.0.0",
   "scripts": {
-    "start": "react-native start",
+    "start": "expo start --dev-client",
+    "start:reset": "expo start --dev-client --clear",
+    "start:rn": "react-native start",
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "ios:clean": "cd ios && rm -rf build ~/Library/Developer/Xcode/DerivedData && pod install && cd .. && react-native run-ios",
@@ -11,9 +13,12 @@
     "ios:device": "react-native run-ios --device",
     "ios:reset": "killall -9 node || true && watchman watch-del-all && cd ios && rm -rf build Pods && pod install && cd .. && react-native start --reset-cache",
     "ios:bundle": "react-native bundle --entry-file='index.js' --bundle-output='./ios/main.jsbundle' --dev=false --platform='ios'",
+    "expo:ios": "expo run:ios",
+    "expo:android": "expo run:android",
+    "expo:prebuild": "expo prebuild",
     "clean": "watchman watch-del-all && rm -rf node_modules && npm install && cd ios && pod install && cd ..",
     "pod-install": "cd ios && pod install",
-    "start:reset": "react-native start --reset-cache"
+    "cache:clear": "watchman watch-del-all && rm -rf $TMPDIR/react-* && rm -rf $TMPDIR/metro-* && expo start --clear"
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",
@@ -65,7 +70,7 @@
     "react-native-confetti-cannon": "^1.5.2",
     "react-native-device-info": "^14.0.4",
     "react-native-dotenv": "^3.4.11",
-    "react-native-fbsdk-next": "^10.1.0",
+    "react-native-fbsdk-next": "^13.4.1",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "~2.16.1",
     "react-native-get-random-values": "^1.11.0",
@@ -91,7 +96,8 @@
     "react-native-video": "^6.14.1",
     "react-native-video-controls": "^2.8.1",
     "react-native-web": "~0.19.10",
-    "styled-components": "^6.1.13"
+    "styled-components": "^6.1.13",
+    "expo-dev-client": "~4.0.29"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
